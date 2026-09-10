@@ -5,7 +5,7 @@ Fornecer autenticação local e controle de acesso baseado em roles para identif
 ## ADDED Requirements
 
 ### Requirement: Login local com credenciais válidas
-O sistema DEVE permitir que um usuário previamente cadastrado se autentique utilizando e-mail e senha válidos e DEVE criar uma sessão autenticada associada à identidade e à role desse usuário.
+O sistema MUST permitir que um usuário previamente cadastrado se autentique utilizando e-mail e senha válidos e MUST criar uma sessão autenticada associada à identidade e à role desse usuário.
 
 #### Scenario: Credenciais válidas
 - **WHEN** um usuário informa um e-mail cadastrado e a senha correspondente
@@ -16,14 +16,14 @@ O sistema DEVE permitir que um usuário previamente cadastrado se autentique uti
 - **THEN** o sistema não cria sessão autenticada e apresenta uma mensagem genérica de falha que não revela qual credencial está incorreta
 
 ### Requirement: Senhas não podem ser armazenadas em texto puro
-O sistema DEVE persistir somente uma representação criptograficamente segura da senha e DEVE verificar a senha informada contra essa representação no lado servidor.
+O sistema MUST persistir somente uma representação criptograficamente segura da senha e MUST verificar a senha informada contra essa representação no lado servidor.
 
 #### Scenario: Persistência de credencial
 - **WHEN** uma credencial de usuário é criada ou alterada
 - **THEN** nenhuma senha em texto puro é persistida no banco de dados, logs ou arquivos versionados
 
 ### Requirement: Sessão autenticada
-O sistema DEVE manter uma sessão autenticada suficiente para identificar o usuário e sua role durante a navegação e DEVE revalidar a sessão no lado servidor antes de liberar dados ou ações protegidas.
+O sistema MUST manter uma sessão autenticada suficiente para identificar o usuário e sua role durante a navegação e MUST revalidar a sessão no lado servidor antes de liberar dados ou ações protegidas.
 
 #### Scenario: Recarregamento de página
 - **WHEN** um usuário com sessão válida recarrega uma página protegida
@@ -34,28 +34,28 @@ O sistema DEVE manter uma sessão autenticada suficiente para identificar o usu�
 - **THEN** o sistema nega o acesso e direciona o fluxo de interface para autenticação sem expor dados privados
 
 ### Requirement: Logout invalida a sessão
-O sistema DEVE permitir que um usuário autenticado encerre sua sessão e DEVE impedir reutilização dessa sessão após o logout.
+O sistema MUST permitir que um usuário autenticado encerre sua sessão e MUST impedir reutilização dessa sessão após o logout.
 
 #### Scenario: Logout concluído
 - **WHEN** um usuário autenticado executa logout
 - **THEN** o sistema invalida a sessão atual, limpa o contexto autenticado e direciona para a página de login
 
 ### Requirement: Roles fixas do domínio
-O sistema DEVE reconhecer exatamente as roles Administrador, Recepcionista, Médico e Financeiro para controle de acesso nesta capability.
+O sistema MUST reconhecer exatamente as roles Administrador, Recepcionista, Médico e Financeiro para controle de acesso nesta capability.
 
 #### Scenario: Usuário autenticado possui uma role válida
 - **WHEN** a sessão de um usuário autenticado é carregada
 - **THEN** o sistema associa o usuário a uma das quatro roles previstas e usa essa role nas decisões de autorização
 
 ### Requirement: Autorização deve ser aplicada no servidor
-O sistema DEVE validar identidade e role no lado servidor em todo event handler, loader, computed var ou operação que leia ou modifique dados protegidos. Ocultar componentes ou redirecionar páginas no frontend NÃO DEVE ser considerado controle de acesso suficiente.
+O sistema MUST validar identidade e role no lado servidor em todo event handler, loader, computed var ou operação que leia ou modifique dados protegidos. Ocultar componentes ou redirecionar páginas no frontend MUST NOT ser considerado controle de acesso suficiente.
 
 #### Scenario: Tentativa de ação sem permissão
 - **WHEN** um usuário autenticado tenta acionar diretamente uma operação não permitida para sua role
 - **THEN** o servidor rejeita a operação e nenhum dado protegido é criado, alterado, removido ou retornado indevidamente
 
 ### Requirement: Shell de dashboard por role
-O sistema DEVE possuir um destino inicial protegido para cada uma das quatro roles, ainda sem implementar os módulos finais de negócio.
+O sistema MUST possuir um destino inicial protegido para cada uma das quatro roles, ainda sem implementar os módulos finais de negócio.
 
 #### Scenario: Administrador conclui login
 - **WHEN** um usuário com role Administrador conclui a autenticação
@@ -74,14 +74,14 @@ O sistema DEVE possuir um destino inicial protegido para cada uma das quatro rol
 - **THEN** o sistema direciona para o shell do painel financeiro
 
 ### Requirement: Não existe cadastro público nesta change
-O sistema NÃO DEVE expor um fluxo público de criação de contas como parte desta capability inicial.
+O sistema MUST NOT expor um fluxo público de criação de contas como parte desta capability inicial.
 
 #### Scenario: Visitante acessa a área pública
 - **WHEN** uma pessoa não autenticada navega pela aplicação
 - **THEN** o sistema oferece autenticação, mas não oferece criação pública de conta
 
 ### Requirement: Bootstrap controlado do primeiro Administrador
-O sistema DEVE fornecer um mecanismo de bootstrap manual, controlado e idempotente para criar o primeiro usuário Administrador quando ainda não existir um administrador, sem usar senha padrão hardcoded ou versionada.
+O sistema MUST fornecer um mecanismo de bootstrap manual, controlado e idempotente para criar o primeiro usuário Administrador quando ainda não existir um administrador, sem usar senha padrão hardcoded ou versionada.
 
 #### Scenario: Primeiro bootstrap
 - **WHEN** o bootstrap é executado com credenciais fornecidas por configuração segura e ainda não existe Administrador
