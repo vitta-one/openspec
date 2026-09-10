@@ -4,3 +4,22 @@
 assets/external/
 *.py[cod]
 __pycache__/
+
+# Python virtual environments
+.venv/
+venv/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Tooling and test caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local Reflex process logs
+reflex.log

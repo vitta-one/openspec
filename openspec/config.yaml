@@ -1,0 +1,61 @@
+schema: spec-driven
+
+context: |
+  Project: Vitta-One.
+
+  Domain:
+    Sistema de gerenciamento de clínica médica para centralizar pacientes,
+    profissionais, agenda, consultas, atendimentos, prontuários, exames,
+    prescrições, pagamentos e informações gerenciais.
+
+  Tech stack:
+    Python, Reflex e PostgreSQL.
+
+  Architecture:
+    Reflex é a tecnologia full-stack obrigatória da aplicação web.
+    O pacote Python da aplicação é vitta_one.
+    O diretório openspec/ é reservado exclusivamente aos artefatos do OpenSpec.
+    Regras de negócio, autorização e acesso a dados devem ser aplicados no lado
+    servidor da aplicação, nunca apenas por ocultação de componentes na interface.
+
+  Access control:
+    O sistema utiliza roles simples: Administrador, Recepcionista, Médico e
+    Financeiro. Cada role possui um painel dedicado.
+
+  Integrations:
+    Cloudinary para anexos de exames.
+    ZapSign em sandbox para assinatura de prescrições.
+    Asaas em sandbox para operações financeiras.
+    Não existe integração com laboratórios externos de exames.
+
+  Development:
+    Desenvolver incrementalmente com OpenSpec.
+    Mudanças relevantes devem ser especificadas e revisadas antes da implementação.
+    Preferir recursos nativos do Reflex e evitar dependências desnecessárias.
+
+  Language:
+    Documentação do projeto e artefatos OpenSpec em português brasileiro.
+
+rules:
+  proposal:
+    - Descrever claramente problema, objetivo, escopo e itens fora do escopo.
+    - Não transformar pontos ainda em aberto em decisões implícitas.
+  specs:
+    - Escrever requisitos verificáveis e cenários para comportamentos relevantes.
+    - Cobrir autorização, validação e estados de erro quando aplicáveis.
+  design:
+    - Respeitar Reflex como framework full-stack e PostgreSQL como banco de dados.
+    - Explicitar riscos de segurança e falhas de integrações externas quando relevantes.
+  tasks:
+    - Dividir a implementação em tarefas pequenas e verificáveis.
+    - Incluir validações e testes relevantes na própria change.
+
+operations:
+  apply:
+    guidance:
+      - Executar as verificações e testes relevantes antes de concluir tarefas.
+      - Não expor credenciais, tokens, dados clínicos ou outros dados sensíveis.
+  archive:
+    guidance:
+      - Confirmar que a implementação corresponde às specs aprovadas.
+      - Registrar pendências reais em vez de tratá-las como concluídas.
