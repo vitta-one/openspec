@@ -9,6 +9,7 @@ from vitta_one.auth.roles import Role
 from vitta_one.auth.security import (
     hash_password,
     hash_session_token,
+    is_valid_email_identifier,
     new_session_token,
     normalize_email,
     verify_password,
@@ -42,11 +43,18 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _as_utc(value: datetime) -> datetime:
+    """Normalize database timestamps to aware UTC for deterministic comparisons."""
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
 def find_user_by_email(db: Session, email: str) -> User | None:
     """Find a user by the normalized login e-mail."""
-    normalized = normalize_email(email)
-    if not normalized:
+    if not is_valid_email_identifier(email):
         return None
+    normalized = normalize_email(email)
     return db.exec(select(User).where(User.email == normalized)).first()
 
 
@@ -75,7 +83,7 @@ def create_session(
     if ttl.total_seconds() <= 0:
         raise ValueError("A duração da sessão deve ser positiva.")
 
-    issued_at = now or utc_now()
+    issued_at = _as_utc(now or utc_now())
     token = new_session_token()
     db.add(
         AuthSession(
@@ -105,8 +113,8 @@ def resolve_session(
     if session_row is None or session_row.revoked_at is not None:
         return None
 
-    current_time = now or utc_now()
-    if session_row.expires_at <= current_time:
+    current_time = _as_utc(now or utc_now())
+    if _as_utc(session_row.expires_at) <= current_time:
         return None
 
     user = db.get(User, session_row.user_id)
@@ -142,7 +150,7 @@ def revoke_session(
     if session_row.revoked_at is not None:
         return True
 
-    session_row.revoked_at = now or utc_now()
+    session_row.revoked_at = _as_utc(now or utc_now())
     db.add(session_row)
     db.commit()
     return True
@@ -151,8 +159,8 @@ def revoke_session(
 def bootstrap_first_admin(db: Session, *, email: str, password: str) -> BootstrapResult:
     """Create the first Administrator exactly once without overwriting identities."""
     normalized_email = normalize_email(email)
-    if not normalized_email:
-        raise ValueError("O e-mail do administrador é obrigatório.")
+    if not is_valid_email_identifier(normalized_email):
+        raise ValueError("O e-mail do administrador é inválido.")
     if not password:
         raise ValueError("A senha do administrador é obrigatória.")
 

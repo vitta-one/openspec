@@ -4,6 +4,7 @@ from vitta_one.auth.roles import Role
 from vitta_one.auth.security import (
     hash_password,
     hash_session_token,
+    is_valid_email_identifier,
     new_session_token,
     normalize_email,
     verify_password,
@@ -12,6 +13,16 @@ from vitta_one.auth.security import (
 
 def test_normalize_email_trims_and_casefolds() -> None:
     assert normalize_email("  Usuario@EXEMPLO.COM  ") == "usuario@exemplo.com"
+
+
+def test_email_identifier_requires_basic_valid_shape() -> None:
+    assert is_valid_email_identifier("usuario@exemplo.com") is True
+    assert is_valid_email_identifier(" usuario@EXEMPLO.COM ") is True
+    assert is_valid_email_identifier("sem-arroba") is False
+    assert is_valid_email_identifier("@exemplo.com") is False
+    assert is_valid_email_identifier("usuario@") is False
+    assert is_valid_email_identifier("usuario @exemplo.com") is False
+    assert is_valid_email_identifier("a@b@c.com") is False
 
 
 def test_password_hash_round_trip_and_wrong_password() -> None:

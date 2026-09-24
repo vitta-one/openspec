@@ -15,24 +15,24 @@
 
 ## 3. Autenticação no Reflex
 
-- [ ] 3.1 Criar State de autenticação com login, restauração de sessão e logout seguindo os mecanismos atuais do Reflex.
-- [ ] 3.2 Criar página/formulário acessível de login com validação de campos, estados de envio e mensagem genérica para credenciais inválidas.
-- [ ] 3.3 Configurar armazenamento cliente apenas para o identificador de sessão necessário, usando as opções de segurança disponíveis e sem expor dados sensíveis.
-- [ ] 3.4 Garantir que páginas e dados protegidos não sejam renderizados/carregados para sessão ausente, inválida ou expirada.
+- [x] 3.1 Criar State de autenticação com login, restauração de sessão e logout seguindo os mecanisms atuais do Reflex.
+- [x] 3.2 Criar página/formulário acessível de login com validação de campos, estados de envio e mensagem genérica para credenciais inválidas.
+- [x] 3.3 Configurar armazenamento cliente apenas para o identificador de sessão necessário, usando as opções de segurança disponíveis e sem expor dados sensíveis.
+- [x] 3.4 Garantir que páginas e dados protegidos não sejam renderizados/carregados para sessão ausente, inválida ou expirada.
 
 ## 4. RBAC e shells protegidos
 
 - [x] 4.1 Definir as quatro roles do domínio como conjunto fechado: Administrador, Recepcionista, Médico e Financeiro.
-- [ ] 4.2 Criar abstração reutilizável de autorização server-side para sessão autenticada e role requerida.
-- [ ] 4.3 Criar shells mínimos e responsivos dos quatro painéis, sem implementar módulos de negócio antecipadamente.
-- [ ] 4.4 Redirecionar após login para o shell correspondente à role e rejeitar acesso direto a shell incompatível.
-- [ ] 4.5 Validar autorização também em event handlers/loaders protegidos, independentemente do estado visual da interface.
+- [x] 4.2 Criar abstração reutilizável de autorização server-side para sessão autenticada e role requerida.
+- [x] 4.3 Criar shells mínimos e responsivos dos quatro painéis, sem implementar módulos de negócio antecipadamente.
+- [x] 4.4 Redirecionar após login para o shell correspondente à role e rejeitar acesso direto a shell incompatível.
+- [x] 4.5 Validar autorização também em event handlers/loaders protegidos, independentemente do estado visual da interface.
 
 ## 5. Verificação e qualidade
 
-- [ ] 5.1 Adicionar testes para login válido, e-mail inexistente, senha inválida, logout, sessão ausente, sessão expirada e sessão revogada.
-- [ ] 5.2 Adicionar testes para cada role e para tentativa de acesso direto a painel/operação sem permissão.
-- [ ] 5.3 Testar bootstrap repetido e garantir que não cria usuário duplicado nem sobrescreve credencial existente.
-- [ ] 5.4 Verificar que senha em texto puro, hash de senha e identificadores sensíveis não aparecem em logs ou respostas de erro.
+- [x] 5.1 Adicionar testes para login válido, e-mail inexistente, senha inválida, logout, sessão ausente, sessão expirada e sessão revogada.
+- [x] 5.2 Adicionar testes para cada role e para tentativa de acesso direto a painel/operação sem permissão.
+- [x] 5.3 Testar bootstrap repetido e garantir que não cria usuário duplicado nem sobrescreve credencial existente.
+- [x] 5.4 Verificar que senha em texto puro, hash de senha e identificadores senséveis não aparecem em logs ou respostas de erro.
 - [ ] 5.5 Validar teclado, foco visível, labels, mensagens de erro e contraste da tela de login, além dos estados loading/erro/sucesso relevantes.
 - [ ] 5.6 Executar a suíte de testes aplicável e `reflex compile --dry`, corrigindo regressões antes de marcar a change como pronta para archive.

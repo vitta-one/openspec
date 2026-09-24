@@ -15,6 +15,17 @@ def normalize_email(email: str) -> str:
     return email.strip().casefold()
 
 
+def is_valid_email_identifier(email: str) -> bool:
+    """Validate the minimal server-side shape accepted for a login e-mail identifier."""
+    normalized = normalize_email(email)
+    if not normalized or len(normalized) > 320 or any(char.isspace() for char in normalized):
+        return False
+    if normalized.count("@") != 1:
+        return False
+    local_part, domain = normalized.split("@", 1)
+    return bool(local_part and domain)
+
+
 def hash_password(password: str) -> str:
     """Hash a password with Argon2id using argon2-cffi safe defaults."""
     if not password:

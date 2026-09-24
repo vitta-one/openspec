@@ -20,6 +20,7 @@ O repositório está na fase de fundação. A change `add-local-authentication-a
 ```text
 .
 ├── AGENTS.md
+├── DESIGN.md
 ├── docs/
 │   ├── project-overview.md
 │   └── domain-model.md
@@ -31,10 +32,12 @@ O repositório está na fase de fundação. A change `add-local-authentication-a
 ├── vitta_one/
 │   ├── auth/
 │   ├── models/
+│   ├── ui/
 │   ├── __init__.py
 │   └── vitta_one.py
 ├── tests/
 ├── assets/
+│   └── styles.css
 ├── rxconfig.py
 └── requirements.txt
 ```
@@ -56,6 +59,18 @@ A aplicação exige PostgreSQL. Forneça a conexão somente por variável de amb
 export DATABASE_URL='postgresql+psycopg://<usuario>:<senha>@<host>:5432/<banco>'
 ```
 
+A duração da sessão é obrigatoriamente explícita e configurada em segundos. O cookie usa `Secure` por padrão; desabilite essa opção apenas em desenvolvimento local sem HTTPS.
+
+```bash
+export VITTA_ONE_SESSION_TTL_SECONDS='<segundos-da-sessao>'
+export VITTA_ONE_COOKIE_SECURE='true'         # produção/HTTPS
+# export VITTA_ONE_COOKIE_SECURE='false'      # somente desenvolvimento HTTP local
+```
+
+> A duração da sessão não possui valor padrão no projeto. A política definitiva deve ser decidida explicitamente antes de uso real.
+
+A sessão do navegador contém somente um identificador opaco e imprevisível. O banco persiste apenas o hash desse token; identidade, role, expiração e revogação são revalidadas no servidor. Nesta versão do Reflex, a implementação usa as opções disponíveis em `rx.Cookie`: `Path=/`, `Max-Age`, `Secure` e `SameSite=Strict`.
+
 A migração da change de autenticação ainda deve ser gerada e revisada pelo fluxo do Reflex antes de aplicar o schema em um banco. Depois disso, o primeiro Administrador poderá ser criado manualmente sem credencial padrão versionada:
 
 ```bash
@@ -66,11 +81,23 @@ python -m vitta_one.auth.bootstrap
 unset VITTA_ONE_BOOTSTRAP_ADMIN_PASSWORD
 ```
 
-Validação rápida do Reflex:
+Validações principais:
 
 ```bash
+pytest -q
 reflex compile --dry
 ```
+
+## Rotas da fundação de acesso
+
+- `/login`: autenticação local, sem cadastro público;
+- `/admin`: shell protegido do Administrador;
+- `/recepcao`: shell protegido da Recepcionista;
+- `/medico`: shell protegido do Médico;
+- `/financeiro`: shell protegido do Financeiro;
+- `/acesso-negado`: estado autenticado para tentativa de acesso a uma role incompatível.
+
+Esses painéis ainda não contêm módulos de negócio. A autorização é revalidada no backend durante o carregamento das rotas e não depende apenas de componentes escondidos no frontend.
 
 ## Fluxo de desenvolvimento
 

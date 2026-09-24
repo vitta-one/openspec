@@ -15,7 +15,11 @@ def main() -> int:
     email = os.getenv(_EMAIL_ENV, "").strip()
     password = os.getenv(_PASSWORD_ENV, "")
 
-    missing = [name for name, value in ((_EMAIL_ENV, email), (_PASSWORD_ENV, password)) if not value]
+    missing = [
+        name
+        for name, value in ((_EMAIL_ENV, email), (_PASSWORD_ENV, password))
+        if not value
+    ]
     if missing:
         print(f"Defina as variáveis obrigatórias: {', '.join(missing)}.")
         return 2
@@ -23,14 +27,14 @@ def main() -> int:
     try:
         with rx.session() as db:
             result = bootstrap_first_admin(db, email=email, password=password)
-    except BootstrapConflictError as exc:
+    except (BootstrapConflictError, ValueError) as exc:
         print(f"Bootstrap recusado: {exc}")
         return 3
 
     if result.created:
-        print(f"Administrador inicial criado com id {result.user_id}.")
+        print("Administrador inicial criado.")
     else:
-        print(f"Bootstrap já concluído; administrador existente com id {result.user_id}.")
+        print("Bootstrap já concluído; administrador existente preservado.")
     return 0
 
 
