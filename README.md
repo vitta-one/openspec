@@ -4,7 +4,7 @@ Sistema acadêmico de gerenciamento de clínica médica desenvolvido com **Pytho
 
 ## Estado atual
 
-O repositório está na fase de fundação: ambiente Reflex, documentação global do domínio e configuração inicial do OpenSpec. Funcionalidades do produto ainda não devem ser implementadas fora de uma change revisada.
+O repositório está na fase de fundação. A change `add-local-authentication-and-rbac` está em implementação para estabelecer autenticação local, sessão revogável e as quatro roles do domínio antes dos módulos clínicos e financeiros.
 
 ## Stack definida
 
@@ -29,8 +29,11 @@ O repositório está na fase de fundação: ambiente Reflex, documentação glob
 │   └── changes/
 │       └── archive/
 ├── vitta_one/
+│   ├── auth/
+│   ├── models/
 │   ├── __init__.py
 │   └── vitta_one.py
+├── tests/
 ├── assets/
 ├── rxconfig.py
 └── requirements.txt
@@ -44,7 +47,23 @@ O repositório está na fase de fundação: ambiente Reflex, documentação glob
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
+```
+
+A aplicação exige PostgreSQL. Forneça a conexão somente por variável de ambiente; o projeto normaliza URLs `postgresql://` para o driver Psycopg 3 configurado nas dependências.
+
+```bash
+export DATABASE_URL='postgresql+psycopg://<usuario>:<senha>@<host>:5432/<banco>'
+```
+
+A migração da change de autenticação ainda deve ser gerada e revisada pelo fluxo do Reflex antes de aplicar o schema em um banco. Depois disso, o primeiro Administrador poderá ser criado manualmente sem credencial padrão versionada:
+
+```bash
+export VITTA_ONE_BOOTSTRAP_ADMIN_EMAIL='admin@exemplo.com'
+read -s VITTA_ONE_BOOTSTRAP_ADMIN_PASSWORD
+export VITTA_ONE_BOOTSTRAP_ADMIN_PASSWORD
+python -m vitta_one.auth.bootstrap
+unset VITTA_ONE_BOOTSTRAP_ADMIN_PASSWORD
 ```
 
 Validação rápida do Reflex:

@@ -3,6 +3,11 @@
 import reflex as rx
 
 from rxconfig import config
+from vitta_one.models import AuthSession, User
+
+# Keep persistent models imported from the application module so Reflex/Alembic
+# can discover their metadata when generating migrations.
+_AUTH_MODELS = (User, AuthSession)
 
 
 class State(rx.State):

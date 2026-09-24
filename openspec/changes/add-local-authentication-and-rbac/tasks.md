@@ -1,17 +1,17 @@
 ## 1. Banco e dependências de autenticação
 
-- [ ] 1.1 Habilitar as dependências de banco suportadas pelo Reflex e configurar PostgreSQL por variável de ambiente, sem credenciais versionadas.
-- [ ] 1.2 Selecionar e fixar uma biblioteca segura e compatível com Python 3.12 para password hashing, preferencialmente Argon2id.
-- [ ] 1.3 Criar os modelos persistentes mínimos de usuário e sessão sem antecipar campos dos módulos clínicos.
+- [x] 1.1 Habilitar as dependências de banco suportadas pelo Reflex e configurar PostgreSQL por variável de ambiente, sem credenciais versionadas.
+- [x] 1.2 Selecionar e fixar uma biblioteca segura e compatível com Python 3.12 para password hashing, preferencialmente Argon2id.
+- [x] 1.3 Criar os modelos persistentes mínimos de usuário e sessão sem antecipar campos dos módulos clínicos.
 - [ ] 1.4 Inicializar/ajustar Alembic pelo fluxo do Reflex, gerar a migração e revisar o script antes de aplicá-lo.
 
 ## 2. Serviço de identidade e sessão
 
-- [ ] 2.1 Implementar normalização e busca do e-mail de login com unicidade garantida no banco.
-- [ ] 2.2 Implementar criação/verificação segura do hash de senha sem registrar credenciais em logs.
-- [ ] 2.3 Implementar criação de sessão opaca, imprevisível, expirada/revogável e associada ao usuário no servidor.
-- [ ] 2.4 Implementar resolução do usuário autenticado a partir da sessão e invalidação no logout.
-- [ ] 2.5 Implementar mecanismo manual e idempotente de bootstrap do primeiro Administrador sem senha padrão hardcoded.
+- [x] 2.1 Implementar normalização e busca do e-mail de login com unicidade garantida no banco.
+- [x] 2.2 Implementar criação/verificação segura do hash de senha sem registrar credenciais em logs.
+- [x] 2.3 Implementar criação de sessão opaca, imprevisível, expirada/revogável e associada ao usuário no servidor.
+- [x] 2.4 Implementar resolução do usuário autenticado a partir da sessão e invalidação no logout.
+- [x] 2.5 Implementar mecanismo manual e idempotente de bootstrap do primeiro Administrador sem senha padrão hardcoded.
 
 ## 3. Autenticação no Reflex
 
@@ -22,7 +22,7 @@
 
 ## 4. RBAC e shells protegidos
 
-- [ ] 4.1 Definir as quatro roles do domínio como conjunto fechado: Administrador, Recepcionista, Médico e Financeiro.
+- [x] 4.1 Definir as quatro roles do domínio como conjunto fechado: Administrador, Recepcionista, Médico e Financeiro.
 - [ ] 4.2 Criar abstração reutilizável de autorização server-side para sessão autenticada e role requerida.
 - [ ] 4.3 Criar shells mínimos e responsivos dos quatro painéis, sem implementar módulos de negócio antecipadamente.
 - [ ] 4.4 Redirecionar após login para o shell correspondente à role e rejeitar acesso direto a shell incompatível.
