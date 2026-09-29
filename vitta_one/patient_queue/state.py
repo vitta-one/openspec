@@ -461,8 +461,9 @@ class DoctorQueueState(rx.State):
             token = await self._token()
             with rx.session() as db:
                 item = doctor_claim_next(db, token=token)
+                count = doctor_waiting_count(db, token=token)
             self._set_active(item)
-            self.waiting_count = max(0, self.waiting_count - 1)
+            self.waiting_count = count
             self.success_message = "Próximo paciente chamado para atendimento."
         except QueueEmptyError:
             self.error_message = "Não há pacientes aguardando neste momento."
