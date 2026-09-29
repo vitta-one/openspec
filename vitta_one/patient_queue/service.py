@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import re
 
-from sqlalchemy import case
+from sqlalchemy import case, func
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
@@ -218,6 +218,17 @@ def list_waiting_queue(db: Session) -> list[QueueItem]:
         .order_by(_priority_order(), QueueEntry.entered_at, QueueEntry.id)
     ).all()
     return [_to_item(entry, patient) for entry, patient in rows]
+
+
+def count_waiting_queue(db: Session) -> int:
+    """Count active waiting entries without loading sensitive queue payloads."""
+    return int(
+        db.exec(
+            select(func.count(QueueEntry.id)).where(
+                QueueEntry.status == QueueStatus.AGUARDANDO.value
+            )
+        ).one()
+    )
 
 
 def reassess_queue_entry(
