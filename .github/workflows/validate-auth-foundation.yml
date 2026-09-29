@@ -3,7 +3,7 @@ name: Validate auth foundation
 on:
   push:
     branches:
-      - feat/local-auth-rbac-foundation
+      - develop
   pull_request:
     branches:
       - develop
@@ -54,6 +54,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
+
+      - name: Validate OpenSpec specs
+        run: npx -y @fission-ai/openspec@1.13.0 validate --specs
 
       - name: Apply reviewed migration to disposable PostgreSQL
         run: reflex db migrate
