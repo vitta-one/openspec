@@ -1,0 +1,22 @@
+name: Validate patient reception queue plan
+
+on:
+  push:
+    branches:
+      - feat/patient-reception-queue
+
+permissions:
+  contents: read
+
+jobs:
+  validate-openspec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate proposed change
+        run: npx -y @fission-ai/openspec@1.13.0 validate add-patient-reception-queue --strict --no-interactive
+      - name: Show artifact status
+        run: npx -y @fission-ai/openspec@1.13.0 status --change add-patient-reception-queue --json
