@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - feat/local-auth-rbac-foundation
+  pull_request:
+    branches:
+      - develop
   workflow_dispatch:
 
 permissions:
@@ -52,25 +55,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
-      - name: Initialize and generate Reflex migration
-        run: |
-          reflex db init
-          echo "Generated migration files:"
-          find alembic -maxdepth 3 -type f -print
-
-      - name: Upload generated migration
-        uses: actions/upload-artifact@v4
-        with:
-          name: reflex-alembic-migration
-          path: |
-            alembic/
-            alembic.ini
-          if-no-files-found: error
-          retention-days: 1
+      - name: Apply reviewed migration to disposable PostgreSQL
+        run: reflex db migrate
 
       - name: Run test suite
         run: python -m pytest -q
 
       - name: Compile Reflex app
-        if: always()
         run: reflex compile --dry
