@@ -4,7 +4,18 @@ import reflex as rx
 
 from vitta_one.auth.roles import Role
 from vitta_one.auth.state import AuthState
-from vitta_one.ui.components import brand_mark, dashboard_shell, loading_surface, login_form
+from vitta_one.ui.components import brand_mark, dashboard_shell, loading_surface, login_form, protected_workspace
+from vitta_one.ui.queue_components import (
+    active_queue_panel,
+    doctor_active_panel,
+    doctor_waiting_summary,
+    enqueue_panel,
+    feedback_region,
+    patient_identity_panel,
+    reassess_panel,
+    withdraw_panel,
+)
+from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
 
 
 def root_page() -> rx.Component:
@@ -126,18 +137,76 @@ def admin_page() -> rx.Component:
 
 
 def reception_page() -> rx.Component:
-    return dashboard_shell(
+    return protected_workspace(
         Role.RECEPCIONISTA,
-        "Painel de recepção",
-        "O acesso da recepção está validado. Pacientes, agenda, agendamentos e estados de consulta serão implementados em changes próprias.",
+        rx.box(
+            rx.heading("Recepção e fila de atendimento", size="8", letter_spacing="-0.03em"),
+            rx.text(
+                "Cadastre ou localize o paciente, registre a prioridade recebida e acompanhe a fila ativa.",
+                color="var(--vitta-text-muted)",
+                max_width="68ch",
+                line_height="1.65",
+                margin_top="0.45rem",
+            ),
+            width="100%",
+        ),
+        feedback_region(
+            ReceptionQueueState.error_message,
+            ReceptionQueueState.success_message,
+        ),
+        rx.flex(
+            patient_identity_panel(),
+            enqueue_panel(),
+            direction=rx.breakpoints(initial="column", xl="row"),
+            gap="1rem",
+            align="start",
+            width="100%",
+        ),
+        reassess_panel(),
+        withdraw_panel(),
+        active_queue_panel(),
     )
 
 
 def doctor_page() -> rx.Component:
-    return dashboard_shell(
+    return protected_workspace(
         Role.MEDICO,
-        "Painel médico",
-        "O acesso médico está validado. Atendimento, histórico clínico, diagnósticos, prescrições e exames serão implementados em changes próprias.",
+        rx.box(
+            rx.heading("Fila médica", size="8", letter_spacing="-0.03em"),
+            rx.text(
+                "Chame o próximo paciente elegível e finalize somente o atendimento associado à sua sessão.",
+                color="var(--vitta-text-muted)",
+                max_width="68ch",
+                line_height="1.65",
+                margin_top="0.45rem",
+            ),
+            width="100%",
+        ),
+        feedback_region(
+            DoctorQueueState.error_message,
+            DoctorQueueState.success_message,
+        ),
+        doctor_waiting_summary(),
+        rx.cond(
+            DoctorQueueState.is_loading,
+            rx.center(
+                rx.vstack(
+                    rx.spinner(size="3"),
+                    rx.text(
+                        "Carregando atendimento…",
+                        color="var(--vitta-text-muted)",
+                        size="2",
+                    ),
+                    spacing="2",
+                    align="center",
+                ),
+                min_height="13rem",
+                width="100%",
+                role="status",
+                aria_live="polite",
+            ),
+            doctor_active_panel(),
+        ),
     )
 
 
