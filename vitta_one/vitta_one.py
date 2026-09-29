@@ -5,6 +5,7 @@ import reflex as rx
 from vitta_one.auth.roles import Role
 from vitta_one.auth.state import AuthState
 from vitta_one.models import AuthSession, Patient, QueueEntry, User
+from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
 from vitta_one.ui.pages import (
     admin_page,
     doctor_page,
@@ -51,13 +52,13 @@ app.add_page(
     reception_page,
     route=Role.RECEPCIONISTA.dashboard_path,
     title="Painel de recepção | Vitta-One",
-    on_load=AuthState.load_protected,
+    on_load=[AuthState.load_protected, ReceptionQueueState.load],
 )
 app.add_page(
     doctor_page,
     route=Role.MEDICO.dashboard_path,
     title="Painel médico | Vitta-One",
-    on_load=AuthState.load_protected,
+    on_load=[AuthState.load_protected, DoctorQueueState.load],
 )
 app.add_page(
     finance_page,
