@@ -4,6 +4,7 @@ from typing import TypedDict
 
 import reflex as rx
 
+from vitta_one.models.patient_queue import Patient
 from vitta_one.auth.authorization import AuthenticationRequiredError, RoleForbiddenError
 from vitta_one.auth.state import AuthState
 from vitta_one.patient_queue.application import (
@@ -167,10 +168,7 @@ class ReceptionQueueState(rx.State):
                 try:
                     token = await self._token()
                     with rx.session() as db:
-                        patient = db.get(__import__(
-                            "vitta_one.models.patient_queue",
-                            fromlist=["Patient"],
-                        ).Patient, exc.patient_id)
+                        patient = db.get(Patient, exc.patient_id)
                         if patient is not None:
                             reception_find_patient(db, token=token, cpf=patient.cpf)
                             self.selected_patient_id = patient.id or 0
