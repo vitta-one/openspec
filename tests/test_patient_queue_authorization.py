@@ -1,12 +1,12 @@
 """Authorization tests for patient queue application operations."""
 
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
-from vitta_one.auth.authorization import RoleForbiddenError
+from vitta_one.auth.authorization import AuthenticationRequiredError, RoleForbiddenError
 from vitta_one.auth.roles import Role
 from vitta_one.auth.security import hash_password
 from vitta_one.auth.service import create_session
@@ -93,3 +93,34 @@ def test_doctor_operations_reject_reception_role_before_mutation(db: Session) ->
         doctor_claim_next(db, token=reception_token)
 
     assert len(reception_list_queue(db, token=reception_token)) == 1
+
+
+def test_missing_and_expired_sessions_cannot_read_or_mutate_queue(db: Session) -> None:
+    with pytest.raises(AuthenticationRequiredError):
+        reception_list_queue(db, token="")
+
+    expired_user = User(
+        email="expired-reception@example.invalid",
+        password_hash=hash_password("senha-teste"),
+        role=Role.RECEPCIONISTA.value,
+    )
+    db.add(expired_user)
+    db.commit()
+    db.refresh(expired_user)
+    expired_token = create_session(
+        db,
+        user_id=expired_user.id,
+        ttl=timedelta(minutes=1),
+        now=datetime(2020, 1, 1, tzinfo=timezone.utc),
+    )
+
+    with pytest.raises(AuthenticationRequiredError):
+        reception_create_patient(
+            db,
+            token=expired_token,
+            name="Não deve persistir",
+            cpf="16899535009",
+        )
+
+    with pytest.raises(AuthenticationRequiredError):
+        reception_list_queue(db, token=expired_token)
