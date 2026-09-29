@@ -4,7 +4,6 @@ from typing import TypedDict
 
 import reflex as rx
 
-from vitta_one.models.patient_queue import Patient
 from vitta_one.auth.authorization import AuthenticationRequiredError, RoleForbiddenError
 from vitta_one.auth.state import AuthState
 from vitta_one.patient_queue.application import (
@@ -104,12 +103,22 @@ class ReceptionQueueState(rx.State):
         self.error_message = ""
         self.success_message = ""
 
+    def _reset_reassess(self) -> None:
+        self.reassess_entry_id = 0
+        self.reassess_patient_name = ""
+        self.reassess_symptoms = ""
+        self.reassess_priority = "VERDE"
+
+    def _reset_withdraw(self) -> None:
+        self.withdraw_entry_id = 0
+        self.withdraw_patient_name = ""
+
     def _clear_sensitive_view(self) -> None:
         self.queue_rows = []
         self.selected_patient_id = 0
         self.selected_patient_name = ""
-        self.cancel_reassess()
-        self.cancel_withdraw()
+        self._reset_reassess()
+        self._reset_withdraw()
 
     def _load_queue_with_token(self, token: str) -> None:
         with rx.session() as db:
@@ -164,21 +173,10 @@ class ReceptionQueueState(rx.State):
             self.selected_patient_id = patient.id
             self.selected_patient_name = patient.name
             self.success_message = "Paciente cadastrado e selecionado para a fila."
-        except PatientAlreadyExistsError as exc:
+        except PatientAlreadyExistsError:
             self.error_message = (
                 "Este CPF já está cadastrado. Localize o paciente existente para continuar."
             )
-            if exc.patient_id:
-                try:
-                    token = await self._token()
-                    with rx.session() as db:
-                        patient = db.get(Patient, exc.patient_id)
-                        if patient is not None:
-                            reception_find_patient(db, token=token, cpf=patient.cpf)
-                            self.selected_patient_id = patient.id or 0
-                            self.selected_patient_name = patient.name
-                except Exception:
-                    pass
         except PatientValidationError as exc:
             self.error_message = str(exc)
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
@@ -273,7 +271,7 @@ class ReceptionQueueState(rx.State):
         self, entry_id: int, patient_name: str, symptoms: str, priority: str
     ) -> None:
         self._clear_feedback()
-        self.cancel_withdraw()
+        self._reset_withdraw()
         self.reassess_entry_id = entry_id
         self.reassess_patient_name = patient_name
         self.reassess_symptoms = symptoms
@@ -281,10 +279,7 @@ class ReceptionQueueState(rx.State):
 
     @rx.event
     def cancel_reassess(self) -> None:
-        self.reassess_entry_id = 0
-        self.reassess_patient_name = ""
-        self.reassess_symptoms = ""
-        self.reassess_priority = "VERDE"
+        self._reset_reassess()
 
     @rx.event
     async def reassess(self, form_data: ReassessFormData):
@@ -305,7 +300,7 @@ class ReceptionQueueState(rx.State):
                     priority=str(form_data.get("priority", "")),
                 )
             self._load_queue_with_token(token)
-            self.cancel_reassess()
+            self._reset_reassess()
             self.success_message = "Reavaliação registrada e fila reordenada."
         except (QueueValidationError, QueueTransitionError) as exc:
             self.error_message = str(exc)
@@ -323,14 +318,13 @@ class ReceptionQueueState(rx.State):
     @rx.event
     def begin_withdraw(self, entry_id: int, patient_name: str) -> None:
         self._clear_feedback()
-        self.cancel_reassess()
+        self._reset_reassess()
         self.withdraw_entry_id = entry_id
         self.withdraw_patient_name = patient_name
 
     @rx.event
     def cancel_withdraw(self) -> None:
-        self.withdraw_entry_id = 0
-        self.withdraw_patient_name = ""
+        self._reset_withdraw()
 
     @rx.event
     async def withdraw(self, form_data: WithdrawFormData):
@@ -350,7 +344,7 @@ class ReceptionQueueState(rx.State):
                     reason=str(form_data.get("reason", "")),
                 )
             self._load_queue_with_token(token)
-            self.cancel_withdraw()
+            self._reset_withdraw()
             self.success_message = "Paciente retirado da fila; o histórico foi preservado."
         except (QueueValidationError, QueueTransitionError) as exc:
             self.error_message = str(exc)
