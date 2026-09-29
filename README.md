@@ -4,7 +4,7 @@ Sistema acadêmico de gerenciamento de clínica médica desenvolvido com **Pytho
 
 ## Estado atual
 
-O repositório está na fase de fundação. A change `add-local-authentication-and-rbac` está em implementação para estabelecer autenticação local, sessão revogável e as quatro roles do domínio antes dos módulos clínicos e financeiros.
+O repositório está na fase de fundação. A implementação da change `add-local-authentication-and-rbac` está concluída na branch do PR, com autenticação local, sessão revogável, RBAC e migração inicial validados antes dos módulos clínicos e financeiros.
 
 ## Stack definida
 
@@ -21,6 +21,8 @@ O repositório está na fase de fundação. A change `add-local-authentication-a
 .
 ├── AGENTS.md
 ├── DESIGN.md
+├── alembic/
+├── alembic.ini
 ├── docs/
 │   ├── project-overview.md
 │   └── domain-model.md
@@ -71,7 +73,13 @@ export VITTA_ONE_COOKIE_SECURE='true'         # produção/HTTPS
 
 A sessão do navegador contém somente um identificador opaco e imprevisível. O banco persiste apenas o hash desse token; identidade, role, expiração e revogação são revalidadas no servidor. Nesta versão do Reflex, a implementação usa as opções disponíveis em `rx.Cookie`: `Path=/`, `Max-Age`, `Secure` e `SameSite=Strict`.
 
-A migração da change de autenticação ainda deve ser gerada e revisada pelo fluxo do Reflex antes de aplicar o schema em um banco. Depois disso, o primeiro Administrador poderá ser criado manualmente sem credencial padrão versionada:
+A migração inicial de autenticação está versionada em `alembic/versions/` e foi revisada e validada contra PostgreSQL 16 descartável. Com `DATABASE_URL` configurada, aplique as migrações antes de criar o primeiro Administrador:
+
+```bash
+reflex db migrate
+```
+
+O primeiro Administrador pode então ser criado manualmente sem credencial padrão versionada:
 
 ```bash
 export VITTA_ONE_BOOTSTRAP_ADMIN_EMAIL='admin@exemplo.com'
@@ -84,7 +92,7 @@ unset VITTA_ONE_BOOTSTRAP_ADMIN_PASSWORD
 Validações principais:
 
 ```bash
-pytest -q
+python -m pytest -q
 reflex compile --dry
 ```
 
