@@ -687,21 +687,36 @@ def doctor_waiting_summary() -> rx.Component:
                     max_width="58ch",
                 ),
             ),
-            rx.box(
-                rx.text(
-                    DoctorQueueState.waiting_count,
-                    font_size="2rem",
-                    font_weight="800",
-                    line_height="1",
-                    color="var(--vitta-primary)",
+            rx.vstack(
+                rx.box(
+                    rx.text(
+                        DoctorQueueState.waiting_count,
+                        font_size="2rem",
+                        font_weight="800",
+                        line_height="1",
+                        color="var(--vitta-primary)",
+                    ),
+                    rx.text(
+                        "aguardando",
+                        size="1",
+                        color="var(--vitta-text-muted)",
+                        margin_top="0.25rem",
+                    ),
+                    text_align=rx.breakpoints(initial="left", sm="right"),
                 ),
-                rx.text(
-                    "aguardando",
-                    size="1",
-                    color="var(--vitta-text-muted)",
-                    margin_top="0.25rem",
+                rx.button(
+                    "Atualizar fila",
+                    type="button",
+                    size="2",
+                    variant="ghost",
+                    color_scheme="teal",
+                    on_click=DoctorQueueState.load,
+                    disabled=DoctorQueueState.is_loading
+                    | DoctorQueueState.is_submitting,
+                    loading=DoctorQueueState.is_loading,
                 ),
-                text_align=rx.breakpoints(initial="left", sm="right"),
+                spacing="2",
+                align=rx.breakpoints(initial="start", sm="end"),
             ),
             direction=rx.breakpoints(initial="column", sm="row"),
             justify="between",
@@ -795,8 +810,7 @@ def doctor_active_panel() -> rx.Component:
                         high_contrast=True,
                         min_height="3rem",
                         on_click=DoctorQueueState.claim_next,
-                        disabled=DoctorQueueState.is_submitting
-                        | (DoctorQueueState.waiting_count == 0),
+                        disabled=DoctorQueueState.is_submitting,
                         loading=DoctorQueueState.is_submitting,
                     ),
                     spacing="4",
