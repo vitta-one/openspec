@@ -4,7 +4,7 @@ Sistema acadêmico de gerenciamento de clínica médica desenvolvido com **Pytho
 
 ## Estado atual
 
-O repositório está na fase de fundação. A implementação da change `add-local-authentication-and-rbac` está concluída na branch do PR, com autenticação local, sessão revogável, RBAC e migração inicial validados antes dos módulos clínicos e financeiros.
+A fundação de acesso está integrada: autenticação local, sessão revogável, RBAC, migração inicial e shells protegidos foram validados. A capability consolidada está em `openspec/specs/access-control/`; a próxima evolução funcional será planejada em uma change própria.
 
 ## Stack definida
 
