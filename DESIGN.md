@@ -1,7 +1,7 @@
 ---
 version: alpha
 name: "Vitta-One"
-description: "Interface clínica interna, calma e operacional, com foco em identidade, autorização e legibilidade."
+description: "Interface clínica interna, calma e operacional, com foco em identidade, autorização, fila de atendimento e legibilidade."
 colors:
   canvas: "#F4F8F7"
   surface: "#FFFFFF"
@@ -16,6 +16,9 @@ colors:
   danger: "#A43A3A"
   danger-soft: "#FFF0F0"
   danger-border: "#E7B8B8"
+  success: "#236449"
+  success-soft: "#E7F4ED"
+  success-border: "#ADD6C2"
   focus: "#0E7C72"
   scroll-thumb: "#8EA6A2"
   scroll-track: "#EDF3F2"
@@ -33,6 +36,8 @@ components:
   input: {}
   panel: {}
   alert: {}
+  queue-row: {}
+  priority-badge: {}
   scrollbar: {}
 ---
 
@@ -58,7 +63,7 @@ A interface se inspira em uma estação de trabalho clínica bem organizada: sup
 
 ## Colors
 
-O canvas usa `canvas`, com painéis `surface` e áreas secundárias `surface-muted`. `primary` identifica ação, acesso autorizado e foco institucional. `danger` é reservado a erros. Texto normal usa `text`; `text-muted` é permitido para informação secundária, mantendo contraste WCAG AA sobre as superfícies atuais. O foco de teclado usa `focus` de forma explícita e não depende apenas de mudança de cor.
+O canvas usa `canvas`, com painéis `surface` e áreas secundárias `surface-muted`. `primary` identifica ação, acesso autorizado e foco institucional. `danger` é reservado a erros e ações de retirada; `success` comunica confirmações concluídas. Texto normal usa `text`; `text-muted` é permitido para informação secundária, mantendo contraste WCAG AA sobre as superfícies atuais. O foco de teclado usa `focus` de forma explícita e não depende apenas de mudança de cor. Prioridades da fila podem usar vermelho, amarelo e verde como reforço semântico, mas sempre acompanhadas pelo rótulo textual correspondente.
 
 ## Typography
 
@@ -66,7 +71,7 @@ A fonte é a pilha do sistema para evitar dependência externa e reduzir desloca
 
 ## Layout
 
-O login adota dois painéis apenas em telas médias ou maiores; no mobile eles empilham verticalmente sem perder a ordem do formulário. Shells protegidos usam largura máxima de `72rem`, padding horizontal de `1.25rem` e fluxo natural da página. Não há sidebar nem grade de módulos nesta change porque esses comportamentos ainda não foram especificados.
+O login adota dois painéis apenas em telas médias ou maiores; no mobile eles empilham verticalmente sem perder a ordem do formulário. Áreas protegidas usam largura máxima de `72rem`, padding horizontal de `1.25rem` e fluxo natural da página. Nos fluxos de Recepção, identidade do paciente e entrada na fila podem ocupar duas colunas apenas quando houver largura suficiente; em telas estreitas voltam para uma coluna mantendo a sequência operacional. A fila permanece uma lista vertical, porque prioridade, relato e ações precisam continuar legíveis sem rolagem horizontal. Não há sidebar nesta fase.
 
 ## Elevation & Depth
 
@@ -88,11 +93,11 @@ A ação primária usa teal sólido; ações secundárias usam outline/ghost. Bo
 
 ### Navigation and data display
 
-Nesta change não existe navegação de módulos nem dados clínicos. Os quatro destinos autenticados são shells mínimos. A rota incompatível apresenta estado 403 próprio e retorno ao painel autorizado.
+Os destinos autenticados continuam separados por role. Administrador e Financeiro permanecem shells; Recepção e Médico passam a hospedar a capability de fila sem criar navegação global nova. A fila ativa é exibida como lista vertical ordenada pelo servidor. Cada item mostra nome, horário de entrada, prioridade textual e relato; ações são botões explícitos. A rota incompatível mantém estado 403 próprio e retorno ao painel autorizado.
 
 ### Forms and overlays
 
-Campos possuem label explícita, sem placeholder como substituto de rótulo. E-mail usa semântica `email`/`username`; senha usa `current-password` e alternância acessível de visibilidade. Falha de credenciais aparece em alert inline genérico. Não existe cadastro público.
+Campos possuem label explícita, sem placeholder como substituto de rótulo. E-mail usa semântica `email`/`username`; senha usa `current-password` e alternância acessível de visibilidade. CPF e relato da fila recebem validação no servidor mesmo quando o navegador já aplica restrições básicas. Prioridade usa Select acessível do próprio Reflex/Radix e nunca é inferida pelo sistema. Reavaliação e retirada acontecem inline no fluxo para preservar contexto; retirada exige motivo e confirmação explícita, mas não usa modal porque não apaga o histórico. Falhas aparecem em alert inline seguro e confirmações em região `status`. Não existe cadastro público.
 
 ### Iconography
 
@@ -104,11 +109,13 @@ Apenas transições curtas de foco/hover. Nenhuma animação ambiente. Em `prefe
 
 ### Content and data visualization
 
-A voz é objetiva e operacional. Não exibir métricas, gráficos ou dados de negócio simulados. Cada shell deve explicar que as funcionalidades correspondentes serão implementadas em changes próprias.
+A voz é objetiva e operacional. Não exibir métricas ou gráficos simulados. O painel Médico pode mostrar apenas a contagem real de pacientes aguardando e o atendimento ativo da própria identidade. Prioridade é apresentada como dado recebido pela operação, nunca como diagnóstico, recomendação ou cálculo do Vitta-One. Estados vazios devem dizer claramente que não há pacientes aplicáveis sem preencher a interface com conteúdo fictício.
 
 ## Do's and Don'ts
 
 - **Do:** usar o teal como sinal consistente de ação, foco e autorização.
 - **Do:** manter autorização real no backend e tratar ocultação visual apenas como UX.
 - **Don't:** antecipar módulos, métricas ou navegação ainda não especificados pelo OpenSpec.
+- **Do:** manter prioridade sempre acompanhada de texto e preservar a ordem recebida do servidor.
+- **Don't:** sugerir que cor, tempo de espera ou interface calculam gravidade clínica.
 - **Don't:** reduzir contraste, remover foco ou esconder scrollbar para ganhar aparência “clean”.
