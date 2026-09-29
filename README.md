@@ -4,7 +4,7 @@ Sistema acadêmico de gerenciamento de clínica médica desenvolvido com **Pytho
 
 ## Estado atual
 
-O repositório está na fase de fundação: ambiente Reflex, documentação global do domínio e configuração inicial do OpenSpec. Funcionalidades do produto ainda não devem ser implementadas fora de uma change revisada.
+O repositório está na fase de fundação. A implementação da change `add-local-authentication-and-rbac` está concluída na branch do PR, com autenticação local, sessão revogável, RBAC e migração inicial validados antes dos módulos clínicos e financeiros.
 
 ## Stack definida
 
@@ -20,6 +20,9 @@ O repositório está na fase de fundação: ambiente Reflex, documentação glob
 ```text
 .
 ├── AGENTS.md
+├── DESIGN.md
+├── alembic/
+├── alembic.ini
 ├── docs/
 │   ├── project-overview.md
 │   └── domain-model.md
@@ -29,9 +32,14 @@ O repositório está na fase de fundação: ambiente Reflex, documentação glob
 │   └── changes/
 │       └── archive/
 ├── vitta_one/
+│   ├── auth/
+│   ├── models/
+│   ├── ui/
 │   ├── __init__.py
 │   └── vitta_one.py
+├── tests/
 ├── assets/
+│   └── styles.css
 ├── rxconfig.py
 └── requirements.txt
 ```
@@ -44,14 +52,60 @@ O repositório está na fase de fundação: ambiente Reflex, documentação glob
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 
-Validação rápida do Reflex:
+A aplicação exige PostgreSQL. Forneça a conexão somente por variável de ambiente; o projeto normaliza URLs `postgresql://` para o driver Psycopg 3 configurado nas dependências.
 
 ```bash
+export DATABASE_URL='postgresql+psycopg://<usuario>:<senha>@<host>:5432/<banco>'
+```
+
+A duração da sessão é obrigatoriamente explícita e configurada em segundos. O cookie usa `Secure` por padrão; desabilite essa opção apenas em desenvolvimento local sem HTTPS.
+
+```bash
+export VITTA_ONE_SESSION_TTL_SECONDS='<segundos-da-sessao>'
+export VITTA_ONE_COOKIE_SECURE='true'         # produção/HTTPS
+# export VITTA_ONE_COOKIE_SECURE='false'      # somente desenvolvimento HTTP local
+```
+
+> A duração da sessão não possui valor padrão no projeto. A política definitiva deve ser decidida explicitamente antes de uso real.
+
+A sessão do navegador contém somente um identificador opaco e imprevisível. O banco persiste apenas o hash desse token; identidade, role, expiração e revogação são revalidadas no servidor. Nesta versão do Reflex, a implementação usa as opções disponíveis em `rx.Cookie`: `Path=/`, `Max-Age`, `Secure` e `SameSite=Strict`.
+
+A migração inicial de autenticação está versionada em `alembic/versions/` e foi revisada e validada contra PostgreSQL 16 descartável. Com `DATABASE_URL` configurada, aplique as migrações antes de criar o primeiro Administrador:
+
+```bash
+reflex db migrate
+```
+
+O primeiro Administrador pode então ser criado manualmente sem credencial padrão versionada:
+
+```bash
+export VITTA_ONE_BOOTSTRAP_ADMIN_EMAIL='admin@exemplo.com'
+read -s VITTA_ONE_BOOTSTRAP_ADMIN_PASSWORD
+export VITTA_ONE_BOOTSTRAP_ADMIN_PASSWORD
+python -m vitta_one.auth.bootstrap
+unset VITTA_ONE_BOOTSTRAP_ADMIN_PASSWORD
+```
+
+Validações principais:
+
+```bash
+python -m pytest -q
 reflex compile --dry
 ```
+
+## Rotas da fundação de acesso
+
+- `/login`: autenticação local, sem cadastro público;
+- `/admin`: shell protegido do Administrador;
+- `/recepcao`: shell protegido da Recepcionista;
+- `/medico`: shell protegido do Médico;
+- `/financeiro`: shell protegido do Financeiro;
+- `/acesso-negado`: estado autenticado para tentativa de acesso a uma role incompatível.
+
+Esses painéis ainda não contêm módulos de negócio. A autorização é revalidada no backend durante o carregamento das rotas e não depende apenas de componentes escondidos no frontend.
 
 ## Fluxo de desenvolvimento
 
