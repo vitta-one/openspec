@@ -92,6 +92,10 @@ class ReceptionQueueState(rx.State):
     withdraw_entry_id: int = 0
     withdraw_patient_name: str = ""
 
+    @rx.var
+    def has_queue(self) -> bool:
+        return bool(self.queue_rows)
+
     async def _token(self) -> str:
         auth = await self.get_state(AuthState)
         return auth.session_token
