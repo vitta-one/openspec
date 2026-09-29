@@ -54,7 +54,7 @@ app.add_page(
     on_load=AuthState.load_protected,
 )
 app.add_page(
-    doctor_pae,
+    doctor_page,
     route=Role.MEDICO.dashboard_path,
     title="Painel médico | Vitta-One",
     on_load=AuthState.load_protected,
