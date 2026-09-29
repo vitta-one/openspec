@@ -162,9 +162,9 @@ def reception_page() -> rx.Component:
             align="start",
             width="100%",
         ),
+        active_queue_panel(),
         reassess_panel(),
         withdraw_panel(),
-        active_queue_panel(),
     )
 
 
