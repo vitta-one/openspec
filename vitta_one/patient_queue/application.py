@@ -8,6 +8,7 @@ from vitta_one.models.patient_queue import Patient, QueueEntry
 from vitta_one.patient_queue.service import (
     QueueItem,
     claim_next_patient,
+    count_waiting_queue,
     create_patient,
     create_queue_entry,
     find_patient_by_cpf,
@@ -75,6 +76,11 @@ def reception_withdraw(
 ) -> QueueEntry:
     require_role(db, token, Role.RECEPCIONISTA)
     return withdraw_queue_entry(db, entry_id=entry_id, reason=reason)
+
+
+def doctor_waiting_count(db: Session, *, token: str) -> int:
+    require_role(db, token, Role.MEDICO)
+    return count_waiting_queue(db)
 
 
 def doctor_active_queue_entry(db: Session, *, token: str) -> QueueItem | None:
