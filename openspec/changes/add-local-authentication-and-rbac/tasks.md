@@ -3,7 +3,7 @@
 - [x] 1.1 Habilitar as dependências de banco suportadas pelo Reflex e configurar PostgreSQL por variável de ambiente, sem credenciais versionadas.
 - [x] 1.2 Selecionar e fixar uma biblioteca segura e compatível com Python 3.12 para password hashing, preferencialmente Argon2id.
 - [x] 1.3 Criar os modelos persistentes mínimos de usuário e sessão sem antecipar campos dos módulos clínicos.
-- [ ] 1.4 Inicializar/ajustar Alembic pelo fluxo do Reflex, gerar a migração e revisar o script antes de aplicá-lo.
+- [x] 1.4 Inicializar/ajustar Alembic pelo fluxo do Reflex, gerar a migração e revisar o script antes de aplicá-lo.
 
 ## 2. Serviço de identidade e sessão
 
@@ -34,5 +34,5 @@
 - [x] 5.2 Adicionar testes para cada role e para tentativa de acesso direto a painel/operação sem permissão.
 - [x] 5.3 Testar bootstrap repetido e garantir que não cria usuário duplicado nem sobrescreve credencial existente.
 - [x] 5.4 Verificar que senha em texto puro, hash de senha e identificadores senséveis não aparecem em logs ou respostas de erro.
-- [ ] 5.5 Validar teclado, foco visível, labels, mensagens de erro e contraste da tela de login, além dos estados loading/erro/sucesso relevantes.
-- [ ] 5.6 Executar a suíte de testes aplicável e `reflex compile --dry`, corrigindo regressões antes de marcar a change como pronta para archive.
+- [x] 5.5 Validar teclado, foco visível, labels, mensagens de erro e contraste da tela de login, além dos estados loading/erro/sucesso relevantes.
+- [x] 5.6 Executar a suíte de testes aplicável e `reflex compile --dry`, corrigindo regressões antes de marcar a change como pronta para archive.
