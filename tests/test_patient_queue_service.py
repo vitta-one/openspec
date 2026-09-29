@@ -118,6 +118,31 @@ def test_waiting_queue_orders_priority_then_entry_time_and_id(db: Session) -> No
     ]
 
 
+
+def test_waiting_queue_uses_id_as_final_tiebreaker(db: Session) -> None:
+    first_patient = create_patient(db, name="Primeiro", cpf="52998224725")
+    second_patient = create_patient(db, name="Segundo", cpf="16899535009")
+    moment = datetime(2026, 9, 28, 12, 0, tzinfo=timezone.utc)
+
+    first = create_queue_entry(
+        db,
+        patient_id=first_patient.id,
+        symptoms="Mesmo horário 1",
+        priority="AMARELO",
+        now=moment,
+    )
+    second = create_queue_entry(
+        db,
+        patient_id=second_patient.id,
+        symptoms="Mesmo horário 2",
+        priority="AMARELO",
+        now=moment,
+    )
+
+    queue = list_waiting_queue(db)
+    assert [item.id for item in queue] == [first.id, second.id]
+
+
 def test_wait_time_does_not_mutate_priority(db: Session) -> None:
     patient = create_patient(db, name="Sem Escalonamento", cpf="52998224725")
     entry = create_queue_entry(
@@ -181,6 +206,20 @@ def test_doctor_claim_and_finish_are_owned_and_single_active(db: Session) -> Non
     assert claimed.doctor_user_id == doctor.id
     assert get_doctor_active_entry(db, doctor_user_id=doctor.id) is not None
     assert count_waiting_queue(db) == 0
+
+    with pytest.raises(QueueTransitionError):
+        reassess_queue_entry(
+            db,
+            entry_id=entry.id,
+            symptoms="Não pode alterar em atendimento",
+            priority="VERMELHO",
+        )
+    with pytest.raises(QueueTransitionError):
+        withdraw_queue_entry(
+            db,
+            entry_id=entry.id,
+            reason="Não pode retirar em atendimento",
+        )
 
     with pytest.raises(DoctorAlreadyAttendingError):
         claim_next_patient(db, doctor_user_id=doctor.id)
