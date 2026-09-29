@@ -62,12 +62,15 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: reflex-alembic-migration
-          path: alembic/
+          path: |
+            alembic/
+            alembic.ini
           if-no-files-found: error
           retention-days: 1
 
       - name: Run test suite
-        run: pytest -q
+        run: python -m pytest -q
 
       - name: Compile Reflex app
+        if: always()
         run: reflex compile --dry
