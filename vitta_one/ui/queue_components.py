@@ -241,6 +241,11 @@ def patient_identity_panel() -> rx.Component:
                                 max_length=14,
                                 class_name="vitta-input",
                                 placeholder="000.000.000-00",
+                                aria_describedby=rx.cond(
+                                    ReceptionQueueState.error_message != "",
+                                    "queue-feedback",
+                                    "",
+                                ),
                                 margin_top="0.4rem",
                             ),
                             width="100%",
