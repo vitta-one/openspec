@@ -278,6 +278,14 @@ class ReceptionQueueState(rx.State):
         self.reassess_priority = priority
 
     @rx.event
+    def update_reassess_symptoms(self, value: str) -> None:
+        self.reassess_symptoms = value
+
+    @rx.event
+    def update_reassess_priority(self, value: str) -> None:
+        self.reassess_priority = value
+
+    @rx.event
     def cancel_reassess(self) -> None:
         self._reset_reassess()
 
