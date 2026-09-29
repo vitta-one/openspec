@@ -8,6 +8,7 @@ from sqlalchemy import case, func
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
+from vitta_one.models.auth import User
 from vitta_one.models.patient_queue import Patient, QueueEntry
 from vitta_one.patient_queue.domain import QueuePriority, QueueStatus
 
@@ -316,6 +317,14 @@ def claim_next_patient(
     now: datetime | None = None,
 ) -> QueueItem:
     """Atomically claim the first eligible waiting patient for one doctor."""
+    doctor = db.exec(
+        select(User)
+        .where(User.id == doctor_user_id)
+        .with_for_update()
+    ).first()
+    if doctor is None:
+        raise QueueValidationError("A identidade médica não está disponível.")
+
     if get_doctor_active_entry(db, doctor_user_id=doctor_user_id) is not None:
         raise DoctorAlreadyAttendingError(
             "Finalize o atendimento atual antes de chamar outro paciente."
