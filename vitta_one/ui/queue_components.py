@@ -58,6 +58,7 @@ def priority_select(
     value=None,
     on_change=None,
     default_value: str | None = None,
+    described_by: str | None = None,
     disabled=False,
 ) -> rx.Component:
     """Use the maintained Radix select with domain values and human labels."""
@@ -80,7 +81,7 @@ def priority_select(
             placeholder="Selecione a prioridade",
             width="100%",
             class_name="vitta-select-trigger",
-            aria_describedby="priority-help",
+            aria_describedby=described_by,
         ),
         rx.select.content(
             rx.select.item("Vermelho", value="VERMELHO"),
@@ -185,6 +186,11 @@ def patient_identity_panel() -> rx.Component:
                                 max_length=14,
                                 class_name="vitta-input",
                                 placeholder="000.000.000-00",
+                                aria_describedby=rx.cond(
+                                    ReceptionQueueState.error_message != "",
+                                    "queue-feedback",
+                                    "",
+                                ),
                                 margin_top="0.4rem",
                             ),
                             width="100%",
@@ -305,11 +311,12 @@ def enqueue_panel() -> rx.Component:
                                 name="priority",
                                 control_id="queue-priority",
                                 default_value="VERDE",
+                                described_by="queue-priority-help",
                                 disabled=ReceptionQueueState.is_submitting,
                             ),
                             rx.text(
                                 "Escolha exatamente a classificação recebida: Vermelho, Amarelo ou Verde.",
-                                id="priority-help",
+                                id="queue-priority-help",
                                 size="1",
                                 color="var(--vitta-text-muted)",
                                 margin_top="0.4rem",
@@ -458,7 +465,15 @@ def reassess_panel() -> rx.Component:
                                 control_id="reassess-priority",
                                 value=ReceptionQueueState.reassess_priority,
                                 on_change=ReceptionQueueState.update_reassess_priority,
+                                described_by="reassess-priority-help",
                                 disabled=ReceptionQueueState.is_submitting,
+                            ),
+                            rx.text(
+                                "A prioridade só muda por esta reavaliação manual.",
+                                id="reassess-priority-help",
+                                size="1",
+                                color="var(--vitta-text-muted)",
+                                margin_top="0.4rem",
                             ),
                             width="100%",
                         ),
