@@ -17,6 +17,7 @@ from vitta_one.patient_queue.service import (
     QueueOwnershipError,
     QueueTransitionError,
     claim_next_patient,
+    count_waiting_queue,
     create_patient,
     create_queue_entry,
     finish_queue_entry,
@@ -172,11 +173,14 @@ def test_doctor_claim_and_finish_are_owned_and_single_active(db: Session) -> Non
         db, patient_id=patient.id, symptoms="Dor", priority="AMARELO"
     )
 
+    assert count_waiting_queue(db) == 1
+
     claimed = claim_next_patient(db, doctor_user_id=doctor.id)
     assert claimed.id == entry.id
     assert claimed.status is QueueStatus.EM_ATENDIMENTO
     assert claimed.doctor_user_id == doctor.id
     assert get_doctor_active_entry(db, doctor_user_id=doctor.id) is not None
+    assert count_waiting_queue(db) == 0
 
     with pytest.raises(DoctorAlreadyAttendingError):
         claim_next_patient(db, doctor_user_id=doctor.id)
