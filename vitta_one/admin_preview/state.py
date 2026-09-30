@@ -8,10 +8,12 @@ from sqlmodel import select
 from vitta_one.auth.authorization import (
     AuthenticationRequiredError,
     RoleForbiddenError,
-    require_role,
 )
 from vitta_one.auth.roles import Role
-from vitta_one.auth.settings import local_admin_preview_enabled
+from vitta_one.admin_preview.service import (
+    LocalAdminPreviewDisabledError,
+    require_local_admin_preview,
+)
 from vitta_one.auth.state import AuthState
 from vitta_one.models import Patient, Professional, QueueEntry, Specialty
 
@@ -148,16 +150,10 @@ class AdminPreviewState(rx.State):
         self.error_message = ""
         yield
 
-        if not local_admin_preview_enabled():
-            self._clear()
-            self.is_loading = False
-            yield rx.redirect(Role.ADMINISTRADOR.dashboard_path)
-            return
-
         try:
             token = await self._token()
             with rx.session() as db:
-                require_role(db, token, Role.ADMINISTRADOR)
+                require_local_admin_preview(db, token)
 
                 patient_items = list(
                     db.exec(select(Patient).order_by(Patient.name)).all()
@@ -248,7 +244,13 @@ class AdminPreviewState(rx.State):
                 self.selected_patient_name = ""
                 self.selected_patient_cpf = ""
 
-        except (AuthenticationRequiredError, RoleForbiddenError):
+        except LocalAdminPreviewDisabledError:
+            self._clear()
+            yield rx.redirect(Role.ADMINISTRADOR.dashboard_path)
+        except AuthenticationRequiredError:
+            self._clear()
+            yield rx.redirect("/login")
+        except RoleForbiddenError:
             self._clear()
             yield rx.redirect("/acesso-negado")
         except Exception:
