@@ -178,8 +178,7 @@ def specialties_list_panel() -> rx.Component:
             rx.flex(
                 rx.heading("Especialidades cadastradas", size="4"),
                 rx.text(
-                    AdminDirectoryState.specialties.length(),
-                    " registros",
+                    "Ativas e inativas",
                     size="1",
                     color="var(--vitta-text-muted)",
                 ),
@@ -273,7 +272,7 @@ def medical_account_select() -> rx.Component:
                 AdminDirectoryState.medical_accounts,
                 lambda account: rx.select.item(
                     account["email"],
-                    value=account["id"].to_string(),
+                    value=account["value"],
                 ),
             ),
             position="popper",
