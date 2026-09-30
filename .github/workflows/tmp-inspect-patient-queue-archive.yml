@@ -1,0 +1,24 @@
+name: Inspect patient queue archive inputs
+
+on:
+  push:
+    branches:
+      - chore/archive-patient-reception-queue
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Archive instructions
+        run: npx -y @fission-ai/openspec@1.13.0 instructions archive --change add-patient-reception-queue --json || true
+      - name: Status
+        run: npx -y @fission-ai/openspec@1.13.0 status --change add-patient-reception-queue --json
+      - name: Specs instructions
+        run: npx -y @fission-ai/openspec@1.13.0 instructions specs --change add-patient-reception-queue --json
