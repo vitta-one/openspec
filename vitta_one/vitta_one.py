@@ -2,6 +2,7 @@
 
 import reflex as rx
 
+from vitta_one.admin_preview.state import AdminPreviewState
 from vitta_one.auth.roles import Role
 from vitta_one.auth.state import AuthState
 from vitta_one.models import (
@@ -16,7 +17,12 @@ from vitta_one.models import (
 from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
 from vitta_one.professional_directory.state import AdminDirectoryState
 from vitta_one.ui.pages import (
+    admin_agenda_preview_page,
+    admin_clinical_preview_page,
+    admin_finance_preview_page,
     admin_page,
+    admin_patients_preview_page,
+    admin_reception_preview_page,
     doctor_page,
     finance_page,
     forbidden_page,
@@ -65,6 +71,37 @@ app.add_page(
     title="Painel administrativo | Vitta-One",
     on_load=[AuthState.load_protected, AdminDirectoryState.load],
 )
+app.add_page(
+    admin_reception_preview_page,
+    route="/admin/recepcao",
+    title="Recepção · Preview local | Vitta-One",
+    on_load=[AuthState.load_admin_preview, AdminPreviewState.load],
+)
+app.add_page(
+    admin_agenda_preview_page,
+    route="/admin/agenda",
+    title="Agenda · Preview local | Vitta-One",
+    on_load=[AuthState.load_admin_preview, AdminPreviewState.load],
+)
+app.add_page(
+    admin_clinical_preview_page,
+    route="/admin/atendimento",
+    title="Atendimento · Preview local | Vitta-One",
+    on_load=[AuthState.load_admin_preview, AdminPreviewState.load],
+)
+app.add_page(
+    admin_patients_preview_page,
+    route="/admin/pacientes",
+    title="Pacientes · Preview local | Vitta-One",
+    on_load=[AuthState.load_admin_preview, AdminPreviewState.load],
+)
+app.add_page(
+    admin_finance_preview_page,
+    route="/admin/financeiro",
+    title="Financeiro · Preview local | Vitta-One",
+    on_load=[AuthState.load_admin_preview, AdminPreviewState.load],
+)
+
 app.add_page(
     reception_page,
     route=Role.RECEPCIONISTA.dashboard_path,
