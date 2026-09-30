@@ -285,6 +285,104 @@ def medical_account_select() -> rx.Component:
 
 
 def professional_form_panel() -> rx.Component:
+    form_fields = rx.vstack(
+        rx.box(
+            field_label("Nome do profissional", "professional-name"),
+            rx.el.input(
+                id="professional-name",
+                name="name",
+                type="text",
+                value=AdminDirectoryState.professional_name,
+                on_change=AdminDirectoryState.update_professional_name,
+                required=True,
+                max_length=160,
+                auto_complete="name",
+                class_name="vitta-input",
+                margin_top="0.4rem",
+            ),
+            width="100%",
+        ),
+        rx.box(
+            field_label("Identificador profissional", "professional-registration"),
+            rx.el.input(
+                id="professional-registration",
+                name="registration_identifier",
+                type="text",
+                value=AdminDirectoryState.registration_identifier,
+                on_change=AdminDirectoryState.update_registration_identifier,
+                required=True,
+                max_length=80,
+                class_name="vitta-input",
+                aria_describedby="professional-registration-help",
+                margin_top="0.4rem",
+            ),
+            rx.text(
+                "Ex.: registro interno ou identificação profissional. O sistema não presume CRM, conselho ou UF nesta etapa.",
+                id="professional-registration-help",
+                size="1",
+                color="var(--vitta-text-muted)",
+                margin_top="0.35rem",
+                line_height="1.45",
+            ),
+            width="100%",
+        ),
+        rx.el.fieldset(
+            rx.el.legend(
+                "Especialidades",
+                font_weight="650",
+                font_size="0.9rem",
+                color="var(--vitta-text)",
+                margin_bottom="0.55rem",
+            ),
+            rx.vstack(
+                rx.foreach(AdminDirectoryState.specialty_options, specialty_option),
+                rx.text(
+                    "Selecione ao menos uma especialidade ativa. Vínculos históricos inativos permanecem bloqueados e preservados.",
+                    size="1",
+                    color="var(--vitta-text-muted)",
+                    line_height="1.45",
+                ),
+                spacing="2",
+                align="stretch",
+                width="100%",
+            ),
+            width="100%",
+            border="0",
+            padding="0",
+            margin="0",
+        ),
+        rx.box(
+            field_label("Conta Médica opcional", "professional-medical-account"),
+            rx.box(medical_account_select(), margin_top="0.4rem"),
+            rx.text(
+                "Somente contas locais com role Médico e ainda disponíveis podem ser vinculadas.",
+                id="medical-account-help",
+                size="1",
+                color="var(--vitta-text-muted)",
+                margin_top="0.35rem",
+                line_height="1.45",
+            ),
+            width="100%",
+        ),
+        rx.button(
+            rx.cond(
+                AdminDirectoryState.is_editing_professional,
+                "Salvar alterações",
+                "Cadastrar profissional",
+            ),
+            type="submit",
+            min_height="3rem",
+            width=rx.breakpoints(initial="100%", sm="auto"),
+            color_scheme="teal",
+            high_contrast=True,
+            disabled=AdminDirectoryState.is_submitting,
+            loading=AdminDirectoryState.is_submitting,
+        ),
+        spacing="4",
+        width="100%",
+        align="stretch",
+    )
+
     return section_panel(
         rx.vstack(
             rx.flex(
@@ -316,97 +414,16 @@ def professional_form_panel() -> rx.Component:
                 gap="0.75rem",
                 width="100%",
             ),
-            rx.box(
-                field_label("Nome do profissional", "professional-name"),
-                rx.el.input(
-                    id="professional-name",
-                    type="text",
-                    value=AdminDirectoryState.professional_name,
-                    on_change=AdminDirectoryState.update_professional_name,
-                    required=True,
-                    max_length=160,
-                    auto_complete="name",
-                    class_name="vitta-input",
-                    margin_top="0.4rem",
-                ),
+            rx.el.form(
+                form_fields,
+                on_submit=AdminDirectoryState.save_professional,
                 width="100%",
-            ),
-            rx.box(
-                field_label("Identificador profissional", "professional-registration"),
-                rx.el.input(
-                    id="professional-registration",
-                    type="text",
-                    value=AdminDirectoryState.registration_identifier,
-                    on_change=AdminDirectoryState.update_registration_identifier,
-                    required=True,
-                    max_length=80,
-                    class_name="vitta-input",
-                    aria_describedby="professional-registration-help",
-                    margin_top="0.4rem",
-                ),
-                rx.text(
-                    "Ex.: registro interno ou identificação profissional. O sistema não presume CRM, conselho ou UF nesta etapa.",
-                    id="professional-registration-help",
-                    size="1",
-                    color="var(--vitta-text-muted)",
-                    margin_top="0.35rem",
-                    line_height="1.45",
-                ),
-                width="100%",
-            ),
-            rx.el.fieldset(
-                rx.el.legend(
-                    "Especialidades",
-                    font_weight="650",
-                    font_size="0.9rem",
-                    color="var(--vitta-text)",
-                    margin_bottom="0.55rem",
-                ),
-                rx.vstack(
-                    rx.foreach(AdminDirectoryState.specialty_options, specialty_option),
-                    spacing="2",
-                    align="stretch",
-                    width="100%",
-                ),
-                width="100%",
-                border="0",
-                padding="0",
-                margin="0",
-            ),
-            rx.box(
-                field_label("Conta Médica opcional", "professional-medical-account"),
-                rx.box(medical_account_select(), margin_top="0.4rem"),
-                rx.text(
-                    "Somente contas locais com role Médico e ainda disponíveis podem ser vinculadas.",
-                    id="medical-account-help",
-                    size="1",
-                    color="var(--vitta-text-muted)",
-                    margin_top="0.35rem",
-                    line_height="1.45",
-                ),
-                width="100%",
-            ),
-            rx.button(
-                rx.cond(
-                    AdminDirectoryState.is_editing_professional,
-                    "Salvar alterações",
-                    "Cadastrar profissional",
-                ),
-                type="button",
-                min_height="3rem",
-                width=rx.breakpoints(initial="100%", sm="auto"),
-                color_scheme="teal",
-                high_contrast=True,
-                on_click=AdminDirectoryState.save_professional,
-                disabled=AdminDirectoryState.is_submitting,
-                loading=AdminDirectoryState.is_submitting,
             ),
             spacing="4",
             width="100%",
             align="stretch",
         )
     )
-
 
 def professional_row(row) -> rx.Component:
     return rx.box(
