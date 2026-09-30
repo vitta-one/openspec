@@ -14,6 +14,7 @@ from vitta_one.models import (
     User,
 )
 from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
+from vitta_one.professional_directory.state import AdminDirectoryState
 from vitta_one.ui.pages import (
     admin_page,
     doctor_page,
@@ -62,7 +63,7 @@ app.add_page(
     admin_page,
     route=Role.ADMINISTRADOR.dashboard_path,
     title="Painel administrativo | Vitta-One",
-    on_load=AuthState.load_protected,
+    on_load=[AuthState.load_protected, AdminDirectoryState.load],
 )
 app.add_page(
     reception_page,
