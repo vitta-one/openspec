@@ -406,7 +406,7 @@ class AdminDirectoryState(rx.State):
         self.specialty_options = updated
 
     @rx.event
-    async def save_professional(self):
+    async def save_professional(self, _form_data: dict[str, str]):
         self.is_submitting = True
         self._clear_feedback()
         yield
