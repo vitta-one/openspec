@@ -44,6 +44,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
+      - name: Lint DESIGN.md
+        run: npx -y -p @google/design.md designmd lint DESIGN.md
+      - name: Premium static audit
+        run: python .github/tmp/premium_audit_project.py . --mode strict --config premium-ui.json
       - name: Apply migrations
         run: reflex db migrate
       - name: Unit tests
