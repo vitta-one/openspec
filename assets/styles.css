@@ -1,29 +1,39 @@
 :root {
-  --vitta-canvas: #f4f8f7;
+  --vitta-canvas: #f7f8fc;
   --vitta-surface: #ffffff;
-  --vitta-surface-muted: #eaf3f1;
-  --vitta-primary: #0b5d56;
-  --vitta-primary-hover: #084b46;
-  --vitta-primary-soft: #d8ebe7;
-  --vitta-text: #18302d;
-  --vitta-text-muted: #586e6b;
-  --vitta-border: #cbdad7;
-  --vitta-border-hover: #9db5b1;
-  --vitta-danger: #a43a3a;
-  --vitta-danger-soft: #fff0f0;
-  --vitta-focus: #0e7c72;
-  --vitta-focus-soft: rgba(14, 124, 114, 0.12);
-  --vitta-scroll-thumb: #8ea6a2;
-  --vitta-scroll-track: #edf3f2;
-  --vitta-radius-control: 0.75rem;
-  --vitta-radius-panel: 1.25rem;
-  --vitta-shadow-panel: 0 24px 70px rgba(24, 48, 45, 0.12);
-  --vitta-shadow-mark: 0 10px 24px rgba(11, 93, 86, 0.18);
-  --vitta-danger-border: #e7b8b8;
-  --vitta-success: #236449;
-  --vitta-success-soft: #e7f4ed;
-  --vitta-success-border: #add6c2;
-  --vitta-font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --vitta-surface-muted: #f1f5f9;
+  --vitta-surface-subtle: #f8fafc;
+  --vitta-primary: #0f766e;
+  --vitta-primary-hover: #0b655f;
+  --vitta-primary-soft: #e8f5f3;
+  --vitta-text: #0f172a;
+  --vitta-text-muted: #475569;
+  --vitta-text-subtle: #64748b;
+  --vitta-border: #e2e8f0;
+  --vitta-border-hover: #cbd5e1;
+  --vitta-info: #0284c7;
+  --vitta-info-soft: #f0f9ff;
+  --vitta-warning: #d97706;
+  --vitta-warning-soft: #fffbeb;
+  --vitta-danger: #e11d48;
+  --vitta-danger-soft: #fff1f2;
+  --vitta-danger-border: #fecdd3;
+  --vitta-success: #059669;
+  --vitta-success-soft: #ecfdf5;
+  --vitta-success-border: #a7f3d0;
+  --vitta-focus: #0f766e;
+  --vitta-focus-soft: rgba(15, 118, 110, 0.14);
+  --vitta-scroll-thumb: #94a3b8;
+  --vitta-scroll-track: #f1f5f9;
+  --vitta-radius-control: 0.625rem;
+  --vitta-radius-panel: 0.875rem;
+  --vitta-radius-large: 1.125rem;
+  --vitta-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --vitta-shadow-sm: 0 8px 24px rgba(15, 23, 42, 0.06);
+  --vitta-shadow-md: 0 20px 50px rgba(15, 23, 42, 0.10);
+  --vitta-font-display: "Segoe UI Variable Display", "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+  --vitta-font-sans: "Inter", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --vitta-sidebar-width: 15.5rem;
 }
 
 * {
@@ -33,6 +43,7 @@
 html {
   scrollbar-color: var(--vitta-scroll-thumb) var(--vitta-scroll-track);
   scrollbar-width: thin;
+  background: var(--vitta-canvas);
 }
 
 body {
@@ -40,11 +51,25 @@ body {
   background: var(--vitta-canvas);
   color: var(--vitta-text);
   font-family: var(--vitta-font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
 }
 
 *::-webkit-scrollbar {
-  width: 0.75rem;
-  height: 0.75rem;
+  width: 0.72rem;
+  height: 0.72rem;
 }
 
 *::-webkit-scrollbar-track {
@@ -66,6 +91,10 @@ body {
   outline-offset: 3px;
 }
 
+.vitta-tabular {
+  font-variant-numeric: tabular-nums;
+}
+
 .vitta-input,
 .vitta-textarea {
   width: 100%;
@@ -73,9 +102,9 @@ body {
   border-radius: var(--vitta-radius-control);
   background: var(--vitta-surface);
   color: var(--vitta-text);
-  font: inherit;
-  padding: 0.72rem 0.9rem;
-  transition: border-color 140ms ease, box-shadow 140ms ease;
+  padding: 0.78rem 0.9rem;
+  transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
+  box-shadow: inset 0 0 0 1px transparent;
 }
 
 .vitta-input {
@@ -83,13 +112,18 @@ body {
 }
 
 .vitta-textarea {
-  min-height: 7.5rem;
-  resize: vertical;
-  line-height: 1.5;
+  min-height: 8rem;
+  resize: none;
+  line-height: 1.55;
 }
 
-.vitta-input:hover,
-.vitta-textarea:hover {
+.vitta-input::placeholder,
+.vitta-textarea::placeholder {
+  color: #94a3b8;
+}
+
+.vitta-input:hover:not(:disabled),
+.vitta-textarea:hover:not(:disabled) {
   border-color: var(--vitta-border-hover);
 }
 
@@ -97,6 +131,13 @@ body {
 .vitta-textarea:focus {
   border-color: var(--vitta-focus);
   box-shadow: 0 0 0 3px var(--vitta-focus-soft);
+  outline: none;
+}
+
+.vitta-input:disabled,
+.vitta-textarea:disabled {
+  background: var(--vitta-surface-muted);
+  color: var(--vitta-text-subtle);
 }
 
 .vitta-select-trigger {
@@ -105,27 +146,544 @@ body {
 }
 
 .vitta-password-input {
-  padding-right: 6.5rem;
+  padding-right: 3.6rem;
 }
 
 .vitta-password-toggle {
   position: absolute;
-  right: 0.45rem;
+  right: 0.4rem;
   top: 50%;
   transform: translateY(-50%);
+  width: 2.4rem;
+  height: 2.4rem;
+  min-width: 2.4rem;
+  padding: 0;
+  border-radius: 0.5rem;
+  color: var(--vitta-text-muted);
+}
+
+.vitta-password-toggle:hover:not(:disabled) {
+  color: var(--vitta-primary);
+  background: var(--vitta-primary-soft);
 }
 
 .vitta-primary-action {
   cursor: pointer;
+  transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+  box-shadow: var(--vitta-shadow-xs);
 }
 
 .vitta-primary-action:hover:not(:disabled) {
-  filter: brightness(0.94);
+  filter: brightness(0.96);
+  box-shadow: 0 8px 18px rgba(15, 118, 110, 0.18);
+}
+
+.vitta-primary-action:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 button:disabled,
 [aria-disabled="true"] {
   cursor: not-allowed;
+}
+
+/* Login */
+.vitta-login-shell {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(24rem, 0.88fr) minmax(34rem, 1.12fr);
+  background: var(--vitta-surface);
+}
+
+.vitta-login-form-pane {
+  min-width: 0;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: clamp(1.5rem, 3vw, 3.5rem);
+  background: var(--vitta-surface);
+  border-right: 1px solid var(--vitta-border);
+  z-index: 2;
+}
+
+.vitta-login-form-wrap {
+  width: min(100%, 28rem);
+  margin: auto;
+}
+
+.vitta-login-kicker {
+  display: inline-flex;
+  align-items: center;
+  width: max-content;
+  padding: 0.38rem 0.65rem;
+  border-radius: 999px;
+  color: var(--vitta-primary);
+  background: var(--vitta-primary-soft);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.vitta-login-visual {
+  min-width: 0;
+  min-height: 100dvh;
+  position: relative;
+  overflow: hidden;
+  background: #0b4e49;
+  isolation: isolate;
+}
+
+.vitta-login-visual::before,
+.vitta-login-visual::after {
+  content: "";
+  position: absolute;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.vitta-login-visual::before {
+  width: min(54vw, 46rem);
+  aspect-ratio: 1;
+  right: -16%;
+  top: -17%;
+}
+
+.vitta-login-visual::after {
+  width: min(34vw, 28rem);
+  aspect-ratio: 1;
+  left: -10%;
+  bottom: -12%;
+}
+
+.vitta-login-emblem {
+  position: absolute;
+  width: clamp(15rem, 29vw, 25rem);
+  aspect-ratio: 1;
+  right: clamp(2rem, 8vw, 8rem);
+  top: 11%;
+  border: clamp(1.7rem, 3vw, 2.9rem) solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  z-index: 1;
+}
+
+.vitta-login-emblem::before,
+.vitta-login-emblem::after {
+  content: "";
+  position: absolute;
+  background: rgba(255, 255, 255, 0.90);
+  border-radius: 999px;
+}
+
+.vitta-login-emblem::before {
+  width: 37%;
+  height: 9%;
+}
+
+.vitta-login-emblem::after {
+  width: 9%;
+  height: 37%;
+}
+
+.vitta-login-emblem-icon {
+  width: 4.25rem;
+  height: 4.25rem;
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.18);
+}
+
+.vitta-login-caption {
+  position: absolute;
+  left: clamp(1.75rem, 4vw, 4.25rem);
+  right: clamp(1.75rem, 4vw, 4.25rem);
+  bottom: clamp(2rem, 5vw, 4.5rem);
+  z-index: 2;
+}
+
+.vitta-login-feature {
+  min-height: 2.3rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 0.65rem;
+  color: rgba(255, 255, 255, 0.90);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Product shell */
+.vitta-shell {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: var(--vitta-sidebar-width) minmax(0, 1fr);
+  background: var(--vitta-canvas);
+}
+
+.vitta-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem 0.85rem 1rem;
+  background: var(--vitta-surface);
+  border-right: 1px solid var(--vitta-border);
+  z-index: 20;
+}
+
+.vitta-sidebar-brand {
+  padding: 0.2rem 0.6rem 0.55rem;
+}
+
+.vitta-local-badge {
+  margin: 0 0.45rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.6rem;
+  color: var(--vitta-primary);
+  background: var(--vitta-primary-soft);
+}
+
+.vitta-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.vitta-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.7rem;
+  color: var(--vitta-text-muted);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 650;
+  transition: background 130ms ease, color 130ms ease, transform 130ms ease;
+}
+
+.vitta-nav-link:hover {
+  color: var(--vitta-text);
+  background: var(--vitta-surface-muted);
+}
+
+.vitta-nav-link:active {
+  transform: translateY(1px);
+}
+
+.vitta-sidebar-session {
+  margin-top: auto;
+  padding: 0.75rem;
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-panel);
+  background: var(--vitta-surface-subtle);
+}
+
+.vitta-session-avatar,
+.vitta-patient-avatar,
+.vitta-profile-avatar {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  color: var(--vitta-primary);
+  background: var(--vitta-primary-soft);
+  border-radius: 0.65rem;
+}
+
+.vitta-session-avatar {
+  width: 2rem;
+  height: 2rem;
+}
+
+.vitta-patient-avatar {
+  width: 2.35rem;
+  height: 2.35rem;
+}
+
+.vitta-profile-avatar {
+  width: 3rem;
+  height: 3rem;
+}
+
+.vitta-main {
+  min-width: 0;
+  min-height: 100dvh;
+}
+
+.vitta-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  min-height: 4.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.78rem clamp(1rem, 2vw, 2rem);
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom: 1px solid var(--vitta-border);
+  backdrop-filter: blur(10px);
+}
+
+.vitta-online-dot {
+  width: 0.48rem;
+  height: 0.48rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--vitta-success);
+  box-shadow: 0 0 0 4px var(--vitta-success-soft);
+}
+
+.vitta-page {
+  width: min(100%, 90rem);
+  margin: 0 auto;
+  padding: clamp(1rem, 2vw, 1.75rem) clamp(1rem, 2vw, 2rem) 3rem;
+}
+
+.vitta-page-header {
+  margin-bottom: 0.2rem;
+}
+
+/* Reusable operational surfaces */
+.vitta-metric-card {
+  min-width: 0;
+  padding: 1rem 1.05rem;
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-panel);
+  background: var(--vitta-surface);
+  box-shadow: var(--vitta-shadow-xs);
+}
+
+.vitta-metric-mark {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--vitta-primary);
+  box-shadow: 0 0 0 4px var(--vitta-primary-soft);
+}
+
+.vitta-data-row {
+  width: 100%;
+  padding: 0.9rem 0.95rem;
+  border: 1px solid var(--vitta-border);
+  border-radius: 0.7rem;
+  background: var(--vitta-surface);
+  transition: border-color 130ms ease, background 130ms ease;
+}
+
+.vitta-data-row:hover {
+  border-color: var(--vitta-border-hover);
+  background: var(--vitta-surface-subtle);
+}
+
+.vitta-empty-state {
+  min-height: 14rem;
+  border: 1px dashed var(--vitta-border-strong);
+  border-radius: var(--vitta-radius-panel);
+  background: var(--vitta-surface-subtle);
+}
+
+.vitta-empty-icon {
+  width: 2.8rem;
+  height: 2.8rem;
+  display: grid;
+  place-items: center;
+  border-radius: 0.75rem;
+  color: var(--vitta-primary);
+  background: var(--vitta-primary-soft);
+}
+
+.vitta-professional-chip {
+  min-height: 2.35rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--vitta-border);
+  border-radius: 0.65rem;
+  background: var(--vitta-surface-subtle);
+}
+
+.vitta-week-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(8.5rem, 1fr));
+  min-width: 47rem;
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-panel);
+  overflow: hidden;
+  background: var(--vitta-surface);
+}
+
+.vitta-week-cell {
+  min-height: 9rem;
+  padding: 0.8rem;
+  border-right: 1px solid var(--vitta-border);
+  background: var(--vitta-surface);
+}
+
+.vitta-week-cell:last-child {
+  border-right: 0;
+}
+
+.vitta-info-strip,
+.vitta-future-module {
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-control);
+  background: var(--vitta-surface-subtle);
+  color: var(--vitta-text-muted);
+}
+
+.vitta-patient-browser {
+  position: sticky;
+  top: 5.25rem;
+}
+
+.vitta-patient-list {
+  max-height: 38rem;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+.vitta-patient-list-button {
+  min-height: 3.5rem;
+  justify-content: stretch;
+  padding: 0.55rem 0.6rem;
+  border-radius: 0.65rem;
+}
+
+.vitta-patient-list-button:hover {
+  background: var(--vitta-primary-soft);
+}
+
+.vitta-search-input {
+  padding-left: 2.35rem;
+  padding-right: 2.5rem;
+}
+
+.vitta-search-clear {
+  position: absolute;
+  right: 0.45rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2rem;
+  height: 2rem;
+  min-width: 2rem;
+  padding: 0;
+}
+
+.vitta-timeline-row {
+  position: relative;
+  padding: 0.8rem 0 0.8rem 0.15rem;
+  border-bottom: 1px solid var(--vitta-border);
+}
+
+.vitta-timeline-row:last-child {
+  border-bottom: 0;
+}
+
+.vitta-timeline-dot {
+  width: 0.65rem;
+  height: 0.65rem;
+  margin-top: 0.35rem;
+  border-radius: 999px;
+  background: var(--vitta-primary);
+  box-shadow: 0 0 0 4px var(--vitta-primary-soft);
+}
+
+.vitta-clinical-placeholder {
+  min-height: 6.5rem;
+  padding: 0.85rem;
+  border: 1px dashed var(--vitta-border-strong);
+  border-radius: var(--vitta-radius-control);
+  background: var(--vitta-surface-subtle);
+}
+
+@media (max-width: 1050px) {
+  .vitta-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .vitta-sidebar {
+    position: sticky;
+    height: auto;
+    padding: 0.75rem 1rem;
+    border-right: 0;
+    border-bottom: 1px solid var(--vitta-border);
+  }
+
+  .vitta-sidebar-brand,
+  .vitta-sidebar-session {
+    display: none;
+  }
+
+  .vitta-local-badge {
+    width: max-content;
+    margin: 0;
+  }
+
+  .vitta-sidebar-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    scrollbar-gutter: stable;
+    padding-bottom: 0.1rem;
+  }
+
+  .vitta-sidebar-nav > div {
+    flex-direction: row;
+    width: max-content;
+  }
+
+  .vitta-nav-link {
+    width: auto;
+    min-width: max-content;
+  }
+
+  .vitta-topbar {
+    position: relative;
+  }
+
+  .vitta-patient-browser {
+    position: relative;
+    top: auto;
+  }
+}
+
+@media (max-width: 860px) {
+  .vitta-login-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .vitta-login-form-pane {
+    border-right: 0;
+  }
+
+  .vitta-login-visual {
+    display: none;
+  }
+
+  .vitta-week-grid {
+    min-width: 42rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .vitta-login-form-pane {
+    padding: 1.25rem;
+  }
+
+  .vitta-page {
+    padding-left: 0.85rem;
+    padding-right: 0.85rem;
+  }
+
+  .vitta-topbar {
+    align-items: flex-start;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -142,5 +700,12 @@ button:disabled,
 @media (forced-colors: active) {
   :focus-visible {
     outline-color: Highlight;
+  }
+
+  .vitta-online-dot,
+  .vitta-metric-mark,
+  .vitta-timeline-dot {
+    border: 1px solid ButtonText;
+    box-shadow: none;
   }
 }
