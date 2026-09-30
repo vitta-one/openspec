@@ -454,10 +454,10 @@ def page_header(
             ),
             min_width="0",
         ),
-        rx.cond(
-            len(actions) > 0,
-            rx.hstack(*actions, spacing="2", align="center"),
-            rx.fragment(),
+        (
+            rx.hstack(*actions, spacing="2", align="center")
+            if actions
+            else rx.fragment()
         ),
         direction=rx.breakpoints(initial="column", md="row"),
         justify="between",
@@ -506,15 +506,15 @@ def metric_card(label: str, value, detail: str = "") -> rx.Component:
             class_name="vitta-tabular",
             margin_top="0.55rem",
         ),
-        rx.cond(
-            detail != "",
+        (
             rx.text(
                 detail,
                 size="1",
                 color="var(--vitta-text-subtle)",
                 margin_top="0.15rem",
-            ),
-            rx.fragment(),
+            )
+            if detail
+            else rx.fragment()
         ),
         class_name="vitta-metric-card",
     )
@@ -542,10 +542,10 @@ def empty_state(
                 max_width="52ch",
                 text_align="center",
             ),
-            rx.cond(
-                len(actions) > 0,
-                rx.hstack(*actions, spacing="2", justify="center", flex_wrap="wrap"),
-                rx.fragment(),
+            (
+                rx.hstack(*actions, spacing="2", justify="center", flex_wrap="wrap")
+                if actions
+                else rx.fragment()
             ),
             spacing="3",
             align="center",
