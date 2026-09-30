@@ -100,6 +100,7 @@ class AdminDirectoryState(rx.State):
     error_message: str = ""
     success_message: str = ""
 
+    new_specialty_name: str = ""
     editing_specialty_id: int = 0
     editing_specialty_name: str = ""
 
@@ -218,7 +219,11 @@ class AdminDirectoryState(rx.State):
             yield
 
     @rx.event
-    async def create_specialty(self, form_data: dict[str, str]):
+    def update_new_specialty_name(self, value: str) -> None:
+        self.new_specialty_name = value
+
+    @rx.event
+    async def create_specialty(self, _form_data: dict[str, str]):
         self.is_submitting = True
         self._clear_feedback()
         yield
@@ -228,8 +233,9 @@ class AdminDirectoryState(rx.State):
                 admin_create_specialty(
                     db,
                     token=token,
-                    name=str(form_data.get("name", "")),
+                    name=self.new_specialty_name,
                 )
+            self.new_specialty_name = ""
             self._load_with_token(token)
             self.success_message = "Especialidade cadastrada."
         except (DirectoryValidationError, DirectoryConflictError) as exc:
