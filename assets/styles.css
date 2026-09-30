@@ -20,6 +20,9 @@
   --vitta-shadow-panel: 0 24px 70px rgba(24, 48, 45, 0.12);
   --vitta-shadow-mark: 0 10px 24px rgba(11, 93, 86, 0.18);
   --vitta-danger-border: #e7b8b8;
+  --vitta-success: #236449;
+  --vitta-success-soft: #e7f4ed;
+  --vitta-success-border: #add6c2;
   --vitta-font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
@@ -63,9 +66,9 @@ body {
   outline-offset: 3px;
 }
 
-.vitta-input {
+.vitta-input,
+.vitta-textarea {
   width: 100%;
-  min-height: 3rem;
   border: 1px solid var(--vitta-border);
   border-radius: var(--vitta-radius-control);
   background: var(--vitta-surface);
@@ -75,13 +78,30 @@ body {
   transition: border-color 140ms ease, box-shadow 140ms ease;
 }
 
-.vitta-input:hover {
+.vitta-input {
+  min-height: 3rem;
+}
+
+.vitta-textarea {
+  min-height: 7.5rem;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.vitta-input:hover,
+.vitta-textarea:hover {
   border-color: var(--vitta-border-hover);
 }
 
-.vitta-input:focus {
+.vitta-input:focus,
+.vitta-textarea:focus {
   border-color: var(--vitta-focus);
   box-shadow: 0 0 0 3px var(--vitta-focus-soft);
+}
+
+.vitta-select-trigger {
+  width: 100%;
+  min-height: 3rem;
 }
 
 .vitta-password-input {

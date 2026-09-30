@@ -262,3 +262,31 @@ def dashboard_shell(role: Role, title: str, description: str) -> rx.Component:
         protected_content,
         loading_surface(),
     )
+
+
+def protected_workspace(role: Role, *children: rx.Component) -> rx.Component:
+    """Render an authorized operational workspace using the shared product shell."""
+    protected_content = rx.box(
+        authenticated_header(),
+        rx.box(
+            rx.vstack(
+                *children,
+                spacing="5",
+                align="stretch",
+                width="100%",
+            ),
+            padding=rx.breakpoints(initial="1.5rem 0 2.5rem", sm="2.25rem 0 3.5rem"),
+        ),
+        width="100%",
+        max_width="72rem",
+        margin="0 auto",
+        padding="0 1.25rem",
+    )
+
+    return rx.cond(
+        AuthState.auth_checked
+        & (AuthState.current_role == role.value)
+        & (AuthState.verified_path == role.dashboard_path),
+        protected_content,
+        loading_surface(),
+    )
