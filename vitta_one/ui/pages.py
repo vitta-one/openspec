@@ -1,23 +1,38 @@
-"""Vitta-One public and protected page components."""
+"""Vitta-One public, protected, and local QA page components."""
 
 import reflex as rx
 
 from vitta_one.auth.roles import Role
 from vitta_one.auth.state import AuthState
-from vitta_one.ui.components import brand_mark, dashboard_shell, loading_surface, login_form, protected_workspace
+from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
+from vitta_one.professional_directory.state import AdminDirectoryState
+from vitta_one.ui.admin_directory_components import admin_directory_workspace
+from vitta_one.ui.admin_preview_components import (
+    agenda_preview,
+    clinical_preview,
+    finance_preview,
+    patients_preview,
+    reception_preview,
+)
+from vitta_one.ui.components import (
+    admin_preview_workspace,
+    brand_logo,
+    dashboard_shell,
+    feedback_region,
+    loading_surface,
+    login_form,
+    page_header,
+    protected_workspace,
+)
 from vitta_one.ui.queue_components import (
     active_queue_panel,
     doctor_active_panel,
     doctor_waiting_summary,
     enqueue_panel,
-    feedback_region,
     patient_identity_panel,
     reassess_panel,
     withdraw_panel,
 )
-from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
-from vitta_one.professional_directory.state import AdminDirectoryState
-from vitta_one.ui.admin_directory_components import admin_directory_workspace
 
 
 def root_page() -> rx.Component:
@@ -26,101 +41,130 @@ def root_page() -> rx.Component:
 
 
 def login_page() -> rx.Component:
-    """Render the public Vitta-One authentication entry point."""
-    content = rx.center(
-        rx.flex(
+    """Render the premium internal authentication entry point."""
+    content = rx.box(
+        rx.box(
             rx.box(
-                rx.vstack(
-                    rx.hstack(
-                        brand_mark(),
-                        rx.text("Vitta-One", font_weight="800", font_size="1.05rem"),
-                        spacing="3",
-                        align="center",
-                    ),
-                    rx.box(
-                        rx.text(
-                            "Acesso clínico, sem ruído.",
-                            font_size=rx.breakpoints(initial="2rem", sm="2.7rem"),
-                            font_weight="760",
-                            letter_spacing="-0.045em",
-                            line_height="1.05",
-                            max_width="11ch",
-                        ),
-                        rx.text(
-                            "Identidade e permissões são validadas no servidor antes de qualquer área protegida ser liberada.",
-                            margin_top="1rem",
-                            max_width="42ch",
-                            line_height="1.7",
-                            color="var(--vitta-text-muted)",
-                        ),
-                    ),
-                    rx.hstack(
-                        rx.box(
-                            width="2.8rem",
-                            height="2px",
-                            background="var(--vitta-primary)",
-                            aria_hidden="true",
-                        ),
-                        rx.text("Ambiente interno", size="2", color="var(--vitta-text-muted)"),
-                        spacing="3",
-                        align="center",
-                    ),
-                    spacing="7",
-                    align="start",
-                    height="100%",
-                    justify="between",
+                brand_logo(width="10rem"),
+                rx.hstack(
+                    rx.box(class_name="vitta-online-dot", aria_hidden="true"),
+                    rx.text("Ambiente interno", font_weight="750", font_size="0.74rem"),
+                    spacing="2",
+                    align="center",
+                    color="var(--vitta-primary)",
+                    margin_top="1.25rem",
                 ),
-                flex="1 1 0",
-                padding=rx.breakpoints(initial="1.5rem", md="3.5rem"),
-                background="var(--vitta-surface-muted)",
-                border_radius=rx.breakpoints(
-                    initial="var(--vitta-radius-panel) var(--vitta-radius-panel) 0 0",
-                    md="var(--vitta-radius-panel) 0 0 var(--vitta-radius-panel)",
-                ),
-                min_height=rx.breakpoints(initial="auto", md="35rem"),
             ),
-            rx.center(
-                rx.box(
-                    rx.vstack(
-                        rx.box(
-                            rx.text("Identificação", font_size="0.78rem", font_weight="800", letter_spacing="0.08em", color="var(--vitta-primary)"),
-                            rx.heading("Entrar no sistema", size="7", margin_top="0.35rem", letter_spacing="-0.03em"),
-                            rx.text(
-                                "Use as credenciais fornecidas pela administração da clínica.",
-                                margin_top="0.55rem",
-                                color="var(--vitta-text-muted)",
-                                line_height="1.6",
-                            ),
-                            width="100%",
-                        ),
-                        login_form(),
-                        spacing="6",
-                        width="100%",
-                    ),
-                    width="100%",
-                    max_width="27rem",
-                    padding=rx.breakpoints(initial="1.5rem", sm="2.5rem"),
+            rx.box(
+                rx.text(
+                    "ACESSO SEGURO",
+                    class_name="vitta-login-kicker",
                 ),
-                flex="1 1 0",
-                background="var(--vitta-surface)",
-                border_radius=rx.breakpoints(
-                    initial="0 0 var(--vitta-radius-panel) var(--vitta-radius-panel)",
-                    md="0 var(--vitta-radius-panel) var(--vitta-radius-panel) 0",
+                rx.heading(
+                    "Bem-vindo de volta.",
+                    font_size=rx.breakpoints(initial="2rem", sm="2.45rem"),
+                    line_height="1.08",
+                    letter_spacing="-0.045em",
+                    font_family="var(--vitta-font-display)",
+                    margin_top="1rem",
                 ),
-                min_height=rx.breakpoints(initial="auto", md="35rem"),
+                rx.text(
+                    "Entre com suas credenciais para acessar o ambiente operacional da clínica.",
+                    color="var(--vitta-text-muted)",
+                    line_height="1.65",
+                    margin_top="0.75rem",
+                    max_width="42ch",
+                ),
+                rx.box(login_form(), margin_top="1.75rem"),
+                class_name="vitta-login-form-wrap",
             ),
-            width="100%",
-            max_width="70rem",
-            direction=rx.breakpoints(initial="column", md="row"),
-            box_shadow="var(--vitta-shadow-panel)",
-            border="1px solid var(--vitta-border)",
-            border_radius="var(--vitta-radius-panel)",
-            overflow="hidden",
+            rx.hstack(
+                rx.icon("shield_check", size=15),
+                rx.text(
+                    "Sessões e permissões são validadas no servidor.",
+                    font_size="0.74rem",
+                    color="var(--vitta-text-subtle)",
+                ),
+                spacing="2",
+                align="center",
+            ),
+            class_name="vitta-login-form-pane",
         ),
-        width="100%",
-        min_height="100dvh",
-        padding=rx.breakpoints(initial="1rem", sm="2rem"),
-        background="var(--vitta-canvas)",
+        rx.box(
+            rx.box(
+                rx.box(
+                    rx.icon("activity", size=42),
+                    class_name="vitta-login-emblem-icon",
+                ),
+                rx.box(
+                    width="0.65rem",
+                    height="0.65rem",
+                    border_radius="999px",
+                    background="#ffffff",
+                    opacity="0.95",
+                    position="absolute",
+                    right="18%",
+                    top="18%",
+                ),
+                class_name="vitta-login-emblem",
+                aria_hidden="true",
+            ),
+            rx.box(
+                rx.text(
+                    "CLÍNICA EM FOCO",
+                    font_size="0.72rem",
+                    font_weight="800",
+                    letter_spacing="0.1em",
+                    color="rgba(255,255,255,0.72)",
+                ),
+                rx.heading(
+                    "Uma estação clínica para trabalhar com clareza.",
+                    font_size=rx.breakpoints(initial="2rem", lg="3.15rem"),
+                    line_height="1.04",
+                    letter_spacing="-0.045em",
+                    color="#ffffff",
+                    font_family="var(--vitta-font-display)",
+                    max_width="12ch",
+                    margin_top="0.7rem",
+                ),
+                rx.text(
+                    "Pacientes, equipe e operação organizados em uma experiência única, precisa e rastreável.",
+                    color="rgba(255,255,255,0.78)",
+                    line_height="1.65",
+                    max_width="48ch",
+                    margin_top="1rem",
+                ),
+                rx.flex(
+                    rx.hstack(
+                        rx.icon("users", size=16),
+                        rx.text("Recepção", font_size="0.8rem", font_weight="700"),
+                        spacing="2",
+                        align="center",
+                        class_name="vitta-login-feature",
+                    ),
+                    rx.hstack(
+                        rx.icon("stethoscope", size=16),
+                        rx.text("Equipe clínica", font_size="0.8rem", font_weight="700"),
+                        spacing="2",
+                        align="center",
+                        class_name="vitta-login-feature",
+                    ),
+                    rx.hstack(
+                        rx.icon("settings", size=16),
+                        rx.text("Administração", font_size="0.8rem", font_weight="700"),
+                        spacing="2",
+                        align="center",
+                        class_name="vitta-login-feature",
+                    ),
+                    gap="0.5rem",
+                    flex_wrap="wrap",
+                    margin_top="1.35rem",
+                ),
+                class_name="vitta-login-caption",
+            ),
+            class_name="vitta-login-visual",
+        ),
+        class_name="vitta-login-shell",
     )
 
     return rx.cond(
@@ -134,22 +178,17 @@ def admin_page() -> rx.Component:
     return protected_workspace(
         Role.ADMINISTRADOR,
         admin_directory_workspace(),
+        active="administracao",
     )
 
 
 def reception_page() -> rx.Component:
     return protected_workspace(
         Role.RECEPCIONISTA,
-        rx.box(
-            rx.heading("Recepção e fila de atendimento", size="8", letter_spacing="-0.03em"),
-            rx.text(
-                "Cadastre ou localize o paciente, registre a prioridade recebida e acompanhe a fila ativa.",
-                color="var(--vitta-text-muted)",
-                max_width="68ch",
-                line_height="1.65",
-                margin_top="0.45rem",
-            ),
-            width="100%",
+        page_header(
+            "Operação",
+            "Recepção e fila",
+            "Cadastre ou localize pacientes, registre a prioridade recebida e acompanhe a fila ativa.",
         ),
         feedback_region(
             ReceptionQueueState.error_message,
@@ -166,22 +205,17 @@ def reception_page() -> rx.Component:
         active_queue_panel(),
         reassess_panel(),
         withdraw_panel(),
+        active="recepcao",
     )
 
 
 def doctor_page() -> rx.Component:
     return protected_workspace(
         Role.MEDICO,
-        rx.box(
-            rx.heading("Fila médica", size="8", letter_spacing="-0.03em"),
-            rx.text(
-                "Chame o próximo paciente elegível e finalize somente o atendimento associado à sua sessão.",
-                color="var(--vitta-text-muted)",
-                max_width="68ch",
-                line_height="1.65",
-                margin_top="0.45rem",
-            ),
-            width="100%",
+        page_header(
+            "Atendimento",
+            "Fila médica",
+            "Chame o próximo paciente elegível e finalize somente o atendimento associado à sua sessão.",
         ),
         feedback_region(
             DoctorQueueState.error_message,
@@ -208,46 +242,106 @@ def doctor_page() -> rx.Component:
             ),
             doctor_active_panel(),
         ),
+        active="atendimento",
     )
 
 
 def finance_page() -> rx.Component:
     return dashboard_shell(
         Role.FINANCEIRO,
-        "Painel financeiro",
-        "O acesso financeiro está validado. Pagamentos, valores e operações com Asaas sandbox serão implementados em changes próprias.",
+        "Financeiro",
+        "O acesso financeiro está validado. Pagamentos, valores e integração com Asaas sandbox serão implementados em change própria.",
+    )
+
+
+def admin_reception_preview_page() -> rx.Component:
+    return admin_preview_workspace(
+        "/admin/recepcao",
+        "recepcao",
+        reception_preview(),
+    )
+
+
+def admin_agenda_preview_page() -> rx.Component:
+    return admin_preview_workspace(
+        "/admin/agenda",
+        "agenda",
+        agenda_preview(),
+    )
+
+
+def admin_clinical_preview_page() -> rx.Component:
+    return admin_preview_workspace(
+        "/admin/atendimento",
+        "atendimento",
+        clinical_preview(),
+    )
+
+
+def admin_patients_preview_page() -> rx.Component:
+    return admin_preview_workspace(
+        "/admin/pacientes",
+        "pacientes",
+        patients_preview(),
+    )
+
+
+def admin_finance_preview_page() -> rx.Component:
+    return admin_preview_workspace(
+        "/admin/financeiro",
+        "financeiro",
+        finance_preview(),
     )
 
 
 def forbidden_page() -> rx.Component:
     """Render an authenticated 403-style route without disclosing another role's content."""
     content = rx.center(
-        rx.vstack(
-            brand_mark(),
-            rx.text("403", font_weight="800", color="var(--vitta-primary)", letter_spacing="0.08em"),
-            rx.heading("Acesso não autorizado", size="8", text_align="center", letter_spacing="-0.03em"),
-            rx.text(
-                "Sua sessão está ativa, mas esta área pertence a outra função da clínica.",
-                color="var(--vitta-text-muted)",
-                line_height="1.7",
-                text_align="center",
-                max_width="42ch",
+        rx.box(
+            brand_logo(width="8.5rem"),
+            rx.box(
+                rx.text(
+                    "403 · ACESSO RESTRITO",
+                    font_size="0.72rem",
+                    font_weight="800",
+                    letter_spacing="0.09em",
+                    color="var(--vitta-primary)",
+                ),
+                rx.heading(
+                    "Esta área pertence a outra função.",
+                    size="8",
+                    letter_spacing="-0.035em",
+                    font_family="var(--vitta-font-display)",
+                    margin_top="0.6rem",
+                ),
+                rx.text(
+                    "Sua sessão continua ativa. Volte ao ambiente compatível com sua função para continuar.",
+                    color="var(--vitta-text-muted)",
+                    line_height="1.65",
+                    max_width="46ch",
+                    margin_top="0.7rem",
+                ),
+                rx.button(
+                    rx.hstack(
+                        rx.icon("arrow_left", size=17),
+                        rx.text("Voltar ao meu painel"),
+                        spacing="2",
+                        align="center",
+                    ),
+                    size="3",
+                    color_scheme="teal",
+                    high_contrast=True,
+                    on_click=AuthState.go_to_dashboard,
+                    margin_top="1.4rem",
+                ),
+                margin_top="1.5rem",
             ),
-            rx.button(
-                "Voltar ao meu painel",
-                size="3",
-                color_scheme="teal",
-                high_contrast=True,
-                on_click=AuthState.go_to_dashboard,
-            ),
-            spacing="5",
-            align="center",
-            padding=rx.breakpoints(initial="2rem 1.25rem", sm="3rem"),
-            max_width="36rem",
+            width="min(100%, 37rem)",
+            padding=rx.breakpoints(initial="1.5rem", sm="2.25rem"),
             border="1px solid var(--vitta-border)",
-            border_radius="var(--vitta-radius-panel)",
+            border_radius="var(--vitta-radius-large)",
             background="var(--vitta-surface)",
-            box_shadow="var(--vitta-shadow-panel)",
+            box_shadow="var(--vitta-shadow-sm)",
         ),
         width="100%",
         min_height="100dvh",
