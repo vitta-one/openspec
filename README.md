@@ -4,7 +4,7 @@ Sistema acadêmico de gerenciamento de clínica médica desenvolvido com **Pytho
 
 ## Estado atual
 
-A fundação de acesso está integrada e a change ativa `add-patient-reception-queue` implementa o primeiro fluxo operacional: cadastro/localização de pacientes, fila priorizada na Recepção e chamada/finalização pelo Médico. A autorização continua sendo revalidada no servidor em todas as leituras e mutações protegidas.
+A fundação de acesso e o primeiro fluxo operacional estão integrados: cadastro/localização de pacientes, fila priorizada na Recepção e chamada/finalização pelo Médico. A capability consolidada está em `openspec/specs/patient-reception-queue/`, com a evolução correspondente de `openspec/specs/access-control/`. A autorização continua sendo revalidada no servidor em todas as leituras e mutações protegidas.
 
 ## Stack definida
 
