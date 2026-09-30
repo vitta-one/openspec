@@ -269,10 +269,19 @@ def agenda_preview() -> rx.Component:
                         margin_top="0.25rem",
                     ),
                 ),
-                rx.badge(
-                    AdminPreviewState.professionals.length().to_string() + " cadastrados",
-                    color_scheme="teal",
-                    variant="soft",
+                rx.hstack(
+                    rx.text(
+                        AdminPreviewState.professionals.length(),
+                        font_weight="800",
+                        class_name="vitta-tabular",
+                    ),
+                    rx.text("profissionais", font_size="0.74rem"),
+                    spacing="1",
+                    align="center",
+                    color="var(--vitta-primary)",
+                    padding="0.35rem 0.55rem",
+                    border_radius="999px",
+                    background="var(--vitta-primary-soft)",
                 ),
                 direction=rx.breakpoints(initial="column", sm="row"),
                 justify="between",
@@ -348,11 +357,7 @@ def _patient_list_row(row) -> rx.Component:
     return rx.button(
         rx.hstack(
             rx.box(
-                rx.text(
-                    row["name"].slice(0, 1),
-                    font_weight="800",
-                    font_size="0.78rem",
-                ),
+                rx.icon("user", size=16),
                 class_name="vitta-patient-avatar",
             ),
             rx.box(
