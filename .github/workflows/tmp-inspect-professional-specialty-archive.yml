@@ -1,0 +1,24 @@
+name: Inspect archive professional specialty
+
+on:
+  push:
+    branches:
+      - chore/archive-professional-specialty-management
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Archive instructions
+        run: npx -y @fission-ai/openspec@1.13.0 instructions archive --change add-professional-specialty-management --json || true
+      - name: Status
+        run: npx -y @fission-ai/openspec@1.13.0 status --change add-professional-specialty-management --json
+      - name: Specs instructions
+        run: npx -y @fission-ai/openspec@1.13.0 instructions specs --change add-professional-specialty-management --json
