@@ -2,7 +2,11 @@
 
 import pytest
 
-from vitta_one.auth.settings import (\n    local_admin_preview_enabled,\n    secure_cookie_enabled,\n    session_ttl_seconds,\n)
+from vitta_one.auth.settings import (
+    local_admin_preview_enabled,
+    secure_cookie_enabled,
+    session_ttl_seconds,
+)
 
 
 def test_session_ttl_requires_explicit_positive_integer(monkeypatch: pytest.MonkeyPatch) -> None:
