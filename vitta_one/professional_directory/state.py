@@ -41,6 +41,7 @@ class SpecialtyOption(TypedDict):
 
 class MedicalAccountRow(TypedDict):
     id: int
+    value: str
     email: str
 
 
@@ -166,7 +167,7 @@ class AdminDirectoryState(rx.State):
 
     def _set_medical_accounts(self, items) -> None:
         self.medical_accounts = [
-            {"id": item.id, "email": item.email}
+            {"id": item.id, "value": str(item.id), "email": item.email}
             for item in items
         ]
 
