@@ -6,6 +6,7 @@ from vitta_one.professional_directory.state import AdminDirectoryState
 from vitta_one.ui.components import (
     feedback_region,
     field_label,
+    page_header,
     section_panel,
 )
 
@@ -72,6 +73,7 @@ def specialty_create_panel() -> rx.Component:
                     width="100%",
                 ),
                 on_submit=AdminDirectoryState.create_specialty,
+                no_validate=True,
                 width="100%",
             ),
             spacing="4",
@@ -419,6 +421,7 @@ def professional_form_panel() -> rx.Component:
             rx.el.form(
                 form_fields,
                 on_submit=AdminDirectoryState.save_professional,
+                no_validate=True,
                 width="100%",
             ),
             spacing="4",
@@ -591,22 +594,12 @@ def professionals_list_panel() -> rx.Component:
 
 
 def admin_directory_workspace() -> rx.Component:
-    """Compose the administrator directory without introducing global navigation."""
+    """Compose the premium administrator directory workspace."""
     return rx.vstack(
-        rx.box(
-            rx.heading(
-                "Profissionais e especialidades",
-                size="8",
-                letter_spacing="-0.03em",
-            ),
-            rx.text(
-                "Mantenha o diretório que servirá de base para agenda e consultas. Esta área não cria contas, horários ou agendamentos.",
-                color="var(--vitta-text-muted)",
-                max_width="70ch",
-                line_height="1.65",
-                margin_top="0.45rem",
-            ),
-            width="100%",
+        page_header(
+            "Administração",
+            "Profissionais e especialidades",
+            "Mantenha o diretório que servirá de base para agenda e consultas. Horários e agendamentos entram pela capability específica.",
         ),
         feedback_region(
             AdminDirectoryState.error_message,
