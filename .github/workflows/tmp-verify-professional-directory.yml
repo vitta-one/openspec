@@ -1,0 +1,22 @@
+name: Verify professional directory completion
+
+on:
+  push:
+    branches:
+      - feat/professional-specialty-management-implementation
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Strict change validation
+        run: npx -y @fission-ai/openspec@1.13.0 validate add-professional-specialty-management --strict --no-interactive
+      - name: Apply progress
+        run: npx -y @fission-ai/openspec@1.13.0 instructions apply --change add-professional-specialty-management --json
