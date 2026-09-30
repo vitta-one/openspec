@@ -16,6 +16,8 @@ from vitta_one.ui.queue_components import (
     withdraw_panel,
 )
 from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
+from vitta_one.professional_directory.state import AdminDirectoryState
+from vitta_one.ui.admin_directory_components import admin_directory_workspace
 
 
 def root_page() -> rx.Component:
@@ -129,10 +131,9 @@ def login_page() -> rx.Component:
 
 
 def admin_page() -> rx.Component:
-    return dashboard_shell(
+    return protected_workspace(
         Role.ADMINISTRADOR,
-        "Painel administrativo",
-        "O acesso administrativo está validado. Gestão de usuários, profissionais, especialidades e configurações será implementada em changes próprias.",
+        admin_directory_workspace(),
     )
 
 

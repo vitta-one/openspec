@@ -4,7 +4,7 @@ Sistema acadêmico de gerenciamento de clínica médica desenvolvido com **Pytho
 
 ## Estado atual
 
-A fundação de acesso e o primeiro fluxo operacional estão integrados: cadastro/localização de pacientes, fila priorizada na Recepção e chamada/finalização pelo Médico. A capability consolidada está em `openspec/specs/patient-reception-queue/`, com a evolução correspondente de `openspec/specs/access-control/`. A autorização continua sendo revalidada no servidor em todas as leituras e mutações protegidas.
+A fundação de acesso, o fluxo de paciente/fila e a gestão administrativa de profissionais/especialidades estão implementados nesta branch. A capability consolidada está em `openspec/specs/patient-reception-queue/`, com a evolução correspondente de `openspec/specs/access-control/`. A autorização continua sendo revalidada no servidor em todas as leituras e mutações protegidas.
 
 ## Stack definida
 
@@ -35,6 +35,7 @@ A fundação de acesso e o primeiro fluxo operacional estão integrados: cadastr
 │   ├── auth/
 │   ├── models/
 │   ├── patient_queue/
+│   ├── professional_directory/
 │   ├── ui/
 │   ├── __init__.py
 │   └── vitta_one.py
@@ -74,7 +75,7 @@ export VITTA_ONE_COOKIE_SECURE='true'         # produção/HTTPS
 
 A sessão do navegador contém somente um identificador opaco e imprevisível. O banco persiste apenas o hash desse token; identidade, role, expiração e revogação são revalidadas no servidor. Nesta versão do Reflex, a implementação usa as opções disponíveis em `rx.Cookie`: `Path=/`, `Max-Age`, `Secure` e `SameSite=Strict`.
 
-As migrações de autenticação e da fila de atendimento estão versionadas em `alembic/versions/` e foram revisadas e validadas contra PostgreSQL 16 descartável. Com `DATABASE_URL` configurada, aplique as migrações antes de criar o primeiro Administrador:
+As migrações de autenticação, fila de atendimento e diretório profissional estão versionadas em `alembic/versions/` e foram revisadas e validadas contra PostgreSQL 16 descartável. Com `DATABASE_URL` configurada, aplique as migrações antes de criar o primeiro Administrador:
 
 ```bash
 reflex db migrate
@@ -100,13 +101,13 @@ reflex compile --dry
 ## Rotas protegidas
 
 - `/login`: autenticação local, sem cadastro público;
-- `/admin`: shell protegido do Administrador;
+- `/admin`: gestão de especialidades e profissionais, com vínculo opcional a contas Médicas;
 - `/recepcao`: cadastro/localização de pacientes, entrada, reavaliação, retirada e acompanhamento da fila ativa;
 - `/medico`: contagem da fila, chamada atômica do próximo paciente e finalização do próprio atendimento ativo;
 - `/financeiro`: shell protegido do Financeiro;
 - `/acesso-negado`: estado autenticado para tentativa de acesso a uma role incompatível.
 
-Administrador e Financeiro ainda permanecem shells. Recepção e Médico já executam a capability de fila; prioridade é sempre informada pela operação (`VERMELHO`, `AMARELO`, `VERDE`) e nunca é calculada ou elevada automaticamente pelo Vitta-One. A autorização é revalidada no backend e não depende apenas de componentes escondidos no frontend.
+Financeiro ainda permanece shell. Administrador executa a gestão do diretório e Recepção/Médico executam a capability de fila; prioridade é sempre informada pela operação (`VERMELHO`, `AMARELO`, `VERDE`) e nunca é calculada ou elevada automaticamente pelo Vitta-One. A autorização é revalidada no backend e não depende apenas de componentes escondidos no frontend.
 
 ## Fluxo de desenvolvimento
 

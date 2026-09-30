@@ -4,8 +4,17 @@ import reflex as rx
 
 from vitta_one.auth.roles import Role
 from vitta_one.auth.state import AuthState
-from vitta_one.models import AuthSession, Patient, QueueEntry, User
+from vitta_one.models import (
+    AuthSession,
+    Patient,
+    Professional,
+    ProfessionalSpecialty,
+    QueueEntry,
+    Specialty,
+    User,
+)
 from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
+from vitta_one.professional_directory.state import AdminDirectoryState
 from vitta_one.ui.pages import (
     admin_page,
     doctor_page,
@@ -18,7 +27,15 @@ from vitta_one.ui.pages import (
 
 # Keep persistent models imported from the application module so Reflex/Alembic
 # can discover their metadata when generating migrations.
-_PERSISTENT_MODELS = (User, AuthSession, Patient, QueueEntry)
+_PERSISTENT_MODELS = (
+    User,
+    AuthSession,
+    Patient,
+    QueueEntry,
+    Specialty,
+    Professional,
+    ProfessionalSpecialty,
+)
 
 app = rx.App(
     theme=rx.theme(
@@ -46,7 +63,7 @@ app.add_page(
     admin_page,
     route=Role.ADMINISTRADOR.dashboard_path,
     title="Painel administrativo | Vitta-One",
-    on_load=AuthState.load_protected,
+    on_load=[AuthState.load_protected, AdminDirectoryState.load],
 )
 app.add_page(
     reception_page,

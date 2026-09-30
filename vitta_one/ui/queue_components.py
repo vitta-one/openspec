@@ -3,52 +3,7 @@
 import reflex as rx
 
 from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
-from vitta_one.ui.components import error_banner
-
-
-def section_panel(*children, **props) -> rx.Component:
-    """Render a quiet operational section using the established Vitta-One surface."""
-    return rx.box(
-        *children,
-        width="100%",
-        padding=rx.breakpoints(initial="1rem", sm="1.35rem"),
-        background="var(--vitta-surface)",
-        border="1px solid var(--vitta-border)",
-        border_radius="var(--vitta-radius-panel)",
-        **props,
-    )
-
-
-def success_banner(message) -> rx.Component:
-    return rx.box(
-        rx.text(message, size="2", line_height="1.5"),
-        width="100%",
-        padding="0.8rem 0.9rem",
-        border="1px solid var(--vitta-success-border)",
-        border_radius="var(--vitta-radius-control)",
-        background="var(--vitta-success-soft)",
-        color="var(--vitta-success)",
-        role="status",
-        aria_live="polite",
-    )
-
-
-def feedback_region(error, success) -> rx.Component:
-    return rx.box(
-        rx.cond(error != "", error_banner(error, "queue-feedback"), rx.fragment()),
-        rx.cond(success != "", success_banner(success), rx.fragment()),
-        width="100%",
-    )
-
-
-def field_label(text: str, control_id: str) -> rx.Component:
-    return rx.el.label(
-        text,
-        html_for=control_id,
-        font_weight="650",
-        font_size="0.9rem",
-        color="var(--vitta-text)",
-    )
+from vitta_one.ui.components import feedback_region, field_label, section_panel
 
 
 def priority_select(

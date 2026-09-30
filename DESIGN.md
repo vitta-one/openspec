@@ -1,7 +1,7 @@
 ---
 version: alpha
 name: "Vitta-One"
-description: "Interface clínica interna, calma e operacional, com foco em identidade, autorização, fila de atendimento e legibilidade."
+description: "Interface clínica interna, calma e operacional, com foco em identidade, autorização, diretórios administrativos, fila de atendimento e legibilidade."
 colors:
   canvas: "#F4F8F7"
   surface: "#FFFFFF"
@@ -38,6 +38,9 @@ components:
   alert: {}
   queue-row: {}
   priority-badge: {}
+  directory-row: {}
+  status-badge: {}
+  checkbox-group: {}
   scrollbar: {}
 ---
 
@@ -71,7 +74,7 @@ A fonte é a pilha do sistema para evitar dependência externa e reduzir desloca
 
 ## Layout
 
-O login adota dois painéis apenas em telas médias ou maiores; no mobile eles empilham verticalmente sem perder a ordem do formulário. Áreas protegidas usam largura máxima de `72rem`, padding horizontal de `1.25rem` e fluxo natural da página. Nos fluxos de Recepção, identidade do paciente e entrada na fila podem ocupar duas colunas apenas quando houver largura suficiente; em telas estreitas voltam para uma coluna mantendo a sequência operacional. A fila permanece uma lista vertical, porque prioridade, relato e ações precisam continuar legíveis sem rolagem horizontal. Não há sidebar nesta fase.
+O login adota dois painéis apenas em telas médias ou maiores; no mobile eles empilham verticalmente sem perder a ordem do formulário. Áreas protegidas usam largura máxima de `72rem`, padding horizontal de `1.25rem` e fluxo natural da página. Nos fluxos de Recepção, identidade do paciente e entrada na fila podem ocupar duas colunas apenas quando houver largura suficiente; em telas estreitas voltam para uma coluna mantendo a sequência operacional. A fila permanece uma lista vertical, porque prioridade, relato e ações precisam continuar legíveis sem rolagem horizontal. No painel Administrador, especialidades e formulário de profissional podem dividir a largura apenas em telas amplas; listas continuam verticais e retornam a uma coluna em telas estreitas. Não há sidebar nesta fase.
 
 ## Elevation & Depth
 
@@ -93,11 +96,11 @@ A ação primária usa teal sólido; ações secundárias usam outline/ghost. Bo
 
 ### Navigation and data display
 
-Os destinos autenticados continuam separados por role. Administrador e Financeiro permanecem shells; Recepção e Médico passam a hospedar a capability de fila sem criar navegação global nova. A fila ativa é exibida como lista vertical ordenada pelo servidor. Cada item mostra nome, horário de entrada, prioridade textual e relato; ações são botões explícitos. A rota incompatível mantém estado 403 próprio e retorno ao painel autorizado.
+Os destinos autenticados continuam separados por role. Financeiro permanece shell; Administrador hospeda a gestão de profissionais/especialidades e Recepção/Médico hospedam a capability de fila sem criar navegação global nova. A fila ativa é exibida como lista vertical ordenada pelo servidor. Cada item mostra nome, horário de entrada, prioridade textual e relato; ações são botões explícitos. A rota incompatível mantém estado 403 próprio e retorno ao painel autorizado.
 
 ### Forms and overlays
 
-Campos possuem label explícita, sem placeholder como substituto de rótulo. E-mail usa semântica `email`/`username`; senha usa `current-password` e alternância acessível de visibilidade. CPF e relato da fila recebem validação no servidor mesmo quando o navegador já aplica restrições básicas. Prioridade usa Select acessível do próprio Reflex/Radix e nunca é inferida pelo sistema. Reavaliação e retirada acontecem inline no fluxo para preservar contexto; retirada exige motivo e confirmação explícita, mas não usa modal porque não apaga o histórico. Falhas aparecem em alert inline seguro e confirmações em região `status`. Não existe cadastro público.
+Campos possuem label explícita, sem placeholder como substituto de rótulo. E-mail usa semântica `email`/`username`; senha usa `current-password` e alternância acessível de visibilidade. CPF e relato da fila recebem validação no servidor mesmo quando o navegador já aplica restrições básicas. Prioridade usa Select acessível do próprio Reflex/Radix e nunca é inferida pelo sistema. Seleção de múltiplas especialidades usa checkboxes visíveis; vínculo histórico inativo permanece marcado e bloqueado para não ser removido acidentalmente. Reavaliação, retirada e edições administrativas acontecem inline no fluxo para preservar contexto; retirada exige motivo e confirmação explícita, mas não usa modal porque não apaga o histórico. Falhas aparecem em alert inline seguro e confirmações em região `status`. Não existe cadastro público.
 
 ### Iconography
 
@@ -109,7 +112,7 @@ Apenas transições curtas de foco/hover. Nenhuma animação ambiente. Em `prefe
 
 ### Content and data visualization
 
-A voz é objetiva e operacional. Não exibir métricas ou gráficos simulados. O painel Médico pode mostrar apenas a contagem real de pacientes aguardando e o atendimento ativo da própria identidade. Prioridade é apresentada como dado recebido pela operação, nunca como diagnóstico, recomendação ou cálculo do Vitta-One. Estados vazios devem dizer claramente que não há pacientes aplicáveis sem preencher a interface com conteúdo fictício.
+A voz é objetiva e operacional. Não exibir métricas ou gráficos simulados. O painel Médico pode mostrar apenas a contagem real de pacientes aguardando e o atendimento ativo da própria identidade. O painel Administrador mostra somente dados persistidos do diretório, incluindo estados ativo/inativo e vínculo opcional com conta Médica. Prioridade é apresentada como dado recebido pela operação, nunca como diagnóstico, recomendação ou cálculo do Vitta-One. Estados vazios devem dizer claramente que não há pacientes aplicáveis sem preencher a interface com conteúdo fictício.
 
 ## Do's and Don'ts
 
@@ -117,5 +120,6 @@ A voz é objetiva e operacional. Não exibir métricas ou gráficos simulados. O
 - **Do:** manter autorização real no backend e tratar ocultação visual apenas como UX.
 - **Don't:** antecipar módulos, métricas ou navegação ainda não especificados pelo OpenSpec.
 - **Do:** manter prioridade sempre acompanhada de texto e preservar a ordem recebida do servidor.
+- **Do:** comunicar estados ativo/inativo por texto e preservar vínculos históricos durante edições administrativas.
 - **Don't:** sugerir que cor, tempo de espera ou interface calculam gravidade clínica.
 - **Don't:** reduzir contraste, remover foco ou esconder scrollbar para ganhar aparência “clean”.
