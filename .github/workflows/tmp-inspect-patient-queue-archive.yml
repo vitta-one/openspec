@@ -22,3 +22,5 @@ jobs:
         run: npx -y @fission-ai/openspec@1.13.0 status --change add-patient-reception-queue --json
       - name: Specs instructions
         run: npx -y @fission-ai/openspec@1.13.0 instructions specs --change add-patient-reception-queue --json
+      - name: Validate synced specs
+        run: npx -y @fission-ai/openspec@1.13.0 validate --specs
