@@ -2,11 +2,13 @@
 
 import reflex as rx
 
+from vitta_one.appointment_scheduling.state import AdminAvailabilityState, ReceptionAgendaState
 from vitta_one.auth.roles import Role
 from vitta_one.auth.state import AuthState
 from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
 from vitta_one.professional_directory.state import AdminDirectoryState
 from vitta_one.ui.admin_directory_components import admin_directory_workspace
+from vitta_one.ui.appointment_components import admin_availability_panel, reception_agenda_panel
 from vitta_one.ui.admin_preview_components import (
     agenda_preview,
     clinical_preview,
@@ -180,6 +182,7 @@ def admin_page() -> rx.Component:
     return protected_workspace(
         Role.ADMINISTRADOR,
         admin_directory_workspace(),
+        admin_availability_panel(),
         active="administracao",
     )
 
@@ -192,6 +195,7 @@ def reception_page() -> rx.Component:
             "Recepção e fila",
             "Cadastre ou localize pacientes, registre a prioridade recebida e acompanhe a fila ativa.",
         ),
+        reception_agenda_panel(),
         feedback_region(
             ReceptionQueueState.error_message,
             ReceptionQueueState.success_message,
