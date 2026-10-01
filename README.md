@@ -73,6 +73,34 @@ export VITTA_ONE_COOKIE_SECURE='true'         # produção/HTTPS
 
 > A duração da sessão não possui valor padrão no projeto. A política definitiva deve ser decidida explicitamente antes de uso real.
 
+
+### Preview local do Administrador
+
+Para validar o fluxo visual completo durante desenvolvimento local, o Administrador pode habilitar uma navegação unificada de **QA somente leitura**. Esse modo não altera o RBAC de produção e não concede ao Admin as mutações exclusivas de Recepção ou Médico.
+
+PowerShell:
+
+```powershell
+$env:VITTA_ONE_LOCAL_ADMIN_PREVIEW="true"
+```
+
+CMD:
+
+```cmd
+set "VITTA_ONE_LOCAL_ADMIN_PREVIEW=true"
+```
+
+Com o flag habilitado e uma sessão `ADMINISTRADOR`, o shell local também expõe:
+
+- `/admin/recepcao`: projeção da fila persistida;
+- `/admin/agenda`: estrutura visual da agenda sem compromissos fictícios;
+- `/admin/atendimento`: contexto somente leitura de atendimentos operacionais ativos;
+- `/admin/pacientes`: pacientes persistidos + histórico operacional;
+- `/admin/financeiro`: estado vazio honesto até a capability financeira existir.
+
+Sem esse flag, as rotas de preview redirecionam para `/admin`.
+
+
 A sessão do navegador contém somente um identificador opaco e imprevisível. O banco persiste apenas o hash desse token; identidade, role, expiração e revogação são revalidadas no servidor. Nesta versão do Reflex, a implementação usa as opções disponíveis em `rx.Cookie`: `Path=/`, `Max-Age`, `Secure` e `SameSite=Strict`.
 
 As migrações de autenticação, fila de atendimento e diretório profissional estão versionadas em `alembic/versions/` e foram revisadas e validadas contra PostgreSQL 16 descartável. Com `DATABASE_URL` configurada, aplique as migrações antes de criar o primeiro Administrador:

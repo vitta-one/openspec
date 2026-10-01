@@ -1,4 +1,4 @@
-"""Vitta-One public and protected page components."""
+"""Vitta-One public, protected, and local QA page components."""
 
 import reflex as rx
 
@@ -7,15 +7,22 @@ from vitta_one.auth.state import AuthState
 from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
 from vitta_one.professional_directory.state import AdminDirectoryState
 from vitta_one.ui.admin_directory_components import admin_directory_workspace
+from vitta_one.ui.admin_preview_components import (
+    agenda_preview,
+    clinical_preview,
+    finance_preview,
+    patients_preview,
+    reception_preview,
+)
 from vitta_one.ui.components import (
+    admin_preview_workspace,
     brand_logo,
     dashboard_shell,
     feedback_region,
     loading_surface,
     login_form,
-    page_heading,
+    page_header,
     protected_workspace,
-    section_panel,
 )
 from vitta_one.ui.queue_components import (
     active_queue_panel,
@@ -34,58 +41,130 @@ def root_page() -> rx.Component:
 
 
 def login_page() -> rx.Component:
-    """Render a focused, image-led authentication entry point."""
+    """Render the premium internal authentication entry point."""
     content = rx.box(
         rx.box(
             rx.box(
-                brand_logo(),
-                rx.box(
-                    rx.text("ACESSO CLÍNICO", class_name="vitta-eyebrow"),
-                    rx.heading("Bem-vindo ao Vitta-One", class_name="vitta-login-title"),
-                    rx.text(
-                        "Entre para acessar seu espaço de trabalho da clínica com segurança.",
-                        class_name="vitta-login-copy",
-                    ),
-                    margin_top="2.4rem",
+                brand_logo(width="10rem"),
+                rx.hstack(
+                    rx.box(class_name="vitta-online-dot", aria_hidden="true"),
+                    rx.text("Ambiente interno", font_weight="750", font_size="0.74rem"),
+                    spacing="2",
+                    align="center",
+                    color="var(--vitta-primary)",
+                    margin_top="1.25rem",
                 ),
-                login_form(),
-                rx.text(
-                    "Vitta-One · Ambiente interno da clínica",
-                    class_name="vitta-login-footnote",
-                ),
-                class_name="vitta-login-form-panel",
             ),
             rx.box(
-                rx.image(
-                    src="/medical-doctor.jpg",
-                    alt="Profissional médica em ambiente clínico",
-                    class_name="vitta-login-photo",
+                rx.text(
+                    "ACESSO SEGURO",
+                    class_name="vitta-login-kicker",
+                ),
+                rx.heading(
+                    "Bem-vindo de volta.",
+                    font_size=rx.breakpoints(initial="2rem", sm="2.45rem"),
+                    line_height="1.08",
+                    letter_spacing="-0.045em",
+                    font_family="var(--vitta-font-display)",
+                    margin_top="1rem",
+                ),
+                rx.text(
+                    "Entre com suas credenciais para acessar o ambiente operacional da clínica.",
+                    color="var(--vitta-text-muted)",
+                    line_height="1.65",
+                    margin_top="0.75rem",
+                    max_width="42ch",
+                ),
+                rx.box(login_form(), margin_top="1.75rem"),
+                class_name="vitta-login-form-wrap",
+            ),
+            rx.hstack(
+                rx.icon("shield_check", size=15),
+                rx.text(
+                    "Sessões e permissões são validadas no servidor.",
+                    font_size="0.74rem",
+                    color="var(--vitta-text-subtle)",
+                ),
+                spacing="2",
+                align="center",
+            ),
+            class_name="vitta-login-form-pane",
+        ),
+        rx.box(
+            rx.box(
+                rx.box(
+                    rx.icon("activity", size=42),
+                    class_name="vitta-login-emblem-icon",
                 ),
                 rx.box(
-                    rx.text("OPERAÇÃO CONECTADA", class_name="vitta-login-visual-kicker"),
-                    rx.heading(
-                        "Informação certa, no momento certo.",
-                        class_name="vitta-login-visual-title",
-                    ),
-                    rx.text(
-                        "Recepção, equipe clínica e administração trabalham sobre o mesmo contexto — com acesso separado por função.",
-                        class_name="vitta-login-visual-copy",
-                    ),
-                    rx.flex(
-                        rx.box("Recepção", class_name="vitta-visual-chip"),
-                        rx.box("Atendimento", class_name="vitta-visual-chip"),
-                        rx.box("Administração", class_name="vitta-visual-chip"),
-                        gap="0.5rem",
-                        wrap="wrap",
-                        margin_top="1.2rem",
-                    ),
-                    class_name="vitta-login-visual-caption",
+                    width="0.65rem",
+                    height="0.65rem",
+                    border_radius="999px",
+                    background="#ffffff",
+                    opacity="0.95",
+                    position="absolute",
+                    right="18%",
+                    top="18%",
                 ),
-                class_name="vitta-login-visual",
+                class_name="vitta-login-emblem",
+                aria_hidden="true",
             ),
-            class_name="vitta-login-shell",
+            rx.box(
+                rx.text(
+                    "CLÍNICA EM FOCO",
+                    font_size="0.72rem",
+                    font_weight="800",
+                    letter_spacing="0.1em",
+                    color="rgba(255,255,255,0.72)",
+                ),
+                rx.heading(
+                    "Uma estação clínica para trabalhar com clareza.",
+                    font_size=rx.breakpoints(initial="2rem", lg="3.15rem"),
+                    line_height="1.04",
+                    letter_spacing="-0.045em",
+                    color="#ffffff",
+                    font_family="var(--vitta-font-display)",
+                    max_width="12ch",
+                    margin_top="0.7rem",
+                ),
+                rx.text(
+                    "Pacientes, equipe e operação organizados em uma experiência única, precisa e rastreável.",
+                    color="rgba(255,255,255,0.78)",
+                    line_height="1.65",
+                    max_width="48ch",
+                    margin_top="1rem",
+                ),
+                rx.flex(
+                    rx.hstack(
+                        rx.icon("users", size=16),
+                        rx.text("Recepção", font_size="0.8rem", font_weight="700"),
+                        spacing="2",
+                        align="center",
+                        class_name="vitta-login-feature",
+                    ),
+                    rx.hstack(
+                        rx.icon("stethoscope", size=16),
+                        rx.text("Equipe clínica", font_size="0.8rem", font_weight="700"),
+                        spacing="2",
+                        align="center",
+                        class_name="vitta-login-feature",
+                    ),
+                    rx.hstack(
+                        rx.icon("settings", size=16),
+                        rx.text("Administração", font_size="0.8rem", font_weight="700"),
+                        spacing="2",
+                        align="center",
+                        class_name="vitta-login-feature",
+                    ),
+                    gap="0.5rem",
+                    flex_wrap="wrap",
+                    margin_top="1.35rem",
+                ),
+                class_name="vitta-login-caption",
+            ),
+            class_name="vitta-login-visual",
         ),
-        class_name="vitta-login-canvas",
+        class_name="vitta-login-shell",
     )
 
     return rx.cond(
@@ -95,293 +174,21 @@ def login_page() -> rx.Component:
     )
 
 
-def _module_card(
-    title: str,
-    description: str,
-    icon: str,
-    href: str,
-    status: str,
-    status_tone: str = "available",
-) -> rx.Component:
-    return rx.link(
-        section_panel(
-            rx.flex(
-                rx.box(rx.icon(icon, size=21), class_name="vitta-module-icon"),
-                rx.badge(
-                    status,
-                    variant="soft",
-                    color_scheme="teal" if status_tone == "available" else "gray",
-                ),
-                justify="between",
-                align="center",
-                width="100%",
-            ),
-            rx.heading(title, size="5", margin_top="1rem"),
-            rx.text(
-                description,
-                color="var(--vitta-text-muted)",
-                size="2",
-                line_height="1.6",
-                margin_top="0.45rem",
-                min_height="3.2rem",
-            ),
-            rx.flex(
-                rx.text("Abrir módulo", size="2", font_weight="650"),
-                rx.icon("arrow_right", size=17),
-                gap="0.45rem",
-                align="center",
-                color="var(--vitta-primary)",
-                margin_top="1.15rem",
-            ),
-            class_name="vitta-module-card",
-        ),
-        href=href,
-        underline="none",
-        color="inherit",
-    )
-
-
 def admin_page() -> rx.Component:
     return protected_workspace(
         Role.ADMINISTRADOR,
-        page_heading(
-            "CENTRAL ADMINISTRATIVA",
-            "Visão geral da clínica",
-            "Acompanhe os módulos disponíveis no ambiente atual e navegue por toda a estrutura do Vitta-One sem misturar permissões operacionais.",
-        ),
-        rx.grid(
-            _module_card(
-                "Recepção",
-                "Fluxo de pacientes, classificação informada e fila operacional.",
-                "clipboard_list",
-                "/admin/recepcao",
-                "Operacional",
-            ),
-            _module_card(
-                "Agenda",
-                "Disponibilidade, agendamentos e consultas serão aplicados na próxima change.",
-                "calendar",
-                "/admin/agenda",
-                "Planejado",
-                "planned",
-            ),
-            _module_card(
-                "Atendimento clínico",
-                "A fila médica já existe; prontuário e registro clínico permanecem em evolução.",
-                "stethoscope",
-                "/admin/atendimento",
-                "Parcial",
-                "planned",
-            ),
-            _module_card(
-                "Pacientes",
-                "O cadastro mínimo de paciente já sustenta o fluxo da recepção.",
-                "users",
-                "/admin/pacientes",
-                "Operacional",
-            ),
-            _module_card(
-                "Financeiro",
-                "Área protegida pronta para receber pagamentos e integração Asaas.",
-                "wallet",
-                "/admin/financeiro",
-                "Estrutura pronta",
-                "planned",
-            ),
-            _module_card(
-                "Administração",
-                "Gerencie especialidades, profissionais e vínculos com contas médicas.",
-                "settings",
-                "/admin/administracao",
-                "Operacional",
-            ),
-            columns=rx.breakpoints(initial="1", md="2", xl="3"),
-            gap="1rem",
-            width="100%",
-        ),
-        section_panel(
-            rx.flex(
-                rx.box(
-                    rx.text("PRÓXIMA EVOLUÇÃO", class_name="vitta-eyebrow"),
-                    rx.heading("Agenda e consultas", size="5", margin_top="0.25rem"),
-                    rx.text(
-                        "O planejamento OpenSpec já está consolidado para disponibilidade por slots, agendamento, reagendamento e cancelamento. A interface não simula dados antes da implementação.",
-                        color="var(--vitta-text-muted)",
-                        size="2",
-                        line_height="1.6",
-                        margin_top="0.35rem",
-                        max_width="70ch",
-                    ),
-                ),
-                rx.box(
-                    rx.icon("shield_check", size=22),
-                    class_name="vitta-module-icon",
-                ),
-                justify="between",
-                align="center",
-                gap="1rem",
-                width="100%",
-            ),
-        ),
-      active_nav="overview",
-        page_title="Visão geral",
-        required_path="/admin",
-    )
-
-
-def admin_reception_page() -> rx.Component:
-    return protected_workspace(
-        Role.ADMINISTRADOR,
-        page_heading(
-            "RECEPÇÃO · VISÃO ADMINISTRATIVA",
-            "Fluxo operacional da recepção",
-            "O Administrador enxerga a estrutura do fluxo, enquanto as mutações da fila continuam restritas à role Recepcionista no servidor.",
-        ),
-        rx.grid(
-            section_panel(
-                rx.box(rx.icon("user_plus", size=21), class_name="vitta-module-icon"),
-                rx.heading("1. Identificar paciente", size="4", margin_top="0.9rem"),
-                rx.text("Localizar pelo CPF ou cadastrar a identidade mínima.", size="2", color="var(--vitta-text-muted)", margin_top="0.35rem"),
-            ),
-            section_panel(
-                rx.box(rx.icon("list_plus", size=21), class_name="vitta-module-icon"),
-                rx.heading("2. Entrada na fila", size="4", margin_top="0.9rem"),
-                rx.text("Registrar relato e prioridade recebida pela operação.", size="2", color="var(--vitta-text-muted)", margin_top="0.35rem"),
-            ),
-            section_panel(
-                rx.box(rx.icon("refresh_cw", size=21), class_name="vitta-module-icon"),
-                rx.heading("3. Reavaliar ou retirar", size="4", margin_top="0.9rem"),
-                rx.text("Atualizar a classificação manual ou preservar a retirada com motivo.", size="2", color="var(--vitta-text-muted)", margin_top="0.35rem"),
-            ),
-            columns=rx.breakpoints(initial="1", md="3"),
-            gap="1rem",
-            width="100%",
-        ),
-        section_panel(
-            rx.flex(
-                rx.icon("lock_keyhole", size=20, color="var(--vitta-primary)"),
-                rx.box(
-                    rx.text("Separação de responsabilidades", font_weight="700"),
-                    rx.text(
-                        "Este painel é de supervisão estrutural. Para preservar o RBAC já aprovado, o Admin não executa ações da Recepção por esta rota.",
-                        color="var(--vitta-text-muted)",
-                        size="2",
-                        margin_top="0.2rem",
-                    ),
-                ),
-                gap="0.8rem",
-                align="start",
-             )
-        ),
-        active_nav="reception",
-        page_title="Recepção",
-        required_path="/admin/recepcao",
-    )
-
-
-def admin_agenda_page() -> rx.Component:
-    return dashboard_shell(
-        Role.ADMINISTRADOR,
-        "Agenda",
-        "A navegação já está preparada para o fluxo visual dos mockups. O próximo backend de disponibilidade e agendamento está especificado em add-appointment-scheduling e ainda não deve exibir horários fictícios.",
-        active_nav="agenda",
-        required_path="/admin/agenda",
-    )
-
-
-def admin_clinical_page() -> rx.Component:
-    return protected_workspace(
-        Role.ADMINISTRADOR,
-        page_heading(
-            "ATENDIMENTO · VISÃO ADMINISTRATIVA",
-            "Jornada clínica",
-            "A fila médica está operacional. Registro de anamnese, diagnóstico, prescrições, exames e prontuário ainda dependem de changes clínicas próprias.",
-        ),
-        rx.flex(
-            section_panel(
-                rx.text("01", class_name="vitta-step-number"),
-                rx.heading("Fila médica", size="4", margin_top="0.65rem"),
-                rx.text("Chamada atômica do próximo paciente elegível.", size="2", color="var(--vitta-text-muted)", margin_top="0.3rem"),
-            ),
-            section_panel(
-                rx.text("02", class_name="vitta-step-number"),
-                rx.heading("Atendimento ativo", size="4", margin_top="0.65rem"),
-                rx.text("Um atendimento ativo por identidade médica.", size="2", color="var(--vitta-text-muted)", margin_top="0.3rem"),
-           ),
-            section_panel(
-                rx.text("03", class_name="vitta-step-number"),
-                rx.heading("Registro clínico", size="4", margin_top="0.65rem"),
-                rx.text("Próxima camada: prontuário, prescrição e exames.", size="2", color="var(--vitta-text-muted)", margin_top="0.3rem"),
-           ),
-            direction=rx.breakpoints(initial="column", lg="row"),
-            gap="1rem",
-            align="stretch",
-            width="100%",
-        ),
-        active_nav="clinical",
-        page_title="Atendimento clínico",
-        required_path="/admin/atendimento",
-    )
-
-
-def admin_patients_page() -> rx.Component:
-    return protected_workspace(
-        Role.ADMINISTRADOR,
-        page_heading(
-            "PACIENTES · VISÃO ADMINISTRATIVA",
-            "Base de pacientes",
-            "Hoje o Vitta-One mantém a identidade mínima necessária para a fila: nome e CPF validado. O prontuário completo será construído sobre essa mesma identidade, sem duplicação.",
-        ),
-        section_panel(
-            rx.flex(
-                rx.box(rx.icon("users", size=22), class_name="vitta-module-icon"),
-                rx.box(
-                    rx.heading("Cadastro centralizado", size="5"),
-                    rx.text(
-                        "O cadastro operacional permanece no painel da Recepção. Esta rota administrativa evita inventar campos clínicos antes da especificação correspondente.",
-                        color="var(--vitta-text-muted)",
-                        size="2",
-                        line_height="1.6",
-                        margin_top="0.35rem",
-                    ),
-                ),
-                gap="1rem",
-                align="start",
-            )
-        ),
-        active_nav="patients",
-        page_title="Pacientes",
-        required_path="/admin/pacientes",
-    )
-
-
-def admin_finance_page() -> rx.Component:
-    return dashboard_shell(
-        Role.ADMINISTRADOR,
-        "Financeiro",
-        "A área financeira já possui rota protegida própria, mas pagamentos e integração Asaas sandbox ainda não foram implementados. Nenhum valor é simulado neste painel.",
-        active_nav="finance",
-        required_path="/admin/financeiro",
-    )
-
-
-def admin_administration_page() -> rx.Component:
-    return protected_workspace(
-        Role.ADMINISTRADOR,
         admin_directory_workspace(),
-        active_nav="administration",
-        page_title="Administração",
-        required_path="/admin/administracao",
+        active="administracao",
     )
 
 
 def reception_page() -> rx.Component:
     return protected_workspace(
         Role.RECEPCIONISTA,
-        page_heading(
-            "OPERAÇÃO DA RECEPÇÃO",
-            "Pacientes e fila de atendimento",
-            "Cadastre ou localize o paciente, registre a prioridade recebida e acompanhe a fila ativa.",
+        page_header(
+            "Operação",
+            "Recepção e fila",
+            "Cadastre ou localize pacientes, registre a prioridade recebida e acompanhe a fila ativa.",
         ),
         feedback_region(
             ReceptionQueueState.error_message,
@@ -398,17 +205,15 @@ def reception_page() -> rx.Component:
         active_queue_panel(),
         reassess_panel(),
         withdraw_panel(),
-        active_nav="reception",
-        page_title="Recepção",
-        required_path="/recepcao",
+        active="recepcao",
     )
 
 
 def doctor_page() -> rx.Component:
     return protected_workspace(
         Role.MEDICO,
-        page_heading(
-            "ATENDIMENTO CLÍNICO",
+        page_header(
+            "Atendimento",
             "Fila médica",
             "Chame o próximo paciente elegível e finalize somente o atendimento associado à sua sessão.",
         ),
@@ -437,9 +242,7 @@ def doctor_page() -> rx.Component:
             ),
             doctor_active_panel(),
         ),
-        active_nav="clinical",
-        page_title="Atendimento clínico",
-        required_path="/medico",
+        active="atendimento",
     )
 
 
@@ -447,38 +250,98 @@ def finance_page() -> rx.Component:
     return dashboard_shell(
         Role.FINANCEIRO,
         "Financeiro",
-        "O acesso financeiro está validado. Pagamentos, valores e operações com Asaas sandbox serão implementados em changes próprias.",
-        active_nav="finance",
-        required_path="/financeiro",
+        "O acesso financeiro está validado. Pagamentos, valores e integração com Asaas sandbox serão implementados em change própria.",
+    )
+
+
+def admin_reception_preview_page() -> rx.Component:
+    return admin_preview_workspace(
+        "/admin/recepcao",
+        "recepcao",
+        reception_preview(),
+    )
+
+
+def admin_agenda_preview_page() -> rx.Component:
+    return admin_preview_workspace(
+        "/admin/agenda",
+        "agenda",
+        agenda_preview(),
+    )
+
+
+def admin_clinical_preview_page() -> rx.Component:
+    return admin_preview_workspace(
+        "/admin/atendimento",
+        "atendimento",
+        clinical_preview(),
+    )
+
+
+def admin_patients_preview_page() -> rx.Component:
+    return admin_preview_workspace(
+        "/admin/pacientes",
+        "pacientes",
+        patients_preview(),
+    )
+
+
+def admin_finance_preview_page() -> rx.Component:
+    return admin_preview_workspace(
+        "/admin/financeiro",
+        "financeiro",
+        finance_preview(),
     )
 
 
 def forbidden_page() -> rx.Component:
     """Render an authenticated 403-style route without disclosing another role's content."""
     content = rx.center(
-        section_panel(
-            rx.vstack(
-                brand_logo(),
-                rx.box(rx.icon("shield_x", size=25), class_name="vitta-empty-icon"),
-                rx.text("403", class_name="vitta-eyebrow"),
-                rx.heading("Acesso não autorizado", size="7", text_align="center"),
+        rx.box(
+            brand_logo(width="8.5rem"),
+            rx.box(
                 rx.text(
-                    "Sua sessão está ativa, mas esta área pertence a outra função da clínica.",
+                    "403 · ACESSO RESTRITO",
+                    font_size="0.72rem",
+                    font_weight="800",
+                    letter_spacing="0.09em",
+                    color="var(--vitta-primary)",
+                ),
+                rx.heading(
+                    "Esta área pertence a outra função.",
+                    size="8",
+                    letter_spacing="-0.035em",
+                    font_family="var(--vitta-font-display)",
+                    margin_top="0.6rem",
+                ),
+                rx.text(
+                    "Sua sessão continua ativa. Volte ao ambiente compatível com sua função para continuar.",
                     color="var(--vitta-text-muted)",
-                    line_height="1.7",
-                    text_align="center",
-                    max_width="42ch",
+                    line_height="1.65",
+                    max_width="46ch",
+                    margin_top="0.7rem",
                 ),
                 rx.button(
-                    rx.hstack(rx.icon("arrow_left", size=17), rx.text("Voltar ao meu painel"), spacing="2"),
+                    rx.hstack(
+                        rx.icon("arrow_left", size=17),
+                        rx.text("Voltar ao meu painel"),
+                        spacing="2",
+                        align="center",
+                    ),
+                    size="3",
+                    color_scheme="teal",
+                    high_contrast=True,
                     on_click=AuthState.go_to_dashboard,
-                    class_name="vitta-primary-action",
+                    margin_top="1.4rem",
                 ),
-                spacing="4",
-                align="center",
-                width="100%",
+                margin_top="1.5rem",
             ),
-            max_width="34rem",
+            width="min(100%, 37rem)",
+            padding=rx.breakpoints(initial="1.5rem", sm="2.25rem"),
+            border="1px solid var(--vitta-border)",
+            border_radius="var(--vitta-radius-large)",
+            background="var(--vitta-surface)",
+            box_shadow="var(--vitta-shadow-sm)",
         ),
         width="100%",
         min_height="100dvh",

@@ -1,0 +1,19 @@
+{
+  "profile": "product-admin",
+  "sourceRoots": ["vitta_one", "assets"],
+  "locale": "pt-BR",
+  "canonicalMap": "UX-CONTRACT.md",
+  "requiredCapabilities": ["Select/Listbox", "Form", "Scrollbar", "CRUD"],
+  "ownership": {
+    "Select/Listbox": "authored"
+  },
+  "requiredCommands": ["unit", "compile"],
+  "commands": {
+    "unit": "python -m pytest -q",
+    "compile": "reflex compile --dry"
+  },
+  "evidence": {
+    "crudFullFlow": "tests/test_professional_directory_service.py",
+    "failurePaths": "tests/test_professional_directory_authorization.py"
+  }
+}

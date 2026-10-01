@@ -6,6 +6,7 @@ from datetime import timedelta
 SESSION_COOKIE_NAME = "vitta_one_session"
 _SESSION_TTL_ENV = "VITTA_ONE_SESSION_TTL_SECONDS"
 _COOKIE_SECURE_ENV = "VITTA_ONE_COOKIE_SECURE"
+_LOCAL_ADMIN_PREVIEW_ENV = "VITTA_ONE_LOCAL_ADMIN_PREVIEW"
 
 
 def session_ttl_seconds() -> int:
@@ -36,4 +37,16 @@ def secure_cookie_enabled() -> bool:
         return False
     raise RuntimeError(
         f"{_COOKIE_SECURE_ENV} deve ser true/false (ou equivalente booleano)."
+    )
+
+
+def local_admin_preview_enabled() -> bool:
+    """Return whether the explicit local Administrator QA preview is enabled."""
+    raw_value = os.getenv(_LOCAL_ADMIN_PREVIEW_ENV, "false").strip().casefold()
+    if raw_value in {"1", "true", "yes", "on"}:
+        return True
+    if raw_value in {"0", "false", "no", "off"}:
+        return False
+    raise RuntimeError(
+        f"{_LOCAL_ADMIN_PREVIEW_ENV} deve ser true/false (ou equivalente booleano)."
     )

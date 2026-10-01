@@ -1,125 +1,184 @@
 ---
 version: alpha
-name: "Vitta-One — Clinical Precision & Calm"
-description: "Sistema clínico interno de alta confiança, com navegação operacional direta, superfícies calmas e identidade teal própria."
+name: "Vitta-One"
+description: "Estação clínica interna de alta confiança: precisa, calma, operacional e fiel à identidade visual Vitta-One."
 colors:
   canvas: "#F7F8FC"
   surface: "#FFFFFF"
-  surface-muted: "#F1F4FB"
-  surface-strong: "#E8EDF8"
-  primary: "#00645D"
-  primary-hover: "#004F4A"
-  primary-soft: "#E2F2EF"
-  secondary: "#0A6EA8"
-  text: "#111827"
-  text-muted: "#556070"
-  text-subtle: "#7A8492"
-  border: "#DDE3EC"
-  danger: "#B42318"
-  danger-soft: "#FFF2F0"
-  success: "#176B52"
-  success-soft: "#E9F7F1"
-  focus: "#0B7D74"
-  scroll-thumb: "#9AA8B8"
-  scroll-track: "#EEF2F6"
+  surface-muted: "#F1F5F9"
+  surface-subtle: "#F8FAFC"
+  primary: "#0F766E"
+  primary-hover: "#0B655F"
+  primary-soft: "#E8F5F3"
+  text: "#0F172A"
+  text-muted: "#475569"
+  text-subtle: "#64748B"
+  border: "#E2E8F0"
+  border-strong: "#CBD5E1"
+  info: "#0284C7"
+  info-soft: "#F0F9FF"
+  warning: "#D97706"
+  warning-soft: "#FFFBEB"
+  danger: "#E11D48"
+  danger-soft: "#FFF1F2"
+  success: "#059669"
+  success-soft: "#ECFDF5"
+  focus: "#0F766E"
+  scroll-thumb: "#94A3B8"
+  scroll-track: "#F1F5F9"
 typography:
   display:
-    fontFamily: "Plus Jakarta Sans, Segoe UI, sans-serif"
+    fontFamily: '"Segoe UI Variable Display", "SF Pro Display", "Segoe UI", system-ui, sans-serif'
+    fontSize: "2rem"
+    lineHeight: "1.12"
   sans:
-    fontFamily: "Inter, Segoe UI, sans-serif"
+    fontFamily: '"Inter", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif'
+    fontSize: "1rem"
+    lineHeight: "1.5"
+  utility:
+    fontFamily: '"Inter", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif'
+    fontSize: "0.75rem"
+    lineHeight: "1.35"
 rounded:
-  control: "0.72rem"
-  panel: "1rem"
-  shell: "1.35rem"
+  control: "0.625rem"
+  panel: "0.875rem"
+  large: "1.125rem"
 spacing:
-  page-horizontal: "2.25rem"
-  page-max: "76rem"
-  sidebar: "15.5rem"
+  page-horizontal: "1.75rem"
+  page-max: "90rem"
+  sidebar-width: "15.5rem"
+  rhythm: "0.5rem"
 components:
-  login: {}
-  sidebar: {}
-  topbar: {}
-  panel: {}
   button: {}
   input: {}
-  feedback: {}
-  module-card: {}
+  panel: {}
+  alert: {}
+  nav-item: {}
+  status-badge: {}
+  metric-card: {}
+  data-row: {}
+  scrollbar: {}
 ---
 
 # Vitta-One Design System
 
 ## Overview
 
-### North Star
+### Creative North Star
 
-O Vitta-One deve parecer uma **estação de trabalho clínica de alta confiança**, não uma landing page de saúde nem um dashboard genérico de SaaS. A referência visual aprovada combina os mockups enviados pelo produto com uma linguagem própria: navegação lateral compacta, teal clínico profundo, superfícies quase brancas levemente azuladas, hierarquia tipográfica forte e pouca ornamentação.
+O Vitta-One deve parecer uma **estação clínica de comando silenciosa**: uma interface que a equipe consegue usar por horas, em ritmo operacional, sem parecer um prontuário legado nem um SaaS decorativo. A identidade parte da marca oficial fornecida ao projeto: teal clínico `#0F766E`, navy `#0F172A` e slate `#475569`.
 
-### Assinatura visual
+A assinatura visual é a combinação de **sidebar clínica persistente + cabeçalho operacional compacto + superfícies brancas extremamente alinhadas**. O login concentra a expressão visual da marca por meio de uma geometria médica de grande escala; as telas internas priorizam leitura e operação.
 
-A identidade memorável é a combinação entre a **logo Vitta-One real**, o teal operacional e o contraste entre superfícies brancas e canvas frio. No login, a fotografia médica ocupa uma única área expressiva; dentro do produto, a interface volta a ser contida e funcional.
+### Product context and register
 
-### Anti-references
+- **Audiência:** Administrador, Recepcionista, Médico e Financeiro em ambiente interno de clínica.
+- **Uso:** desktop como prioridade operacional; tablet e telas estreitas preservam as tarefas essenciais.
+- **Idioma:** português brasileiro.
+- **Registro:** produto interno, não marketing.
+- **Acessibilidade:** WCAG 2.2 AA como alvo.
+- **Anti-references:** glassmorphism, gradientes promocionais, sombras pesadas, cards superdimensionados, métricas fictícias, ícones ornamentais e ações que não existem no backend.
+- **Token ownership:** `assets/styles.css` é a fonte runtime canônica; este arquivo espelha e explica os valores duráveis aceitos.
 
-- não usar glassmorphism, gradientes decorativos ou cards excessivamente flutuantes;
-- não simular métricas, pacientes, consultas ou dados clínicos para preencher espaço;
-- não usar azul hospitalar genérico como cor principal;
-- não esconder ações importantes em ícones sem nome acessível;
-- não criar telas diferentes para a mesma operação quando um primitivo compartilhado resolve.
+### Modo local do Administrador
+
+O Administrador de desenvolvimento pode receber uma navegação unificada somente quando `VITTA_ONE_LOCAL_ADMIN_PREVIEW=true`. Esse modo existe para inspeção visual e QA local. Ele não altera o RBAC de produção nem transforma o Administrador em superusuário de negócio. Áreas ainda não implementadas renderizam estados vazios honestos ou projeções somente leitura de dados persistidos.
 
 ## Colors
 
-`primary` representa ação, foco e navegação selecionada. `secondary` é reservado a informação operacional complementar. Canvas e superfícies possuem contraste baixo o bastante para uso prolongado, mas bordas permanecem visíveis. Estados de erro/sucesso usam semântica própria e sempre acompanham texto.
+A base é fria e discreta para reduzir fadiga. O canvas `#F7F8FC` separa a página das superfícies `#FFFFFF` por contraste e bordas finas, não por efeitos chamativos. Teal é reservado para foco, seleção e ação primária; navy é reservado à informação principal.
+
+Semântica operacional:
+
+- **Informação / Agendada:** `#0284C7` sobre `#F0F9FF`.
+- **Atenção / Em andamento:** `#D97706` sobre `#FFFBEB`.
+- **Sucesso / Concluída:** `#059669` sobre `#ECFDF5`.
+- **Perigo / Cancelada, falha ou ação destrutiva:** `#E11D48` sobre `#FFF1F2`.
+
+Cor nunca é o único sinal de estado; badges mantêm rótulo textual.
 
 ## Typography
 
-`Plus Jakarta Sans` é usada para títulos e momentos de identidade. `Inter` é a fonte operacional para corpo, formulários, listas e metadados. O fallback mantém `Segoe UI` para Windows. Títulos usam tracking negativo discreto; labels operacionais usam peso 600–700 sem caixa alta extensa, exceto eyebrows curtos.
+Títulos usam a pilha de display do sistema com peso forte e tracking levemente negativo. Corpo, listas, tabelas e controles usam uma pilha legível de UI, priorizando Inter quando disponível e caindo para Segoe/system-ui sem download externo.
+
+Horários, contadores e identificadores usam numerais tabulares quando o alinhamento melhora a leitura operacional.
 
 ## Layout
 
-O produto autenticado usa sidebar fixa de `15.5rem` em desktop e navegação horizontal rolável em telas estreitas. O conteúdo possui largura máxima de `76rem`, enquanto o topbar permanece compacto e contextual. A página deve rolar naturalmente; painéis internos só assumem scroll quando o conteúdo exigir de fato.
-
-O login usa duas zonas: formulário objetivo e uma única imagem clínica com legenda curta. Em mobile, o formulário vem primeiro e a imagem vira apoio visual abaixo.
+- Desktop: sidebar de `15.5rem`, topbar compacto e conteúdo de até `90rem`.
+- Tablet: sidebar vira faixa superior rolável; conteúdo mantém leitura em uma ou duas áreas.
+- Mobile: login e fluxos operacionais retornam a uma coluna.
+- O documento permanece dono da rolagem principal. Tabelas/listas recebem overflow próprio somente quando necessário.
+- Cards agrupam comportamento real; não são usados para decorar espaço vazio.
 
 ## Elevation & Depth
 
-Bordas e contraste de superfície criam a hierarquia principal. Sombras são discretas em cards interativos e mais presentes apenas no shell do login. Não empilhar sombras em formulários, listas ou tabelas.
+A hierarquia vem primeiro de borda, espaço e contraste. Sombras são discretas:
+
+- superfícies normais: borda `#E2E8F0` e sombra quase imperceptível;
+- menus/drawers futuros: sombra média somente quando flutuarem;
+- login: contraste estrutural entre formulário e plano teal.
 
 ## Shapes
 
-Controles usam cerca de `0.72rem`; painéis `1rem`; o shell do login `1.35rem`. Pills ficam restritas a status/chips. A logo mantém sua geometria própria e não deve ser redesenhada com CSS.
+- controles: `0.625rem`;
+- painéis: `0.875rem`;
+- contêineres principais: `1.125rem`;
+- pill é reservado a estado ou metadado curto.
 
 ## Components
 
-### Navigation
+### Marca
 
-Admin vê toda a estrutura de módulos do produto. Roles operacionais veem somente o destino compatível com sua função. A sidebar comunica a seleção com fundo teal + texto branco; segurança continua server-side.
+A logo oficial fornecida ao projeto é a identidade principal do login e shell autenticado. A antiga marca textual `V1` deixa de ser a assinatura principal.
 
-### Authentication
+### Login
 
-Senha é mascarada por padrão. O controle de visibilidade é um botão de ícone `eye/eye_off`, possui nome acessível dinâmico e não altera o tamanho do campo. Login preserva suporte a password managers, autofill e paste.
+- layout dividido no desktop;
+- formulário objetivo, logo real, status de ambiente e cópia curta;
+- painel teal usa geometria médica em grande escala como assinatura visual;
+- senha inicia mascarada;
+- revelar/ocultar usa botão de ícone `eye` / `eye-off`, com nome acessível e estado pressionado;
+- não há links falsos de cadastro ou recuperação enquanto esses fluxos não existem;
+- falhas aparecem inline.
 
-### Forms and feedback
+### Navegação
 
-Labels são explícitas. Erros aparecem inline em texto e região `alert`; sucesso em região `status`. Botões mantêm dimensão durante loading e bloqueiam envio duplicado. Textareas não são redimensionáveis manualmente e recebem altura inicial suficiente.
+A sidebar agrupa os módulos por função reconhecível: Recepção, Agenda, Atendimento clínico, Pacientes, Financeiro e Administração. Em produção, cada role continua vendo apenas o destino compatível. A navegação completa do Administrador existe somente no modo local de QA e é rotulada como tal.
 
-### Data and empty states
+### Topbar
 
-Dados operacionais só aparecem quando existem no backend. Capabilities futuras usam estado vazio honesto, nunca pacientes, consultas, horários ou valores inventados. A interface pode explicar o próximo fluxo aprovado sem criar falsa affordance.
+Mostra estado do sistema, identidade atual e role. Não exibe busca global, unidade física, notificações ou métricas sem backend correspondente.
+
+### Forms
+
+- label sempre visível;
+- validação pertence ao app, não a balões nativos do navegador;
+- inputs preservam geometria em loading/erro;
+- textareas usam `resize: none`;
+- Select reutiliza o owner acessível Reflex/Radix do projeto;
+- ações destrutivas permanecem separadas das primárias.
 
 ### Iconography
 
-Usar Lucide via `rx.icon`, tamanho 16–22px na maior parte do produto, stroke regular e sem dependência decorativa adicional. Ícone reforça rótulo; ações críticas não dependem apenas dele.
+Ícones Lucide via `rx.icon` são permitidos quando comunicam função reconhecível. Ícone nunca substitui texto na navegação principal. Controles somente de ícone recebem nome acessível.
 
 ### Motion
 
-Hover e press usam transições de 120–140ms. `prefers-reduced-motion` efetivamente desativa movimento não essencial.
+Transições de 120–180ms somente em hover, foco e seleção. Sem animação ambiente. `prefers-reduced-motion` remove movimento não essencial.
+
+### Content and data visualization
+
+Nunca preencher dashboard, agenda, prontuário ou financeiro com conteúdo de demonstração apresentado como real. Projeções locais usam dados persistidos; módulos futuros mostram estados vazios claros. Prioridade clínica é sempre acompanhada por texto e nunca é inferida pela interface.
 
 ## Do's and Don'ts
 
-- **Do:** tratar sidebar, feedback, campos e painéis como componentes canônicos compartilhados.
-- **Do:** usar a foto médica apenas onde ela dá contexto humano real, principalmente no acesso.
-- **Do:** preservar RBAC no servidor mesmo quando o Admin enxerga a arquitetura completa do produto.
-- **Do:** usar estados vazios orientados à próxima ação/etapa real.
-- **Don't:** preencher Agenda, Financeiro ou Prontuário com dados de demonstração no produto real.
-- **Don't:** transformar a sidebar em menu promocional ou colocar ícones ornamentais sem função.
-- **Don't:** esconder scrollbar global para ganhar aparência “clean”.
+- **Do:** usar a marca real e a paleta extraída dela.
+- **Do:** manter o Admin local como recurso explícito de desenvolvimento, nunca como bypass silencioso.
+- **Do:** exibir módulos futuros como estados vazios honestos.
+- **Do:** preservar operações reais de pacientes, fila e diretório onde já existem.
+- **Do:** manter foco visível, targets confortáveis e estados disabled/busy coerentes.
+- **Don't:** adicionar links ou botões sem ação real.
+- **Don't:** inventar horários, históricos, diagnósticos ou valores.
+- **Don't:** comunicar prioridade apenas por cor.
+- **Don't:** esconder scrollbars por estética.

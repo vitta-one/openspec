@@ -1,64 +1,114 @@
-# UX Contract — Vitta-One
+# Vitta-One UX Contract
 
-## Escopo
+## Canonical UI Map
 
-Contrato de comportamento para autenticação, navegação autenticada e fluxos CRUD já implementados. Regras de negócio continuam nos specs OpenSpec e no backend; este documento registra apenas consequências observáveis de UX.
+| Capability | Canonical owner | Source of truth | Allowed variants | Verification |
+|---|---|---|---|---|
+| Select/Listbox | Reflex/Radix shared select primitive | DESIGN.md + UX-CONTRACT.md | authored | keyboard + popup compile |
+| Form | Shared field/feedback primitives in `vitta_one/ui/components.py` | DESIGN.md + UX-CONTRACT.md | create / edit / login | unit + compile + manual flow |
+| Scrollbar | Global rules in `assets/styles.css` | DESIGN.md | document / bounded list | CSS audit + narrow viewport |
+| CRUD | Professional directory state + shared feedback contract | OpenSpec + UX-CONTRACT.md | create / edit / deactivate-reactivate | unit + authorization + manual full flow |
 
-## Fontes de negócio
+## 1. Escopo
 
-- `openspec/specs/access-control/spec.md` — autenticação, sessão, RBAC e 403.
-- `openspec/specs/patient-reception-queue/spec.md` — paciente e fila.
-- `openspec/specs/professional-specialty-management/spec.md` — diretório administrativo.
-- `docs/project-overview.md` e `docs/domain-model.md` — escopo global e capabilities futuras.
+Este contrato define o comportamento observável do login, shell autenticado e navegação local de QA. Ele complementa `DESIGN.md`; regras de domínio e autorização continuam pertencendo ao OpenSpec e às validações server-side.
 
-## Navegação canônica
+## 2. Autenticação
 
-- Login bem-sucedido envia o usuário ao `dashboard_path` da role.
-- Administrador entra em `/admin` e vê a arquitetura completa de módulos; isso não concede mutações operacionais de Recepção/Médico.
-- Roles operacionais veem somente sua navegação relevante.
-- Navegação direta para rota incompatível mantém 403 explícito e retorno ao próprio painel.
-- Cada rota define título localizado e honesto.
+- Login aceita e-mail + senha e não oferece cadastro público.
+- Senha inicia mascarada.
+- O controle de revelar senha é somente ícone e alterna `eye` / `eye-off`, `aria-label` e `aria-pressed` sem alterar o valor digitado.
+- Submit duplicado é bloqueado durante autenticação.
+- Credenciais inválidas retornam mensagem genérica inline.
+- Sessão válida redireciona para o dashboard autorizado; logout revoga a sessão antes do redirecionamento.
+- Password managers e colagem permanecem permitidos.
 
-## Autenticação
+## 3. Shell autenticado
 
-- E-mail: `autocomplete=username`.
-- Senha: `autocomplete=current-password`, mascarada por padrão.
-- Mostrar/ocultar senha usa botão de ícone com `aria-label` dinâmico e não altera layout.
-- Erro de credencial permanece genérico e inline.
-- Durante submit, o botão mantém geometria, bloqueia duplo envio e indica loading.
-- Logout revoga a sessão no servidor antes de limpar o cliente.
+### Desktop
 
-## Feedback e recuperação
+- Sidebar persistente à esquerda.
+- Topbar compacto no conteúdo.
+- O documento mantém a rolagem principal.
+- Item ativo é identificado por contraste, texto e `aria-current`.
 
-- Erro corrigível: alerta inline próximo ao fluxo que o gerou.
-- Sucesso de mutação: status inline canônico.
-- Nenhum `alert()`, `confirm()` ou `prompt()` do navegador.
-- Estados ainda não implementados são apresentados como indisponíveis/planejados; nunca como dados simulados.
+### Tela estreita
 
-## Formulários
+- A navegação vira faixa horizontal rolável acima do conteúdo.
+- Nenhuma ação essencial depende de hover.
+- Conteúdo retorna a uma coluna quando a divisão comprometer leitura.
 
-- Labels reais e clicáveis.
-- Validação relevante é server-side; UI nunca substitui autorização ou regra de negócio.
-- Campos preservam valores após erro sempre que o State atual permitir.
-- Textareas usam altura estável e `resize: none`.
-- Select existente continua com o primitivo acessível Reflex/Radix.
+## 4. Navegação por role
 
-## Superfícies canônicas
+- Administrador: `/admin`.
+- Recepcionista: `/recepcao`.
+- Médico: `/medico`.
+- Financeiro: `/financeiro`.
+- A tentativa de acessar outra role mantém a resposta de acesso negado.
+- Ocultar link nunca substitui autorização server-side.
 
-| Capability | Dono canônico | Fonte |
-|---|---|---|
-| Shell autenticado | `vitta_one/ui/components.py::protected_workspace` | DESIGN + este contrato |
-| Sidebar/topbar | `vitta_one/ui/components.py` | DESIGN + este contrato |
-| Input/textarea | `assets/styles.css` + helpers UI | DESIGN |
-| Feedback | `feedback_region`, `error_banner`, `success_banner` | este contrato |
-| Form administrativo | componentes do diretório | OpenSpec professional-specialty-management |
-| Fila | componentes `queue_components.py` | OpenSpec patient-reception-queue |
+## 5. Modo local de QA do Administrador
 
-## Responsividade e acessibilidade
+O modo local só existe quando `VITTA_ONE_LOCAL_ADMIN_PREVIEW=true`.
 
-- Meta: WCAG 2.2 AA.
-- Foco visível sempre presente.
-- Sidebar vira navegação horizontal rolável abaixo de 900px; conteúdo nunca fica escondido atrás dela.
-- Controle icon-only possui nome acessível e `title` de apoio.
-- `prefers-reduced-motion` remove movimento não essencial.
-- `forced-colors` mantém foco e seleção navegável.
+Rotas de inspeção:
+
+- `/admin/recepcao`
+- `/admin/agenda`
+- `/admin/atendimento`
+- `/admin/pacientes`
+- `/admin/financeiro`
+
+Regras:
+
+- a sessão precisa continuar sendo `ADMINISTRADOR`;
+- cada loader revalida flag + sessão + role antes de consultar dados;
+- o modo é identificado visualmente como “Modo local de QA”;
+- dados existentes são apresentados somente leitura;
+- handlers de Recepção/Médico não são reutilizados para conceder mutações ao Admin;
+- módulos ainda não implementados exibem estado vazio ou estrutura desabilitada, sem dados simulados;
+- quando o flag está falso, as rotas de preview não retornam dados e redirecionam ao `/admin`.
+
+## 6. Feedback
+
+- erro corrigível: inline, próximo ao fluxo que falhou;
+- sucesso: região `status` estável;
+- loading: indicador em região reservada;
+- empty state: explica o que falta e só oferece ação quando ela realmente existe;
+- nenhuma informação crítica existe apenas em toast.
+
+## 7. Forms
+
+- campos possuem labels reais;
+- formulários de produto desativam validação nativa e mantêm mensagens do app;
+- erro preserva valores editáveis relevantes;
+- campos inválidos usam texto e associação acessível;
+- textareas usam `resize: none`;
+- Select reutiliza Reflex/Radix;
+- segredos nunca aparecem em URL, logs ou feedback.
+
+## 8. CRUD administrativo
+
+- criar/editar mantém o contexto da Administração;
+- “Cancelar” restaura o formulário;
+- desativar é reversível e nunca é apresentado como exclusão;
+- listas são atualizadas após commit;
+- erro server-side não apaga silenciosamente o que ainda precisa ser corrigido.
+
+## 9. Pacientes, fila e módulos futuros
+
+- Admin local visualiza pacientes/fila somente leitura.
+- Cadastro, localização, entrada, reavaliação e retirada continuam exclusivos da Recepção.
+- Chamar/finalizar continua exclusivo do Médico.
+- Até as capabilities correspondentes existirem, Agenda, prontuário, diagnóstico, prescrição e Financeiro não inventam registros, totais, horários ou transições.
+- Botões sem backend real não são renderizados como ações habilitadas.
+
+## 10. Acessibilidade e estabilidade
+
+- alvo WCAG 2.2 AA;
+- foco visível;
+- controles usam semântica nativa;
+- controles de ícone possuem nome acessível;
+- scrollbars permanecem visíveis;
+- `prefers-reduced-motion` reduz transições;
+- loading e feedback não deslocam ações principais desnecessariamente.

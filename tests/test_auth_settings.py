@@ -2,7 +2,11 @@
 
 import pytest
 
-from vitta_one.auth.settings import secure_cookie_enabled, session_ttl_seconds
+from vitta_one.auth.settings import (
+    local_admin_preview_enabled,
+    secure_cookie_enabled,
+    session_ttl_seconds,
+)
 
 
 def test_session_ttl_requires_explicit_positive_integer(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -30,3 +34,20 @@ def test_cookie_secure_defaults_true_and_can_be_disabled_explicitly(
     monkeypatch.setenv("VITTA_ONE_COOKIE_SECURE", "invalido")
     with pytest.raises(RuntimeError):
         secure_cookie_enabled()
+
+
+def test_local_admin_preview_is_opt_in_and_strict(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("VITTA_ONE_LOCAL_ADMIN_PREVIEW", raising=False)
+    assert local_admin_preview_enabled() is False
+
+    monkeypatch.setenv("VITTA_ONE_LOCAL_ADMIN_PREVIEW", "true")
+    assert local_admin_preview_enabled() is True
+
+    monkeypatch.setenv("VITTA_ONE_LOCAL_ADMIN_PREVIEW", "off")
+    assert local_admin_preview_enabled() is False
+
+    monkeypatch.setenv("VITTA_ONE_LOCAL_ADMIN_PREVIEW", "talvez")
+    with pytest.raises(RuntimeError):
+        local_admin_preview_enabled()

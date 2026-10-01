@@ -14,6 +14,7 @@ from vitta_one.auth.roles import Role
 from vitta_one.auth.service import authenticate_user, create_session, revoke_session
 from vitta_one.auth.settings import (
     SESSION_COOKIE_NAME,
+    local_admin_preview_enabled,
     secure_cookie_enabled,
     session_ttl,
     session_ttl_seconds,
@@ -25,21 +26,16 @@ _LOGIN_REQUIRED = "Preencha o e-mail e a senha para continuar."
 _SYSTEM_LOGIN_ERROR = "Não foi possível concluir o acesso agora. Tente novamente."
 _LOGOUT_ERROR = "Não foi possível encerrar a sessão agora. Tente novamente."
 
-_ADMIN_ROUTES = (
-    "/admin",
-    "/admin/recepcao",
-    "/admin/agenda",
-    "/admin/atendimento",
-    "/admin/pacientes",
-    "/admin/financeiro",
-    "/admin/administracao",
+_ROLE_BY_ROUTE = {role.dashboard_path: role for role in Role}
+_ADMIN_PREVIEW_ROUTES = frozenset(
+    {
+        "/admin/recepcao",
+        "/admin/agenda",
+        "/admin/atendimento",
+        "/admin/pacientes",
+        "/admin/financeiro",
+    }
 )
-_ROLE_BY_ROUTE = {
-    **{path: Role.ADMINISTRADOR for path in _ADMIN_ROUTES},
-    Role.RECEPCIONISTA.dashboard_path: Role.RECEPCIONISTA,
-    Role.MEDICO.dashboard_path: Role.MEDICO,
-    Role.FINANCEIRO.dashboard_path: Role.FINANCEIRO,
-}
 
 
 class LoginFormData(TypedDict):
@@ -69,6 +65,7 @@ class AuthState(rx.State):
     show_password: bool = False
     login_error: str = ""
     shell_error: str = ""
+    local_admin_preview: bool = local_admin_preview_enabled()
 
     def _set_identity(self, *, email: str, role: Role, verified_path: str = "") -> None:
         self.current_email = email
@@ -223,8 +220,7 @@ class AuthState(rx.State):
         self.shell_error = ""
         yield
 
-        route_id = self.router.route_id
-        required_role = _ROLE_BY_ROUTE.get(route_id)
+        required_role = _ROLE_BY_ROUTE.get(self.router.route_id)
         if required_role is None:
             self._clear_identity()
             self.auth_checked = True
@@ -255,7 +251,53 @@ class AuthState(rx.State):
         self._set_identity(
             email=identity.email,
             role=identity.role,
-            verified_path=route_id,
+            verified_path=required_role.dashboard_path,
+        )
+        self.auth_checked = True
+        yield
+
+    @rx.event
+    def load_admin_preview(self):
+        """Authorize a read-only local Administrator QA route without widening production RBAC."""
+        self.auth_checked = False
+        self.shell_error = ""
+        yield
+
+        requested_path = self.router.route_id
+        if not self.local_admin_preview or requested_path not in _ADMIN_PREVIEW_ROUTES:
+            self.auth_checked = True
+            yield rx.redirect(Role.ADMINISTRADOR.dashboard_path)
+            return
+
+        try:
+            with rx.session() as db:
+                identity = require_role(
+                    db,
+                    self.session_token,
+                    Role.ADMINISTRADOR,
+                )
+        except AuthenticationRequiredError:
+            self.session_token = ""
+            self._clear_identity()
+            self.auth_checked = True
+            yield rx.remove_cookie(SESSION_COOKIE_NAME)
+            yield rx.redirect("/login")
+            return
+        except RoleForbiddenError as exc:
+            self._set_identity(email=exc.identity.email, role=exc.identity.role)
+            self.auth_checked = True
+            yield rx.redirect("/acesso-negado")
+            return
+        except Exception:
+            self._clear_identity()
+            self.auth_checked = True
+            yield rx.redirect("/login")
+            return
+
+        self._set_identity(
+            email=identity.email,
+            role=identity.role,
+            verified_path=requested_path,
         )
         self.auth_checked = True
         yield
