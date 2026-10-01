@@ -1,6 +1,6 @@
 """Reflex state for Administrator availability and Reception appointment agenda."""
 
-from typing import TypedDict
+from typing import Any, TypedDict
 
 import reflex as rx
 
@@ -236,7 +236,7 @@ class AdminAvailabilityState(rx.State):
             yield
 
     @rx.event
-    async def create_slot(self, _form_data: dict[str, object]):
+    async def create_slot(self, _form_data: dict[str, Any]):
         self.is_submitting = True
         self._clear_feedback()
         yield
@@ -472,7 +472,7 @@ class ReceptionAgendaState(rx.State):
         self.patient_cpf = value
 
     @rx.event
-    async def find_patient(self, _form_data: dict[str, object]):
+    async def find_patient(self, _form_data: dict[str, Any]):
         self.is_submitting = True
         self._clear_feedback()
         yield
