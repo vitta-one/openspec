@@ -42,6 +42,7 @@ class ProfessionalOptionRow(TypedDict):
 
 class SlotRow(TypedDict):
     id: int
+    value: str
     professional_id: int
     professional_name: str
     starts_at: str
@@ -76,6 +77,7 @@ def _slot_rows(items) -> list[SlotRow]:
     return [
         {
             "id": item.id,
+            "value": str(item.id),
             "professional_id": item.professional_id,
             "professional_name": item.professional_name,
             "starts_at": format_clinic_datetime(item.starts_at),
