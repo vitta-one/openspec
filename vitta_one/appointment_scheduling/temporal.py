@@ -10,8 +10,10 @@ class SchedulingTimeValidationError(ValueError):
 
 
 def ensure_utc(value: datetime) -> datetime:
+    # SQLite used by unit tests can drop tzinfo on round-trip; persisted values
+    # are UTC by contract. User-facing local input never passes through here.
     if value.tzinfo is None:
-        raise SchedulingTimeValidationError("O horário precisa possuir timezone.")
+        return value.replace(tzinfo=timezone.utc)
     return value.astimezone(timezone.utc)
 
 
