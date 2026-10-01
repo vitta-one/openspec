@@ -100,6 +100,9 @@ class AdminDirectoryState(rx.State):
     error_message: str = ""
     success_message: str = ""
 
+    specialty_dialog_open: bool = False
+    professional_dialog_open: bool = False
+
     new_specialty_name: str = ""
     editing_specialty_id: int = 0
     editing_specialty_name: str = ""
@@ -142,6 +145,9 @@ class AdminDirectoryState(rx.State):
         self.professionals = []
         self.medical_accounts = []
         self.specialty_options = []
+        self.specialty_dialog_open = False
+        self.professional_dialog_open = False
+        self.new_specialty_name = ""
         self._reset_specialty_edit()
         self._reset_professional_form()
 
@@ -219,6 +225,46 @@ class AdminDirectoryState(rx.State):
             yield
 
     @rx.event
+    def set_specialty_dialog_open(self, is_open: bool) -> None:
+        if self.is_submitting and not is_open:
+            return
+        self.specialty_dialog_open = is_open
+        if not is_open:
+            self.new_specialty_name = ""
+            self._reset_specialty_edit()
+
+    @rx.event
+    def start_new_specialty(self) -> None:
+        self._clear_feedback()
+        self.new_specialty_name = ""
+        self._reset_specialty_edit()
+        self.specialty_dialog_open = True
+
+    @rx.event
+    def cancel_specialty_dialog(self) -> None:
+        if self.is_submitting:
+            return
+        self.new_specialty_name = ""
+        self._reset_specialty_edit()
+        self.specialty_dialog_open = False
+
+    @rx.event
+    def set_professional_dialog_open(self, is_open: bool) -> None:
+        if self.is_submitting and not is_open:
+            return
+        self.professional_dialog_open = is_open
+        if not is_open:
+            self._reset_professional_form()
+
+    @rx.event
+    def cancel_professional_dialog(self) -> None:
+        if self.is_submitting:
+            return
+        self._clear_feedback()
+        self._reset_professional_form()
+        self.professional_dialog_open = False
+
+    @rx.event
     def update_new_specialty_name(self, value: str) -> None:
         self.new_specialty_name = value
 
@@ -236,6 +282,7 @@ class AdminDirectoryState(rx.State):
                     name=self.new_specialty_name,
                 )
             self.new_specialty_name = ""
+            self.specialty_dialog_open = False
             self._load_with_token(token)
             self.success_message = "Especialidade cadastrada."
         except (DirectoryValidationError, DirectoryConflictError) as exc:
@@ -254,6 +301,7 @@ class AdminDirectoryState(rx.State):
         self._clear_feedback()
         self.editing_specialty_id = specialty_id
         self.editing_specialty_name = name
+        self.specialty_dialog_open = True
 
     @rx.event
     def update_specialty_edit_name(self, value: str) -> None:
@@ -262,9 +310,10 @@ class AdminDirectoryState(rx.State):
     @rx.event
     def cancel_specialty_edit(self) -> None:
         self._reset_specialty_edit()
+        self.specialty_dialog_open = False
 
     @rx.event
-    async def save_specialty_edit(self):
+    async def save_specialty_edit(self, _form_data: dict[str, str]):
         self.is_submitting = True
         self._clear_feedback()
         yield
@@ -280,6 +329,7 @@ class AdminDirectoryState(rx.State):
                     name=self.editing_specialty_name,
                 )
             self._reset_specialty_edit()
+            self.specialty_dialog_open = False
             self._load_with_token(token)
             self.success_message = "Especialidade atualizada."
         except (
@@ -337,6 +387,7 @@ class AdminDirectoryState(rx.State):
             with rx.session() as db:
                 accounts = admin_list_available_medical_accounts(db, token=token)
             self._set_medical_accounts(accounts)
+            self.professional_dialog_open = True
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
@@ -378,6 +429,7 @@ class AdminDirectoryState(rx.State):
                     professional_id=professional_id,
                 )
             self._set_medical_accounts(accounts)
+            self.professional_dialog_open = True
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
@@ -388,6 +440,7 @@ class AdminDirectoryState(rx.State):
     def cancel_professional_edit(self) -> None:
         self._clear_feedback()
         self._reset_professional_form()
+        self.professional_dialog_open = False
 
     @rx.event
     def update_professional_name(self, value: str) -> None:
@@ -447,6 +500,7 @@ class AdminDirectoryState(rx.State):
                     )
                     message = "Profissional cadastrado."
             self._reset_professional_form()
+            self.professional_dialog_open = False
             self._load_with_token(token)
             self.success_message = message
         except (
