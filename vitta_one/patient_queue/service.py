@@ -4,13 +4,30 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import re
 
-from sqlalchemy import case, func
+from sqlalchemy import case, exists, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
+from vitta_one.appointment_scheduling.domain import ConsultationStatus
+from vitta_one.auth.roles import Role
+from vitta_one.consultation_care.service import (
+    CareLifecycleAssignmentError,
+    CareLifecycleTransitionError,
+    CareLifecycleValidationError,
+    cancel_linked_consultation_from_queue,
+    complete_linked_consultation,
+    start_linked_consultation,
+)
+from vitta_one.models.appointment import Consultation
 from vitta_one.models.auth import User
 from vitta_one.models.patient_queue import Patient, QueueEntry
+from vitta_one.models.professional import Professional
 from vitta_one.patient_queue.domain import QueuePriority, QueueStatus
+from vitta_one.patient_queue.validation import (
+    QueuePayloadValidationError,
+    normalize_queue_symptoms,
+    parse_queue_priority,
+)
 
 
 class PatientValidationError(ValueError):
@@ -38,7 +55,7 @@ class QueueEmptyError(LookupError):
 
 
 class QueueOwnershipError(PermissionError):
-    """Raised when a doctor tries to finish another doctor's active entry."""
+    """Raised when a doctor tries to operate another doctor's attendance."""
 
 
 class DoctorAlreadyAttendingError(RuntimeError):
@@ -58,6 +75,9 @@ class QueueItem:
     entered_at: datetime
     doctor_user_id: int | None = None
     called_at: datetime | None = None
+    consultation_id: int | None = None
+    scheduled_at: datetime | None = None
+    professional_name: str | None = None
 
 
 def utc_now() -> datetime:
@@ -107,11 +127,18 @@ def is_valid_cpf(value: str) -> bool:
     return second == digits[10]
 
 
-def _parse_priority(value: str | QueuePriority) -> QueuePriority:
+def _validated_symptoms(value: str) -> str:
     try:
-        return value if isinstance(value, QueuePriority) else QueuePriority(str(value))
-    except ValueError as exc:
-        raise QueueValidationError("Selecione uma prioridade válida.") from exc
+        return normalize_queue_symptoms(value)
+    except QueuePayloadValidationError as exc:
+        raise QueueValidationError(str(exc)) from exc
+
+
+def _validated_priority(value: str | QueuePriority) -> QueuePriority:
+    try:
+        return parse_queue_priority(value)
+    except QueuePayloadValidationError as exc:
+        raise QueueValidationError(str(exc)) from exc
 
 
 def find_patient_by_cpf(db: Session, cpf: str) -> Patient | None:
@@ -158,21 +185,17 @@ def create_queue_entry(
     priority: str | QueuePriority,
     now: datetime | None = None,
 ) -> QueueEntry:
-    """Place an existing patient in the operational queue."""
+    """Place an existing patient in the operational queue as a walk-in."""
     patient = db.get(Patient, patient_id)
     if patient is None:
         raise QueueValidationError("Selecione um paciente válido.")
 
-    clean_symptoms = str(symptoms or "").strip()
-    if not clean_symptoms:
-        raise QueueValidationError("Informe os sintomas relatados.")
-    if len(clean_symptoms) > 4000:
-        raise QueueValidationError("O relato de sintomas excede o limite permitido.")
-
-    parsed_priority = _parse_priority(priority)
+    clean_symptoms = _validated_symptoms(symptoms)
+    parsed_priority = _validated_priority(priority)
     timestamp = _as_utc(now or utc_now())
     entry = QueueEntry(
         patient_id=patient_id,
+        consultation_id=None,
         symptoms=clean_symptoms,
         priority=parsed_priority.value,
         status=QueueStatus.AGUARDANDO.value,
@@ -194,9 +217,31 @@ def _priority_order():
     )
 
 
-def _to_item(entry: QueueEntry, patient: Patient) -> QueueItem:
+def _doctor_eligibility_clause(doctor_user_id: int):
+    scheduled_for_doctor = exists().where(
+        Consultation.id == QueueEntry.consultation_id,
+        Professional.id == Consultation.professional_id,
+        Professional.user_id == doctor_user_id,
+    )
+    return or_(QueueEntry.consultation_id.is_(None), scheduled_for_doctor)
+
+
+def _to_item(db: Session, entry: QueueEntry, patient: Patient) -> QueueItem:
     if entry.id is None or patient.id is None:
         raise RuntimeError("Registro de fila sem identificador persistido.")
+
+    scheduled_at: datetime | None = None
+    professional_name: str | None = None
+    if entry.consultation_id is not None:
+        consultation = db.get(Consultation, entry.consultation_id)
+        if consultation is None:
+            raise RuntimeError("Consulta vinculada à fila não foi encontrada.")
+        professional = db.get(Professional, consultation.professional_id)
+        if professional is None:
+            raise RuntimeError("Profissional vinculado à consulta não foi encontrado.")
+        scheduled_at = _as_utc(consultation.scheduled_at)
+        professional_name = professional.name
+
     return QueueItem(
         id=entry.id,
         patient_id=patient.id,
@@ -207,29 +252,35 @@ def _to_item(entry: QueueEntry, patient: Patient) -> QueueItem:
         entered_at=_as_utc(entry.entered_at),
         doctor_user_id=entry.doctor_user_id,
         called_at=_as_utc(entry.called_at) if entry.called_at else None,
+        consultation_id=entry.consultation_id,
+        scheduled_at=scheduled_at,
+        professional_name=professional_name,
     )
 
 
 def list_waiting_queue(db: Session) -> list[QueueItem]:
-    """Return the active queue in deterministic server-side order."""
+    """Return the active reception queue in deterministic server-side order."""
     rows = db.exec(
         select(QueueEntry, Patient)
         .join(Patient, Patient.id == QueueEntry.patient_id)
         .where(QueueEntry.status == QueueStatus.AGUARDANDO.value)
         .order_by(_priority_order(), QueueEntry.entered_at, QueueEntry.id)
     ).all()
-    return [_to_item(entry, patient) for entry, patient in rows]
+    return [_to_item(db, entry, patient) for entry, patient in rows]
 
 
-def count_waiting_queue(db: Session) -> int:
-    """Count active waiting entries without loading sensitive queue payloads."""
-    return int(
-        db.exec(
-            select(func.count(QueueEntry.id)).where(
-                QueueEntry.status == QueueStatus.AGUARDANDO.value
-            )
-        ).one()
+def count_waiting_queue(
+    db: Session,
+    *,
+    doctor_user_id: int | None = None,
+) -> int:
+    """Count waiting entries, optionally restricted to one doctor's eligibility."""
+    statement = select(func.count(QueueEntry.id)).where(
+        QueueEntry.status == QueueStatus.AGUARDANDO.value
     )
+    if doctor_user_id is not None:
+        statement = statement.where(_doctor_eligibility_clause(doctor_user_id))
+    return int(db.exec(statement).one())
 
 
 def reassess_queue_entry(
@@ -241,20 +292,16 @@ def reassess_queue_entry(
     now: datetime | None = None,
 ) -> QueueEntry:
     """Update symptoms/priority only while the patient is waiting."""
-    entry = db.get(QueueEntry, entry_id)
+    entry = db.exec(
+        select(QueueEntry).where(QueueEntry.id == entry_id).with_for_update()
+    ).first()
     if entry is None:
         raise QueueTransitionError("A entrada de fila não está disponível.")
     if entry.status != QueueStatus.AGUARDANDO.value:
         raise QueueTransitionError("Somente pacientes aguardando podem ser reavaliados.")
 
-    clean_symptoms = str(symptoms or "").strip()
-    if not clean_symptoms:
-        raise QueueValidationError("Informe os sintomas relatados.")
-    if len(clean_symptoms) > 4000:
-        raise QueueValidationError("O relato de sintomas excede o limite permitido.")
-
-    entry.symptoms = clean_symptoms
-    entry.priority = _parse_priority(priority).value
+    entry.symptoms = _validated_symptoms(symptoms)
+    entry.priority = _validated_priority(priority).value
     entry.updated_at = _as_utc(now or utc_now())
     db.add(entry)
     db.commit()
@@ -269,8 +316,10 @@ def withdraw_queue_entry(
     reason: str,
     now: datetime | None = None,
 ) -> QueueEntry:
-    """Logically remove one waiting entry while preserving its history."""
-    entry = db.get(QueueEntry, entry_id)
+    """Logically remove one waiting entry and cancel a linked confirmed Consultation."""
+    entry = db.exec(
+        select(QueueEntry).where(QueueEntry.id == entry_id).with_for_update()
+    ).first()
     if entry is None:
         raise QueueTransitionError("A entrada de fila não está disponível.")
     if entry.status != QueueStatus.AGUARDANDO.value:
@@ -283,6 +332,16 @@ def withdraw_queue_entry(
         raise QueueValidationError("O motivo da retirada excede o limite permitido.")
 
     timestamp = _as_utc(now or utc_now())
+    if entry.consultation_id is not None:
+        try:
+            cancel_linked_consultation_from_queue(
+                db,
+                consultation_id=entry.consultation_id,
+                now=timestamp,
+            )
+        except (CareLifecycleTransitionError, CareLifecycleValidationError) as exc:
+            raise QueueTransitionError(str(exc)) from exc
+
     entry.status = QueueStatus.RETIRADO.value
     entry.withdrawal_reason = clean_reason
     entry.withdrawn_at = timestamp
@@ -307,7 +366,7 @@ def get_doctor_active_entry(db: Session, *, doctor_user_id: int) -> QueueItem | 
     if row is None:
         return None
     entry, patient = row
-    return _to_item(entry, patient)
+    return _to_item(db, entry, patient)
 
 
 def claim_next_patient(
@@ -316,13 +375,11 @@ def claim_next_patient(
     doctor_user_id: int,
     now: datetime | None = None,
 ) -> QueueItem:
-    """Atomically claim the first eligible waiting patient for one doctor."""
+    """Atomically claim the first waiting entry eligible for this doctor."""
     doctor = db.exec(
-        select(User)
-        .where(User.id == doctor_user_id)
-        .with_for_update()
+        select(User).where(User.id == doctor_user_id).with_for_update()
     ).first()
-    if doctor is None:
+    if doctor is None or doctor.role != Role.MEDICO.value:
         raise QueueValidationError("A identidade médica não está disponível.")
 
     if get_doctor_active_entry(db, doctor_user_id=doctor_user_id) is not None:
@@ -330,18 +387,33 @@ def claim_next_patient(
             "Finalize o atendimento atual antes de chamar outro paciente."
         )
 
-    statement = (
+    entry = db.exec(
         select(QueueEntry)
-        .where(QueueEntry.status == QueueStatus.AGUARDANDO.value)
+        .where(
+            QueueEntry.status == QueueStatus.AGUARDANDO.value,
+            _doctor_eligibility_clause(doctor_user_id),
+        )
         .order_by(_priority_order(), QueueEntry.entered_at, QueueEntry.id)
         .with_for_update(skip_locked=True)
         .limit(1)
-    )
-    entry = db.exec(statement).first()
+    ).first()
     if entry is None:
-        raise QueueEmptyError("Não há pacientes aguardando.")
+        raise QueueEmptyError("Não há pacientes aguardando para este profissional.")
 
     timestamp = _as_utc(now or utc_now())
+    if entry.consultation_id is not None:
+        try:
+            start_linked_consultation(
+                db,
+                consultation_id=entry.consultation_id,
+                doctor_user_id=doctor_user_id,
+                now=timestamp,
+            )
+        except CareLifecycleAssignmentError as exc:
+            raise QueueOwnershipError(str(exc)) from exc
+        except (CareLifecycleTransitionError, CareLifecycleValidationError) as exc:
+            raise QueueTransitionError(str(exc)) from exc
+
     entry.status = QueueStatus.EM_ATENDIMENTO.value
     entry.doctor_user_id = doctor_user_id
     entry.called_at = timestamp
@@ -353,7 +425,7 @@ def claim_next_patient(
     patient = db.get(Patient, entry.patient_id)
     if patient is None:
         raise RuntimeError("Paciente associado à fila não foi encontrado.")
-    return _to_item(entry, patient)
+    return _to_item(db, entry, patient)
 
 
 def finish_queue_entry(
@@ -365,9 +437,7 @@ def finish_queue_entry(
 ) -> QueueEntry:
     """Finish an active attendance only for its assigned doctor."""
     entry = db.exec(
-        select(QueueEntry)
-        .where(QueueEntry.id == entry_id)
-        .with_for_update()
+        select(QueueEntry).where(QueueEntry.id == entry_id).with_for_update()
     ).first()
     if entry is None or entry.status != QueueStatus.EM_ATENDIMENTO.value:
         raise QueueTransitionError("O atendimento não está ativo.")
@@ -375,6 +445,19 @@ def finish_queue_entry(
         raise QueueOwnershipError("O atendimento pertence a outro profissional.")
 
     timestamp = _as_utc(now or utc_now())
+    if entry.consultation_id is not None:
+        try:
+            complete_linked_consultation(
+                db,
+                consultation_id=entry.consultation_id,
+                doctor_user_id=doctor_user_id,
+                now=timestamp,
+            )
+        except CareLifecycleAssignmentError as exc:
+            raise QueueOwnershipError(str(exc)) from exc
+        except (CareLifecycleTransitionError, CareLifecycleValidationError) as exc:
+            raise QueueTransitionError(str(exc)) from exc
+
     entry.status = QueueStatus.FINALIZADO.value
     entry.finished_at = timestamp
     entry.updated_at = timestamp
