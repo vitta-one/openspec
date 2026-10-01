@@ -6,20 +6,31 @@ from vitta_one.auth.roles import Role
 from vitta_one.auth.state import AuthState
 
 
-def brand_mark() -> rx.Component:
-    """Render the compact Vitta-One identity mark."""
-    return rx.box(
-        rx.text("V1", font_weight="800", letter_spacing="-0.04em"),
-        width="2.75rem",
-        height="2.75rem",
-        display="flex",
-        align_items="center",
-        justify_content="center",
-        border_radius="0.9rem 0.9rem 0.9rem 0.3rem",
-        background="var(--vitta-primary)",
-        color="var(--vitta-surface)",
+def brand_mark(*, decorative: bool = False) -> rx.Component:
+    """Render the compact official Vitta-One mark derived from the supplied logo."""
+    aria_props = {"aria_hidden": "true"} if decorative else {}
+    return rx.image(
+        src="/vitta-one-mark.webp",
+        alt="" if decorative else "Vitta-One",
+        width="2.9rem",
+        height="2.9rem",
+        object_fit="contain",
+        display="block",
+        border_radius="0.9rem",
         box_shadow="var(--vitta-shadow-mark)",
-        aria_hidden="true",
+        **aria_props,
+    )
+
+
+def brand_logo(*, width: str = "11rem") -> rx.Component:
+    """Render the official horizontal Vitta-One logo supplied for this project."""
+    return rx.image(
+        src="/vitta-one-logo.webp",
+        alt="Vitta-One",
+        width=width,
+        height="auto",
+        object_fit="contain",
+        display="block",
     )
 
 
@@ -46,7 +57,12 @@ def error_banner(message, element_id: str | None = None) -> rx.Component:
     """Render an accessible inline error region."""
     id_props = {"id": element_id} if element_id else {}
     return rx.box(
-        rx.text(message, size="2", line_height="1.5"),
+        rx.hstack(
+            rx.icon("circle_alert", size=17, aria_hidden="true"),
+            rx.text(message, size="2", line_height="1.5"),
+            spacing="2",
+            align="start",
+        ),
         width="100%",
         padding="0.8rem 0.9rem",
         border="1px solid var(--vitta-danger-border)",
@@ -67,8 +83,8 @@ def login_form() -> rx.Component:
                 rx.el.label(
                     "E-mail",
                     html_for="login-email",
-                    font_weight="650",
-                    font_size="0.9rem",
+                    font_weight="700",
+                    font_size="0.88rem",
                     color="var(--vitta-text)",
                 ),
                 rx.el.input(
@@ -78,9 +94,13 @@ def login_form() -> rx.Component:
                     required=True,
                     max_length=320,
                     auto_complete="username",
+                    auto_capitalize="none",
+                    spell_check=False,
                     input_mode="email",
-                    class_name="vitta-input",
-                    margin_top="0.45rem",
+                    enter_key_hint="next",
+                    placeholder="seu.email@clinica.com.br",
+                    class_name="vitta-input vitta-login-input",
+                    margin_top="0.5rem",
                     aria_invalid=AuthState.login_error != "",
                     aria_describedby=rx.cond(
                         AuthState.login_error != "", "login-error", ""
@@ -92,8 +112,8 @@ def login_form() -> rx.Component:
                 rx.el.label(
                     "Senha",
                     html_for="login-password",
-                    font_weight="650",
-                    font_size="0.9rem",
+                    font_weight="700",
+                    font_size="0.88rem",
                     color="var(--vitta-text)",
                 ),
                 rx.box(
@@ -103,17 +123,23 @@ def login_form() -> rx.Component:
                         type=rx.cond(AuthState.show_password, "text", "password"),
                         required=True,
                         auto_complete="current-password",
-                        class_name="vitta-input vitta-password-input",
+                        spell_check=False,
+                        enter_key_hint="go",
+                        placeholder="Digite sua senha",
+                        class_name="vitta-input vitta-login-input vitta-password-input",
                         aria_invalid=AuthState.login_error != "",
                         aria_describedby=rx.cond(
                             AuthState.login_error != "", "login-error", ""
                         ),
                     ),
                     rx.button(
-                        rx.cond(AuthState.show_password, "Ocultar", "Mostrar"),
+                        rx.cond(
+                            AuthState.show_password,
+                            rx.icon("eye_off", size=20),
+                            rx.icon("eye", size=20),
+                        ),
                         type="button",
                         variant="ghost",
-                        size="2",
                         color_scheme="teal",
                         class_name="vitta-password-toggle",
                         on_click=AuthState.toggle_password_visibility,
@@ -122,40 +148,67 @@ def login_form() -> rx.Component:
                             "Ocultar senha",
                             "Mostrar senha",
                         ),
+                        aria_pressed=AuthState.show_password,
                     ),
                     position="relative",
-                    margin_top="0.45rem",
+                    margin_top="0.5rem",
                 ),
                 width="100%",
             ),
-            rx.cond(
-                AuthState.login_error != "",
-                error_banner(AuthState.login_error, "login-error"),
-                rx.fragment(),
+            rx.box(
+                rx.cond(
+                    AuthState.login_error != "",
+                    error_banner(AuthState.login_error, "login-error"),
+                    rx.box(min_height="0.25rem"),
+                ),
+                width="100%",
+                min_height=rx.cond(AuthState.login_error != "", "auto", "0.25rem"),
             ),
             rx.button(
-                "Entrar",
+                rx.hstack(
+                    rx.cond(
+                        AuthState.is_submitting,
+                        rx.spinner(size="2"),
+                        rx.icon("log_in", size=18),
+                    ),
+                    rx.text(
+                        rx.cond(
+                            AuthState.is_submitting,
+                            "Validando acesso…",
+                            "Entrar no Vitta-One",
+                        ),
+                        font_weight="750",
+                    ),
+                    spacing="2",
+                    align="center",
+                ),
                 type="submit",
                 size="3",
                 width="100%",
-                min_height="3rem",
+                min_height="3.15rem",
                 color_scheme="teal",
                 high_contrast=True,
-                loading=AuthState.is_submitting,
                 disabled=AuthState.is_submitting,
                 class_name="vitta-primary-action",
             ),
-            rx.text(
-                "Não há cadastro público. O acesso é criado pela administração da clínica.",
-                color="var(--vitta-text-muted)",
-                font_size="0.78rem",
-                line_height="1.5",
-                text_align="center",
+            rx.hstack(
+                rx.icon("shield_check", size=16, color="var(--vitta-primary)"),
+                rx.text(
+                    "Acesso restrito à equipe autorizada pela clínica.",
+                    color="var(--vitta-text-muted)",
+                    font_size="0.76rem",
+                    line_height="1.45",
+                ),
+                spacing="2",
+                align="start",
+                width="100%",
+                justify="center",
             ),
             spacing="4",
             width="100%",
         ),
         on_submit=AuthState.login,
+        no_validate=True,
         width="100%",
     )
 
@@ -164,7 +217,7 @@ def authenticated_header() -> rx.Component:
     """Render the shared protected-shell header."""
     return rx.flex(
         rx.hstack(
-            brand_mark(),
+            brand_mark(decorative=True),
             rx.vstack(
                 rx.heading("Vitta-One", size="5", color="var(--vitta-text)"),
                 rx.text("Ambiente interno da clínica", size="1", color="var(--vitta-text-muted)"),
@@ -292,6 +345,17 @@ def protected_workspace(role: Role, *children: rx.Component) -> rx.Component:
     )
 
 
+def protected_admin_surface(child: rx.Component) -> rx.Component:
+    """Render the dedicated administrator shell after exact server-side role verification."""
+    return rx.cond(
+        AuthState.auth_checked
+        & (AuthState.current_role == Role.ADMINISTRADOR.value)
+        & (AuthState.verified_path == Role.ADMINISTRADOR.dashboard_path),
+        child,
+        loading_surface(),
+    )
+
+
 def section_panel(*children, **props) -> rx.Component:
     """Render a quiet operational section using the established Vitta-One surface."""
     return rx.box(
@@ -308,7 +372,12 @@ def section_panel(*children, **props) -> rx.Component:
 def success_banner(message) -> rx.Component:
     """Render an accessible inline success region."""
     return rx.box(
-        rx.text(message, size="2", line_height="1.5"),
+        rx.hstack(
+            rx.icon("circle_check", size=17, aria_hidden="true"),
+            rx.text(message, size="2", line_height="1.5"),
+            spacing="2",
+            align="start",
+        ),
         width="100%",
         padding="0.8rem 0.9rem",
         border="1px solid var(--vitta-success-border)",
