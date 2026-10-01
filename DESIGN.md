@@ -82,7 +82,7 @@ A assinatura visual é a combinação de **sidebar clínica persistente + cabeç
 
 ### Modo local do Administrador
 
-O Administrador de desenvolvimento pode receber uma navegação unificada somente quando `VITTA_ONE_LOCAL_ADMIN_PREVIEW=true`. Esse modo existe para inspeção visual e QA local. Ele não altera o RBAC de produção nem transforma o Administrador em superusuário de negócio. Áreas ainda não implementadas renderizam estados vazios honestos ou projeções somente leitura de dados persistidos.
+O Administrador de desenvolvimento pode receber uma navegação unificada somente quando `VITTA_ONE_LOCAL_ADMIN_PREVIEW=true`. Esse modo existe para inspeção visual e QA local. Ele não altera o RBAC de produção nem transforma o Administrador em superusuário de negócio. Áreas ainda não implementadas renderizam estados vazios honestos; Agenda e outras capabilities implementadas usam projeções somente leitura de dados persistidos.
 
 ## Colors
 
@@ -169,7 +169,7 @@ Transições de 120–180ms somente em hover, foco e seleção. Sem animação a
 
 ### Content and data visualization
 
-Nunca preencher dashboard, agenda, prontuário ou financeiro com conteúdo de demonstração apresentado como real. Projeções locais usam dados persistidos; módulos futuros mostram estados vazios claros. Prioridade clínica é sempre acompanhada por texto e nunca é inferida pela interface.
+Nunca preencher dashboard, prontuário ou financeiro com conteúdo de demonstração apresentado como real. A Agenda usa apenas slots e Consultas persistidos. Projeções locais usam dados persistidos; módulos futuros mostram estados vazios claros. Prioridade clínica é sempre acompanhada por texto e nunca é inferida pela interface.
 
 ## Do's and Don'ts
 
