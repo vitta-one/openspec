@@ -107,6 +107,10 @@ def test_schedule_cancel_and_reuse_slot_preserves_history(db: Session) -> None:
     now = datetime(2026, 10, 1, 12, tzinfo=timezone.utc)
     slot = create_availability_slot(db, professional_id=professional.id, starts_at=now + timedelta(days=1), now=now)
 
+    with pytest.raises(SchedulingValidationError):
+        schedule_consultation(db, patient_id=999999, slot_id=slot.id, now=now)
+    assert db.get(ProfessionalAvailabilitySlot, slot.id).status == AvailabilitySlotStatus.AVAILABLE.value
+
     consultation = schedule_consultation(db, patient_id=first_patient.id, slot_id=slot.id, now=now)
     assert consultation.status == ConsultationStatus.AGENDADA.value
     assert db.get(ProfessionalAvailabilitySlot, slot.id).status == AvailabilitySlotStatus.BOOKED.value
