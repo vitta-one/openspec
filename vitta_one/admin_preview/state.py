@@ -43,6 +43,7 @@ class PreviewQueueRow(TypedDict):
     status: str
     status_label: str
     entered_at: str
+    is_scheduled: bool
 
 
 class PreviewProfessionalRow(TypedDict):
@@ -68,6 +69,10 @@ class PreviewConsultationRow(TypedDict):
     scheduled_at: str
     status: str
     status_label: str
+    confirmed_at: str
+    started_at: str
+    completed_at: str
+    cancelled_at: str
 
 
 _PRIORITY_LABELS = {
@@ -360,6 +365,7 @@ class AdminPreviewState(rx.State):
                     "entered_at": item.entered_at.strftime(
                         "%d/%m/%Y · %H:%M UTC"
                     ),
+                    "is_scheduled": item.consultation_id is not None,
                 }
                 for item in queue_items
                 if item.id is not None
@@ -409,6 +415,26 @@ class AdminPreviewState(rx.State):
                     "scheduled_at": format_clinic_datetime(item.scheduled_at),
                     "status": item.status,
                     "status_label": ConsultationStatus(item.status).label,
+                    "confirmed_at": (
+                        format_clinic_datetime(item.confirmed_at)
+                        if item.confirmed_at is not None
+                        else ""
+                    ),
+                    "started_at": (
+                        format_clinic_datetime(item.started_at)
+                        if item.started_at is not None
+                        else ""
+                    ),
+                    "completed_at": (
+                        format_clinic_datetime(item.completed_at)
+                        if item.completed_at is not None
+                        else ""
+                    ),
+                    "cancelled_at": (
+                        format_clinic_datetime(item.cancelled_at)
+                        if item.cancelled_at is not None
+                        else ""
+                    ),
                 }
                 for item in consultation_items
                 if item.id is not None
