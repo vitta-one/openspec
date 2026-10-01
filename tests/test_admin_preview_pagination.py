@@ -43,4 +43,4 @@ def test_patient_page_rows_filters_then_paginates_and_clamps_page() -> None:
     assert [row["id"] for row in _patient_page_rows(PATIENTS, "", 2, 2)] == [3, 4]
     assert [row["id"] for row in _patient_page_rows(PATIENTS, "", 99, 2)] == [5]
     assert [row["id"] for row in _patient_page_rows(PATIENTS, "", 0, 2)] == [1, 2]
-    assert [row["id"] for row in _patient_page_rows(PATIENTS, "a", 1, 2)] == [1, 3]
+    assert [row["id"] for row in _patient_page_rows(PATIENTS, "da", 1, 2)] == [4, 5]
