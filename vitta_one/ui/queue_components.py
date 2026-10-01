@@ -316,12 +316,43 @@ def reception_queue_row(row) -> rx.Component:
         rx.vstack(
             rx.flex(
                 rx.vstack(
-                    rx.text(row["patient_name"], font_weight="750", size="3"),
+                    rx.hstack(
+                        rx.text(row["patient_name"], font_weight="750", size="3"),
+                        rx.cond(
+                            row["is_scheduled"],
+                            rx.badge(
+                                "Consulta agendada",
+                                color_scheme="teal",
+                                variant="soft",
+                                high_contrast=True,
+                            ),
+                            rx.badge(
+                                "Atendimento avulso",
+                                color_scheme="gray",
+                                variant="soft",
+                            ),
+                        ),
+                        spacing="2",
+                        align="center",
+                        flex_wrap="wrap",
+                    ),
                     rx.text(
                         "Entrada: ",
                         row["entered_at"],
                         size="1",
                         color="var(--vitta-text-muted)",
+                    ),
+                    rx.cond(
+                        row["is_scheduled"],
+                        rx.text(
+                            row["professional_name"],
+                            " · ",
+                            row["scheduled_at"],
+                            size="1",
+                            color="var(--vitta-text-subtle)",
+                            class_name="vitta-tabular",
+                        ),
+                        rx.fragment(),
                     ),
                     spacing="1",
                     align="start",
@@ -368,7 +399,9 @@ def reception_queue_row(row) -> rx.Component:
                     variant="ghost",
                     color_scheme="red",
                     on_click=ReceptionQueueState.begin_withdraw(
-                        row["id"], row["patient_name"]
+                        row["id"],
+                        row["patient_name"],
+                        row["is_scheduled"],
                     ),
                     disabled=ReceptionQueueState.is_submitting,
                 ),
@@ -387,7 +420,6 @@ def reception_queue_row(row) -> rx.Component:
         background="var(--vitta-surface)",
         role="listitem",
     )
-
 
 def reassess_panel() -> rx.Component:
     return rx.cond(
@@ -490,11 +522,20 @@ def withdraw_panel() -> rx.Component:
                     size="2",
                     color="var(--vitta-text)",
                 ),
-                rx.text(
-                    "A entrada sairá da fila ativa, mas o histórico será preservado.",
-                    size="2",
-                    color="var(--vitta-text-muted)",
-                    line_height="1.5",
+                rx.cond(
+                    ReceptionQueueState.withdraw_is_scheduled,
+                    rx.text(
+                        "A entrada sairá da fila e a Consulta confirmada será cancelada. O histórico dos dois registros será preservado.",
+                        size="2",
+                        color="var(--vitta-text-muted)",
+                        line_height="1.5",
+                    ),
+                    rx.text(
+                        "A entrada sairá da fila ativa, mas o histórico será preservado.",
+                        size="2",
+                        color="var(--vitta-text-muted)",
+                        line_height="1.5",
+                    ),
                 ),
                 rx.el.form(
                     rx.vstack(
@@ -639,7 +680,7 @@ def doctor_waiting_summary() -> rx.Component:
             rx.box(
                 rx.heading("Fila de atendimento", size="5"),
                 rx.text(
-                    "A chamada respeita a prioridade informada e a ordem de entrada. A seleção é confirmada no servidor.",
+                    "A chamada respeita prioridade e ordem de entrada. Consultas agendadas aparecem somente para o Médico marcado; atendimentos avulsos seguem a fila compartilhada.",
                     color="var(--vitta-text-muted)",
                     size="2",
                     line_height="1.55",
@@ -717,6 +758,34 @@ def doctor_active_panel() -> rx.Component:
                     align="start",
                     width="100%",
                     gap="0.75rem",
+                ),
+                rx.cond(
+                    DoctorQueueState.active_is_scheduled,
+                    rx.box(
+                        rx.hstack(
+                            rx.icon("calendar_clock", size=17),
+                            rx.box(
+                                rx.text(
+                                    "Consulta agendada",
+                                    font_weight="750",
+                                    size="2",
+                                ),
+                                rx.text(
+                                    DoctorQueueState.active_professional_name,
+                                    " · ",
+                                    DoctorQueueState.active_scheduled_at,
+                                    size="1",
+                                    color="var(--vitta-text-muted)",
+                                    class_name="vitta-tabular",
+                                    margin_top="0.15rem",
+                                ),
+                            ),
+                            spacing="3",
+                            align="center",
+                        ),
+                        class_name="vitta-info-strip",
+                    ),
+                    rx.fragment(),
                 ),
                 rx.box(
                     rx.text(
