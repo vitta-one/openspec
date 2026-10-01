@@ -15,7 +15,16 @@ from vitta_one.admin_preview.service import (
     require_local_admin_preview,
 )
 from vitta_one.auth.state import AuthState
-from vitta_one.models import Patient, Professional, QueueEntry, Specialty
+from vitta_one.appointment_scheduling.domain import AvailabilitySlotStatus, ConsultationStatus
+from vitta_one.appointment_scheduling.temporal import format_clinic_datetime
+from vitta_one.models import (
+    Consultation,
+    Patient,
+    Professional,
+    ProfessionalAvailabilitySlot,
+    QueueEntry,
+    Specialty,
+)
 
 
 class PreviewPatientRow(TypedDict):
@@ -41,6 +50,23 @@ class PreviewProfessionalRow(TypedDict):
     name: str
     registration_identifier: str
     is_active: bool
+    status_label: str
+
+
+class PreviewAgendaSlotRow(TypedDict):
+    id: int
+    professional_name: str
+    starts_at: str
+    status: str
+    status_label: str
+
+
+class PreviewConsultationRow(TypedDict):
+    id: int
+    patient_name: str
+    professional_name: str
+    scheduled_at: str
+    status: str
     status_label: str
 
 
@@ -106,6 +132,8 @@ class AdminPreviewState(rx.State):
     queue_rows: list[PreviewQueueRow] = []
     professionals: list[PreviewProfessionalRow] = []
     specialty_count: int = 0
+    agenda_slots: list[PreviewAgendaSlotRow] = []
+    agenda_consultations: list[PreviewConsultationRow] = []
 
     patient_query: str = ""
     patient_page: int = 1
@@ -131,6 +159,8 @@ class AdminPreviewState(rx.State):
         self.queue_rows = []
         self.professionals = []
         self.specialty_count = 0
+        self.agenda_slots = []
+        self.agenda_consultations = []
         self.patient_query = ""
         self.patient_page = 1
         self.selected_patient_id = 0
@@ -277,9 +307,26 @@ class AdminPreviewState(rx.State):
                     db.exec(select(Professional).order_by(Professional.name)).all()
                 )
                 specialty_items = list(db.exec(select(Specialty)).all())
+                slot_items = list(
+                    db.exec(
+                        select(ProfessionalAvailabilitySlot)
+                        .order_by(ProfessionalAvailabilitySlot.starts_at)
+                        .limit(80)
+                    ).all()
+                )
+                consultation_items = list(
+                    db.exec(
+                        select(Consultation)
+                        .order_by(Consultation.scheduled_at)
+                        .limit(80)
+                    ).all()
+                )
 
                 patient_by_id = {
                     item.id: item for item in patient_items if item.id is not None
+                }
+                professional_by_id = {
+                    item.id: item for item in professional_items if item.id is not None
                 }
 
             self.patients = [
@@ -330,6 +377,42 @@ class AdminPreviewState(rx.State):
                 if item.id is not None
             ]
             self.specialty_count = len(specialty_items)
+
+            self.agenda_slots = [
+                {
+                    "id": item.id or 0,
+                    "professional_name": (
+                        professional_by_id[item.professional_id].name
+                        if item.professional_id in professional_by_id
+                        else "Profissional indisponível"
+                    ),
+                    "starts_at": format_clinic_datetime(item.starts_at),
+                    "status": item.status,
+                    "status_label": AvailabilitySlotStatus(item.status).label,
+                }
+                for item in slot_items
+                if item.id is not None
+            ]
+            self.agenda_consultations = [
+                {
+                    "id": item.id or 0,
+                    "patient_name": (
+                        patient_by_id[item.patient_id].name
+                        if item.patient_id in patient_by_id
+                        else "Paciente indisponível"
+                    ),
+                    "professional_name": (
+                        professional_by_id[item.professional_id].name
+                        if item.professional_id in professional_by_id
+                        else "Profissional indisponível"
+                    ),
+                    "scheduled_at": format_clinic_datetime(item.scheduled_at),
+                    "status": item.status,
+                    "status_label": ConsultationStatus(item.status).label,
+                }
+                for item in consultation_items
+                if item.id is not None
+            ]
 
             total_pages = _patient_page_count(
                 len(_filter_patient_rows(self.patients, self.patient_query)),
