@@ -472,11 +472,12 @@ def test_withdraw_scheduled_cancels_consultation_and_releases_or_inactivates_slo
     assert cancelled.cancelled_at == withdrawn.withdrawn_at
     assert db.get(ProfessionalAvailabilitySlot, slot.id).status == AvailabilitySlotStatus.AVAILABLE.value
 
+    doctor2 = _doctor(db, "doctor-withdraw-inactive@example.com")
     professional2, _, slot2, consultation2 = _scheduled(
         db,
         suffix="WITHDRAW-INACTIVE",
         patient_prefix="990011223",
-        doctor_user_id=doctor.id,
+        doctor_user_id=doctor2.id,
         base=base,
     )
     entry2 = confirm_arrival(
