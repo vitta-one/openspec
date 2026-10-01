@@ -82,4 +82,4 @@
 - [x] 8.7 Testar que Consultas em estados posteriores não são alteradas por handlers desta capability.
 - [x] 8.8 Testar RBAC das quatro roles e sessões ausente/expirada.
 - [x] 8.9 Validar índice único parcial/locking no PostgreSQL 16 real do CI.
-- [ ] 8.10 Executar migration, suíte completa, OpenSpec strict e `reflex compile --dry`, corrigindo regressões antes de concluir a change.
+- [x] 8.10 Executar migration, suíte completa, OpenSpec strict e `reflex compile --dry`, corrigindo regressões antes de concluir a change.
