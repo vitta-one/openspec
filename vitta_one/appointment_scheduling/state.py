@@ -31,7 +31,14 @@ from vitta_one.appointment_scheduling.temporal import (
 )
 from vitta_one.auth.authorization import AuthenticationRequiredError, RoleForbiddenError
 from vitta_one.auth.state import AuthState
+from vitta_one.consultation_care.application import reception_confirm_arrival
+from vitta_one.consultation_care.service import (
+    CareLifecycleConflictError,
+    CareLifecycleTransitionError,
+    CareLifecycleValidationError,
+)
 from vitta_one.patient_queue.application import reception_find_patient
+from vitta_one.patient_queue.state import ReceptionQueueState
 
 
 class ProfessionalOptionRow(TypedDict):
@@ -48,6 +55,9 @@ class SlotRow(TypedDict):
     starts_at: str
     status: str
     status_label: str
+    confirmed_at: str
+    started_at: str
+    completed_at: str
 
 
 class ConsultationRow(TypedDict):
@@ -83,6 +93,15 @@ def _slot_rows(items) -> list[SlotRow]:
             "starts_at": format_clinic_datetime(item.starts_at),
             "status": item.status.value,
             "status_label": item.status.label,
+            "confirmed_at": (
+                format_clinic_datetime(item.confirmed_at) if item.confirmed_at else ""
+            ),
+            "started_at": (
+                format_clinic_datetime(item.started_at) if item.started_at else ""
+            ),
+            "completed_at": (
+                format_clinic_datetime(item.completed_at) if item.completed_at else ""
+            ),
         }
         for item in items
     ]
@@ -323,6 +342,14 @@ class ReceptionAgendaState(rx.State):
     selected_patient_id: int = 0
     selected_patient_name: str = ""
 
+    arrival_dialog_open: bool = False
+    arrival_consultation_id: int = 0
+    arrival_patient_name: str = ""
+    arrival_professional_name: str = ""
+    arrival_scheduled_at: str = ""
+    arrival_symptoms: str = ""
+    arrival_priority: str = "VERDE"
+
     reschedule_dialog_open: bool = False
     reschedule_consultation_id: int = 0
     reschedule_patient_name: str = ""
@@ -371,6 +398,7 @@ class ReceptionAgendaState(rx.State):
         self.consultations = []
         self.selected_patient_id = 0
         self.selected_patient_name = ""
+        self._reset_arrival()
         self._reset_reschedule()
         self._reset_cancel()
 
@@ -397,6 +425,15 @@ class ReceptionAgendaState(rx.State):
         self.professionals = _professional_rows(professional_items)
         self.slots = _slot_rows(snapshot.slots)
         self.consultations = _consultation_rows(snapshot.consultations)
+
+    def _reset_arrival(self) -> None:
+        self.arrival_dialog_open = False
+        self.arrival_consultation_id = 0
+        self.arrival_patient_name = ""
+        self.arrival_professional_name = ""
+        self.arrival_scheduled_at = ""
+        self.arrival_symptoms = ""
+        self.arrival_priority = "VERDE"
 
     def _reset_reschedule(self) -> None:
         self.reschedule_dialog_open = False
@@ -535,6 +572,78 @@ class ReceptionAgendaState(rx.State):
                 yield event
         except Exception:
             self.error_message = "Não foi possível agendar a consulta agora."
+        finally:
+            self.is_submitting = False
+            yield
+
+    @rx.event
+    def begin_arrival(
+        self,
+        consultation_id: int,
+        patient_name: str,
+        professional_name: str,
+        scheduled_at: str,
+    ) -> None:
+        self._clear_feedback()
+        self._reset_reschedule()
+        self._reset_cancel()
+        self.arrival_consultation_id = consultation_id
+        self.arrival_patient_name = patient_name
+        self.arrival_professional_name = professional_name
+        self.arrival_scheduled_at = scheduled_at
+        self.arrival_symptoms = ""
+        self.arrival_priority = "VERDE"
+        self.arrival_dialog_open = True
+
+    @rx.event
+    def set_arrival_dialog_open(self, is_open: bool) -> None:
+        if self.is_submitting and not is_open:
+            return
+        self.arrival_dialog_open = is_open
+        if not is_open:
+            self._reset_arrival()
+
+    @rx.event
+    def update_arrival_symptoms(self, value: str) -> None:
+        self.arrival_symptoms = value
+
+    @rx.event
+    def update_arrival_priority(self, value: str) -> None:
+        self.arrival_priority = value
+
+    @rx.event
+    async def confirm_arrival(self, _form_data: dict[str, Any]):
+        self.is_submitting = True
+        self._clear_feedback()
+        yield
+        try:
+            if not self.arrival_consultation_id:
+                raise CareLifecycleValidationError("Selecione uma consulta agendada.")
+            token = await self._token()
+            with rx.session() as db:
+                reception_confirm_arrival(
+                    db,
+                    token=token,
+                    consultation_id=self.arrival_consultation_id,
+                    symptoms=self.arrival_symptoms,
+                    priority=self.arrival_priority,
+                )
+            self._reset_arrival()
+            self._load_with_token(token)
+            queue_state = await self.get_state(ReceptionQueueState)
+            queue_state._load_queue_with_token(token)
+            self.success_message = "Chegada confirmada e paciente incluído na fila."
+        except (
+            CareLifecycleValidationError,
+            CareLifecycleTransitionError,
+            CareLifecycleConflictError,
+        ) as exc:
+            self.error_message = str(exc)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.error_message = "Não foi possível confirmar a chegada agora."
         finally:
             self.is_submitting = False
             yield
