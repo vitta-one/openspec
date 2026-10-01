@@ -77,6 +77,10 @@ def test_timezone_is_explicit_and_converts_local_to_utc(monkeypatch: pytest.Monk
     with pytest.raises(ClinicTimezoneConfigurationError):
         parse_clinic_datetime_local("2026-10-01T10:30")
 
+    monkeypatch.setenv("VITTA_ONE_CLINIC_TIMEZONE", "Timezone/Invalido")
+    with pytest.raises(ClinicTimezoneConfigurationError):
+        clinic_timezone_name()
+
 
 def test_slot_create_duplicate_past_deactivate_and_reactivate(db: Session) -> None:
     professional = _professional(db)
@@ -109,6 +113,9 @@ def test_schedule_cancel_and_reuse_slot_preserves_history(db: Session) -> None:
 
     with pytest.raises(SchedulingConflictError):
         schedule_consultation(db, patient_id=second_patient.id, slot_id=slot.id, now=now)
+
+    with pytest.raises(SchedulingTransitionError):
+        set_availability_slot_active(db, slot_id=slot.id, is_active=False, now=now)
 
     cancelled = cancel_consultation(db, consultation_id=consultation.id, now=now + timedelta(hours=1))
     first_cancelled_at = cancelled.cancelled_at
