@@ -510,7 +510,6 @@ def _patient_search_bar() -> rx.Component:
             gap="0.75rem",
             width="100%",
         ),
-        padding=rx.breakpoints(initial="0.85rem", sm="1rem"),
     )
 
 
