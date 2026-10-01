@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 
 import reflex as rx
-from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String, text
+from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint, text
 from sqlmodel import Field
 
 from vitta_one.appointment_scheduling.domain import AvailabilitySlotStatus, ConsultationStatus
@@ -18,11 +18,16 @@ class ProfessionalAvailabilitySlot(rx.Model, table=True):
 
     __tablename__ = "professional_availability_slots"
     __table_args__ = (
+        UniqueConstraint(
+            "professional_id",
+            "starts_at",
+            name="uq_availability_professional_starts_at",
+        ),
         CheckConstraint(
             "status IN ('AVAILABLE', 'BOOKED', 'INACTIVE')",
             name="ck_availability_slot_status",
         ),
-        Index("ix_availability_professional_starts_at", "professional_id", "starts_at", unique=True),
+        Index("ix_availability_professional_starts_at", "professional_id", "starts_at"),
     )
 
     professional_id: int = Field(
