@@ -4,7 +4,7 @@ Sistema acadêmico de gerenciamento de clínica médica desenvolvido com **Pytho
 
 ## Estado atual
 
-A fundação de acesso, o fluxo de paciente/fila e a gestão administrativa de profissionais/especialidades estão implementados nesta branch. A capability consolidada está em `openspec/specs/patient-reception-queue/`, com a evolução correspondente de `openspec/specs/access-control/`. A autorização continua sendo revalidada no servidor em todas as leituras e mutações protegidas.
+A fundação de acesso, o fluxo de paciente/fila, a gestão administrativa de profissionais/especialidades e a agenda por slots explícitos estão implementados nesta branch. A capability consolidada está em `openspec/specs/patient-reception-queue/`, com a evolução correspondente de `openspec/specs/access-control/`. A autorização continua sendo revalidada no servidor em todas as leituras e mutações protegidas.
 
 ## Stack definida
 
@@ -68,6 +68,7 @@ A duração da sessão é obrigatoriamente explícita e configurada em segundos.
 ```bash
 export VITTA_ONE_SESSION_TTL_SECONDS='<segundos-da-sessao>'
 export VITTA_ONE_COOKIE_SECURE='true'         # produção/HTTPS
+export VITTA_ONE_CLINIC_TIMEZONE='America/Sao_Paulo'
 # export VITTA_ONE_COOKIE_SECURE='false'      # somente desenvolvimento HTTP local
 ```
 
@@ -129,8 +130,8 @@ reflex compile --dry
 ## Rotas protegidas
 
 - `/login`: autenticação local, sem cadastro público;
-- `/admin`: gestão de especialidades e profissionais, com vínculo opcional a contas Médicas;
-- `/recepcao`: cadastro/localização de pacientes, entrada, reavaliação, retirada e acompanhamento da fila ativa;
+- `/admin`: gestão de especialidades, profissionais e slots explícitos de disponibilidade;
+- `/recepcao`: agenda de Consultas + cadastro/localização de pacientes, entrada, reavaliação, retirada e acompanhamento da fila ativa;
 - `/medico`: contagem da fila, chamada atômica do próximo paciente e finalização do próprio atendimento ativo;
 - `/financeiro`: shell protegido do Financeiro;
 - `/acesso-negado`: estado autenticado para tentativa de acesso a uma role incompatível.
