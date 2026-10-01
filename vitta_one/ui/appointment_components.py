@@ -365,7 +365,7 @@ def _reschedule_dialog() -> rx.Component:
                         ReceptionAgendaState.available_slots,
                         lambda row: rx.select.item(
                             row["starts_at"] + " · " + row["professional_name"],
-                            value=row["id"].to_string(),
+                            value=row["value"],
                         ),
                     ),
                     position="popper",
