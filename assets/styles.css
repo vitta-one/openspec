@@ -1,69 +1,217 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700&display=swap");
+
 :root {
-  --vitta-canvas: #f4f8f7;
+  --vitta-canvas: #f7f8fc;
   --vitta-surface: #ffffff;
-  --vitta-surface-muted: #eaf3f1;
-  --vitta-primary: #0b5d56;
-  --vitta-primary-hover: #084b46;
-  --vitta-primary-soft: #d8ebe7;
-  --vitta-text: #18302d;
-  --vitta-text-muted: #586e6b;
-  --vitta-border: #cbdad7;
-  --vitta-border-hover: #9db5b1;
-  --vitta-danger: #a43a3a;
-  --vitta-danger-soft: #fff0f0;
-  --vitta-focus: #0e7c72;
-  --vitta-focus-soft: rgba(14, 124, 114, 0.12);
-  --vitta-scroll-thumb: #8ea6a2;
-  --vitta-scroll-track: #edf3f2;
-  --vitta-radius-control: 0.75rem;
-  --vitta-radius-panel: 1.25rem;
-  --vitta-shadow-panel: 0 24px 70px rgba(24, 48, 45, 0.12);
-  --vitta-shadow-mark: 0 10px 24px rgba(11, 93, 86, 0.18);
-  --vitta-danger-border: #e7b8b8;
-  --vitta-success: #236449;
-  --vitta-success-soft: #e7f4ed;
-  --vitta-success-border: #add6c2;
-  --vitta-font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --vitta-surface-muted: #f1f4fb;
+  --vitta-surface-strong: #e8edf8;
+  --vitta-primary: #00645d;
+  --vitta-primary-hover: #004f4a;
+  --vitta-primary-soft: #e2f2ef;
+  --vitta-primary-contrast: #ffffff;
+  --vitta-secondary: #0a6ea8;
+  --vitta-text: #111827;
+  --vitta-text-muted: #556070;
+  --vitta-text-subtle: #7a8492;
+  --vitta-border: #dde3ec;
+  --vitta-border-hover: #b8c4d3;
+  --vitta-danger: #b42318;
+  --vitta-danger-soft: #fff2f0;
+  --vitta-danger-border: #f2b8b2;
+  --vitta-success: #176b52;
+  --vitta-success-soft: #e9f7f1;
+  --vitta-success-border: #b6dfcf;
+  --vitta-focus: #0b7d74;
+  --vitta-focus-soft: rgba(11, 125, 116, 0.14);
+  --vitta-scroll-thumb: #9aa8b8;
+  --vitta-scroll-track: #eef2f6;
+  --vitta-radius-control: 0.72rem;
+  --vitta-radius-panel: 1rem;
+  --vitta-shadow-panel: 0 8px 28px rgba(28, 39, 54, 0.07);
+  --vitta-shadow-float: 0 18px 60px rgba(20, 34, 48, 0.14);
+  --vitta-font-display: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+  --vitta-font-body: "Inter", "Segoe UI", sans-serif;
+  --vitta-sidebar-width: 15.5rem;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 html {
   scrollbar-color: var(--vitta-scroll-thumb) var(--vitta-scroll-track);
   scrollbar-width: thin;
+  background: var(--vitta-canvas);
 }
 
 body {
   margin: 0;
   background: var(--vitta-canvas);
   color: var(--vitta-text);
-  font-family: var(--vitta-font-sans);
+  font-family: var(--vitta-font-body);
+  font-size: 0.94rem;
+  text-rendering: optimizeLegibility;
 }
 
-*::-webkit-scrollbar {
-  width: 0.75rem;
-  height: 0.75rem;
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--vitta-font-display);
+  color: var(--vitta-text);
 }
 
-*::-webkit-scrollbar-track {
-  background: var(--vitta-scroll-track);
-}
+a { color: inherit; }
+button, input, textarea, select { font: inherit; }
 
+*::-webkit-scrollbar { width: 0.72rem; height: 0.72rem; }
+*::-webkit-scrollbar-track { background: var(--vitta-scroll-track); }
 *::-webkit-scrollbar-thumb {
   background: var(--vitta-scroll-thumb);
   border: 3px solid var(--vitta-scroll-track);
   border-radius: 999px;
 }
-
-*::-webkit-scrollbar-thumb:hover {
-  background: var(--vitta-primary);
-}
+*::-webkit-scrollbar-thumb:hover { background: var(--vitta-primary); }
 
 :focus-visible {
   outline: 3px solid var(--vitta-focus);
   outline-offset: 3px;
+}
+
+.vitta-brand-logo { display: block; }
+
+/* ---------- Login ---------- */
+.vitta-login-canvas {
+  min-height: 100dvh;
+  background: #eef2f7;
+  padding: clamp(0.75rem, 2vw, 1.5rem);
+  display: grid;
+  place-items: center;
+}
+
+.vitta-login-shell {
+  width: min(1180px, 100%);
+  min-height: min(760px, calc(100dvh - 3rem));
+  display: grid;
+  grid-template-columns: minmax(360px, 0.88fr) minmax(440px, 1.12fr);
+  background: var(--vitta-surface);
+  border: 1px solid rgba(205, 215, 225, 0.8);
+  border-radius: 1.35rem;
+  overflow: hidden;
+  box-shadow: var(--vitta-shadow-float);
+}
+
+.vitta-login-form-panel {
+  min-height: 100%;
+  padding: clamp(2rem, 5vw, 4.5rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: #ffffff;
+}
+
+.vitta-login-title {
+  margin: 0.35rem 0 0;
+  font-family: var(--vitta-font-display);
+  font-size: clamp(2rem, 3vw, 3rem);
+  line-height: 1.05;
+  letter-spacing: -0.045em;
+  max-width: 11ch;
+}
+
+.vitta-login-copy {
+  margin-top: 0.9rem;
+  color: var(--vitta-text-muted);
+  line-height: 1.65;
+  max-width: 42ch;
+}
+
+.vitta-login-form-panel form { margin-top: 2rem; }
+.vitta-login-footnote {
+  margin-top: 2rem;
+  color: var(--vitta-text-subtle);
+  font-size: 0.74rem;
+}
+
+.vitta-login-visual {
+  position: relative;
+  min-height: 34rem;
+  overflow: hidden;
+  background: #dbe8e5;
+}
+
+.vitta-login-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 38%;
+}
+
+.vitta-login-visual::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 37, 34, 0.02) 36%, rgba(0, 37, 34, 0.86) 100%);
+  pointer-events: none;
+}
+
+.vitta-login-visual-caption {
+  position: absolute;
+  z-index: 1;
+  left: clamp(1.5rem, 4vw, 3.2rem);
+  right: clamp(1.5rem, 4vw, 3.2rem);
+  bottom: clamp(1.5rem, 4vw, 3rem);
+  color: #ffffff;
+}
+
+.vitta-login-visual-kicker {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: #bff4ec;
+}
+
+.vitta-login-visual-title {
+  margin-top: 0.45rem;
+  color: #ffffff;
+  font-size: clamp(1.7rem, 3vw, 2.5rem);
+  letter-spacing: -0.035em;
+  max-width: 13ch;
+}
+
+.vitta-login-visual-copy {
+  margin-top: 0.7rem;
+  max-width: 52ch;
+  line-height: 1.55;
+  color: rgba(255,255,255,0.86);
+}
+
+.vitta-visual-chip {
+  padding: 0.42rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.28);
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  font-size: 0.74rem;
+  font-weight: 600;
+  backdrop-filter: blur(6px);
+}
+
+/* ---------- Forms ---------- */
+.vitta-field-label {
+  display: inline-block;
+  margin-bottom: 0.45rem;
+  font-weight: 650;
+  font-size: 0.84rem;
+  color: var(--vitta-text);
+}
+
+.vitta-field-wrap { position: relative; width: 100%; }
+.vitta-field-leading-icon {
+  position: absolute;
+  left: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--vitta-text-subtle);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .vitta-input,
@@ -71,67 +219,259 @@ body {
   width: 100%;
   border: 1px solid var(--vitta-border);
   border-radius: var(--vitta-radius-control);
-  background: var(--vitta-surface);
+  background: #ffffff;
   color: var(--vitta-text);
-  font: inherit;
-  padding: 0.72rem 0.9rem;
-  transition: border-color 140ms ease, box-shadow 140ms ease;
+  padding: 0.75rem 0.9rem;
+  transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
 }
 
-.vitta-input {
-  min-height: 3rem;
-}
+.vitta-input { min-height: 3rem; }
+.vitta-input-leading { padding-left: 2.7rem; }
+.vitta-password-input { padding-right: 3.2rem; }
+.vitta-textarea { min-height: 8rem; resize: none; line-height: 1.55; }
 
-.vitta-textarea {
-  min-height: 7.5rem;
-  resize: vertical;
-  line-height: 1.5;
-}
+.vitta-input::placeholder,
+.vitta-textarea::placeholder { color: #98a2b3; }
 
 .vitta-input:hover,
-.vitta-textarea:hover {
-  border-color: var(--vitta-border-hover);
-}
+.vitta-textarea:hover { border-color: var(--vitta-border-hover); }
 
 .vitta-input:focus,
 .vitta-textarea:focus {
   border-color: var(--vitta-focus);
   box-shadow: 0 0 0 3px var(--vitta-focus-soft);
+  outline: none;
 }
 
-.vitta-select-trigger {
-  width: 100%;
-  min-height: 3rem;
-}
-
-.vitta-password-input {
-  padding-right: 6.5rem;
-}
-
+.vitta-select-trigger { width: 100%; min-height: 3rem; }
 .vitta-password-toggle {
   position: absolute;
-  right: 0.45rem;
+  right: 0.38rem;
   top: 50%;
   transform: translateY(-50%);
-}
-
-.vitta-primary-action {
+  width: 2.35rem;
+  height: 2.35rem;
+  min-width: 2.35rem;
+  padding: 0;
+  border-radius: 0.6rem;
+  color: var(--vitta-text-muted);
   cursor: pointer;
 }
+.vitta-password-toggle:hover { background: var(--vitta-surface-muted); color: var(--vitta-primary); }
 
+.vitta-primary-action {
+  border: 0;
+  border-radius: var(--vitta-radius-control);
+  background: var(--vitta-primary);
+  color: var(--vitta-primary-contrast);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 5px 16px rgba(0, 100, 93, 0.16);
+  transition: transform 120ms ease, background 120ms ease, box-shadow 120ms ease;
+}
 .vitta-primary-action:hover:not(:disabled) {
-  filter: brightness(0.94);
+  background: var(--vitta-primary-hover);
+  box-shadow: 0 7px 20px rgba(0, 100, 93, 0.2);
+  transform: translateY(-1px);
+}
+.vitta-primary-action:active:not(:disabled) { transform: translateY(0); }
+
+/* ---------- App shell ---------- */
+.vitta-app-frame {
+  min-height: 100dvh;
+  background: var(--vitta-canvas);
+}
+
+.vitta-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--vitta-sidebar-width);
+  background: #ffffff;
+  border-right: 1px solid var(--vitta-border);
+  z-index: 30;
+}
+
+.vitta-sidebar-brand { border-bottom: 1px solid #edf1f5; }
+.vitta-sidebar-caption {
+  display: block;
+  padding: 0.45rem 0.6rem 0.55rem;
+  font-size: 0.64rem;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  font-weight: 800;
+  color: #8a94a3;
+}
+
+.vitta-nav-item {
+  display: flex;
+  width: 100%;
+  padding: 0.68rem 0.72rem;
+  border-radius: 0.68rem;
+  color: #3f4b5b;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 120ms ease, background 120ms ease, transform 120ms ease;
+}
+.vitta-nav-item:hover { background: #f1f5f8; color: var(--vitta-text); }
+.vitta-nav-item:active { transform: translateY(1px); }
+.vitta-nav-item-active {
+  background: var(--vitta-primary);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 100, 93, 0.14);
+}
+.vitta-nav-item-active:hover { background: var(--vitta-primary-hover); color: #ffffff; }
+
+.vitta-sidebar-user {
+  margin: 0.75rem;
+  padding: 0.72rem;
+  border-radius: 0.75rem;
+  background: var(--vitta-surface-muted);
+  border: 1px solid #e6ebf2;
+}
+.vitta-user-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #ffffff;
+  color: var(--vitta-primary);
+  border: 1px solid var(--vitta-border);
+  flex-shrink: 0;
+}
+.vitta-ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.vitta-app-main { margin-left: var(--vitta-sidebar-width); min-width: 0; }
+.vitta-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  min-height: 4.2rem;
+  padding: 0.75rem clamp(1rem, 2.5vw, 2rem);
+  background: rgba(255,255,255,0.94);
+  border-bottom: 1px solid var(--vitta-border);
+  backdrop-filter: blur(10px);
+}
+.vitta-topbar-title {
+  font-family: var(--vitta-font-display);
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+.vitta-status-dot { width: 0.48rem; height: 0.48rem; border-radius: 999px; background: var(--vitta-primary); }
+.vitta-context-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.38rem;
+  padding: 0.46rem 0.65rem;
+  border-radius: 999px;
+  background: var(--vitta-surface-muted);
+  border: 1px solid #e7ebf1;
+}
+.vitta-icon-button { cursor: pointer; color: var(--vitta-text-muted); }
+.vitta-icon-button:hover { background: var(--vitta-surface-muted); color: var(--vitta-text); }
+
+.vitta-page-content {
+  width: min(100%, 76rem);
+  margin: 0 auto;
+  padding: clamp(1.25rem, 2.8vw, 2rem) clamp(1rem, 3vw, 2.25rem) 3rem;
+}
+.vitta-eyebrow {
+  color: var(--vitta-primary);
+  font-size: 0.68rem;
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+}
+.vitta-page-title {
+  margin-top: 0.38rem;
+  font-size: clamp(1.7rem, 2.3vw, 2.35rem);
+  line-height: 1.12;
+  letter-spacing: -0.038em;
+}
+.vitta-page-description {
+  margin-top: 0.55rem;
+  max-width: 72ch;
+  color: var(--vitta-text-muted);
+  line-height: 1.65;
+}
+
+.vitta-panel {
+  width: 100%;
+  padding: clamp(1rem, 2vw, 1.35rem);
+  background: var(--vitta-surface);
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-panel);
+  box-shadow: 0 1px 2px rgba(16,24,40,0.025);
+}
+.vitta-module-card {
+  min-height: 12.5rem;
+  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  cursor: pointer;
+}
+.vitta-module-card:hover {
+  transform: translateY(-2px);
+  border-color: #b9c6d4;
+  box-shadow: var(--vitta-shadow-panel);
+}
+.vitta-module-icon,
+.vitta-empty-icon {
+  width: 2.55rem;
+  height: 2.55rem;
+  display: grid;
+  place-items: center;
+  border-radius: 0.72rem;
+  background: var(--vitta-primary-soft);
+  color: var(--vitta-primary);
+}
+.vitta-step-number {
+  font-family: var(--vitta-font-display);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+  color: var(--vitta-primary);
 }
 
 button:disabled,
-[aria-disabled="true"] {
-  cursor: not-allowed;
+[aria-disabled="true"] { cursor: not-allowed; opacity: 0.58; }
+
+@media (max-width: 900px) {
+  .vitta-login-shell { grid-template-columns: 1fr; max-width: 38rem; }
+  .vitta-login-visual { min-height: 22rem; }
+  .vitta-login-form-panel { padding: 2rem 1.4rem; }
+
+  .vitta-sidebar {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    height: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--vitta-border);
+    overflow-x: auto;
+  }
+  .vitta-sidebar > div { height: auto !important; }
+  .vitta-sidebar-brand { display: none; }
+  .vitta-sidebar-caption { display: none; }
+  .vitta-sidebar [data-orientation="vertical"] { flex-direction: row; }
+  .vitta-sidebar-user { display: none; }
+  .vitta-sidebar > div > div:nth-child(2) { padding: 0.55rem; overflow-x: auto; }
+  .vitta-sidebar > div > div:nth-child(2) > div { flex-direction: row !important; min-width: max-content; }
+  .vitta-nav-item { width: auto; white-space: nowrap; }
+  .vitta-app-main { margin-left: 0; }
+  .vitta-topbar { position: static; }
+}
+
+@media (max-width: 640px) {
+  .vitta-login-canvas { padding: 0; }
+  .vitta-login-shell { min-height: 100dvh; border: 0; border-radius: 0; box-shadow: none; }
+  .vitta-login-visual { min-height: 18rem; }
+  .vitta-login-visual-caption { left: 1.2rem; right: 1.2rem; bottom: 1.2rem; }
+  .vitta-context-chip { display: none; }
+  .vitta-page-content { padding-top: 1rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
@@ -140,7 +480,6 @@ button:disabled,
 }
 
 @media (forced-colors: active) {
-  :focus-visible {
-    outline-color: Highlight;
-  }
+  :focus-visible { outline-color: Highlight; }
+  .vitta-nav-item-active { border: 1px solid ButtonText; }
 }

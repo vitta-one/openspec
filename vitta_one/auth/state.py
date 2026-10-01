@@ -25,7 +25,21 @@ _LOGIN_REQUIRED = "Preencha o e-mail e a senha para continuar."
 _SYSTEM_LOGIN_ERROR = "Não foi possível concluir o acesso agora. Tente novamente."
 _LOGOUT_ERROR = "Não foi possível encerrar a sessão agora. Tente novamente."
 
-_ROLE_BY_ROUTE = {role.dashboard_path: role for role in Role}
+_ADMIN_ROUTES = (
+    "/admin",
+    "/admin/recepcao",
+    "/admin/agenda",
+    "/admin/atendimento",
+    "/admin/pacientes",
+    "/admin/financeiro",
+    "/admin/administracao",
+)
+_ROLE_BY_ROUTE = {
+    **{path: Role.ADMINISTRADOR for path in _ADMIN_ROUTES},
+    Role.RECEPCIONISTA.dashboard_path: Role.RECEPCIONISTA,
+    Role.MEDICO.dashboard_path: Role.MEDICO,
+    Role.FINANCEIRO.dashboard_path: Role.FINANCEIRO,
+}
 
 
 class LoginFormData(TypedDict):
@@ -209,7 +223,8 @@ class AuthState(rx.State):
         self.shell_error = ""
         yield
 
-        required_role = _ROLE_BY_ROUTE.get(self.router.route_id)
+        route_id = self.router.route_id
+        required_role = _ROLE_BY_ROUTE.get(route_id)
         if required_role is None:
             self._clear_identity()
             self.auth_checked = True
@@ -240,7 +255,7 @@ class AuthState(rx.State):
         self._set_identity(
             email=identity.email,
             role=identity.role,
-            verified_path=required_role.dashboard_path,
+            verified_path=route_id,
         )
         self.auth_checked = True
         yield
