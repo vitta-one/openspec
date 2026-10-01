@@ -57,11 +57,46 @@ _QUEUE_STATUS_LABELS = {
     "RETIRADO": "Retirado",
 }
 
+PATIENT_PAGE_SIZE = 8
+
 
 def _mask_cpf(cpf: str) -> str:
     digits = "".join(char for char in cpf if char.isdigit())
     suffix = digits[-2:] if len(digits) >= 2 else "**"
     return f"***.***.***-{suffix}"
+
+
+def _filter_patient_rows(
+    patients: list[PreviewPatientRow],
+    query: str,
+) -> list[PreviewPatientRow]:
+    normalized = query.strip().casefold()
+    if not normalized:
+        return patients
+    return [
+        row
+        for row in patients
+        if normalized in row["name"].casefold()
+        or normalized in row["cpf_masked"].casefold()
+    ]
+
+
+def _patient_page_count(total: int, page_size: int = PATIENT_PAGE_SIZE) -> int:
+    if page_size <= 0:
+        raise ValueError("O tamanho da página deve ser positivo.")
+    return max(1, (total + page_size - 1) // page_size)
+
+
+def _patient_page_rows(
+    patients: list[PreviewPatientRow],
+    query: str,
+    page: int,
+    page_size: int = PATIENT_PAGE_SIZE,
+) -> list[PreviewPatientRow]:
+    filtered = _filter_patient_rows(patients, query)
+    safe_page = min(max(page, 1), _patient_page_count(len(filtered), page_size))
+    start = (safe_page - 1) * page_size
+    return filtered[start : start + page_size]
 
 
 class AdminPreviewState(rx.State):
@@ -73,6 +108,8 @@ class AdminPreviewState(rx.State):
     specialty_count: int = 0
 
     patient_query: str = ""
+    patient_page: int = 1
+    patient_page_size: int = PATIENT_PAGE_SIZE
     selected_patient_id: int = 0
     selected_patient_name: str = ""
     selected_patient_cpf: str = ""
@@ -94,6 +131,8 @@ class AdminPreviewState(rx.State):
         self.queue_rows = []
         self.professionals = []
         self.specialty_count = 0
+        self.patient_query = ""
+        self.patient_page = 1
         self.selected_patient_id = 0
         self.selected_patient_name = ""
         self.selected_patient_cpf = ""
@@ -104,14 +143,47 @@ class AdminPreviewState(rx.State):
 
     @rx.var
     def filtered_patients(self) -> list[PreviewPatientRow]:
-        query = self.patient_query.strip().casefold()
-        if not query:
-            return self.patients
-        return [
-            row
-            for row in self.patients
-            if query in row["name"].casefold() or query in row["cpf_masked"].casefold()
-        ]
+        return _filter_patient_rows(self.patients, self.patient_query)
+
+    @rx.var
+    def patient_result_count(self) -> int:
+        return len(_filter_patient_rows(self.patients, self.patient_query))
+
+    @rx.var
+    def patient_total_pages(self) -> int:
+        return _patient_page_count(
+            len(_filter_patient_rows(self.patients, self.patient_query)),
+            self.patient_page_size,
+        )
+
+    @rx.var
+    def paginated_patients(self) -> list[PreviewPatientRow]:
+        return _patient_page_rows(
+            self.patients,
+            self.patient_query,
+            self.patient_page,
+            self.patient_page_size,
+        )
+
+    @rx.var
+    def patient_range_label(self) -> str:
+        total = len(_filter_patient_rows(self.patients, self.patient_query))
+        if total == 0:
+            return "0 pacientes"
+        start = (self.patient_page - 1) * self.patient_page_size + 1
+        end = min(self.patient_page * self.patient_page_size, total)
+        return f"{start}–{end} de {total} pacientes"
+
+    @rx.var
+    def can_previous_patient_page(self) -> bool:
+        return self.patient_page > 1
+
+    @rx.var
+    def can_next_patient_page(self) -> bool:
+        return self.patient_page < _patient_page_count(
+            len(_filter_patient_rows(self.patients, self.patient_query)),
+            self.patient_page_size,
+        )
 
     @rx.var
     def selected_patient_history(self) -> list[PreviewQueueRow]:
@@ -129,19 +201,57 @@ class AdminPreviewState(rx.State):
             row for row in self.queue_rows if row["status"] == "EM_ATENDIMENTO"
         ]
 
+    def _clear_patient_selection(self) -> None:
+        self.selected_patient_id = 0
+        self.selected_patient_name = ""
+        self.selected_patient_cpf = ""
+
     @rx.event
     def update_patient_query(self, value: str) -> None:
         self.patient_query = value
+        self.patient_page = 1
+        self._clear_patient_selection()
 
     @rx.event
     def clear_patient_query(self) -> None:
         self.patient_query = ""
+        self.patient_page = 1
+        self._clear_patient_selection()
 
     @rx.event
-    def select_patient(self, patient_id: int, name: str, cpf_masked: str) -> None:
-        self.selected_patient_id = patient_id
-        self.selected_patient_name = name
-        self.selected_patient_cpf = cpf_masked
+    def toggle_patient_selection(
+        self,
+        patient_id: int,
+        name: str,
+        cpf_masked: str,
+        checked: bool,
+    ) -> None:
+        if checked:
+            self.selected_patient_id = patient_id
+            self.selected_patient_name = name
+            self.selected_patient_cpf = cpf_masked
+        elif self.selected_patient_id == patient_id:
+            self._clear_patient_selection()
+
+    @rx.event
+    def clear_patient_selection(self) -> None:
+        self._clear_patient_selection()
+
+    @rx.event
+    def previous_patient_page(self) -> None:
+        if self.patient_page > 1:
+            self.patient_page -= 1
+            self._clear_patient_selection()
+
+    @rx.event
+    def next_patient_page(self) -> None:
+        total_pages = _patient_page_count(
+            len(_filter_patient_rows(self.patients, self.patient_query)),
+            self.patient_page_size,
+        )
+        if self.patient_page < total_pages:
+            self.patient_page += 1
+            self._clear_patient_selection()
 
     @rx.event
     async def load(self):
@@ -221,6 +331,12 @@ class AdminPreviewState(rx.State):
             ]
             self.specialty_count = len(specialty_items)
 
+            total_pages = _patient_page_count(
+                len(_filter_patient_rows(self.patients, self.patient_query)),
+                self.patient_page_size,
+            )
+            self.patient_page = min(max(self.patient_page, 1), total_pages)
+
             self.waiting_count = sum(
                 1 for row in self.queue_rows if row["status"] == "AGUARDANDO"
             )
@@ -240,9 +356,7 @@ class AdminPreviewState(rx.State):
                     row["id"] == self.selected_patient_id for row in self.patients
                 )
             ):
-                self.selected_patient_id = 0
-                self.selected_patient_name = ""
-                self.selected_patient_cpf = ""
+                self._clear_patient_selection()
 
         except LocalAdminPreviewDisabledError:
             self._clear()

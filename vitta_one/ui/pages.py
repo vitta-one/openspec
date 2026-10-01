@@ -67,6 +67,7 @@ def login_page() -> rx.Component:
                     letter_spacing="-0.045em",
                     font_family="var(--vitta-font-display)",
                     margin_top="1rem",
+                    class_name="vitta-login-title",
                 ),
                 rx.text(
                     "Entre com suas credenciais para acessar o ambiente operacional da clínica.",
@@ -74,6 +75,7 @@ def login_page() -> rx.Component:
                     line_height="1.65",
                     margin_top="0.75rem",
                     max_width="42ch",
+                    class_name="vitta-login-lead",
                 ),
                 rx.box(login_form(), margin_top="1.75rem"),
                 class_name="vitta-login-form-wrap",

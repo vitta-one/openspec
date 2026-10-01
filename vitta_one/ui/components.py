@@ -241,6 +241,7 @@ def login_form() -> rx.Component:
         on_submit=AuthState.login,
         no_validate=True,
         width="100%",
+        class_name="vitta-login-form",
     )
 
 
