@@ -210,16 +210,13 @@ class AdminPreviewState(rx.State):
     def update_patient_query(self, value: str) -> None:
         self.patient_query = value
         self.patient_page = 1
-        if self.selected_patient_id and not any(
-            row["id"] == self.selected_patient_id
-            for row in _filter_patient_rows(self.patients, value)
-        ):
-            self._clear_patient_selection()
+        self._clear_patient_selection()
 
     @rx.event
     def clear_patient_query(self) -> None:
         self.patient_query = ""
         self.patient_page = 1
+        self._clear_patient_selection()
 
     @rx.event
     def toggle_patient_selection(
