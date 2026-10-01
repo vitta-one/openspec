@@ -878,3 +878,165 @@ def _patient_preview() -> rx.Component:
         ),
         _preview_notice(),
         rx.box(
+            rx.flex(
+                rx.hstack(
+                    rx.box(rx.icon("user_round", size=22), class_name="vitta-module-icon"),
+                    rx.box(
+                        rx.heading("Paciente de demonstração", size="5"),
+                        rx.text("Cadastro visual · DEMO-003", size="1", color="var(--vitta-text-muted)"),
+                    ),
+                    spacing="3",
+                    align="center",
+                ),
+                rx.hstack(
+                    _status_pill("Ativo", "success"),
+                    rx.button(
+                        "Voltar à agenda",
+                        type="button",
+                        variant="outline",
+                        color_scheme="teal",
+                        on_click=AdminExperienceState.open_section("agenda"),
+                    ),
+                    spacing="2",
+                    align="center",
+                ),
+                justify="between",
+                align="center",
+                width="100%",
+                gap="1rem",
+            ),
+            rx.box(
+                rx.hstack(
+                    _patient_tab("Histórico", "historico"),
+                    _patient_tab("Consultas", "consultas"),
+                    _patient_tab("Prescrições", "prescricoes"),
+                    _patient_tab("Exames", "exames"),
+                    _patient_tab("Dados", "dados"),
+                    spacing="1",
+                    width="max-content",
+                ),
+                class_name="vitta-tabs-scroll",
+                margin_top="1.35rem",
+            ),
+            class_name="vitta-demo-panel",
+        ),
+        rx.flex(
+            rx.box(
+                rx.text("TIMELINE CRONOLÓGICA", class_name="vitta-panel-kicker"),
+                rx.box(_patient_tab_content(), margin_top="1rem"),
+                class_name="vitta-demo-panel",
+                flex="1 1 42rem",
+                min_width="0",
+            ),
+            rx.vstack(
+                rx.box(
+                    rx.text("PRÓXIMA CONSULTA", class_name="vitta-panel-kicker"),
+                    rx.text("30/09/2026 · 09:00", font_weight="800", margin_top="0.6rem"),
+                    rx.text("Exemplo visual da agenda", size="1", color="var(--vitta-text-muted)", margin_top="0.25rem"),
+                    class_name="vitta-demo-panel",
+                    width="100%",
+                ),
+                rx.box(
+                    rx.text("CONTATO & RESPONSÁVEL", class_name="vitta-panel-kicker"),
+                    rx.text("Dados mascarados em prévia", font_weight="700", margin_top="0.6rem"),
+                    rx.text("Nenhum telefone ou e-mail real é exibido.", size="1", color="var(--vitta-text-muted)", margin_top="0.25rem"),
+                    class_name="vitta-demo-panel",
+                    width="100%",
+                ),
+                spacing="3",
+                flex="0 1 20rem",
+                width="100%",
+            ),
+            direction=rx.breakpoints(initial="column", xl="row"),
+            gap="1rem",
+            align="start",
+            width="100%",
+        ),
+        spacing="5",
+        align="stretch",
+        width="100%",
+    )
+
+
+def _finance_preview() -> rx.Component:
+    return rx.vstack(
+        _section_heading(
+            "Financeiro",
+            "Estrutura pronta para receber dados reais, sem números inventados.",
+            "O projeto prevê Asaas em sandbox, mas a capability financeira ainda não foi implementada. Por isso esta área mostra somente o estado de produto e o próximo passo, não métricas fictícias.",
+        ),
+        rx.box(
+            rx.box(rx.icon("wallet_cards", size=28), class_name="vitta-empty-icon"),
+            rx.heading("Financeiro ainda não possui operações nesta versão", size="5", margin_top="1rem", text_align="center"),
+            rx.text(
+                "Quando a change de pagamentos for aprovada, esta superfície receberá cobranças, estados, filtros e feedback de integração com o Asaas sandbox.",
+                size="2",
+                color="var(--vitta-text-muted)",
+                line_height="1.6",
+                text_align="center",
+                max_width="55ch",
+                margin_top="0.55rem",
+            ),
+            rx.button(
+                "Voltar à visão geral",
+                type="button",
+                variant="outline",
+                color_scheme="teal",
+                margin_top="1.2rem",
+                on_click=AdminExperienceState.open_section("inicio"),
+            ),
+            class_name="vitta-empty-state",
+        ),
+        spacing="5",
+        align="stretch",
+        width="100%",
+    )
+
+
+def _administration() -> rx.Component:
+    return rx.vstack(
+        _section_heading(
+            "Administração",
+            "Profissionais e especialidades conectados ao backend.",
+            "Esta é a área funcional já consolidada no projeto. Diferente das prévias visuais, as ações abaixo passam pelas validações e autorização server-side existentes.",
+        ),
+        admin_directory_workspace(),
+        spacing="5",
+        align="stretch",
+        width="100%",
+    )
+
+
+def _active_content() -> rx.Component:
+    return rx.match(
+        AdminExperienceState.active_section,
+        ("inicio", _overview()),
+        ("recepcao", _reception_preview()),
+        ("agenda", _agenda_preview()),
+        ("atendimento", _attendance_preview()),
+        ("pacientes", _patient_preview()),
+        ("financeiro", _finance_preview()),
+        ("administracao", _administration()),
+        _overview(),
+    )
+
+
+def admin_experience() -> rx.Component:
+    """Render the administrator hub with production-safe visual previews."""
+    return rx.flex(
+        _desktop_sidebar(),
+        rx.box(
+            _topbar(),
+            _mobile_navigation(),
+            rx.box(
+                _active_content(),
+                class_name="vitta-admin-content",
+            ),
+            class_name="vitta-admin-main",
+            min_width="0",
+        ),
+        width="100%",
+        min_height="100dvh",
+        align="stretch",
+        background="var(--vitta-canvas)",
+    )
