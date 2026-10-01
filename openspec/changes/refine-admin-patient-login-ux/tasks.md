@@ -28,6 +28,6 @@
 ## 5. Verificação
 
 - [x] 5.1 Adicionar testes unitários para paginação/filtro/seleção quando aplicável.
-- [ ] 5.2 Executar `python -m pytest -q`.
-- [ ] 5.3 Executar `reflex compile --dry`.
-- [ ] 5.4 Validar OpenSpec e registrar qualquer risco visual que exija inspeção manual.
+- [x] 5.2 Executar `python -m pytest -q`.
+- [x] 5.3 Executar `reflex compile --dry`.
+- [x] 5.4 Validar OpenSpec e registrar qualquer risco visual que exija inspeção manual.
