@@ -11,6 +11,7 @@ from vitta_one.appointment_scheduling.application import (
     admin_list_active_professionals,
     reception_get_agenda,
     reception_list_active_professionals,
+    reception_schedule_consultation,
 )
 from vitta_one.auth.authorization import AuthenticationRequiredError, RoleForbiddenError
 from vitta_one.auth.roles import Role
@@ -92,6 +93,13 @@ def test_doctor_and_finance_cannot_read_schedule_capability(db: Session, role: R
         admin_list_active_professionals(db, token=token)
     with pytest.raises(RoleForbiddenError):
         reception_list_active_professionals(db, token=token)
+    with pytest.raises(RoleForbiddenError):
+        reception_schedule_consultation(
+            db,
+            token=token,
+            patient_id=999999,
+            slot_id=999999,
+        )
 
 
 def test_missing_session_is_rejected_before_scheduling_data(db: Session) -> None:
