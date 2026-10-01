@@ -1,7 +1,7 @@
+import os
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 
@@ -10,14 +10,25 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+
+def _database_url() -> str:
+    """Use the same DATABASE_URL contract as the Reflex application."""
+    database_url = os.getenv("DATABASE_URL", "").strip()
+    if not database_url:
+        return config.get_main_option("sqlalchemy.url")
+    if database_url.startswith("postgresql://"):
+        return database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+    return database_url
+
+
+config.set_main_option("sqlalchemy.url", _database_url())
 target_metadata = None
 
 
 def run_migrations_offline() -> None:
     """Run migrations in offline mode."""
-    url = config.get_main_option("sqlalchemy.url")
     context.configure(
-        url=url,
+        url=config.get_main_option("sqlalchemy.url"),
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},

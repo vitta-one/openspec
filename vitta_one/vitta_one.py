@@ -16,7 +16,13 @@ from vitta_one.models import (
 from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
 from vitta_one.professional_directory.state import AdminDirectoryState
 from vitta_one.ui.pages import (
+    admin_administration_page,
+    admin_agenda_page,
+    admin_clinical_page,
+    admin_finance_page,
     admin_page,
+    admin_patients_page,
+    admin_reception_page,
     doctor_page,
     finance_page,
     forbidden_page,
@@ -47,24 +53,52 @@ app = rx.App(
     stylesheets=["/styles.css"],
 )
 
-app.add_page(
-    root_page,
-    route="/",
-    title="Vitta-One",
-    on_load=AuthState.route_from_root,
-)
-app.add_page(
-    login_page,
-    route="/login",
-    title="Entrar | Vitta-One",
-    on_load=AuthState.prepare_login,
-)
+app.add_page(root_page, route="/", title="Vitta-One", on_load=AuthState.route_from_root)
+app.add_page(login_page, route="/login", title="Entrar | Vitta-One", on_load=AuthState.prepare_login)
+
 app.add_page(
     admin_page,
-    route=Role.ADMINISTRADOR.dashboard_path,
-    title="Painel administrativo | Vitta-One",
+    route="/admin",
+    title="Visão geral | Vitta-One",
+    on_load=AuthState.load_protected,
+)
+app.add_page(
+    admin_reception_page,
+    route="/admin/recepcao",
+    title="Recepção | Administração | Vitta-One",
+    on_load=AuthState.load_protected,
+)
+app.add_page(
+    admin_agenda_page,
+    route="/admin/agenda",
+    title="Agenda | Administração | Vitta-One",
+    on_load=AuthState.load_protected,
+)
+app.add_page(
+    admin_clinical_page,
+    route="/admin/atendimento",
+    title="Atendimento clínico | Administração | Vitta-One",
+    on_load=AuthState.load_protected,
+)
+app.add_page(
+    admin_patients_page,
+    route="/admin/pacientes",
+    title="Pacientes | Administração | Vitta-One",
+    on_load=AuthState.load_protected,
+)
+app.add_page(
+    admin_finance_page,
+    route="/admin/financeiro",
+    title="Financeiro | Administração | Vitta-One",
+    on_load=AuthState.load_protected,
+)
+app.add_page(
+    admin_administration_page,
+    route="/admin/administracao",
+    title="Administração | Vitta-One",
     on_load=[AuthState.load_protected, AdminDirectoryState.load],
 )
+
 app.add_page(
     reception_page,
     route=Role.RECEPCIONISTA.dashboard_path,
