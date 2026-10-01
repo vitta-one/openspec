@@ -1,6 +1,6 @@
 """Reflex state for administrator professional and specialty management."""
 
-from typing import TypedDict
+from typing import Any, TypedDict
 
 import reflex as rx
 
@@ -269,7 +269,7 @@ class AdminDirectoryState(rx.State):
         self.new_specialty_name = value
 
     @rx.event
-    async def create_specialty(self, _form_data: dict[str, str]):
+    async def create_specialty(self, _form_data: dict[str, Any]):
         self.is_submitting = True
         self._clear_feedback()
         yield
@@ -313,7 +313,7 @@ class AdminDirectoryState(rx.State):
         self.specialty_dialog_open = False
 
     @rx.event
-    async def save_specialty_edit(self, _form_data: dict[str, str]):
+    async def save_specialty_edit(self, _form_data: dict[str, Any]):
         self.is_submitting = True
         self._clear_feedback()
         yield
@@ -465,7 +465,7 @@ class AdminDirectoryState(rx.State):
         self.specialty_options = updated
 
     @rx.event
-    async def save_professional(self, _form_data: dict[str, str]):
+    async def save_professional(self, _form_data: dict[str, Any]):
         self.is_submitting = True
         self._clear_feedback()
         yield
