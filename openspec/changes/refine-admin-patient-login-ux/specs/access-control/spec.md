@@ -15,6 +15,8 @@ O sistema MUST permitir que um usuário previamente cadastrado se autentique uti
 - **WHEN** a tela de login é aberta em viewport que não comporta confortavelmente o layout dividido
 - **THEN** o formulário permanece integralmente legível e alcançável, sem clipping de campos ou ação de entrada, e o conteúdo visual secundário é reduzido ou removido
 
+## ADDED Requirements
+
 ### Requirement: Senha permanece mascarada com controle acessível de revelação
 O campo de senha MUST iniciar mascarado e MUST permitir revelar ou ocultar o valor por um controle de ícone centralizado dentro da área do campo, sem alterar o valor digitado.
 
