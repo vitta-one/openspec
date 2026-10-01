@@ -1,6 +1,6 @@
 """Authorization coverage for appointment scheduling application operations."""
 
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy.pool import StaticPool
@@ -99,3 +99,23 @@ def test_missing_session_is_rejected_before_scheduling_data(db: Session) -> None
         admin_list_active_professionals(db, token="")
     with pytest.raises(AuthenticationRequiredError):
         reception_get_agenda(db, token="")
+
+def test_expired_session_is_rejected_before_schedule_data(db: Session) -> None:
+    user = User(
+        email="expired-agenda@example.com",
+        password_hash=hash_password("senha-teste"),
+        role=Role.RECEPCIONISTA.value,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    expired = create_session(
+        db,
+        user_id=user.id,
+        ttl=timedelta(minutes=1),
+        now=datetime(2020, 1, 1, tzinfo=timezone.utc),
+    )
+
+    with pytest.raises(AuthenticationRequiredError):
+        reception_get_agenda(db, token=expired)
+
