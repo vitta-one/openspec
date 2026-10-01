@@ -218,3 +218,223 @@ def _topbar() -> rx.Component:
                 on_click=AuthState.logout,
                 aria_label="Sair do Vitta-One",
             ),
+            spacing="3",
+            align="center",
+        ),
+        class_name="vitta-admin-topbar",
+        justify="between",
+        align="center",
+        width="100%",
+    )
+
+
+def _module_card(
+    title: str,
+    description: str,
+    icon: str,
+    section: str,
+    status: str,
+    tone: str,
+) -> rx.Component:
+    return rx.box(
+        rx.flex(
+            rx.box(rx.icon(icon, size=20), class_name="vitta-module-icon"),
+            _status_pill(status, tone),
+            justify="between",
+            align="start",
+            width="100%",
+        ),
+        rx.heading(title, size="4", margin_top="1rem", letter_spacing="-0.02em"),
+        rx.text(
+            description,
+            size="2",
+            color="var(--vitta-text-muted)",
+            line_height="1.55",
+            margin_top="0.45rem",
+            min_height="3rem",
+        ),
+        rx.button(
+            "Abrir módulo",
+            rx.icon("arrow_right", size=16),
+            type="button",
+            variant="ghost",
+            color_scheme="teal",
+            on_click=AdminExperienceState.open_section(section),
+            margin_top="1rem",
+            padding_left="0",
+        ),
+        class_name="vitta-module-card",
+    )
+
+
+def _overview() -> rx.Component:
+    return rx.vstack(
+        _section_heading(
+            "Central administrativa",
+            "Boa noite. O Vitta-One está pronto para revisão.",
+            "Este hub reúne a administração real já implementada e prévias navegáveis dos fluxos anexados. As prévias são isoladas de dados clínicos reais e não enfraquecem a autorização server-side.",
+        ),
+        rx.box(
+            rx.flex(
+                rx.box(
+                    rx.hstack(
+                        rx.icon("shield_check", size=20, color="var(--vitta-primary)"),
+                        rx.text("Acesso administrativo validado", font_weight="750"),
+                        spacing="2",
+                        align="center",
+                    ),
+                    rx.text(
+                        "Diretório de profissionais e especialidades permanece conectado aos dados persistidos. Os demais módulos abaixo funcionam como fluxo visual para aprovação de UI/UX.",
+                        size="2",
+                        color="var(--vitta-text-muted)",
+                        line_height="1.55",
+                        margin_top="0.45rem",
+                    ),
+                    max_width="72ch",
+                ),
+                rx.image(
+                    src="/vitta-one-mark.webp",
+                    alt="",
+                    width="4.5rem",
+                    height="4.5rem",
+                    object_fit="contain",
+                    aria_hidden="true",
+                    class_name="vitta-overview-mark",
+                ),
+                justify="between",
+                align="center",
+                width="100%",
+                gap="1.5rem",
+            ),
+            class_name="vitta-admin-hero",
+        ),
+        rx.box(
+            _module_card(
+                "Recepção",
+                "Agenda do dia, status de chegada, próximos atendimentos e atalhos de balcão.",
+                "clipboard_plus",
+                "recepcao",
+                "Prévia visual",
+                "info",
+            ),
+            _module_card(
+                "Agenda",
+                "Visão semanal com horários, detalhes da consulta e transição visual para atendimento.",
+                "calendar_days",
+                "agenda",
+                "Prévia visual",
+                "info",
+            ),
+            _module_card(
+                "Atendimento clínico",
+                "Estrutura de anamnese, diagnóstico, conduta, prescrição e exames sem persistência nesta etapa.",
+                "stethoscope",
+                "atendimento",
+                "Prévia visual",
+                "info",
+            ),
+            _module_card(
+                "Pacientes",
+                "Perfil longitudinal com abas e timeline clínica demonstrativa.",
+                "users",
+                "pacientes",
+                "Prévia visual",
+                "info",
+            ),
+            _module_card(
+                "Financeiro",
+                "Estado honesto da área financeira enquanto Asaas e pagamentos seguem para change própria.",
+                "wallet_cards",
+                "financeiro",
+                "Planejado",
+                "warning",
+            ),
+            _module_card(
+                "Administração",
+                "Profissionais e especialidades usando o fluxo funcional e persistido já existente.",
+                "settings",
+                "administracao",
+                "Funcional",
+                "success",
+            ),
+            class_name="vitta-module-grid",
+        ),
+        spacing="5",
+        align="stretch",
+        width="100%",
+    )
+
+
+def _demo_stat(label: str, value: str, helper: str, icon: str) -> rx.Component:
+    return rx.box(
+        rx.hstack(
+            rx.box(rx.icon(icon, size=18), class_name="vitta-module-icon vitta-module-icon--small"),
+            rx.text(label, size="1", color="var(--vitta-text-muted)"),
+            spacing="2",
+            align="center",
+        ),
+        rx.text(value, font_size="1.65rem", font_weight="800", margin_top="0.65rem"),
+        rx.text(helper, size="1", color="var(--vitta-text-muted)", margin_top="0.25rem"),
+        class_name="vitta-demo-stat",
+    )
+
+
+def _appointment_row(
+    time: str,
+    patient: str,
+    professional: str,
+    specialty: str,
+    status: str,
+    tone: str,
+    action: str,
+) -> rx.Component:
+    return rx.flex(
+        rx.box(
+            rx.text(time, font_weight="800", font_size="0.95rem"),
+            rx.text("DEMO", size="1", color="var(--vitta-text-muted)"),
+            min_width="4.7rem",
+        ),
+        rx.box(
+            rx.text(patient, font_weight="750", size="2"),
+            rx.text(
+                professional,
+                " · ",
+                specialty,
+                size="1",
+                color="var(--vitta-text-muted)",
+                margin_top="0.2rem",
+            ),
+            flex="1 1 15rem",
+        ),
+        _status_pill(status, tone),
+        rx.button(
+            action,
+            type="button",
+            size="2",
+            variant="outline",
+            color_scheme="teal",
+            on_click=AdminExperienceState.open_section("agenda"),
+        ),
+        class_name="vitta-demo-table-row",
+        align="center",
+        width="100%",
+        gap="1rem",
+    )
+
+
+def _reception_preview() -> rx.Component:
+    return rx.vstack(
+        _section_heading(
+            "Recepção",
+            "Operação do dia em uma única leitura.",
+            "Uma composição inspirada nas telas anexadas, priorizando fila visual, status textual e acesso rápido ao detalhe da agenda.",
+        ),
+        _preview_notice(),
+        rx.box(
+            _demo_stat("Consultas demonstradas", "08", "Amostra visual do período", "calendar_days"),
+            _demo_stat("Aguardando", "03", "Exemplo de estado operacional", "clock_3"),
+            _demo_stat("Em atendimento", "02", "Sem vínculo com fila real", "stethoscope"),
+            _demo_stat("Finalizadas", "03", "Somente para composição", "circle_check"),
+            class_name="vitta-demo-stat-grid",
+        ),
+        rx.box(
