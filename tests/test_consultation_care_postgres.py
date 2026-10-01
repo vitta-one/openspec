@@ -45,7 +45,7 @@ def _cpf(prefix: str) -> str:
     return "".join(str(digit) for digit in digits)
 
 
-def _seed(engine):
+def _seed(engine, patient_prefix: str):
     suffix = uuid4().hex[:10]
     base = datetime.now(timezone.utc)
     with Session(engine) as db:
@@ -68,7 +68,7 @@ def _seed(engine):
         patient = create_patient(
             db,
             name=f"Paciente {suffix}",
-            cpf=_cpf("123456789"),
+            cpf=_cpf(patient_prefix),
         )
         slot = create_availability_slot(
             db,
@@ -91,7 +91,7 @@ def _seed(engine):
 )
 def test_concurrent_arrival_creates_one_linked_queue_entry() -> None:
     engine = create_engine(_DATABASE_URL, pool_pre_ping=True)
-    doctor_id, consultation_id, base = _seed(engine)
+    doctor_id, consultation_id, base = _seed(engine, "123456789")
 
     def arrive():
         with Session(engine) as db:
@@ -128,7 +128,7 @@ def test_concurrent_arrival_creates_one_linked_queue_entry() -> None:
 )
 def test_concurrent_claim_keeps_queue_and_consultation_in_sync() -> None:
     engine = create_engine(_DATABASE_URL, pool_pre_ping=True)
-    doctor_id, consultation_id, base = _seed(engine)
+    doctor_id, consultation_id, base = _seed(engine, "987654321")
     with Session(engine) as db:
         entry = confirm_arrival(
             db,
