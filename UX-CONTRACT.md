@@ -8,6 +8,7 @@
 | Form | Shared field/feedback primitives in `vitta_one/ui/components.py` | DESIGN.md + UX-CONTRACT.md | create / edit / login | unit + compile + manual flow |
 | Scrollbar | Global rules in `assets/styles.css` | DESIGN.md | document / bounded list | CSS audit + narrow viewport |
 | CRUD | Professional directory state + shared feedback contract | OpenSpec + UX-CONTRACT.md | create / edit / deactivate-reactivate | unit + authorization + manual full flow |
+| Agenda | Appointment scheduling State + Reflex/Radix controls | OpenSpec appointment-scheduling + UX-CONTRACT.md | admin availability / reception scheduling | unit + PostgreSQL locking + compile + manual flow |
 
 ## 1. Escopo
 
@@ -111,10 +112,24 @@ Regras:
 - Mudar de página limpa a seleção para evitar contexto invisível; busca que elimina o paciente selecionado também limpa a seleção.
 - Cadastro, localização, entrada, reavaliação e retirada continuam exclusivos da Recepção.
 - Chamar/finalizar continua exclusivo do Médico.
-- Até as capabilities correspondentes existirem, Agenda, prontuário, diagnóstico, prescrição e Financeiro não inventam registros, totais, horários ou transições.
+- Agenda usa somente slots e Consultas persistidos. Até as capabilities correspondentes existirem, prontuário, diagnóstico, prescrição e Financeiro não inventam registros, totais ou transições.
 - Botões sem backend real não são renderizados como ações habilitadas.
 
-## 10. Acessibilidade e estabilidade
+## 10. Agenda e disponibilidade
+
+- A disponibilidade é exibida como **slots explícitos de data/hora**; a UI não presume duração, recorrência ou intervalos clínicos.
+- Administrador cria, filtra, desativa e reativa slots em `/admin`; slot reservado não oferece ação administrativa de desativação.
+- Recepção consulta agenda por profissional/período, localiza paciente existente, agenda, reagenda e cancela Consultas em `/recepcao`.
+- Busca de paciente reutiliza a identidade persistida existente; não existe cadastro paralelo para agenda.
+- Agendamento exige paciente selecionado + slot futuro disponível e preserva seleção quando um conflito concorrente ocorre.
+- Reagendamento usa diálogo explícito, preserva o paciente e só confirma depois da seleção de outro slot disponível.
+- Cancelamento usa confirmação explícita, nunca exclui fisicamente a Consulta e mantém o registro no histórico.
+- Estados de slot e Consulta aparecem em texto; cor é apenas sinal secundário.
+- Filtros e tarefas principais retornam a uma coluna em tela estreita, sem exigir rolagem horizontal.
+- Horários são recebidos/exibidos no timezone IANA configurado da clínica e persistidos em UTC.
+- A fila operacional continua independente da agenda até uma change futura definir integração entre chegada e Consulta.
+
+## 11. Acessibilidade e estabilidade
 
 - alvo WCAG 2.2 AA;
 - foco visível;

@@ -3,12 +3,15 @@
 import reflex as rx
 
 from vitta_one.admin_preview.state import AdminPreviewState
+from vitta_one.appointment_scheduling.state import AdminAvailabilityState, ReceptionAgendaState
 from vitta_one.auth.roles import Role
 from vitta_one.auth.state import AuthState
 from vitta_one.models import (
     AuthSession,
+    Consultation,
     Patient,
     Professional,
+    ProfessionalAvailabilitySlot,
     ProfessionalSpecialty,
     QueueEntry,
     Specialty,
@@ -40,7 +43,9 @@ _PERSISTENT_MODELS = (
     QueueEntry,
     Specialty,
     Professional,
+    ProfessionalAvailabilitySlot,
     ProfessionalSpecialty,
+    Consultation,
 )
 
 app = rx.App(
@@ -69,7 +74,7 @@ app.add_page(
     admin_page,
     route=Role.ADMINISTRADOR.dashboard_path,
     title="Painel administrativo | Vitta-One",
-    on_load=[AuthState.load_protected, AdminDirectoryState.load],
+    on_load=[AuthState.load_protected, AdminDirectoryState.load, AdminAvailabilityState.load],
 )
 app.add_page(
     admin_reception_preview_page,
@@ -106,7 +111,7 @@ app.add_page(
     reception_page,
     route=Role.RECEPCIONISTA.dashboard_path,
     title="Painel de recepção | Vitta-One",
-    on_load=[AuthState.load_protected, ReceptionQueueState.load],
+    on_load=[AuthState.load_protected, ReceptionQueueState.load, ReceptionAgendaState.load],
 )
 app.add_page(
     doctor_page,

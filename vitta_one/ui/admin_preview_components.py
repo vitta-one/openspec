@@ -229,28 +229,64 @@ def _professional_chip(row) -> rx.Component:
     )
 
 
-def _week_cell(day: str) -> rx.Component:
+def _preview_slot_row(row) -> rx.Component:
     return rx.box(
-        rx.text(day, font_size="0.72rem", font_weight="800", color="var(--vitta-text-muted)"),
-        rx.center(
-            rx.text(
-                "Sem slots",
-                font_size="0.72rem",
-                color="var(--vitta-text-subtle)",
+        rx.flex(
+            rx.box(
+                rx.text(row["starts_at"], font_weight="750", size="2", class_name="vitta-tabular"),
+                rx.text(row["professional_name"], size="1", color="var(--vitta-text-muted)", margin_top="0.15rem"),
             ),
-            min_height="7rem",
+            rx.badge(
+                row["status_label"],
+                color_scheme=rx.cond(
+                    row["status"] == "AVAILABLE",
+                    "green",
+                    rx.cond(row["status"] == "BOOKED", "blue", "gray"),
+                ),
+                variant="soft",
+            ),
+            direction=rx.breakpoints(initial="column", sm="row"),
+            justify="between",
+            align=rx.breakpoints(initial="stretch", sm="center"),
+            gap="0.6rem",
+            width="100%",
         ),
-        class_name="vitta-week-cell",
+        class_name="vitta-schedule-row",
+        role="listitem",
+    )
+
+
+def _preview_consultation_row(row) -> rx.Component:
+    return rx.box(
+        rx.flex(
+            rx.box(
+                rx.text(row["scheduled_at"], font_weight="750", size="2", class_name="vitta-tabular"),
+                rx.text(row["patient_name"], size="2", margin_top="0.2rem"),
+                rx.text(row["professional_name"], size="1", color="var(--vitta-text-muted)", margin_top="0.1rem"),
+            ),
+            rx.badge(
+                row["status_label"],
+                color_scheme=rx.cond(row["status"] == "CANCELADA", "red", "blue"),
+                variant="soft",
+            ),
+            direction=rx.breakpoints(initial="column", sm="row"),
+            justify="between",
+            align=rx.breakpoints(initial="stretch", sm="center"),
+            gap="0.6rem",
+            width="100%",
+        ),
+        class_name="vitta-schedule-row",
+        role="listitem",
     )
 
 
 def agenda_preview() -> rx.Component:
-    """Structural agenda preview with no fabricated appointments."""
+    """Read-only local QA projection of persisted scheduling data."""
     return rx.vstack(
         page_header(
-            "Planejamento",
+            "Agenda",
             "Agenda clínica",
-            "Estrutura semanal preparada para receber disponibilidade e Consultas reais, sem compromissos de demonstração.",
+            "Confira slots e Consultas persistidos sem conceder à sessão Administrador as mutações exclusivas da Recepção.",
         ),
         _preview_notice(),
         rx.cond(
@@ -258,100 +294,69 @@ def agenda_preview() -> rx.Component:
             error_banner(AdminPreviewState.error_message),
             rx.fragment(),
         ),
-        section_panel(
-            rx.flex(
-                rx.box(
-                    rx.heading("Profissionais", size="5"),
-                    rx.text(
-                        "Diretório real disponível para a futura agenda.",
-                        size="2",
-                        color="var(--vitta-text-muted)",
-                        margin_top="0.25rem",
-                    ),
-                ),
-                rx.hstack(
-                    rx.text(
-                        AdminPreviewState.professionals.length(),
-                        font_weight="800",
-                        class_name="vitta-tabular",
-                    ),
-                    rx.text("profissionais", font_size="0.74rem"),
-                    spacing="1",
-                    align="center",
-                    color="var(--vitta-primary)",
-                    padding="0.35rem 0.55rem",
-                    border_radius="999px",
-                    background="var(--vitta-primary-soft)",
-                ),
-                direction=rx.breakpoints(initial="column", sm="row"),
-                justify="between",
-                align=rx.breakpoints(initial="stretch", sm="center"),
-                gap="0.75rem",
-                width="100%",
-            ),
-            rx.cond(
-                AdminPreviewState.professionals.length() > 0,
-                rx.flex(
-                    rx.foreach(AdminPreviewState.professionals, _professional_chip),
-                    gap="0.5rem",
-                    flex_wrap="wrap",
-                    margin_top="1rem",
-                    width="100%",
-                ),
+        rx.grid(
+            section_panel(
+                rx.heading("Disponibilidade", size="5"),
                 rx.text(
-                    "Nenhum profissional cadastrado ainda.",
+                    "Slots reais cadastrados pela Administração.",
                     size="2",
                     color="var(--vitta-text-muted)",
-                    margin_top="1rem",
+                    margin_top="0.25rem",
                 ),
-            ),
-        ),
-        section_panel(
-            rx.hstack(
-                rx.box(
-                    rx.heading("Grade semanal", size="5"),
-                    rx.text(
-                        "A grade é apenas estrutural até que slots sejam persistidos.",
-                        size="2",
-                        color="var(--vitta-text-muted)",
-                        margin_top="0.25rem",
+                rx.cond(
+                    AdminPreviewState.agenda_slots.length() > 0,
+                    rx.vstack(
+                        rx.foreach(AdminPreviewState.agenda_slots, _preview_slot_row),
+                        spacing="2",
+                        align="stretch",
+                        width="100%",
+                        role="list",
+                        margin_top="1rem",
+                    ),
+                    empty_state(
+                        "calendar",
+                        "Nenhum horário persistido",
+                        "Cadastre disponibilidade em Administração para vê-la neste preview.",
                     ),
                 ),
-                rx.badge("Sem dados simulados", color_scheme="gray", variant="soft"),
-                justify="between",
-                align="start",
-                width="100%",
-                gap="1rem",
             ),
-            rx.box(
-                _week_cell("Segunda"),
-                _week_cell("Terça"),
-                _week_cell("Quarta"),
-                _week_cell("Quinta"),
-                _week_cell("Sexta"),
-                class_name="vitta-week-grid",
-                margin_top="1rem",
-            ),
-            rx.box(
-                rx.hstack(
-                    rx.icon("info", size=17),
-                    rx.text(
-                        "Disponibilidade, prevenção de conflito, agendamento, reagendamento e cancelamento estão especificados na change add-appointment-scheduling.",
-                        size="2",
-                        line_height="1.55",
-                    ),
-                    spacing="2",
-                    align="start",
+            section_panel(
+                rx.heading("Consultas", size="5"),
+                rx.text(
+                    "Agendamentos e cancelamentos reais do período persistido.",
+                    size="2",
+                    color="var(--vitta-text-muted)",
+                    margin_top="0.25rem",
                 ),
-                class_name="vitta-info-strip",
-                margin_top="1rem",
+                rx.cond(
+                    AdminPreviewState.agenda_consultations.length() > 0,
+                    rx.vstack(
+                        rx.foreach(
+                            AdminPreviewState.agenda_consultations,
+                            _preview_consultation_row,
+                        ),
+                        spacing="2",
+                        align="stretch",
+                        width="100%",
+                        role="list",
+                        margin_top="1rem",
+                    ),
+                    empty_state(
+                        "calendar",
+                        "Nenhuma consulta persistida",
+                        "Quando a Recepção fizer um agendamento, ele aparecerá aqui em modo somente leitura.",
+                    ),
+                ),
             ),
+            columns=rx.breakpoints(initial="1", xl="1fr 1fr"),
+            gap="1rem",
+            width="100%",
+            align_items="start",
         ),
         spacing="5",
         align="stretch",
         width="100%",
     )
-
 
 def _patient_list_row(row) -> rx.Component:
     is_selected = AdminPreviewState.selected_patient_id == row["id"]
