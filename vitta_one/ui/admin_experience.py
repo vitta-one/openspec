@@ -438,3 +438,223 @@ def _reception_preview() -> rx.Component:
             class_name="vitta-demo-stat-grid",
         ),
         rx.box(
+            rx.flex(
+                rx.box(
+                    rx.heading("Agenda da recepção", size="5"),
+                    rx.text(
+                        "Quarta-feira · 30 de setembro · dados demonstrativos",
+                        size="2",
+                        color="var(--vitta-text-muted)",
+                        margin_top="0.3rem",
+                    ),
+                ),
+                rx.hstack(
+                    _status_pill("Todas", "info"),
+                    _status_pill("Aguardando"),
+                    spacing="2",
+                    align="center",
+                ),
+                justify="between",
+                align="center",
+                width="100%",
+                gap="1rem",
+            ),
+            rx.vstack(
+                _appointment_row(
+                    "09:00",
+                    "Paciente demonstração A",
+                    "Dra. Sarah Jenkins",
+                    "Clínica Geral",
+                    "Aguardando",
+                    "warning",
+                    "Abrir",
+                ),
+                _appointment_row(
+                    "09:30",
+                    "Paciente demonstração B",
+                    "Dr. Roberto Lima",
+                    "Cardiologia",
+                    "Em atendimento",
+                    "info",
+                    "Abrir",
+                ),
+                _appointment_row(
+                    "10:00",
+                    "Paciente demonstração C",
+                    "Dra. Sarah Jenkins",
+                    "Clínica Geral",
+                    "Confirmada",
+                    "success",
+                    "Abrir",
+                ),
+                spacing="0",
+                width="100%",
+                margin_top="1.1rem",
+            ),
+            class_name="vitta-demo-panel",
+        ),
+        rx.box(
+            rx.heading("Próximos 30 minutos", size="5"),
+            rx.text(
+                "O painel lateral das referências foi condensado aqui para manter a leitura boa em notebook e empilhar corretamente no mobile.",
+                size="2",
+                color="var(--vitta-text-muted)",
+                line_height="1.55",
+                margin_top="0.35rem",
+            ),
+            rx.hstack(
+                rx.icon("clock_3", size=18, color="var(--vitta-primary)"),
+                rx.text("09:30 · Paciente demonstração B", font_weight="700", size="2"),
+                spacing="2",
+                align="center",
+                margin_top="1rem",
+            ),
+            class_name="vitta-demo-panel",
+        ),
+        spacing="5",
+        align="stretch",
+        width="100%",
+    )
+
+
+def _agenda_slot(time: str, title: str, meta: str, tone: str = "info") -> rx.Component:
+    return rx.box(
+        rx.text(time, size="1", font_weight="800", color="var(--vitta-text-muted)"),
+        rx.text(title, size="2", font_weight="750", margin_top="0.35rem"),
+        rx.text(meta, size="1", color="var(--vitta-text-muted)", margin_top="0.25rem"),
+        _status_pill("Demonstração", tone),
+        class_name="vitta-agenda-slot",
+    )
+
+
+def _agenda_preview() -> rx.Component:
+    return rx.vstack(
+        _section_heading(
+            "Agenda",
+            "Semana clínica com detalhe persistente ao lado.",
+            "A leitura mantém horário, profissional, paciente e estado juntos. Em telas menores, o detalhe desce para a sequência natural sem rolagem horizontal obrigatória.",
+        ),
+        _preview_notice(),
+        rx.flex(
+            rx.box(
+                rx.flex(
+                    rx.box(
+                        rx.heading("28 set — 4 out", size="5"),
+                        rx.text("Visualização semanal demonstrativa", size="1", color="var(--vitta-text-muted)"),
+                    ),
+                    rx.hstack(
+                        rx.button("Dia", disabled=True, variant="ghost", size="2"),
+                        rx.button("Semana", disabled=True, variant="soft", color_scheme="teal", size="2"),
+                        rx.button("Mês", disabled=True, variant="ghost", size="2"),
+                        spacing="1",
+                    ),
+                    justify="between",
+                    align="center",
+                    width="100%",
+                    gap="1rem",
+                ),
+                rx.box(
+                    rx.box(rx.text("SEG", class_name="vitta-agenda-day"), _agenda_slot("08:30", "Paciente demonstração A", "Clínica Geral")),
+                    rx.box(rx.text("TER", class_name="vitta-agenda-day"), _agenda_slot("10:00", "Paciente demonstração B", "Cardiologia", "success")),
+                    rx.box(rx.text("QUA", class_name="vitta-agenda-day"), _agenda_slot("09:00", "Paciente demonstração C", "Clínica Geral", "warning")),
+                    rx.box(rx.text("QUI", class_name="vitta-agenda-day"), _agenda_slot("14:30", "Paciente demonstração D", "Neurologia")),
+                    rx.box(rx.text("SEX", class_name="vitta-agenda-day"), _agenda_slot("11:15", "Paciente demonstração E", "Ortopedia")),
+                    class_name="vitta-agenda-grid",
+                    margin_top="1.25rem",
+                ),
+                class_name="vitta-demo-panel",
+                flex="1 1 42rem",
+                min_width="0",
+            ),
+            rx.box(
+                rx.text("DETALHE DA CONSULTA", class_name="vitta-panel-kicker"),
+                rx.heading("Paciente demonstração C", size="5", margin_top="0.45rem"),
+                rx.text("Quarta-feira · 09:00", font_weight="750", margin_top="0.7rem"),
+                rx.text(
+                    "Dra. Sarah Jenkins · Clínica Geral",
+                    size="2",
+                    color="var(--vitta-text-muted)",
+                    margin_top="0.25rem",
+                ),
+                rx.box(
+                    rx.text("Motivo demonstrativo", size="1", color="var(--vitta-text-muted)"),
+                    rx.text(
+                        "Retorno para revisão de exames e atualização de conduta.",
+                        size="2",
+                        line_height="1.55",
+                        margin_top="0.25rem",
+                    ),
+                    class_name="vitta-demo-detail-block",
+                ),
+                rx.vstack(
+                    rx.button(
+                        "Visualizar atendimento",
+                        rx.icon("stethoscope", size=16),
+                        type="button",
+                        width="100%",
+                        color_scheme="teal",
+                        high_contrast=True,
+                        on_click=AdminExperienceState.open_attendance_preview,
+                    ),
+                    rx.button(
+                        "Abrir perfil do paciente",
+                        type="button",
+                        width="100%",
+                        variant="outline",
+                        color_scheme="teal",
+                        on_click=AdminExperienceState.open_patient_history,
+                    ),
+                    spacing="2",
+                    width="100%",
+                    margin_top="1rem",
+                ),
+                class_name="vitta-demo-panel vitta-demo-detail-panel",
+                flex="0 1 20rem",
+            ),
+            direction=rx.breakpoints(initial="column", xl="row"),
+            gap="1rem",
+            align="start",
+            width="100%",
+        ),
+        spacing="5",
+        align="stretch",
+        width="100%",
+    )
+
+
+def _read_only_field(label: str, value: str, min_height: str = "5rem") -> rx.Component:
+    return rx.box(
+        rx.text(label, size="1", font_weight="750", color="var(--vitta-text-muted)"),
+        rx.box(
+            rx.text(value, size="2", line_height="1.6", white_space="pre-wrap"),
+            class_name="vitta-readonly-field",
+            min_height=min_height,
+            margin_top="0.4rem",
+        ),
+        width="100%",
+    )
+
+
+def _attendance_preview() -> rx.Component:
+    return rx.vstack(
+        _section_heading(
+            "Atendimento clínico",
+            "Prontuário em foco, sem distração de dashboard.",
+            "A tela reproduz a hierarquia do anexo de atendimento, mas permanece intencionalmente somente leitura até as capabilities de prontuário, prescrição e exames serem especificadas.",
+        ),
+        _preview_notice(),
+        rx.box(
+            rx.flex(
+                rx.hstack(
+                    rx.box(rx.icon("user_round", size=22), class_name="vitta-module-icon"),
+                    rx.box(
+                        rx.text("Paciente demonstração C", font_weight="800"),
+                        rx.text("34 anos · ID visual DEMO-003", size="1", color="var(--vitta-text-muted)"),
+                    ),
+                    spacing="3",
+                    align="center",
+                ),
+                _status_pill("Atendimento demonstrativo", "info"),
+                justify="between",
+                align="center",
+                width="100%",
