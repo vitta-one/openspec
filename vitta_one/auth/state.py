@@ -93,6 +93,7 @@ class AuthState(rx.State):
         self.auth_checked = False
         self.login_error = ""
         self.shell_error = ""
+        self.show_password = False
         yield
 
         if not self.session_token:
@@ -166,6 +167,7 @@ class AuthState(rx.State):
         self._set_identity(email=authenticated_email, role=role)
         self.auth_checked = True
         self.is_submitting = False
+        self.show_password = False
         yield
         yield rx.redirect(role.dashboard_path)
 
@@ -310,5 +312,6 @@ class AuthState(rx.State):
         self.session_token = ""
         self._clear_identity()
         self.auth_checked = True
+        self.show_password = False
         yield rx.remove_cookie(SESSION_COOKIE_NAME)
         yield rx.redirect("/login")
