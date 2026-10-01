@@ -658,3 +658,223 @@ def _attendance_preview() -> rx.Component:
                 justify="between",
                 align="center",
                 width="100%",
+                gap="1rem",
+            ),
+            class_name="vitta-demo-panel",
+        ),
+        rx.flex(
+            rx.box(
+                rx.text("RESUMO CLÍNICO", class_name="vitta-panel-kicker"),
+                rx.heading("Contexto do paciente", size="4", margin_top="0.45rem"),
+                rx.vstack(
+                    rx.box(
+                        rx.text("Alergias", size="1", color="var(--vitta-text-muted)"),
+                        rx.text("Nenhuma registrada nesta prévia", size="2", font_weight="650", margin_top="0.2rem"),
+                    ),
+                    rx.box(
+                        rx.text("Última consulta", size="1", color="var(--vitta-text-muted)"),
+                        rx.text("12/09/2026 · demonstração", size="2", font_weight="650", margin_top="0.2rem"),
+                    ),
+                    rx.box(
+                        rx.text("Sinais exibidos", size="1", color="var(--vitta-text-muted)"),
+                        rx.text("Sem dados vitais reais nesta fase", size="2", font_weight="650", margin_top="0.2rem"),
+                    ),
+                    spacing="4",
+                    align="stretch",
+                    margin_top="1.1rem",
+                ),
+                rx.button(
+                    "Ver histórico demonstrativo",
+                    type="button",
+                    variant="outline",
+                    color_scheme="teal",
+                    width="100%",
+                    margin_top="1.4rem",
+                    on_click=AdminExperienceState.open_patient_history,
+                ),
+                class_name="vitta-demo-panel",
+                flex="0 1 19rem",
+            ),
+            rx.box(
+                rx.text("01 · ANAMNESE", class_name="vitta-panel-kicker"),
+                _read_only_field(
+                    "Queixa principal",
+                    "Retorno demonstrativo para revisão de exames e acompanhamento clínico.",
+                ),
+                rx.box(height="1rem"),
+                _read_only_field(
+                    "História e observações",
+                    "Conteúdo ilustrativo. Nenhuma informação desta prévia representa dado clínico persistido.",
+                    "7rem",
+                ),
+                rx.box(height="1.25rem"),
+                rx.text("02 · DIAGNÓSTICO E CONDUTA", class_name="vitta-panel-kicker"),
+                rx.box(height="0.8rem"),
+                _read_only_field("Diagnóstico", "Campo reservado para capability clínica futura."),
+                rx.box(height="1rem"),
+                _read_only_field("Conduta", "Campo reservado para capability clínica futura."),
+                rx.box(height="1.25rem"),
+                rx.flex(
+                    rx.box(
+                        rx.text("03 · PRESCRIÇÃO", class_name="vitta-panel-kicker"),
+                        rx.text(
+                            "A assinatura via ZapSign sandbox será conectada em change própria.",
+                            size="2",
+                            color="var(--vitta-text-muted)",
+                            line_height="1.55",
+                            margin_top="0.55rem",
+                        ),
+                        class_name="vitta-readonly-module",
+                    ),
+                    rx.box(
+                        rx.text("04 · EXAMES", class_name="vitta-panel-kicker"),
+                        rx.text(
+                            "Anexos via Cloudinary serão ligados quando o fluxo de exames estiver especificado.",
+                            size="2",
+                            color="var(--vitta-text-muted)",
+                            line_height="1.55",
+                            margin_top="0.55rem",
+                        ),
+                        class_name="vitta-readonly-module",
+                    ),
+                    direction=rx.breakpoints(initial="column", lg="row"),
+                    gap="1rem",
+                    width="100%",
+                ),
+                class_name="vitta-demo-panel",
+                flex="1 1 40rem",
+                min_width="0",
+            ),
+            direction=rx.breakpoints(initial="column", lg="row"),
+            gap="1rem",
+            width="100%",
+            align="start",
+        ),
+        spacing="5",
+        align="stretch",
+        width="100%",
+    )
+
+
+def _patient_tab(label: str, tab: str) -> rx.Component:
+    selected = AdminExperienceState.patient_tab == tab
+    return rx.button(
+        label,
+        type="button",
+        variant="ghost",
+        class_name=rx.cond(selected, "vitta-tab vitta-tab--active", "vitta-tab"),
+        on_click=AdminExperienceState.set_patient_tab(tab),
+        aria_label=f"Abrir aba {label}",
+    )
+
+
+def _timeline_item(date: str, title: str, description: str, icon: str) -> rx.Component:
+    return rx.flex(
+        rx.box(rx.icon(icon, size=17), class_name="vitta-timeline-icon"),
+        rx.box(
+            rx.text(date, size="1", color="var(--vitta-text-muted)", font_weight="700"),
+            rx.heading(title, size="3", margin_top="0.25rem"),
+            rx.text(
+                description,
+                size="2",
+                color="var(--vitta-text-muted)",
+                line_height="1.55",
+                margin_top="0.35rem",
+            ),
+            flex="1 1 auto",
+        ),
+        gap="0.8rem",
+        align="start",
+        width="100%",
+        class_name="vitta-timeline-item",
+    )
+
+
+def _patient_tab_content() -> rx.Component:
+    history = rx.vstack(
+        _timeline_item(
+            "12 set 2026",
+            "Consulta médica especializada",
+            "Registro de demonstração para validar hierarquia, leitura cronológica e estados do prontuário.",
+            "stethoscope",
+        ),
+        _timeline_item(
+            "09 set 2026",
+            "Exame anexado — Ecocardiograma",
+            "Amostra visual sem arquivo real ou integração com laboratório.",
+            "file_text",
+        ),
+        _timeline_item(
+            "03 set 2026",
+            "Prescrição médica digital",
+            "Amostra de histórico sem assinatura ou documento persistido.",
+            "clipboard_plus",
+        ),
+        spacing="0",
+        align="stretch",
+        width="100%",
+    )
+    appointments = rx.box(
+        rx.heading("Consultas", size="4"),
+        rx.text(
+            "A aba está desenhada e pronta para receber a capability de agenda. Nesta revisão, nenhum compromisso real é carregado.",
+            size="2",
+            color="var(--vitta-text-muted)",
+            line_height="1.6",
+            margin_top="0.55rem",
+        ),
+        class_name="vitta-readonly-module",
+    )
+    prescriptions = rx.box(
+        rx.heading("Prescrições", size="4"),
+        rx.text(
+            "O histórico visual está preparado para documentos assinados, mas não simula prescrições reais.",
+            size="2",
+            color="var(--vitta-text-muted)",
+            line_height="1.6",
+            margin_top="0.55rem",
+        ),
+        class_name="vitta-readonly-module",
+    )
+    exams = rx.box(
+        rx.heading("Exames", size="4"),
+        rx.text(
+            "A área futura exibirá solicitações, resultados e anexos autorizados. Nenhum arquivo clínico é exposto nesta prévia.",
+            size="2",
+            color="var(--vitta-text-muted)",
+            line_height="1.6",
+            margin_top="0.55rem",
+        ),
+        class_name="vitta-readonly-module",
+    )
+    data = rx.box(
+        rx.heading("Dados cadastrais", size="4"),
+        rx.text(
+            "Campos cadastrais reais continuam fora desta prévia até o fluxo completo de pacientes ser especificado.",
+            size="2",
+            color="var(--vitta-text-muted)",
+            line_height="1.6",
+            margin_top="0.55rem",
+        ),
+        class_name="vitta-readonly-module",
+    )
+    return rx.match(
+        AdminExperienceState.patient_tab,
+        ("historico", history),
+        ("consultas", appointments),
+        ("prescricoes", prescriptions),
+        ("exames", exams),
+        ("dados", data),
+        history,
+    )
+
+
+def _patient_preview() -> rx.Component:
+    return rx.vstack(
+        _section_heading(
+            "Pacientes",
+            "Histórico longitudinal sem perder o contexto atual.",
+            "A navegação por abas e a timeline seguem o anexo de perfil do paciente. O conteúdo abaixo é demonstrativo e não consulta prontuários reais.",
+        ),
+        _preview_notice(),
+        rx.box(
