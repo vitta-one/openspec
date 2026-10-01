@@ -18,6 +18,8 @@ Este contrato define o comportamento observável do login, shell autenticado e n
 - Login aceita e-mail + senha e não oferece cadastro público.
 - Senha inicia mascarada.
 - O controle de revelar senha é somente ícone e alterna `eye` / `eye-off`, `aria-label` e `aria-pressed` sem alterar o valor digitado.
+- O controle de revelar senha permanece centralizado verticalmente dentro do campo e conserva alvo clicável estável.
+- Em viewports estreitos ou baixos, o formulário de login mantém todos os campos e a ação Entrar alcançáveis; o painel visual secundário pode ser reduzido ou ocultado antes de comprimir a tarefa principal.
 - Submit duplicado é bloqueado durante autenticação.
 - Credenciais inválidas retornam mensagem genérica inline.
 - Sessão válida redireciona para o dashboard autorizado; logout revoga a sessão antes do redirecionamento.
@@ -90,6 +92,10 @@ Regras:
 ## 8. CRUD administrativo
 
 - criar/editar mantém o contexto da Administração;
+- criação e edição de especialidade/profissional usam diálogos modais controlados pelo State; o diretório permanece como superfície principal;
+- o diálogo permanece aberto quando a validação server-side falha e fecha somente após sucesso persistido ou cancelamento explícito;
+- Escape/fechamento do diálogo usa o primitive Reflex/Radix e restaura foco ao fluxo de origem;
+- formulários longos em diálogo possuem altura limitada à viewport e rolagem interna, mantendo ações alcançáveis;
 - “Cancelar” restaura o formulário;
 - desativar é reversível e nunca é apresentado como exclusão;
 - listas são atualizadas após commit;
@@ -98,6 +104,11 @@ Regras:
 ## 9. Pacientes, fila e módulos futuros
 
 - Admin local visualiza pacientes/fila somente leitura.
+- A tela local de Pacientes possui uma única busca no topo e pagina somente registros persistidos já autorizados para o preview.
+- Alterar ou limpar a busca retorna para a primeira página; paginação nunca implica seleção de registros fora da página visível.
+- A seleção de paciente usa checkbox controlado com cardinalidade máxima de 1. Selecionar outro paciente substitui a seleção anterior.
+- Quando há seleção, uma barra contextual apresenta somente ações reais e somente leitura do preview, como consultar histórico e limpar a seleção.
+- Mudar de página limpa a seleção para evitar contexto invisível; busca que elimina o paciente selecionado também limpa a seleção.
 - Cadastro, localização, entrada, reavaliação e retirada continuam exclusivos da Recepção.
 - Chamar/finalizar continua exclusivo do Médico.
 - Até as capabilities correspondentes existirem, Agenda, prontuário, diagnóstico, prescrição e Financeiro não inventam registros, totais, horários ou transições.
