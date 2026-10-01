@@ -94,7 +94,7 @@ set "VITTA_ONE_LOCAL_ADMIN_PREVIEW=true"
 Com o flag habilitado e uma sessão `ADMINISTRADOR`, o shell local também expõe:
 
 - `/admin/recepcao`: projeção da fila persistida;
-- `/admin/agenda`: estrutura visual da agenda sem compromissos fictícios;
+- `/admin/agenda`: projeção somente leitura dos slots e Consultas persistidos;
 - `/admin/atendimento`: contexto somente leitura de atendimentos operacionais ativos;
 - `/admin/pacientes`: pacientes persistidos + histórico operacional;
 - `/admin/financeiro`: estado vazio honesto até a capability financeira existir.
