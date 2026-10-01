@@ -192,8 +192,8 @@ def reception_page() -> rx.Component:
         Role.RECEPCIONISTA,
         page_header(
             "Operação",
-            "Recepção e fila",
-            "Cadastre ou localize pacientes, registre a prioridade recebida e acompanhe a fila ativa.",
+            "Recepção, agenda e fila",
+            "Agende Consultas, localize pacientes e acompanhe a fila ativa sem misturar os dois fluxos.",
         ),
         reception_agenda_panel(),
         feedback_region(
