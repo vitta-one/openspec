@@ -55,6 +55,9 @@ class ConsultationItem:
     availability_slot_id: int
     scheduled_at: datetime
     status: ConsultationStatus
+    confirmed_at: datetime | None
+    started_at: datetime | None
+    completed_at: datetime | None
     cancelled_at: datetime | None
 
 
@@ -251,6 +254,21 @@ def list_consultations(
             availability_slot_id=consultation.availability_slot_id,
             scheduled_at=ensure_utc(consultation.scheduled_at),
             status=ConsultationStatus(consultation.status),
+            confirmed_at=(
+                ensure_utc(consultation.confirmed_at)
+                if consultation.confirmed_at is not None
+                else None
+            ),
+            started_at=(
+                ensure_utc(consultation.started_at)
+                if consultation.started_at is not None
+                else None
+            ),
+            completed_at=(
+                ensure_utc(consultation.completed_at)
+                if consultation.completed_at is not None
+                else None
+            ),
             cancelled_at=(
                 ensure_utc(consultation.cancelled_at)
                 if consultation.cancelled_at is not None
@@ -367,7 +385,7 @@ def _locked_consultation(db: Session, consultation_id: int) -> Consultation:
     return consultation
 
 
-def _release_old_slot(
+def release_reserved_slot(
     db: Session,
     slot: ProfessionalAvailabilitySlot,
     *,
@@ -414,7 +432,7 @@ def reschedule_consultation(
     new_slot = slots[new_slot_id]
     professional = _validate_bookable_slot(db, new_slot, now=timestamp)
 
-    _release_old_slot(db, old_slot, now=timestamp)
+    release_reserved_slot(db, old_slot, now=timestamp)
     new_slot.status = AvailabilitySlotStatus.BOOKED.value
     new_slot.updated_at = timestamp
     consultation.professional_id = professional.id
@@ -454,7 +472,7 @@ def cancel_consultation(
     consultation.status = ConsultationStatus.CANCELADA.value
     consultation.cancelled_at = timestamp
     consultation.updated_at = timestamp
-    _release_old_slot(db, slot, now=timestamp)
+    release_reserved_slot(db, slot, now=timestamp)
     db.add(consultation)
     db.commit()
     db.refresh(consultation)
