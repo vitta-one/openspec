@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 
 import reflex as rx
-from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint, text
+from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String, text
 from sqlmodel import Field
 
 from vitta_one.appointment_scheduling.domain import AvailabilitySlotStatus, ConsultationStatus
@@ -18,16 +18,11 @@ class ProfessionalAvailabilitySlot(rx.Model, table=True):
 
     __tablename__ = "professional_availability_slots"
     __table_args__ = (
-        UniqueConstraint(
-            "professional_id",
-            "starts_at",
-            name="uq_availability_professional_starts_at",
-        ),
         CheckConstraint(
             "status IN ('AVAILABLE', 'BOOKED', 'INACTIVE')",
             name="ck_availability_slot_status",
         ),
-        Index("ix_availability_professional_starts_at", "professional_id", "starts_at"),
+        Index("ix_availability_professional_starts_at", "professional_id", "starts_at", unique=True),
     )
 
     professional_id: int = Field(
@@ -105,6 +100,18 @@ class Consultation(rx.Model, table=True):
     status: str = Field(
         default=ConsultationStatus.AGENDADA.value,
         sa_column=Column(String(20), nullable=False, index=True),
+    )
+    confirmed_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+    started_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+    completed_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
     )
     cancelled_at: datetime | None = Field(
         default=None,
