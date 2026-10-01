@@ -574,7 +574,7 @@ def _patient_selection_bar() -> rx.Component:
             rx.flex(
                 rx.hstack(
                     rx.box(
-                        rx.icon("user_check", size=18),
+                        rx.icon("user", size=18),
                         class_name="vitta-patient-avatar",
                     ),
                     rx.box(
@@ -701,7 +701,7 @@ def patients_preview() -> rx.Component:
                     width="100%",
                 ),
                 empty_state(
-                    "user_search",
+                    "search",
                     "Nenhum paciente encontrado",
                     "Ajuste a busca. Esta lista usa somente pacientes persistidos e não cria dados de demonstração.",
                 ),
