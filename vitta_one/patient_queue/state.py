@@ -99,6 +99,7 @@ class ReceptionQueueState(rx.State):
 
     withdraw_entry_id: int = 0
     withdraw_patient_name: str = ""
+    withdraw_is_scheduled: bool = False
 
     @rx.var
     def has_queue(self) -> bool:
@@ -121,6 +122,7 @@ class ReceptionQueueState(rx.State):
     def _reset_withdraw(self) -> None:
         self.withdraw_entry_id = 0
         self.withdraw_patient_name = ""
+        self.withdraw_is_scheduled = False
 
     def _clear_sensitive_view(self) -> None:
         self.queue_rows = []
@@ -333,11 +335,17 @@ class ReceptionQueueState(rx.State):
             yield
 
     @rx.event
-    def begin_withdraw(self, entry_id: int, patient_name: str) -> None:
+    def begin_withdraw(
+        self,
+        entry_id: int,
+        patient_name: str,
+        is_scheduled: bool,
+    ) -> None:
         self._clear_feedback()
         self._reset_reassess()
         self.withdraw_entry_id = entry_id
         self.withdraw_patient_name = patient_name
+        self.withdraw_is_scheduled = is_scheduled
 
     @rx.event
     def cancel_withdraw(self) -> None:
