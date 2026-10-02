@@ -16,6 +16,7 @@ from vitta_one.admin_preview.service import (
 )
 from vitta_one.auth.state import AuthState
 from vitta_one.clinical_care.application import admin_preview_patient_history
+from vitta_one.clinical_prescription.application import admin_preview_prescriptions_for_records
 from vitta_one.appointment_scheduling.domain import AvailabilitySlotStatus, ConsultationStatus
 from vitta_one.appointment_scheduling.temporal import format_clinic_datetime
 from vitta_one.models import (
@@ -35,6 +36,20 @@ class PreviewPatientRow(TypedDict):
     cpf_masked: str
 
 
+class PreviewPrescriptionItemRow(TypedDict):
+    medication_or_item: str
+    instructions: str
+    notes: str
+
+
+class PreviewPrescriptionRow(TypedDict):
+    id: int
+    created_at: str
+    general_notes: str
+    items: list[PreviewPrescriptionItemRow]
+    item_count: int
+
+
 class PreviewQueueRow(TypedDict):
     id: int
     patient_id: int
@@ -51,6 +66,8 @@ class PreviewQueueRow(TypedDict):
     anamnesis: str
     diagnosis: str
     conduct_notes: str
+    prescriptions: list[PreviewPrescriptionRow]
+    prescription_count: int
 
 
 class PreviewProfessionalRow(TypedDict):
@@ -92,9 +109,30 @@ class PreviewClinicalHistoryRow(TypedDict):
     anamnesis: str
     diagnosis: str
     conduct_notes: str
+    prescriptions: list[PreviewPrescriptionRow]
+    prescription_count: int
+
+
+def _serialize_preview_prescription(item) -> PreviewPrescriptionRow:
+    items = [
+        {
+            "medication_or_item": child.medication_or_item,
+            "instructions": child.instructions,
+            "notes": child.notes,
+        }
+        for child in item.items
+    ]
+    return {
+        "id": item.id,
+        "created_at": format_clinic_datetime(item.created_at),
+        "general_notes": item.general_notes,
+        "items": items,
+        "item_count": len(items),
+    }
 
 
 def _serialize_clinical_history_item(item) -> PreviewClinicalHistoryRow:
+    prescriptions = [_serialize_preview_prescription(value) for value in item.prescriptions]
     return {
         "record_id": item.record_id,
         "consultation_id": item.consultation_id,
@@ -105,6 +143,8 @@ def _serialize_clinical_history_item(item) -> PreviewClinicalHistoryRow:
         "anamnesis": item.anamnesis,
         "diagnosis": item.diagnosis,
         "conduct_notes": item.conduct_notes,
+        "prescriptions": prescriptions,
+        "prescription_count": len(prescriptions),
     }
 
 
@@ -496,6 +536,13 @@ class AdminPreviewState(rx.State):
                         .limit(120)
                     ).all()
                 )
+                prescriptions_by_record = admin_preview_prescriptions_for_records(
+                    db,
+                    token=token,
+                    clinical_care_record_ids=[
+                        item.id for item in clinical_items if item.id is not None
+                    ],
+                )
 
                 patient_by_id = {
                     item.id: item for item in patient_items if item.id is not None
@@ -565,6 +612,27 @@ class AdminPreviewState(rx.State):
                         clinical_by_consultation_id[item.consultation_id].conduct_notes
                         if item.consultation_id in clinical_by_consultation_id
                         else ""
+                    ),
+                    "prescriptions": (
+                        [
+                            _serialize_preview_prescription(value)
+                            for value in prescriptions_by_record.get(
+                                clinical_by_consultation_id[item.consultation_id].id,
+                                (),
+                            )
+                        ]
+                        if item.consultation_id in clinical_by_consultation_id
+                        else []
+                    ),
+                    "prescription_count": (
+                        len(
+                            prescriptions_by_record.get(
+                                clinical_by_consultation_id[item.consultation_id].id,
+                                (),
+                            )
+                        )
+                        if item.consultation_id in clinical_by_consultation_id
+                        else 0
                     ),
                 }
                 for item in queue_items
