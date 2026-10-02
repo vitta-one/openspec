@@ -440,6 +440,51 @@ def test_different_doctor_cannot_finish_scheduled_attendance(db: Session) -> Non
     assert db.get(Consultation, consultation.id).status == ConsultationStatus.EM_ANDAMENTO.value
 
 
+
+def test_finish_rejects_inconsistent_consultation_state_without_finishing_queue(db: Session) -> None:
+    base = datetime(2026, 10, 1, 12, tzinfo=timezone.utc)
+    doctor = _doctor(db, "doctor-inconsistent-finish@example.com")
+    _, _, _, consultation = _scheduled(
+        db,
+        suffix="INCONSISTENT-FINISH",
+        patient_prefix="515253545",
+        doctor_user_id=doctor.id,
+        base=base,
+    )
+    entry = confirm_arrival(
+        db,
+        consultation_id=consultation.id,
+        symptoms="Dor",
+        priority="AMARELO",
+        now=base + timedelta(hours=1),
+    )
+    claim_next_patient(
+        db,
+        doctor_user_id=doctor.id,
+        now=base + timedelta(hours=2),
+    )
+
+    stored_consultation = db.get(Consultation, consultation.id)
+    stored_consultation.status = ConsultationStatus.CONFIRMADA.value
+    db.add(stored_consultation)
+    db.commit()
+
+    with pytest.raises(QueueTransitionError):
+        finish_queue_entry(
+            db,
+            entry_id=entry.id,
+            doctor_user_id=doctor.id,
+            now=base + timedelta(hours=3),
+        )
+
+    queue_entry = db.get(QueueEntry, entry.id)
+    consultation_after = db.get(Consultation, consultation.id)
+    assert queue_entry.status == QueueStatus.EM_ATENDIMENTO.value
+    assert queue_entry.finished_at is None
+    assert consultation_after.status == ConsultationStatus.CONFIRMADA.value
+    assert consultation_after.completed_at is None
+
+
 def test_withdraw_scheduled_cancels_consultation_and_releases_or_inactivates_slot(db: Session) -> None:
     base = datetime(2026, 10, 1, 12, tzinfo=timezone.utc)
     doctor = _doctor(db, "doctor-withdraw@example.com")
