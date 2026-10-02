@@ -792,6 +792,144 @@ def _history_value(label: str, value) -> rx.Component:
     )
 
 
+def _prescription_item_readonly(item) -> rx.Component:
+    return rx.box(
+        rx.text(
+            item["medication_or_item"],
+            font_weight="800",
+            size="2",
+            overflow_wrap="anywhere",
+        ),
+        rx.text(
+            item["instructions"],
+            size="2",
+            line_height="1.6",
+            white_space="pre-wrap",
+            overflow_wrap="anywhere",
+            margin_top="0.3rem",
+        ),
+        rx.cond(
+            item["notes"] != "",
+            rx.text(
+                item["notes"],
+                size="1",
+                color="var(--vitta-text-muted)",
+                line_height="1.5",
+                white_space="pre-wrap",
+                overflow_wrap="anywhere",
+                margin_top="0.35rem",
+            ),
+            rx.fragment(),
+        ),
+        class_name="vitta-prescription-item",
+        role="listitem",
+    )
+
+
+def _history_prescription_card(row) -> rx.Component:
+    return rx.el.details(
+        rx.el.summary(
+            rx.flex(
+                rx.box(
+                    rx.text("Prescrição", font_weight="800", size="2"),
+                    rx.text(
+                        row["created_at"],
+                        size="1",
+                        color="var(--vitta-text-subtle)",
+                        class_name="vitta-tabular",
+                        margin_top="0.1rem",
+                    ),
+                ),
+                rx.badge(
+                    row["item_count"],
+                    " itens",
+                    color_scheme="teal",
+                    variant="soft",
+                ),
+                justify="between",
+                align="center",
+                gap="0.75rem",
+                width="100%",
+            ),
+            class_name="vitta-disclosure-summary",
+        ),
+        rx.vstack(
+            rx.vstack(
+                rx.foreach(row["items"], _prescription_item_readonly),
+                spacing="2",
+                align="stretch",
+                width="100%",
+                role="list",
+            ),
+            rx.cond(
+                row["general_notes"] != "",
+                rx.box(
+                    rx.text(
+                        "Observações gerais",
+                        size="1",
+                        font_weight="750",
+                        color="var(--vitta-text-muted)",
+                    ),
+                    rx.text(
+                        row["general_notes"],
+                        size="2",
+                        line_height="1.55",
+                        white_space="pre-wrap",
+                        overflow_wrap="anywhere",
+                        margin_top="0.25rem",
+                    ),
+                    width="100%",
+                ),
+                rx.fragment(),
+            ),
+            spacing="3",
+            align="stretch",
+            width="100%",
+            padding_top="0.75rem",
+        ),
+        class_name="vitta-prescription-history-disclosure",
+    )
+
+
+def _history_prescriptions(row) -> rx.Component:
+    return rx.box(
+        rx.flex(
+            rx.text("Prescrições", font_weight="750", size="2"),
+            rx.cond(
+                row["prescription_count"] > 0,
+                rx.badge(
+                    row["prescription_count"],
+                    color_scheme="teal",
+                    variant="soft",
+                ),
+                rx.fragment(),
+            ),
+            justify="between",
+            align="center",
+            width="100%",
+        ),
+        rx.cond(
+            row["prescription_count"] > 0,
+            rx.vstack(
+                rx.foreach(row["prescriptions"], _history_prescription_card),
+                spacing="2",
+                align="stretch",
+                width="100%",
+                margin_top="0.65rem",
+            ),
+            rx.text(
+                "Sem prescrições neste atendimento.",
+                size="2",
+                color="var(--vitta-text-subtle)",
+                margin_top="0.5rem",
+            ),
+        ),
+        width="100%",
+        padding_top="0.85rem",
+        border_top="1px solid var(--vitta-border)",
+    )
+
+
 def _clinical_history_card(row) -> rx.Component:
     return rx.box(
         rx.vstack(
@@ -805,11 +943,24 @@ def _clinical_history_card(row) -> rx.Component:
                         margin_top="0.15rem",
                     ),
                 ),
-                rx.badge(
-                    "Concluído",
-                    color_scheme="green",
-                    variant="soft",
-                    high_contrast=True,
+                rx.hstack(
+                    rx.cond(
+                        row["prescription_count"] > 0,
+                        rx.badge(
+                            row["prescription_count"],
+                            " prescrição(ões)",
+                            color_scheme="teal",
+                            variant="soft",
+                        ),
+                        rx.fragment(),
+                    ),
+                    rx.badge(
+                        "Concluído",
+                        color_scheme="green",
+                        variant="soft",
+                        high_contrast=True,
+                    ),
+                    spacing="2",
                 ),
                 justify="between",
                 align="start",
@@ -825,6 +976,7 @@ def _clinical_history_card(row) -> rx.Component:
                 gap="0.9rem",
                 width="100%",
             ),
+            _history_prescriptions(row),
             spacing="3",
             align="stretch",
             width="100%",
@@ -840,7 +992,7 @@ def clinical_history_panel() -> rx.Component:
             rx.box(
                 rx.heading("Histórico clínico", size="4"),
                 rx.text(
-                    "Somente atendimentos concluídos deste paciente.",
+                    "Atendimentos concluídos e suas prescrições persistidas.",
                     size="2",
                     color="var(--vitta-text-muted)",
                     margin_top="0.25rem",
@@ -921,11 +1073,635 @@ def clinical_history_panel() -> rx.Component:
             empty_state(
                 "history",
                 "Sem atendimentos clínicos anteriores",
-                "Quando este paciente possuir Consultas concluídas com registro clínico, elas aparecerão aqui.",
+                "Quando este paciente possuir Consultas concluídas, o histórico clínico aparecerá aqui.",
             ),
         ),
         width="100%",
         margin_top="1.25rem",
+    )
+
+
+def _prescription_item_editor_row(item, prescription) -> rx.Component:
+    return rx.box(
+        rx.flex(
+            rx.box(
+                rx.text(
+                    item["medication_or_item"],
+                    font_weight="800",
+                    size="2",
+                    overflow_wrap="anywhere",
+                ),
+                rx.text(
+                    item["instructions"],
+                    size="2",
+                    line_height="1.55",
+                    white_space="pre-wrap",
+                    overflow_wrap="anywhere",
+                    margin_top="0.3rem",
+                ),
+                rx.cond(
+                    item["notes"] != "",
+                    rx.text(
+                        item["notes"],
+                        size="1",
+                        color="var(--vitta-text-muted)",
+                        line_height="1.5",
+                        white_space="pre-wrap",
+                        overflow_wrap="anywhere",
+                        margin_top="0.35rem",
+                    ),
+                    rx.fragment(),
+                ),
+                width="100%",
+            ),
+            rx.hstack(
+                rx.button(
+                    "Editar",
+                    type="button",
+                    variant="ghost",
+                    color_scheme="teal",
+                    size="1",
+                    on_click=DoctorQueueState.begin_edit_prescription_item(
+                        prescription["id"],
+                        item["id"],
+                        item["medication_or_item"],
+                        item["instructions"],
+                        item["notes"],
+                    ),
+                    disabled=DoctorQueueState.is_prescription_submitting,
+                ),
+                rx.button(
+                    "Remover",
+                    type="button",
+                    variant="ghost",
+                    color_scheme="red",
+                    size="1",
+                    on_click=DoctorQueueState.begin_remove_prescription_item(
+                        prescription["id"],
+                        item["id"],
+                        item["medication_or_item"],
+                    ),
+                    disabled=(prescription["item_count"] <= 1)
+                    | DoctorQueueState.is_prescription_submitting,
+                    title=rx.cond(
+                        prescription["item_count"] <= 1,
+                        "A Prescrição precisa manter ao menos um item.",
+                        "Remover item",
+                    ),
+                ),
+                spacing="1",
+                flex_wrap="wrap",
+            ),
+            direction=rx.breakpoints(initial="column", md="row"),
+            justify="between",
+            align=rx.breakpoints(initial="stretch", md="start"),
+            gap="0.75rem",
+            width="100%",
+        ),
+        class_name="vitta-prescription-item",
+        role="listitem",
+    )
+
+
+def _current_prescription_card(row) -> rx.Component:
+    return rx.box(
+        rx.vstack(
+            rx.flex(
+                rx.box(
+                    rx.text("Prescrição", size="3", font_weight="850"),
+                    rx.text(
+                        row["created_at"],
+                        size="1",
+                        color="var(--vitta-text-subtle)",
+                        class_name="vitta-tabular",
+                        margin_top="0.15rem",
+                    ),
+                ),
+                rx.hstack(
+                    rx.badge(
+                        row["item_count"],
+                        " itens",
+                        color_scheme="teal",
+                        variant="soft",
+                    ),
+                    rx.button(
+                        "Visualizar para impressão",
+                        type="button",
+                        variant="outline",
+                        color_scheme="teal",
+                        size="1",
+                        on_click=DoctorQueueState.open_prescription_print(row["id"]),
+                        disabled=DoctorQueueState.is_prescription_submitting,
+                    ),
+                    spacing="2",
+                    flex_wrap="wrap",
+                ),
+                direction=rx.breakpoints(initial="column", md="row"),
+                justify="between",
+                align=rx.breakpoints(initial="stretch", md="center"),
+                gap="0.75rem",
+                width="100%",
+            ),
+            rx.vstack(
+                rx.foreach(
+                    row["items"],
+                    lambda item: _prescription_item_editor_row(item, row),
+                ),
+                spacing="2",
+                align="stretch",
+                width="100%",
+                role="list",
+            ),
+            rx.cond(
+                row["general_notes"] != "",
+                rx.box(
+                    rx.text(
+                        "Observações gerais",
+                        size="1",
+                        font_weight="750",
+                        color="var(--vitta-text-muted)",
+                    ),
+                    rx.text(
+                        row["general_notes"],
+                        size="2",
+                        line_height="1.55",
+                        white_space="pre-wrap",
+                        overflow_wrap="anywhere",
+                        margin_top="0.25rem",
+                    ),
+                    width="100%",
+                    padding="0.8rem",
+                    background="var(--vitta-surface-muted)",
+                    border_radius="var(--vitta-radius-control)",
+                ),
+                rx.fragment(),
+            ),
+            rx.flex(
+                rx.hstack(
+                    rx.button(
+                        "Adicionar item",
+                        type="button",
+                        variant="outline",
+                        color_scheme="teal",
+                        size="2",
+                        on_click=DoctorQueueState.begin_add_prescription_item(row["id"]),
+                        disabled=DoctorQueueState.is_prescription_submitting,
+                    ),
+                    rx.button(
+                        "Editar observações gerais",
+                        type="button",
+                        variant="ghost",
+                        color_scheme="gray",
+                        size="2",
+                        on_click=DoctorQueueState.begin_prescription_notes(
+                            row["id"],
+                            row["general_notes"],
+                        ),
+                        disabled=DoctorQueueState.is_prescription_submitting,
+                    ),
+                    spacing="2",
+                    flex_wrap="wrap",
+                ),
+                rx.button(
+                    "Excluir prescrição",
+                    type="button",
+                    variant="ghost",
+                    color_scheme="red",
+                    size="2",
+                    on_click=DoctorQueueState.begin_delete_prescription(row["id"]),
+                    disabled=DoctorQueueState.is_prescription_submitting,
+                ),
+                direction=rx.breakpoints(initial="column", md="row"),
+                justify="between",
+                align=rx.breakpoints(initial="stretch", md="center"),
+                gap="0.6rem",
+                width="100%",
+            ),
+            spacing="3",
+            align="stretch",
+            width="100%",
+        ),
+        class_name="vitta-prescription-card",
+        role="listitem",
+    )
+
+
+def prescription_panel() -> rx.Component:
+    return rx.box(
+        rx.flex(
+            rx.box(
+                rx.heading("Prescrições", size="4"),
+                rx.text(
+                    "Crie documentos simples com itens e orientações. Assinatura digital entra em uma etapa posterior.",
+                    size="2",
+                    color="var(--vitta-text-muted)",
+                    line_height="1.55",
+                    margin_top="0.25rem",
+                ),
+            ),
+            rx.button(
+                "Nova prescrição",
+                type="button",
+                color_scheme="teal",
+                high_contrast=True,
+                on_click=DoctorQueueState.begin_new_prescription,
+                disabled=DoctorQueueState.is_prescription_submitting
+                | DoctorQueueState.is_submitting,
+                loading=DoctorQueueState.is_prescription_submitting,
+                width=rx.breakpoints(initial="100%", sm="auto"),
+            ),
+            direction=rx.breakpoints(initial="column", sm="row"),
+            justify="between",
+            align=rx.breakpoints(initial="stretch", sm="start"),
+            gap="0.75rem",
+            width="100%",
+        ),
+        rx.cond(
+            DoctorQueueState.prescriptions.length() > 0,
+            rx.vstack(
+                rx.foreach(DoctorQueueState.prescriptions, _current_prescription_card),
+                spacing="3",
+                align="stretch",
+                width="100%",
+                role="list",
+                margin_top="1rem",
+            ),
+            empty_state(
+                "clipboard_list",
+                "Nenhuma prescrição neste atendimento",
+                "Crie uma Prescrição quando houver orientação medicamentosa ou outro item a registrar.",
+            ),
+        ),
+        _new_prescription_dialog(),
+        _prescription_item_dialog(),
+        _prescription_notes_dialog(),
+        _delete_prescription_dialog(),
+        _remove_prescription_item_dialog(),
+        class_name="vitta-prescription-workspace",
+        width="100%",
+        margin_top="1.25rem",
+    )
+
+
+def _prescription_text_field(
+    *,
+    label: str,
+    control_id: str,
+    value,
+    on_change,
+    max_length: int,
+    rows: int,
+    help_text: str,
+    auto_focus: bool = False,
+) -> rx.Component:
+    return rx.box(
+        field_label(label, control_id),
+        rx.el.textarea(
+            id=control_id,
+            name=control_id,
+            value=value,
+            on_change=on_change,
+            max_length=max_length,
+            rows=rows,
+            class_name="vitta-textarea vitta-clinical-textarea",
+            aria_describedby=f"{control_id}-help",
+            disabled=DoctorQueueState.is_prescription_submitting,
+            margin_top="0.4rem",
+            auto_focus=auto_focus,
+        ),
+        rx.text(
+            help_text,
+            id=f"{control_id}-help",
+            size="1",
+            color="var(--vitta-text-subtle)",
+            margin_top="0.35rem",
+        ),
+        width="100%",
+    )
+
+
+def _new_prescription_dialog() -> rx.Component:
+    return rx.dialog.root(
+        rx.dialog.content(
+            rx.dialog.title("Nova prescrição"),
+            rx.dialog.description(
+                "A Prescrição será criada junto do primeiro item. Nenhum documento vazio é salvo.",
+                margin_top="0.35rem",
+                margin_bottom="1rem",
+            ),
+            rx.el.form(
+                rx.vstack(
+                    _prescription_text_field(
+                        label="Medicamento ou item",
+                        control_id="new-prescription-medication",
+                        value=DoctorQueueState.new_prescription_medication,
+                        on_change=DoctorQueueState.update_new_prescription_medication,
+                        max_length=300,
+                        rows=2,
+                        help_text="Obrigatório · até 300 caracteres.",
+                        auto_focus=True,
+                    ),
+                    _prescription_text_field(
+                        label="Orientação / posologia",
+                        control_id="new-prescription-instructions",
+                        value=DoctorQueueState.new_prescription_instructions,
+                        on_change=DoctorQueueState.update_new_prescription_instructions,
+                        max_length=2000,
+                        rows=4,
+                        help_text="Obrigatório · até 2.000 caracteres.",
+                    ),
+                    _prescription_text_field(
+                        label="Observações do item",
+                        control_id="new-prescription-item-notes",
+                        value=DoctorQueueState.new_prescription_item_notes,
+                        on_change=DoctorQueueState.update_new_prescription_item_notes,
+                        max_length=2000,
+                        rows=3,
+                        help_text="Opcional · até 2.000 caracteres.",
+                    ),
+                    _prescription_text_field(
+                        label="Observações gerais da prescrição",
+                        control_id="new-prescription-general-notes",
+                        value=DoctorQueueState.new_prescription_general_notes,
+                        on_change=DoctorQueueState.update_new_prescription_general_notes,
+                        max_length=4000,
+                        rows=3,
+                        help_text="Opcional · até 4.000 caracteres.",
+                    ),
+                    rx.flex(
+                        rx.dialog.close(
+                            rx.button(
+                                "Cancelar",
+                                type="button",
+                                variant="ghost",
+                                disabled=DoctorQueueState.is_prescription_submitting,
+                            )
+                        ),
+                        rx.button(
+                            "Criar prescrição",
+                            type="submit",
+                            color_scheme="teal",
+                            high_contrast=True,
+                            disabled=DoctorQueueState.is_prescription_submitting,
+                            loading=DoctorQueueState.is_prescription_submitting,
+                        ),
+                        direction=rx.breakpoints(initial="column-reverse", sm="row"),
+                        justify="end",
+                        gap="0.5rem",
+                        width="100%",
+                    ),
+                    spacing="4",
+                    align="stretch",
+                    width="100%",
+                ),
+                on_submit=DoctorQueueState.create_prescription,
+                no_validate=True,
+                width="100%",
+            ),
+            class_name="vitta-dialog-content",
+            max_width="42rem",
+            max_height="min(90dvh, 48rem)",
+            overflow_y="auto",
+        ),
+        open=DoctorQueueState.new_prescription_dialog_open,
+        on_open_change=DoctorQueueState.set_new_prescription_dialog_open,
+    )
+
+
+def _prescription_item_dialog() -> rx.Component:
+    return rx.dialog.root(
+        rx.dialog.content(
+            rx.dialog.title(
+                rx.cond(
+                    DoctorQueueState.prescription_item_mode == "edit",
+                    "Editar item",
+                    "Adicionar item",
+                )
+            ),
+            rx.dialog.description(
+                "Registre o item e a orientação exatamente como devem permanecer na Prescrição.",
+                margin_top="0.35rem",
+                margin_bottom="1rem",
+            ),
+            rx.el.form(
+                rx.vstack(
+                    _prescription_text_field(
+                        label="Medicamento ou item",
+                        control_id="prescription-item-medication",
+                        value=DoctorQueueState.prescription_item_medication,
+                        on_change=DoctorQueueState.update_prescription_item_medication,
+                        max_length=300,
+                        rows=2,
+                        help_text="Obrigatório · até 300 caracteres.",
+                        auto_focus=True,
+                    ),
+                    _prescription_text_field(
+                        label="Orientação / posologia",
+                        control_id="prescription-item-instructions",
+                        value=DoctorQueueState.prescription_item_instructions,
+                        on_change=DoctorQueueState.update_prescription_item_instructions,
+                        max_length=2000,
+                        rows=4,
+                        help_text="Obrigatório · até 2.000 caracteres.",
+                    ),
+                    _prescription_text_field(
+                        label="Observações",
+                        control_id="prescription-item-notes",
+                        value=DoctorQueueState.prescription_item_notes,
+                        on_change=DoctorQueueState.update_prescription_item_notes,
+                        max_length=2000,
+                        rows=3,
+                        help_text="Opcional · até 2.000 caracteres.",
+                    ),
+                    rx.flex(
+                        rx.dialog.close(
+                            rx.button(
+                                "Cancelar",
+                                type="button",
+                                variant="ghost",
+                                disabled=DoctorQueueState.is_prescription_submitting,
+                            )
+                        ),
+                        rx.button(
+                            rx.cond(
+                                DoctorQueueState.prescription_item_mode == "edit",
+                                "Salvar item",
+                                "Adicionar item",
+                            ),
+                            type="submit",
+                            color_scheme="teal",
+                            high_contrast=True,
+                            disabled=DoctorQueueState.is_prescription_submitting,
+                            loading=DoctorQueueState.is_prescription_submitting,
+                        ),
+                        direction=rx.breakpoints(initial="column-reverse", sm="row"),
+                        justify="end",
+                        gap="0.5rem",
+                        width="100%",
+                    ),
+                    spacing="4",
+                    align="stretch",
+                    width="100%",
+                ),
+                on_submit=DoctorQueueState.submit_prescription_item,
+                no_validate=True,
+                width="100%",
+            ),
+            class_name="vitta-dialog-content",
+            max_width="40rem",
+            max_height="min(90dvh, 44rem)",
+            overflow_y="auto",
+        ),
+        open=DoctorQueueState.prescription_item_dialog_open,
+        on_open_change=DoctorQueueState.set_prescription_item_dialog_open,
+    )
+
+
+def _prescription_notes_dialog() -> rx.Component:
+    return rx.dialog.root(
+        rx.dialog.content(
+            rx.dialog.title("Observações gerais"),
+            rx.dialog.description(
+                "Use este campo para orientações que pertencem ao documento inteiro, não a um item específico.",
+                margin_top="0.35rem",
+                margin_bottom="1rem",
+            ),
+            rx.el.form(
+                rx.vstack(
+                    _prescription_text_field(
+                        label="Observações gerais",
+                        control_id="prescription-general-notes",
+                        value=DoctorQueueState.prescription_general_notes,
+                        on_change=DoctorQueueState.update_prescription_general_notes,
+                        max_length=4000,
+                        rows=5,
+                        help_text="Opcional · até 4.000 caracteres.",
+                        auto_focus=True,
+                    ),
+                    rx.flex(
+                        rx.dialog.close(
+                            rx.button(
+                                "Cancelar",
+                                type="button",
+                                variant="ghost",
+                                disabled=DoctorQueueState.is_prescription_submitting,
+                            )
+                        ),
+                        rx.button(
+                            "Salvar observações",
+                            type="submit",
+                            color_scheme="teal",
+                            high_contrast=True,
+                            disabled=DoctorQueueState.is_prescription_submitting,
+                            loading=DoctorQueueState.is_prescription_submitting,
+                        ),
+                        direction=rx.breakpoints(initial="column-reverse", sm="row"),
+                        justify="end",
+                        gap="0.5rem",
+                        width="100%",
+                    ),
+                    spacing="4",
+                    align="stretch",
+                    width="100%",
+                ),
+                on_submit=DoctorQueueState.save_prescription_notes,
+                no_validate=True,
+                width="100%",
+            ),
+            class_name="vitta-dialog-content",
+            max_width="38rem",
+        ),
+        open=DoctorQueueState.prescription_notes_dialog_open,
+        on_open_change=DoctorQueueState.set_prescription_notes_dialog_open,
+    )
+
+
+def _delete_prescription_dialog() -> rx.Component:
+    return rx.dialog.root(
+        rx.dialog.content(
+            rx.dialog.title("Excluir prescrição?"),
+            rx.dialog.description(
+                "A Prescrição e todos os itens serão removidos deste atendimento em andamento. Após a Consulta ser concluída, essa exclusão não será permitida.",
+                margin_top="0.35rem",
+                margin_bottom="1rem",
+            ),
+            rx.flex(
+                rx.dialog.close(
+                    rx.button(
+                        "Manter prescrição",
+                        type="button",
+                        variant="ghost",
+                        disabled=DoctorQueueState.is_prescription_submitting,
+                        auto_focus=True,
+                    )
+                ),
+                rx.button(
+                    "Excluir prescrição",
+                    type="button",
+                    color_scheme="red",
+                    high_contrast=True,
+                    on_click=DoctorQueueState.confirm_delete_prescription,
+                    disabled=DoctorQueueState.is_prescription_submitting,
+                    loading=DoctorQueueState.is_prescription_submitting,
+                ),
+                direction=rx.breakpoints(initial="column-reverse", sm="row"),
+                justify="end",
+                gap="0.5rem",
+                width="100%",
+            ),
+            class_name="vitta-dialog-content",
+            max_width="34rem",
+        ),
+        open=DoctorQueueState.delete_prescription_dialog_open,
+        on_open_change=DoctorQueueState.set_delete_prescription_dialog_open,
+    )
+
+
+def _remove_prescription_item_dialog() -> rx.Component:
+    return rx.dialog.root(
+        rx.dialog.content(
+            rx.dialog.title("Remover item?"),
+            rx.dialog.description(
+                "O item será removido desta Prescrição em andamento.",
+                margin_top="0.35rem",
+            ),
+            rx.text(
+                DoctorQueueState.remove_prescription_item_name,
+                font_weight="800",
+                size="2",
+                margin_top="0.8rem",
+                overflow_wrap="anywhere",
+            ),
+            rx.flex(
+                rx.dialog.close(
+                    rx.button(
+                        "Manter item",
+                        type="button",
+                        variant="ghost",
+                        disabled=DoctorQueueState.is_prescription_submitting,
+                        auto_focus=True,
+                    )
+                ),
+                rx.button(
+                    "Remover item",
+                    type="button",
+                    color_scheme="red",
+                    high_contrast=True,
+                    on_click=DoctorQueueState.confirm_remove_prescription_item,
+                    disabled=DoctorQueueState.is_prescription_submitting,
+                    loading=DoctorQueueState.is_prescription_submitting,
+                ),
+                direction=rx.breakpoints(initial="column-reverse", sm="row"),
+                justify="end",
+                gap="0.5rem",
+                width="100%",
+                margin_top="1.25rem",
+            ),
+            class_name="vitta-dialog-content",
+            max_width="34rem",
+        ),
+        open=DoctorQueueState.remove_prescription_item_dialog_open,
+        on_open_change=DoctorQueueState.set_remove_prescription_item_dialog_open,
     )
 
 
@@ -935,7 +1711,7 @@ def clinical_care_form() -> rx.Component:
             rx.box(
                 rx.heading("Atendimento clínico", size="4"),
                 rx.text(
-                    "Registre o essencial do atendimento atual. Prescrição e exames continuam fora desta etapa.",
+                    "Registre o essencial do atendimento atual.",
                     size="2",
                     color="var(--vitta-text-muted)",
                     line_height="1.55",
@@ -1011,7 +1787,8 @@ def clinical_care_form() -> rx.Component:
                             color_scheme="gray",
                             on_click=DoctorQueueState.restore_clinical_snapshot,
                             disabled=DoctorQueueState.is_saving_clinical
-                            | DoctorQueueState.is_submitting,
+                            | DoctorQueueState.is_submitting
+                            | DoctorQueueState.is_prescription_submitting,
                         ),
                         rx.fragment(),
                     ),
@@ -1022,7 +1799,8 @@ def clinical_care_form() -> rx.Component:
                         high_contrast=True,
                         disabled=~DoctorQueueState.clinical_is_dirty
                         | DoctorQueueState.is_saving_clinical
-                        | DoctorQueueState.is_submitting,
+                        | DoctorQueueState.is_submitting
+                        | DoctorQueueState.is_prescription_submitting,
                         loading=DoctorQueueState.is_saving_clinical,
                     ),
                     direction=rx.breakpoints(initial="column-reverse", sm="row"),
@@ -1040,6 +1818,7 @@ def clinical_care_form() -> rx.Component:
             width="100%",
             margin_top="1rem",
         ),
+        prescription_panel(),
         clinical_history_panel(),
         class_name="vitta-clinical-workspace",
         width="100%",
@@ -1131,7 +1910,7 @@ def doctor_active_panel() -> rx.Component:
                         rx.hstack(
                             rx.icon("info", size=17),
                             rx.text(
-                                "Atendimento avulso: o registro clínico vinculado a Consulta ainda não se aplica a este fluxo.",
+                                "Atendimento avulso: registro clínico e Prescrição vinculados a Consulta ainda não se aplicam a este fluxo.",
                                 size="2",
                                 color="var(--vitta-text-muted)",
                             ),
@@ -1152,6 +1931,7 @@ def doctor_active_panel() -> rx.Component:
                     on_click=DoctorQueueState.finish_active,
                     disabled=DoctorQueueState.is_submitting
                     | DoctorQueueState.is_saving_clinical
+                    | DoctorQueueState.is_prescription_submitting
                     | (
                         DoctorQueueState.active_is_scheduled
                         & DoctorQueueState.clinical_is_dirty
