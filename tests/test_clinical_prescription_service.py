@@ -448,6 +448,44 @@ def test_completed_consultation_makes_prescription_immutable_but_printable(
     assert printable.scheduled_at == consultation.scheduled_at
 
 
+@pytest.mark.parametrize(
+    "status",
+    [
+        ConsultationStatus.AGENDADA.value,
+        ConsultationStatus.CONFIRMADA.value,
+        ConsultationStatus.CANCELADA.value,
+    ],
+)
+def test_mutation_rejects_any_non_active_consultation_state(
+    db: Session,
+    status: str,
+) -> None:
+    base = datetime(2026, 10, 2, 12, tzinfo=timezone.utc)
+    doctor, _, _, consultation, _, record = _start(
+        db,
+        suffix=f"STATE-{status}",
+        cpf_prefix={
+            ConsultationStatus.AGENDADA.value: "606707808",
+            ConsultationStatus.CONFIRMADA.value: "707808909",
+            ConsultationStatus.CANCELADA.value: "808909010",
+        }[status],
+        base=base,
+    )
+    created = _create(db, record, doctor)
+    stored = db.get(Consultation, consultation.id)
+    stored.status = status
+    db.add(stored)
+    db.commit()
+
+    with pytest.raises(PrescriptionTransitionError):
+        update_prescription_notes(
+            db,
+            prescription_id=created.id,
+            doctor_user_id=doctor.id,
+            general_notes="Não pode alterar",
+        )
+
+
 def test_wrong_doctor_cannot_read_or_mutate_prescription(db: Session) -> None:
     base = datetime(2026, 10, 2, 12, tzinfo=timezone.utc)
     doctor, _, _, _, _, record = _start(
