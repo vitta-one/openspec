@@ -194,6 +194,73 @@ def test_concurrent_item_saves_are_serialized_to_complete_payload() -> None:
     not _DATABASE_URL.startswith("postgresql"),
     reason="Prescription concurrency requires PostgreSQL.",
 )
+def test_concurrent_remove_and_edit_same_item_leave_valid_collection() -> None:
+    engine = create_engine(_DATABASE_URL, pool_pre_ping=True)
+    doctor_id, record_id, _, _ = _seed(engine)
+    with Session(engine) as db:
+        prescription = create_prescription(
+            db,
+            clinical_care_record_id=record_id,
+            doctor_user_id=doctor_id,
+            medication_or_item="Primeiro",
+            instructions="Orientação 1",
+        )
+        prescription = add_prescription_item(
+            db,
+            prescription_id=prescription.id,
+            doctor_user_id=doctor_id,
+            medication_or_item="Segundo",
+            instructions="Orientação 2",
+        )
+        prescription_id = prescription.id
+        target_id = prescription.items[1].id
+
+    def edit_target():
+        with Session(engine) as db:
+            try:
+                update_prescription_item(
+                    db,
+                    prescription_id=prescription_id,
+                    item_id=target_id,
+                    doctor_user_id=doctor_id,
+                    medication_or_item="Segundo editado",
+                    instructions="Orientação editada",
+                )
+                return "edited"
+            except PrescriptionNotFoundError:
+                return "missing"
+
+    def remove_target():
+        with Session(engine) as db:
+            try:
+                remove_prescription_item(
+                    db,
+                    prescription_id=prescription_id,
+                    item_id=target_id,
+                    doctor_user_id=doctor_id,
+                )
+                return "removed"
+            except PrescriptionNotFoundError:
+                return "missing"
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(lambda fn: fn(), [edit_target, remove_target]))
+
+    assert any(value in {"edited", "removed"} for value in results)
+    with Session(engine) as db:
+        remaining = db.exec(
+            select(PrescriptionItem).where(
+                PrescriptionItem.prescription_id == prescription_id
+            )
+        ).all()
+        assert len(remaining) >= 1
+        assert all(item.prescription_id == prescription_id for item in remaining)
+
+
+@pytest.mark.skipif(
+    not _DATABASE_URL.startswith("postgresql"),
+    reason="Prescription concurrency requires PostgreSQL.",
+)
 def test_concurrent_removals_cannot_empty_persisted_prescription() -> None:
     engine = create_engine(_DATABASE_URL, pool_pre_ping=True)
     doctor_id, record_id, _, _ = _seed(engine)
