@@ -1,12 +1,23 @@
 """Reflex states for the patient reception queue capability."""
 
-from typing import TypedDict
+from typing import Any, TypedDict
 
 import reflex as rx
 
 from vitta_one.appointment_scheduling.temporal import format_clinic_datetime
 from vitta_one.auth.authorization import AuthenticationRequiredError, RoleForbiddenError
 from vitta_one.auth.state import AuthState
+from vitta_one.clinical_care.application import (
+    doctor_get_active_record,
+    doctor_list_active_patient_history,
+    doctor_save_active_record,
+)
+from vitta_one.clinical_care.service import (
+    ClinicalCareAuthorizationError,
+    ClinicalCareNotFoundError,
+    ClinicalCareTransitionError,
+    ClinicalCareValidationError,
+)
 from vitta_one.patient_queue.application import (
     doctor_active_queue_entry,
     doctor_claim_next,
@@ -63,6 +74,32 @@ class QueueRow(TypedDict):
     is_scheduled: bool
     scheduled_at: str
     professional_name: str
+
+
+class ClinicalHistoryRow(TypedDict):
+    record_id: int
+    consultation_id: int
+    professional_name: str
+    scheduled_at: str
+    completed_at: str
+    chief_complaint: str
+    anamnesis: str
+    diagnosis: str
+    conduct_notes: str
+
+
+def _serialize_history_item(item) -> ClinicalHistoryRow:
+    return {
+        "record_id": item.record_id,
+        "consultation_id": item.consultation_id,
+        "professional_name": item.professional_name,
+        "scheduled_at": format_clinic_datetime(item.scheduled_at),
+        "completed_at": format_clinic_datetime(item.completed_at),
+        "chief_complaint": item.chief_complaint,
+        "anamnesis": item.anamnesis,
+        "diagnosis": item.diagnosis,
+        "conduct_notes": item.conduct_notes,
+    }
 
 
 def _serialize_queue_item(item) -> QueueRow:
@@ -390,11 +427,12 @@ class ReceptionQueueState(rx.State):
 
 
 class DoctorQueueState(rx.State):
-    """Doctor-only queue state with server-side role and ownership checks."""
+    """Doctor-only queue and clinical-record state with server-side authorization."""
 
     waiting_count: int = 0
     has_active: bool = False
     active_entry_id: int = 0
+    active_consultation_id: int = 0
     active_patient_name: str = ""
     active_symptoms: str = ""
     active_priority: str = ""
@@ -403,10 +441,47 @@ class DoctorQueueState(rx.State):
     active_is_scheduled: bool = False
     active_scheduled_at: str = ""
     active_professional_name: str = ""
+
+    clinical_record_id: int = 0
+    clinical_chief_complaint: str = ""
+    clinical_anamnesis: str = ""
+    clinical_diagnosis: str = ""
+    clinical_conduct_notes: str = ""
+    persisted_chief_complaint: str = ""
+    persisted_anamnesis: str = ""
+    persisted_diagnosis: str = ""
+    persisted_conduct_notes: str = ""
+    clinical_history: list[ClinicalHistoryRow] = []
+    clinical_history_page: int = 1
+    clinical_history_total_pages: int = 1
+    clinical_history_total_count: int = 0
+
     is_loading: bool = False
     is_submitting: bool = False
+    is_saving_clinical: bool = False
     error_message: str = ""
     success_message: str = ""
+
+    @rx.var
+    def has_clinical_record(self) -> bool:
+        return self.active_is_scheduled and self.clinical_record_id > 0
+
+    @rx.var
+    def clinical_is_dirty(self) -> bool:
+        return self.has_clinical_record and (
+            self.clinical_chief_complaint != self.persisted_chief_complaint
+            or self.clinical_anamnesis != self.persisted_anamnesis
+            or self.clinical_diagnosis != self.persisted_diagnosis
+            or self.clinical_conduct_notes != self.persisted_conduct_notes
+        )
+
+    @rx.var
+    def can_previous_clinical_history_page(self) -> bool:
+        return self.clinical_history_page > 1
+
+    @rx.var
+    def can_next_clinical_history_page(self) -> bool:
+        return self.clinical_history_page < self.clinical_history_total_pages
 
     async def _token(self) -> str:
         auth = await self.get_state(AuthState)
@@ -416,9 +491,25 @@ class DoctorQueueState(rx.State):
         self.error_message = ""
         self.success_message = ""
 
+    def _clear_clinical(self) -> None:
+        self.clinical_record_id = 0
+        self.clinical_chief_complaint = ""
+        self.clinical_anamnesis = ""
+        self.clinical_diagnosis = ""
+        self.clinical_conduct_notes = ""
+        self.persisted_chief_complaint = ""
+        self.persisted_anamnesis = ""
+        self.persisted_diagnosis = ""
+        self.persisted_conduct_notes = ""
+        self.clinical_history = []
+        self.clinical_history_page = 1
+        self.clinical_history_total_pages = 1
+        self.clinical_history_total_count = 0
+
     def _clear_active(self) -> None:
         self.has_active = False
         self.active_entry_id = 0
+        self.active_consultation_id = 0
         self.active_patient_name = ""
         self.active_symptoms = ""
         self.active_priority = ""
@@ -427,13 +518,16 @@ class DoctorQueueState(rx.State):
         self.active_is_scheduled = False
         self.active_scheduled_at = ""
         self.active_professional_name = ""
+        self._clear_clinical()
 
     def _set_active(self, item) -> None:
+        self._clear_clinical()
         if item is None:
             self._clear_active()
             return
         self.has_active = True
         self.active_entry_id = item.id
+        self.active_consultation_id = item.consultation_id or 0
         self.active_patient_name = item.patient_name
         self.active_symptoms = item.symptoms
         self.active_priority = item.priority.value
@@ -447,12 +541,66 @@ class DoctorQueueState(rx.State):
         )
         self.active_professional_name = item.professional_name or ""
 
+    def _set_clinical_record(self, item) -> None:
+        self.clinical_record_id = item.id
+        self.clinical_chief_complaint = item.chief_complaint
+        self.clinical_anamnesis = item.anamnesis
+        self.clinical_diagnosis = item.diagnosis
+        self.clinical_conduct_notes = item.conduct_notes
+        self.persisted_chief_complaint = item.chief_complaint
+        self.persisted_anamnesis = item.anamnesis
+        self.persisted_diagnosis = item.diagnosis
+        self.persisted_conduct_notes = item.conduct_notes
+
+    def _set_clinical_history(self, page) -> None:
+        self.clinical_history = [_serialize_history_item(item) for item in page.items]
+        self.clinical_history_page = page.page
+        self.clinical_history_total_pages = page.total_pages
+        self.clinical_history_total_count = page.total_count
+
+    def _load_clinical_with_token(self, token: str, *, page: int = 1) -> None:
+        if not self.active_is_scheduled or not self.active_entry_id:
+            self._clear_clinical()
+            return
+        with rx.session() as db:
+            record = doctor_get_active_record(
+                db,
+                token=token,
+                entry_id=self.active_entry_id,
+            )
+            history = doctor_list_active_patient_history(
+                db,
+                token=token,
+                entry_id=self.active_entry_id,
+                page=page,
+            )
+        self._set_clinical_record(record)
+        self._set_clinical_history(history)
+
+    def _load_history_with_token(self, token: str, *, page: int) -> None:
+        if not self.active_is_scheduled or not self.active_entry_id:
+            self.clinical_history = []
+            self.clinical_history_page = 1
+            self.clinical_history_total_pages = 1
+            self.clinical_history_total_count = 0
+            return
+        with rx.session() as db:
+            history = doctor_list_active_patient_history(
+                db,
+                token=token,
+                entry_id=self.active_entry_id,
+                page=page,
+            )
+        self._set_clinical_history(history)
+
     def _load_with_token(self, token: str) -> None:
         with rx.session() as db:
             active = doctor_active_queue_entry(db, token=token)
             count = doctor_waiting_count(db, token=token)
         self._set_active(active)
         self.waiting_count = count
+        if self.active_is_scheduled:
+            self._load_clinical_with_token(token, page=1)
 
     async def _authorization_redirect(self, exc: Exception):
         self.waiting_count = 0
@@ -473,6 +621,13 @@ class DoctorQueueState(rx.State):
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
+        except (
+            ClinicalCareAuthorizationError,
+            ClinicalCareNotFoundError,
+            ClinicalCareTransitionError,
+        ) as exc:
+            self.error_message = str(exc)
+            self._clear_clinical()
         except Exception:
             self.error_message = (
                 "Não foi possível carregar a fila médica agora. Atualize a página."
@@ -496,6 +651,8 @@ class DoctorQueueState(rx.State):
                 count = doctor_waiting_count(db, token=token)
             self._set_active(item)
             self.waiting_count = count
+            if self.active_is_scheduled:
+                self._load_clinical_with_token(token, page=1)
             self.success_message = "Próximo paciente chamado para atendimento."
         except QueueEmptyError:
             self.error_message = "Não há pacientes aguardando neste momento."
@@ -504,6 +661,9 @@ class DoctorQueueState(rx.State):
             DoctorAlreadyAttendingError,
             QueueTransitionError,
             QueueOwnershipError,
+            ClinicalCareAuthorizationError,
+            ClinicalCareNotFoundError,
+            ClinicalCareTransitionError,
         ) as exc:
             self.error_message = str(exc)
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
@@ -518,10 +678,133 @@ class DoctorQueueState(rx.State):
             yield
 
     @rx.event
+    def update_clinical_chief_complaint(self, value: str) -> None:
+        self.clinical_chief_complaint = value
+
+    @rx.event
+    def update_clinical_anamnesis(self, value: str) -> None:
+        self.clinical_anamnesis = value
+
+    @rx.event
+    def update_clinical_diagnosis(self, value: str) -> None:
+        self.clinical_diagnosis = value
+
+    @rx.event
+    def update_clinical_conduct_notes(self, value: str) -> None:
+        self.clinical_conduct_notes = value
+
+    @rx.event
+    def restore_clinical_snapshot(self) -> None:
+        self.clinical_chief_complaint = self.persisted_chief_complaint
+        self.clinical_anamnesis = self.persisted_anamnesis
+        self.clinical_diagnosis = self.persisted_diagnosis
+        self.clinical_conduct_notes = self.persisted_conduct_notes
+        self._clear_feedback()
+
+    @rx.event
+    async def save_clinical(self, _form_data: dict[str, Any]):
+        """Save the clinical draft without changing queue or Consultation lifecycle."""
+        self.is_saving_clinical = True
+        self._clear_feedback()
+        yield
+        try:
+            if not self.has_clinical_record or not self.active_entry_id:
+                raise ClinicalCareNotFoundError(
+                    "Não há registro clínico ativo para salvar."
+                )
+            token = await self._token()
+            with rx.session() as db:
+                record = doctor_save_active_record(
+                    db,
+                    token=token,
+                    entry_id=self.active_entry_id,
+                    chief_complaint=self.clinical_chief_complaint,
+                    anamnesis=self.clinical_anamnesis,
+                    diagnosis=self.clinical_diagnosis,
+                    conduct_notes=self.clinical_conduct_notes,
+                )
+            self._set_clinical_record(record)
+            self.success_message = "Atendimento clínico salvo."
+        except (
+            ClinicalCareAuthorizationError,
+            ClinicalCareNotFoundError,
+            ClinicalCareTransitionError,
+            ClinicalCareValidationError,
+        ) as exc:
+            self.error_message = str(exc)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.error_message = (
+                "Não foi possível salvar o atendimento clínico agora. Tente novamente."
+            )
+        finally:
+            self.is_saving_clinical = False
+            yield
+
+    @rx.event
+    async def previous_clinical_history_page(self):
+        if not self.can_previous_clinical_history_page:
+            return
+        self.is_loading = True
+        yield
+        try:
+            token = await self._token()
+            self._load_history_with_token(
+                token,
+                page=self.clinical_history_page - 1,
+            )
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except (
+            ClinicalCareAuthorizationError,
+            ClinicalCareNotFoundError,
+            ClinicalCareTransitionError,
+        ) as exc:
+            self.error_message = str(exc)
+        finally:
+            self.is_loading = False
+            yield
+
+    @rx.event
+    async def next_clinical_history_page(self):
+        if not self.can_next_clinical_history_page:
+            return
+        self.is_loading = True
+        yield
+        try:
+            token = await self._token()
+            self._load_history_with_token(
+                token,
+                page=self.clinical_history_page + 1,
+            )
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except (
+            ClinicalCareAuthorizationError,
+            ClinicalCareNotFoundError,
+            ClinicalCareTransitionError,
+        ) as exc:
+            self.error_message = str(exc)
+        finally:
+            self.is_loading = False
+            yield
+
+    @rx.event
     async def finish_active(self):
         """Finish only the active queue entry owned by the authenticated doctor."""
-        self.is_submitting = True
         self._clear_feedback()
+        if self.active_is_scheduled and self.clinical_is_dirty:
+            self.error_message = (
+                "Salve ou descarte as alterações clínicas antes de finalizar o atendimento."
+            )
+            yield
+            return
+
+        self.is_submitting = True
         yield
         try:
             if not self.has_active or not self.active_entry_id:
@@ -530,7 +813,7 @@ class DoctorQueueState(rx.State):
             with rx.session() as db:
                 doctor_finish(db, token=token, entry_id=self.active_entry_id)
             self._clear_active()
-            self.success_message = "Atendimento operacional finalizado."
+            self.success_message = "Atendimento finalizado e registro clínico preservado."
             with rx.session() as db:
                 self.waiting_count = doctor_waiting_count(db, token=token)
         except (QueueTransitionError, QueueOwnershipError) as exc:
@@ -545,3 +828,4 @@ class DoctorQueueState(rx.State):
         finally:
             self.is_submitting = False
             yield
+
