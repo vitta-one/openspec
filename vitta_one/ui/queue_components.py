@@ -1143,11 +1143,7 @@ def _prescription_item_editor_row(item, prescription) -> rx.Component:
                     ),
                     disabled=(prescription["item_count"] <= 1)
                     | DoctorQueueState.is_prescription_submitting,
-                    title=rx.cond(
-                        prescription["item_count"] <= 1,
-                        "A Prescrição precisa manter ao menos um item.",
-                        "Remover item",
-                    ),
+                    title="Remover item. A Prescrição deve manter pelo menos um item persistido.",
                 ),
                 spacing="1",
                 flex_wrap="wrap",
