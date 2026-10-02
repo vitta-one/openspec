@@ -18,6 +18,7 @@ from vitta_one.clinical_prescription.application import (
     doctor_list_current_prescriptions,
 )
 from vitta_one.models.auth import User
+from vitta_one.ui.prescription_components import NO_DIGITAL_SIGNATURE_NOTICE
 
 
 @pytest.fixture
@@ -108,6 +109,19 @@ def test_missing_and_expired_sessions_are_rejected_before_prescription_lookup(
         doctor_get_printable_prescription(
             db,
             token=expired,
+            prescription_id=999999,
+        )
+
+
+def test_print_contract_exposes_explicit_unsigned_notice() -> None:
+    assert NO_DIGITAL_SIGNATURE_NOTICE == "Documento sem assinatura digital nesta etapa."
+
+
+def test_print_requires_session_before_lookup(db: Session) -> None:
+    with pytest.raises(AuthenticationRequiredError):
+        doctor_get_printable_prescription(
+            db,
+            token="",
             prescription_id=999999,
         )
 
