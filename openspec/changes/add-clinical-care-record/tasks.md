@@ -1,0 +1,150 @@
+## 1. Modelo e migration
+
+- [ ] 1.1 Criar modelo persistente `ClinicalCareRecord`.
+- [ ] 1.2 Adicionar FK obrigatória e unique de `consultation_id`.
+- [ ] 1.3 Adicionar FK obrigatória de `patient_id`.
+- [ ] 1.4 Adicionar FK obrigatória de `doctor_user_id`.
+- [ ] 1.5 Adicionar campos `chief_complaint`, `anamnesis`, `diagnosis` e `conduct_notes`.
+- [ ] 1.6 Adicionar `created_at` e `updated_at` UTC.
+- [ ] 1.7 Adicionar índices de consulta por paciente, Médico e atualização.
+- [ ] 1.8 Registrar o modelo no metadata/imports usados pelas migrations.
+- [ ] 1.9 Criar migration incremental sobre a revisão de consultation-care-lifecycle.
+- [ ] 1.10 Revisar downgrade sem afetar Consulta/fila.
+- [ ] 1.11 Validar migration em PostgreSQL 16 descartável.
+
+## 2. Criação atômica no início do atendimento
+
+- [ ] 2.1 Criar serviço de domínio/application para ClinicalCareRecord.
+- [ ] 2.2 Integrar criação ao fluxo de chamada de QueueEntry agendada.
+- [ ] 2.3 Criar Atendimento com `consultation_id`, `patient_id` e `doctor_user_id` corretos.
+- [ ] 2.4 Garantir que o Atendimento nasce com campos clínicos vazios.
+- [ ] 2.5 Criar o Atendimento antes do commit que confirma `EM_ANDAMENTO`.
+- [ ] 2.6 Rejeitar criação se já existir ClinicalCareRecord para a Consulta.
+- [ ] 2.7 Converter conflito de unicidade em erro funcional seguro.
+- [ ] 2.8 Garantir rollback integral de fila/Consulta/Atendimento se a criação falhar.
+- [ ] 2.9 Preservar claim/finalize de walk-in sem criar ClinicalCareRecord.
+
+## 3. Validação e edição clínica
+
+- [ ] 3.1 Implementar limites server-side dos quatro campos.
+- [ ] 3.2 Normalizar somente whitespace externo sem reformatar conteúdo interno.
+- [ ] 3.3 Permitir campos vazios e saves parciais.
+- [ ] 3.4 Bloquear ClinicalCareRecord com `FOR UPDATE` durante save.
+- [ ] 3.5 Revalidar sessão e role Médico antes de leitura/mutação clínica.
+- [ ] 3.6 Revalidar que o Médico autenticado corresponde ao profissional da Consulta.
+- [ ] 3.7 Revalidar `doctor_user_id` persistido no ClinicalCareRecord.
+- [ ] 3.8 Revalidar que a Consulta está `EM_ANDAMENTO`.
+- [ ] 3.9 Atualizar `updated_at` somente em save válido.
+- [ ] 3.10 Rejeitar save após `CONCLUIDA`, `CANCELADA`, `CONFIRMADA` ou `AGENDADA`.
+- [ ] 3.11 Garantir que save clínico não altera estado/timestamps da fila ou Consulta.
+- [ ] 3.12 Não incluir textos clínicos em exceptions/logs.
+
+## 4. Histórico clínico
+
+- [ ] 4.1 Criar projeção de histórico baseada em ClinicalCareRecord + Consultation concluída.
+- [ ] 4.2 Filtrar por `patient_id`.
+- [ ] 4.3 Ordenar por `completed_at DESC` e id da Consulta.
+- [ ] 4.4 Excluir Consulta atual ainda em andamento.
+- [ ] 4.5 Excluir registros de Consultas não concluídas.
+- [ ] 4.6 Implementar paginação server-side com 10 itens.
+- [ ] 4.7 Retornar total, página atual e total de páginas.
+- [ ] 4.8 Restringir leitura ao Médico com atendimento ativo do mesmo paciente.
+- [ ] 4.9 Rejeitar tentativa de leitura de outro paciente.
+- [ ] 4.10 Não criar entidade física separada de Prontuário.
+
+## 5. State Médico
+
+- [ ] 5.1 Estender `DoctorQueueState` com snapshot do ClinicalCareRecord atual.
+- [ ] 5.2 Adicionar campos editáveis para queixa principal, anamnese, diagnóstico e conduta/observações.
+- [ ] 5.3 Adicionar snapshot persistido para detecção de alterações não salvas.
+- [ ] 5.4 Adicionar computed var de dirty state.
+- [ ] 5.5 Carregar ClinicalCareRecord ao restaurar atendimento agendado ativo.
+- [ ] 5.6 Não carregar formulário clínico para walk-in.
+- [ ] 5.7 Carregar primeira página do histórico do paciente autorizado.
+- [ ] 5.8 Implementar paginação anterior/próxima do histórico.
+- [ ] 5.9 Implementar save com loading/erro/sucesso.
+- [ ] 5.10 Preservar conteúdo local quando save falhar por erro corrigível.
+- [ ] 5.11 Atualizar snapshot e limpar dirty state após save.
+- [ ] 5.12 Desabilitar finalização no fluxo normal enquanto houver alterações locais não salvas.
+- [ ] 5.13 Limpar formulário/histórico ao finalizar atendimento.
+- [ ] 5.14 Limpar dados clínicos ao perder sessão/autorização.
+
+## 6. UI Médico
+
+- [ ] 6.1 Criar seção “Atendimento clínico” abaixo do contexto operacional.
+- [ ] 6.2 Usar labels explícitos para os quatro campos.
+- [ ] 6.3 Usar textarea nativa/Reflex com resize vertical e foco visível.
+- [ ] 6.4 Exibir contagem/limite de caracteres quando útil sem poluir a interface.
+- [ ] 6.5 Adicionar ação primária “Salvar atendimento”.
+- [ ] 6.6 Exibir estado “Salvo” / “Alterações não salvas” em texto.
+- [ ] 6.7 Integrar ação existente “Finalizar atendimento” ao dirty state.
+- [ ] 6.8 Criar seção “Histórico clínico” somente leitura abaixo do formulário.
+- [ ] 6.9 Renderizar histórico em cards/accordion simples e responsivo.
+- [ ] 6.10 Mostrar data, profissional e quatro áreas clínicas sem inventar dados.
+- [ ] 6.11 Adicionar paginação simples do histórico.
+- [ ] 6.12 Manter uma coluna em viewport estreita.
+- [ ] 6.13 Preservar teclado, foco, contraste e reduced-motion.
+- [ ] 6.14 Manter o fluxo walk-in visualmente inalterado quanto ao ClinicalCareRecord.
+
+## 7. Admin QA
+
+- [ ] 7.1 Criar operação/projeção somente leitura de histórico clínico para o Admin preview local.
+- [ ] 7.2 Exigir flag `VITTA_ONE_LOCAL_ADMIN_PREVIEW=true` e sessão Administrador.
+- [ ] 7.3 Integrar dados reais à seleção de paciente em `/admin/pacientes`.
+- [ ] 7.4 Substituir placeholder de prontuário por histórico clínico persistido quando existir.
+- [ ] 7.5 Manter estado vazio honesto quando não houver registros.
+- [ ] 7.6 Não renderizar ações de editar/salvar no Admin QA.
+- [ ] 7.7 Paginar histórico para evitar carga ilimitada.
+- [ ] 7.8 Limpar conteúdo clínico do State ao trocar/limpar paciente.
+
+## 8. Segurança e privacidade
+
+- [ ] 8.1 Auditar handlers para não registrar payload clínico.
+- [ ] 8.2 Garantir que mensagens de validação não ecoem texto digitado.
+- [ ] 8.3 Garantir que errors de banco não exponham constraint/stack trace.
+- [ ] 8.4 Testar role Recepcionista sem acesso de leitura/escrita clínica.
+- [ ] 8.5 Testar role Administrador fora do Admin QA sem API clínica geral.
+- [ ] 8.6 Testar role Financeiro sem acesso clínico.
+- [ ] 8.7 Testar Médico diferente sem leitura/escrita do registro atual.
+- [ ] 8.8 Testar sessão ausente/expirada limpando dados do State.
+
+## 9. Testes de domínio e autorização
+
+- [ ] 9.1 Testar criação automática do ClinicalCareRecord na chamada agendada.
+- [ ] 9.2 Testar walk-in sem criação de ClinicalCareRecord.
+- [ ] 9.3 Testar unicidade de um Atendimento por Consulta.
+- [ ] 9.4 Testar rollback da chamada quando criação do Atendimento falha.
+- [ ] 9.5 Testar save parcial e campos vazios.
+- [ ] 9.6 Testar limites dos quatro campos.
+- [ ] 9.7 Testar save por Médico correto em `EM_ANDAMENTO`.
+- [ ] 9.8 Testar save por Médico diferente.
+- [ ] 9.9 Testar save por role não Médica.
+- [ ] 9.10 Testar imutabilidade após `CONCLUIDA`.
+- [ ] 9.11 Testar que finalizar registro vazio continua permitido.
+- [ ] 9.12 Testar que save não altera lifecycle.
+- [ ] 9.13 Testar histórico contendo somente Consultas concluídas.
+- [ ] 9.14 Testar ordenação cronológica decrescente.
+- [ ] 9.15 Testar paginação com mais de 10 registros.
+- [ ] 9.16 Testar que Médico sem atendimento ativo não lê histórico.
+- [ ] 9.17 Testar tentativa de histórico de outro paciente.
+- [ ] 9.18 Testar limpeza do State após finalização/logout.
+
+## 10. PostgreSQL e concorrência
+
+- [ ] 10.1 Testar duas chamadas concorrentes produzindo no máximo um ClinicalCareRecord.
+- [ ] 10.2 Testar consistência entre QueueEntry, Consultation e ClinicalCareRecord sob concorrência.
+- [ ] 10.3 Testar dois saves concorrentes no mesmo ClinicalCareRecord.
+- [ ] 10.4 Confirmar constraints/FKs/índices na migration real.
+- [ ] 10.5 Executar migration contra PostgreSQL 16 do CI.
+
+## 11. Documentação e validação final
+
+- [ ] 11.1 Atualizar `docs/domain-model.md` com a cardinalidade definida de um Atendimento por Consulta.
+- [ ] 11.2 Atualizar `docs/project-overview.md` removendo pontos de lifecycle que já deixaram de estar em aberto.
+- [ ] 11.3 Atualizar `UX-CONTRACT.md` com formulário clínico, dirty state e histórico.
+- [ ] 11.4 Atualizar `DESIGN.md` apenas para padrões duráveis novos.
+- [ ] 11.5 Atualizar README com o novo fluxo Médico sem anunciar prescrição/exames.
+- [ ] 11.6 Validar OpenSpec com `--all --strict --no-interactive`.
+- [ ] 11.7 Executar suíte completa de testes.
+- [ ] 11.8 Executar `reflex compile --dry`.
+- [ ] 11.9 Corrigir regressões antes de concluir a change.
