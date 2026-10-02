@@ -906,6 +906,10 @@ class DoctorQueueState(rx.State):
             yield
 
     @rx.event
+    def open_prescription_print(self, prescription_id: int):
+        return rx.redirect(f"/medico/prescricao/{prescription_id}")
+
+    @rx.event
     def begin_new_prescription(self) -> None:
         self._clear_feedback()
         self._reset_prescription_item_dialog()
