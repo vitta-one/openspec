@@ -12,6 +12,7 @@ from vitta_one.appointment_scheduling.domain import ConsultationStatus
 from vitta_one.auth.roles import Role
 from vitta_one.consultation_care.service import (
     CareLifecycleAssignmentError,
+    CareLifecycleConflictError,
     CareLifecycleTransitionError,
     CareLifecycleValidationError,
     cancel_linked_consultation_from_queue,
@@ -411,7 +412,11 @@ def claim_next_patient(
             )
         except CareLifecycleAssignmentError as exc:
             raise QueueOwnershipError(str(exc)) from exc
-        except (CareLifecycleTransitionError, CareLifecycleValidationError) as exc:
+        except (
+            CareLifecycleConflictError,
+            CareLifecycleTransitionError,
+            CareLifecycleValidationError,
+        ) as exc:
             raise QueueTransitionError(str(exc)) from exc
 
     entry.status = QueueStatus.EM_ATENDIMENTO.value
@@ -419,7 +424,13 @@ def claim_next_patient(
     entry.called_at = timestamp
     entry.updated_at = timestamp
     db.add(entry)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise QueueTransitionError(
+            "Não foi possível iniciar o atendimento por conflito concorrente. Atualize a fila e tente novamente."
+        ) from exc
     db.refresh(entry)
 
     patient = db.get(Patient, entry.patient_id)
