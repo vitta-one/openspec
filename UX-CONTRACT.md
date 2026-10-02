@@ -150,9 +150,26 @@ Regras:
 - Ao finalizar, perder autorização ou encerrar sessão, o State remove formulário e histórico clínico sensível.
 - O Admin QA local pode projetar histórico clínico persistido e Atendimento ativo somente em modo explicitamente habilitado e sem ações de edição.
 - Conteúdo clínico não é colocado em URL, log, mensagem de erro, toast detalhado ou telemetria.
-- Prescrição, exames, anexos, assinatura e financeiro permanecem fora deste fluxo.
+- Prescrições são uma seção própria do Atendimento; exames, anexos, assinatura digital e financeiro permanecem em capabilities separadas.
 
-## 12. Acessibilidade e estabilidade
+## 12. Prescrições e impressão
+
+- A seção **Prescrições** aparece somente para Atendimento ativo originado de Consulta agendada com `ClinicalCareRecord`.
+- Um Atendimento pode possuir múltiplas Prescrições; cada documento é criado já com o primeiro item válido.
+- Cada item mostra medicamento/item como conteúdo principal, orientação/posologia logo abaixo e observações somente quando existirem.
+- “Nova prescrição”, adicionar/editar item e editar observações gerais usam dialogs controlados, com labels visíveis, limites refletidos nos campos e valores preservados em erro corrigível.
+- Remover o último item isoladamente não é permitido; o Médico deve excluir a Prescrição inteira enquanto a Consulta ainda está `EM_ANDAMENTO`.
+- Exclusão de documento e remoção de item usam confirmação própria da aplicação; não usam `window.confirm`.
+- Operações de Prescrição são explícitas e persistidas imediatamente; não compartilham o dirty state do formulário de Atendimento.
+- O fluxo normal de **Finalizar atendimento** fica indisponível enquanto uma operação de Prescrição estiver em andamento.
+- Prescrições de Consultas concluídas aparecem no histórico como conteúdo somente leitura e ficam recolhidas por padrão para evitar expansão excessiva.
+- A visualização de impressão vive em rota protegida, sem shell operacional, e pode ser reaberta pelo Médico autor depois da conclusão.
+- A versão imprimível exibe paciente, profissional, registro profissional, data/hora da Consulta, itens e observações gerais.
+- A versão imprimível sempre informa **“Documento sem assinatura digital nesta etapa.”** e não mostra selo, QR Code ou indicadores ZapSign.
+- O Admin QA local projeta Prescrições reais em Atendimento/histórico somente leitura; fora da flag local não existe API clínica geral para Administrador.
+- Conteúdo de Prescrição não entra em URL, logs, mensagens de erro detalhadas ou telemetria.
+
+## 13. Acessibilidade e estabilidade
 
 - alvo WCAG 2.2 AA;
 - foco visível;
