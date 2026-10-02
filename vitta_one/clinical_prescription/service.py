@@ -550,6 +550,15 @@ def delete_prescription(
         editable=True,
         lock=True,
     )
+    children = list(
+        db.exec(
+            select(PrescriptionItem)
+            .where(PrescriptionItem.prescription_id == prescription_id)
+            .with_for_update()
+        ).all()
+    )
+    for child in children:
+        db.delete(child)
     db.delete(prescription)
     db.commit()
 
