@@ -8,6 +8,7 @@ from vitta_one.auth.roles import Role
 from vitta_one.auth.state import AuthState
 from vitta_one.models import (
     AuthSession,
+    ClinicalCareRecord,
     Consultation,
     Patient,
     Professional,
@@ -46,6 +47,7 @@ _PERSISTENT_MODELS = (
     ProfessionalAvailabilitySlot,
     ProfessionalSpecialty,
     Consultation,
+    ClinicalCareRecord,
 )
 
 app = rx.App(
