@@ -99,4 +99,4 @@
 - [x] 8.13 Testar reavaliação preservando Consulta `CONFIRMADA`.
 - [x] 8.14 Testar RBAC e sessões ausente/expirada nas novas operações.
 - [x] 8.15 Validar locking/constraints em PostgreSQL 16 real do CI.
-- [ ] 8.16 Executar OpenSpec strict, migration, suíte completa e `reflex compile --dry`, corrigindo regressões antes de concluir.
+- [x] 8.16 Executar OpenSpec strict, migration, suíte completa e `reflex compile --dry`, corrigindo regressões antes de concluir.
