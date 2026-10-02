@@ -559,6 +559,7 @@ def delete_prescription(
     )
     for child in children:
         db.delete(child)
+    db.flush()
     db.delete(prescription)
     db.commit()
 
