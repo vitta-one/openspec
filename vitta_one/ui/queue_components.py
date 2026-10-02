@@ -3,7 +3,7 @@
 import reflex as rx
 
 from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
-from vitta_one.ui.components import feedback_region, field_label, section_panel
+from vitta_one.ui.components import empty_state, feedback_region, field_label, section_panel
 
 
 def priority_select(
@@ -728,6 +728,324 @@ def doctor_waiting_summary() -> rx.Component:
     )
 
 
+def _clinical_field(
+    *,
+    label: str,
+    control_id: str,
+    value,
+    on_change,
+    max_length: int,
+    rows: int,
+    help_text: str,
+) -> rx.Component:
+    return rx.box(
+        field_label(label, control_id),
+        rx.el.textarea(
+            id=control_id,
+            name=control_id,
+            value=value,
+            on_change=on_change,
+            max_length=max_length,
+            rows=rows,
+            class_name="vitta-textarea vitta-clinical-textarea",
+            aria_describedby=f"{control_id}-help",
+            disabled=DoctorQueueState.is_saving_clinical | DoctorQueueState.is_submitting,
+            margin_top="0.4rem",
+        ),
+        rx.text(
+            help_text,
+            id=f"{control_id}-help",
+            size="1",
+            color="var(--vitta-text-subtle)",
+            margin_top="0.35rem",
+        ),
+        width="100%",
+    )
+
+
+def _history_value(label: str, value) -> rx.Component:
+    return rx.box(
+        rx.text(
+            label,
+            size="1",
+            font_weight="750",
+            color="var(--vitta-text-muted)",
+        ),
+        rx.cond(
+            value != "",
+            rx.text(
+                value,
+                size="2",
+                line_height="1.6",
+                white_space="pre-wrap",
+                overflow_wrap="anywhere",
+                margin_top="0.25rem",
+            ),
+            rx.text(
+                "Não registrado",
+                size="2",
+                color="var(--vitta-text-subtle)",
+                margin_top="0.25rem",
+            ),
+        ),
+        width="100%",
+    )
+
+
+def _clinical_history_card(row) -> rx.Component:
+    return rx.box(
+        rx.vstack(
+            rx.flex(
+                rx.box(
+                    rx.text(row["completed_at"], font_weight="800", size="2"),
+                    rx.text(
+                        row["professional_name"],
+                        size="1",
+                        color="var(--vitta-text-muted)",
+                        margin_top="0.15rem",
+                    ),
+                ),
+                rx.badge(
+                    "Concluído",
+                    color_scheme="green",
+                    variant="soft",
+                    high_contrast=True,
+                ),
+                justify="between",
+                align="start",
+                gap="0.75rem",
+                width="100%",
+            ),
+            rx.grid(
+                _history_value("Queixa principal", row["chief_complaint"]),
+                _history_value("Anamnese", row["anamnesis"]),
+                _history_value("Diagnóstico", row["diagnosis"]),
+                _history_value("Conduta e observações", row["conduct_notes"]),
+                columns=rx.breakpoints(initial="1", lg="2"),
+                gap="0.9rem",
+                width="100%",
+            ),
+            spacing="3",
+            align="stretch",
+            width="100%",
+        ),
+        class_name="vitta-clinical-history-card",
+        role="listitem",
+    )
+
+
+def clinical_history_panel() -> rx.Component:
+    return rx.box(
+        rx.flex(
+            rx.box(
+                rx.heading("Histórico clínico", size="4"),
+                rx.text(
+                    "Somente atendimentos concluídos deste paciente.",
+                    size="2",
+                    color="var(--vitta-text-muted)",
+                    margin_top="0.25rem",
+                ),
+            ),
+            rx.cond(
+                DoctorQueueState.clinical_history_total_count > 0,
+                rx.badge(
+                    DoctorQueueState.clinical_history_total_count,
+                    " registros",
+                    color_scheme="gray",
+                    variant="soft",
+                ),
+                rx.fragment(),
+            ),
+            direction=rx.breakpoints(initial="column", sm="row"),
+            justify="between",
+            align=rx.breakpoints(initial="stretch", sm="start"),
+            gap="0.5rem",
+            width="100%",
+        ),
+        rx.cond(
+            DoctorQueueState.clinical_history.length() > 0,
+            rx.vstack(
+                rx.vstack(
+                    rx.foreach(
+                        DoctorQueueState.clinical_history,
+                        _clinical_history_card,
+                    ),
+                    spacing="3",
+                    align="stretch",
+                    width="100%",
+                    role="list",
+                ),
+                rx.flex(
+                    rx.text(
+                        "Página ",
+                        DoctorQueueState.clinical_history_page,
+                        " de ",
+                        DoctorQueueState.clinical_history_total_pages,
+                        size="1",
+                        color="var(--vitta-text-muted)",
+                    ),
+                    rx.hstack(
+                        rx.button(
+                            "Anterior",
+                            type="button",
+                            variant="outline",
+                            color_scheme="teal",
+                            size="2",
+                            on_click=DoctorQueueState.previous_clinical_history_page,
+                            disabled=~DoctorQueueState.can_previous_clinical_history_page
+                            | DoctorQueueState.is_loading,
+                        ),
+                        rx.button(
+                            "Próxima",
+                            type="button",
+                            variant="outline",
+                            color_scheme="teal",
+                            size="2",
+                            on_click=DoctorQueueState.next_clinical_history_page,
+                            disabled=~DoctorQueueState.can_next_clinical_history_page
+                            | DoctorQueueState.is_loading,
+                        ),
+                        spacing="2",
+                    ),
+                    direction=rx.breakpoints(initial="column", sm="row"),
+                    justify="between",
+                    align=rx.breakpoints(initial="stretch", sm="center"),
+                    gap="0.6rem",
+                    width="100%",
+                ),
+                spacing="3",
+                align="stretch",
+                width="100%",
+                margin_top="1rem",
+            ),
+            empty_state(
+                "history",
+                "Sem atendimentos clínicos anteriores",
+                "Quando este paciente possuir Consultas concluídas com registro clínico, elas aparecerão aqui.",
+            ),
+        ),
+        width="100%",
+        margin_top="1.25rem",
+    )
+
+
+def clinical_care_form() -> rx.Component:
+    return rx.box(
+        rx.flex(
+            rx.box(
+                rx.heading("Atendimento clínico", size="4"),
+                rx.text(
+                    "Registre o essencial do atendimento atual. Prescrição e exames continuam fora desta etapa.",
+                    size="2",
+                    color="var(--vitta-text-muted)",
+                    line_height="1.55",
+                    margin_top="0.25rem",
+                ),
+            ),
+            rx.cond(
+                DoctorQueueState.clinical_is_dirty,
+                rx.badge(
+                    "Alterações não salvas",
+                    color_scheme="amber",
+                    variant="soft",
+                    high_contrast=True,
+                ),
+                rx.badge(
+                    "Salvo",
+                    color_scheme="green",
+                    variant="soft",
+                    high_contrast=True,
+                ),
+            ),
+            direction=rx.breakpoints(initial="column", sm="row"),
+            justify="between",
+            align=rx.breakpoints(initial="stretch", sm="start"),
+            gap="0.65rem",
+            width="100%",
+        ),
+        rx.el.form(
+            rx.vstack(
+                _clinical_field(
+                    label="Queixa principal",
+                    control_id="clinical-chief-complaint",
+                    value=DoctorQueueState.clinical_chief_complaint,
+                    on_change=DoctorQueueState.update_clinical_chief_complaint,
+                    max_length=4000,
+                    rows=3,
+                    help_text="Até 4.000 caracteres.",
+                ),
+                _clinical_field(
+                    label="Anamnese",
+                    control_id="clinical-anamnesis",
+                    value=DoctorQueueState.clinical_anamnesis,
+                    on_change=DoctorQueueState.update_clinical_anamnesis,
+                    max_length=12000,
+                    rows=6,
+                    help_text="Até 12.000 caracteres.",
+                ),
+                _clinical_field(
+                    label="Diagnóstico",
+                    control_id="clinical-diagnosis",
+                    value=DoctorQueueState.clinical_diagnosis,
+                    on_change=DoctorQueueState.update_clinical_diagnosis,
+                    max_length=6000,
+                    rows=4,
+                    help_text="Até 6.000 caracteres. Texto livre nesta etapa.",
+                ),
+                _clinical_field(
+                    label="Conduta e observações",
+                    control_id="clinical-conduct-notes",
+                    value=DoctorQueueState.clinical_conduct_notes,
+                    on_change=DoctorQueueState.update_clinical_conduct_notes,
+                    max_length=8000,
+                    rows=5,
+                    help_text="Até 8.000 caracteres.",
+                ),
+                rx.flex(
+                    rx.cond(
+                        DoctorQueueState.clinical_is_dirty,
+                        rx.button(
+                            "Descartar alterações",
+                            type="button",
+                            variant="ghost",
+                            color_scheme="gray",
+                            on_click=DoctorQueueState.restore_clinical_snapshot,
+                            disabled=DoctorQueueState.is_saving_clinical
+                            | DoctorQueueState.is_submitting,
+                        ),
+                        rx.fragment(),
+                    ),
+                    rx.button(
+                        "Salvar atendimento",
+                        type="submit",
+                        color_scheme="teal",
+                        high_contrast=True,
+                        disabled=~DoctorQueueState.clinical_is_dirty
+                        | DoctorQueueState.is_saving_clinical
+                        | DoctorQueueState.is_submitting,
+                        loading=DoctorQueueState.is_saving_clinical,
+                    ),
+                    direction=rx.breakpoints(initial="column-reverse", sm="row"),
+                    justify="end",
+                    align=rx.breakpoints(initial="stretch", sm="center"),
+                    gap="0.5rem",
+                    width="100%",
+                ),
+                spacing="4",
+                align="stretch",
+                width="100%",
+            ),
+            no_validate=True,
+            on_submit=DoctorQueueState.save_clinical,
+            width="100%",
+            margin_top="1rem",
+        ),
+        clinical_history_panel(),
+        class_name="vitta-clinical-workspace",
+        width="100%",
+    )
+
+
 def doctor_active_panel() -> rx.Component:
     return rx.cond(
         DoctorQueueState.has_active,
@@ -798,12 +1116,31 @@ def doctor_active_panel() -> rx.Component:
                         DoctorQueueState.active_symptoms,
                         line_height="1.65",
                         overflow_wrap="anywhere",
+                        white_space="pre-wrap",
                         margin_top="0.35rem",
                     ),
                     width="100%",
                     padding="1rem",
                     background="var(--vitta-surface-muted)",
                     border_radius="var(--vitta-radius-control)",
+                ),
+                rx.cond(
+                    DoctorQueueState.active_is_scheduled,
+                    clinical_care_form(),
+                    rx.box(
+                        rx.hstack(
+                            rx.icon("info", size=17),
+                            rx.text(
+                                "Atendimento avulso: o registro clínico vinculado a Consulta ainda não se aplica a este fluxo.",
+                                size="2",
+                                color="var(--vitta-text-muted)",
+                            ),
+                            spacing="2",
+                            align="start",
+                        ),
+                        class_name="vitta-info-strip",
+                        width="100%",
+                    ),
                 ),
                 rx.button(
                     "Finalizar atendimento",
@@ -813,11 +1150,27 @@ def doctor_active_panel() -> rx.Component:
                     min_height="3rem",
                     width=rx.breakpoints(initial="100%", sm="auto"),
                     on_click=DoctorQueueState.finish_active,
-                    disabled=DoctorQueueState.is_submitting,
+                    disabled=DoctorQueueState.is_submitting
+                    | DoctorQueueState.is_saving_clinical
+                    | (
+                        DoctorQueueState.active_is_scheduled
+                        & DoctorQueueState.clinical_is_dirty
+                    ),
                     loading=DoctorQueueState.is_submitting,
                 ),
+                rx.cond(
+                    DoctorQueueState.active_is_scheduled
+                    & DoctorQueueState.clinical_is_dirty,
+                    rx.text(
+                        "Salve ou descarte as alterações clínicas antes de finalizar.",
+                        size="1",
+                        color="var(--vitta-warning)",
+                        role="status",
+                    ),
+                    rx.fragment(),
+                ),
                 spacing="4",
-                align="start",
+                align="stretch",
                 width="100%",
             ),
             border_color="var(--vitta-primary)",
@@ -850,3 +1203,4 @@ def doctor_active_panel() -> rx.Component:
             )
         ),
     )
+
