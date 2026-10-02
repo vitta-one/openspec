@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, select
 
 from vitta_one.appointment_scheduling.domain import ConsultationStatus
@@ -74,6 +74,14 @@ class PrintablePrescriptionView:
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _commit_or_conflict(db: Session, message: str) -> None:
+    try:
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise PrescriptionConflictError(message) from exc
 
 
 def _as_utc(value: datetime) -> datetime:
@@ -369,10 +377,13 @@ def create_prescription(
             )
         )
         db.commit()
-    except IntegrityError as exc:
+    except PrescriptionConflictError:
+        db.rollback()
+        raise
+    except SQLAlchemyError as exc:
         db.rollback()
         raise PrescriptionConflictError(
-            "Não foi possível salvar a Prescrição por conflito concorrente."
+            "Não foi possível salvar a Prescrição por conflito de persistência."
         ) from exc
 
     db.refresh(prescription)
@@ -416,13 +427,10 @@ def add_prescription_item(
     )
     prescription.updated_at = timestamp
     db.add(prescription)
-    try:
-        db.commit()
-    except IntegrityError as exc:
-        db.rollback()
-        raise PrescriptionConflictError(
-            "Não foi possível adicionar o item por conflito concorrente."
-        ) from exc
+    _commit_or_conflict(
+        db,
+        "Não foi possível adicionar o item por conflito de persistência.",
+    )
     db.refresh(prescription)
     return _views_for_prescriptions(db, [prescription])[0]
 
@@ -469,7 +477,10 @@ def update_prescription_item(
     prescription.updated_at = timestamp
     db.add(item)
     db.add(prescription)
-    db.commit()
+    _commit_or_conflict(
+        db,
+        "Não foi possível atualizar o item por conflito de persistência.",
+    )
     db.refresh(prescription)
     return _views_for_prescriptions(db, [prescription])[0]
 
@@ -508,7 +519,10 @@ def remove_prescription_item(
     prescription.updated_at = _as_utc(now or utc_now())
     db.delete(target)
     db.add(prescription)
-    db.commit()
+    _commit_or_conflict(
+        db,
+        "Não foi possível remover o item por conflito de persistência.",
+    )
     db.refresh(prescription)
     return _views_for_prescriptions(db, [prescription])[0]
 
@@ -532,7 +546,10 @@ def update_prescription_notes(
     prescription.general_notes = clean_notes
     prescription.updated_at = _as_utc(now or utc_now())
     db.add(prescription)
-    db.commit()
+    _commit_or_conflict(
+        db,
+        "Não foi possível atualizar as observações por conflito de persistência.",
+    )
     db.refresh(prescription)
     return _views_for_prescriptions(db, [prescription])[0]
 
@@ -557,11 +574,17 @@ def delete_prescription(
             .with_for_update()
         ).all()
     )
-    for child in children:
-        db.delete(child)
-    db.flush()
-    db.delete(prescription)
-    db.commit()
+    try:
+        for child in children:
+            db.delete(child)
+        db.flush()
+        db.delete(prescription)
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise PrescriptionConflictError(
+            "Não foi possível excluir a Prescrição por conflito de persistência."
+        ) from exc
 
 
 def get_printable_prescription(
