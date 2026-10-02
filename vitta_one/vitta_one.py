@@ -6,6 +6,7 @@ from vitta_one.admin_preview.state import AdminPreviewState
 from vitta_one.appointment_scheduling.state import AdminAvailabilityState, ReceptionAgendaState
 from vitta_one.auth.roles import Role
 from vitta_one.auth.state import AuthState
+from vitta_one.clinical_prescription.state import PrintPrescriptionState
 from vitta_one.models import (
     AuthSession,
     ClinicalCareRecord,
@@ -33,6 +34,7 @@ from vitta_one.ui.pages import (
     finance_page,
     forbidden_page,
     login_page,
+    prescription_print_page,
     reception_page,
     root_page,
 )
@@ -130,6 +132,12 @@ app.add_page(
     route=Role.FINANCEIRO.dashboard_path,
     title="Painel financeiro | Vitta-One",
     on_load=AuthState.load_protected,
+)
+app.add_page(
+    prescription_print_page,
+    route="/medico/prescricao/[prescription_id]",
+    title="Prescrição | Vitta-One",
+    on_load=PrintPrescriptionState.load,
 )
 app.add_page(
     forbidden_page,
