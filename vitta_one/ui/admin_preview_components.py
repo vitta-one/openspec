@@ -745,6 +745,131 @@ def _readonly_clinical_value(label: str, value) -> rx.Component:
     )
 
 
+def _admin_prescription_item(item) -> rx.Component:
+    return rx.box(
+        rx.text(
+            item["medication_or_item"],
+            font_weight="800",
+            size="2",
+            overflow_wrap="anywhere",
+        ),
+        rx.text(
+            item["instructions"],
+            size="2",
+            line_height="1.55",
+            white_space="pre-wrap",
+            overflow_wrap="anywhere",
+            margin_top="0.25rem",
+        ),
+        rx.cond(
+            item["notes"] != "",
+            rx.text(
+                item["notes"],
+                size="1",
+                color="var(--vitta-text-muted)",
+                line_height="1.5",
+                white_space="pre-wrap",
+                overflow_wrap="anywhere",
+                margin_top="0.3rem",
+            ),
+            rx.fragment(),
+        ),
+        class_name="vitta-prescription-item",
+        role="listitem",
+    )
+
+
+def _admin_prescription_document(row) -> rx.Component:
+    return rx.el.details(
+        rx.el.summary(
+            rx.flex(
+                rx.box(
+                    rx.text("Prescrição", font_weight="800", size="2"),
+                    rx.text(
+                        row["created_at"],
+                        size="1",
+                        color="var(--vitta-text-subtle)",
+                        class_name="vitta-tabular",
+                        margin_top="0.1rem",
+                    ),
+                ),
+                rx.badge(
+                    row["item_count"],
+                    " itens",
+                    color_scheme="teal",
+                    variant="soft",
+                ),
+                justify="between",
+                align="center",
+                gap="0.75rem",
+                width="100%",
+            ),
+            class_name="vitta-disclosure-summary",
+        ),
+        rx.vstack(
+            rx.vstack(
+                rx.foreach(row["items"], _admin_prescription_item),
+                spacing="2",
+                align="stretch",
+                width="100%",
+                role="list",
+            ),
+            rx.cond(
+                row["general_notes"] != "",
+                _readonly_clinical_value(
+                    "Observações gerais",
+                    row["general_notes"],
+                ),
+                rx.fragment(),
+            ),
+            spacing="3",
+            align="stretch",
+            width="100%",
+            padding_top="0.7rem",
+        ),
+        class_name="vitta-prescription-history-disclosure",
+    )
+
+
+def _admin_prescriptions_block(row) -> rx.Component:
+    return rx.box(
+        rx.flex(
+            rx.text("Prescrições", font_weight="750", size="2"),
+            rx.cond(
+                row["prescription_count"] > 0,
+                rx.badge(
+                    row["prescription_count"],
+                    color_scheme="teal",
+                    variant="soft",
+                ),
+                rx.fragment(),
+            ),
+            justify="between",
+            align="center",
+            width="100%",
+        ),
+        rx.cond(
+            row["prescription_count"] > 0,
+            rx.vstack(
+                rx.foreach(row["prescriptions"], _admin_prescription_document),
+                spacing="2",
+                align="stretch",
+                width="100%",
+                margin_top="0.65rem",
+            ),
+            rx.text(
+                "Sem prescrições neste atendimento.",
+                size="2",
+                color="var(--vitta-text-subtle)",
+                margin_top="0.5rem",
+            ),
+        ),
+        width="100%",
+        padding_top="0.85rem",
+        border_top="1px solid var(--vitta-border)",
+    )
+
+
 def _admin_clinical_history_card(row) -> rx.Component:
     return rx.box(
         rx.vstack(
@@ -781,6 +906,7 @@ def _admin_clinical_history_card(row) -> rx.Component:
                 gap="0.9rem",
                 width="100%",
             ),
+            _admin_prescriptions_block(row),
             spacing="3",
             align="stretch",
             width="100%",
@@ -1093,16 +1219,22 @@ def _clinical_row(row) -> rx.Component:
         ),
         rx.cond(
             row["has_clinical_record"],
-            rx.grid(
-                _readonly_clinical_value("Queixa principal", row["chief_complaint"]),
-                _readonly_clinical_value("Anamnese", row["anamnesis"]),
-                _readonly_clinical_value("Diagnóstico", row["diagnosis"]),
-                _readonly_clinical_value(
-                    "Conduta e observações",
-                    row["conduct_notes"],
+            rx.vstack(
+                rx.grid(
+                    _readonly_clinical_value("Queixa principal", row["chief_complaint"]),
+                    _readonly_clinical_value("Anamnese", row["anamnesis"]),
+                    _readonly_clinical_value("Diagnóstico", row["diagnosis"]),
+                    _readonly_clinical_value(
+                        "Conduta e observações",
+                        row["conduct_notes"],
+                    ),
+                    columns=rx.breakpoints(initial="1", lg="2"),
+                    gap="0.75rem",
+                    width="100%",
                 ),
-                columns=rx.breakpoints(initial="1", lg="2"),
-                gap="0.75rem",
+                _admin_prescriptions_block(row),
+                spacing="3",
+                align="stretch",
                 width="100%",
                 margin_top="1rem",
             ),
@@ -1129,7 +1261,7 @@ def clinical_preview() -> rx.Component:
         page_header(
             "Médico",
             "Atendimento clínico",
-            "Visualize atendimentos ativos e registros clínicos persistidos em modo local somente leitura.",
+            "Visualize atendimentos ativos, registros clínicos e Prescrições persistidas em modo local somente leitura.",
         ),
         _preview_notice(),
         rx.cond(
