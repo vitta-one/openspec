@@ -15,9 +15,11 @@ from vitta_one.admin_preview.service import (
     require_local_admin_preview,
 )
 from vitta_one.auth.state import AuthState
+from vitta_one.clinical_care.application import admin_preview_patient_history
 from vitta_one.appointment_scheduling.domain import AvailabilitySlotStatus, ConsultationStatus
 from vitta_one.appointment_scheduling.temporal import format_clinic_datetime
 from vitta_one.models import (
+    ClinicalCareRecord,
     Consultation,
     Patient,
     Professional,
@@ -44,6 +46,11 @@ class PreviewQueueRow(TypedDict):
     status_label: str
     entered_at: str
     is_scheduled: bool
+    has_clinical_record: bool
+    chief_complaint: str
+    anamnesis: str
+    diagnosis: str
+    conduct_notes: str
 
 
 class PreviewProfessionalRow(TypedDict):
@@ -73,6 +80,32 @@ class PreviewConsultationRow(TypedDict):
     started_at: str
     completed_at: str
     cancelled_at: str
+
+
+class PreviewClinicalHistoryRow(TypedDict):
+    record_id: int
+    consultation_id: int
+    professional_name: str
+    scheduled_at: str
+    completed_at: str
+    chief_complaint: str
+    anamnesis: str
+    diagnosis: str
+    conduct_notes: str
+
+
+def _serialize_clinical_history_item(item) -> PreviewClinicalHistoryRow:
+    return {
+        "record_id": item.record_id,
+        "consultation_id": item.consultation_id,
+        "professional_name": item.professional_name,
+        "scheduled_at": format_clinic_datetime(item.scheduled_at),
+        "completed_at": format_clinic_datetime(item.completed_at),
+        "chief_complaint": item.chief_complaint,
+        "anamnesis": item.anamnesis,
+        "diagnosis": item.diagnosis,
+        "conduct_notes": item.conduct_notes,
+    }
 
 
 _PRIORITY_LABELS = {
@@ -146,8 +179,13 @@ class AdminPreviewState(rx.State):
     selected_patient_id: int = 0
     selected_patient_name: str = ""
     selected_patient_cpf: str = ""
+    selected_clinical_history: list[PreviewClinicalHistoryRow] = []
+    clinical_history_page: int = 1
+    clinical_history_total_pages: int = 1
+    clinical_history_total_count: int = 0
 
     is_loading: bool = False
+    is_loading_clinical_history: bool = False
     error_message: str = ""
 
     waiting_count: int = 0
@@ -171,6 +209,10 @@ class AdminPreviewState(rx.State):
         self.selected_patient_id = 0
         self.selected_patient_name = ""
         self.selected_patient_cpf = ""
+        self.selected_clinical_history = []
+        self.clinical_history_page = 1
+        self.clinical_history_total_pages = 1
+        self.clinical_history_total_count = 0
         self.waiting_count = 0
         self.attending_count = 0
         self.finalized_count = 0
@@ -236,10 +278,48 @@ class AdminPreviewState(rx.State):
             row for row in self.queue_rows if row["status"] == "EM_ATENDIMENTO"
         ]
 
+    @rx.var
+    def can_previous_clinical_history_page(self) -> bool:
+        return self.clinical_history_page > 1
+
+    @rx.var
+    def can_next_clinical_history_page(self) -> bool:
+        return self.clinical_history_page < self.clinical_history_total_pages
+
+    def _clear_clinical_history(self) -> None:
+        self.selected_clinical_history = []
+        self.clinical_history_page = 1
+        self.clinical_history_total_pages = 1
+        self.clinical_history_total_count = 0
+
     def _clear_patient_selection(self) -> None:
         self.selected_patient_id = 0
         self.selected_patient_name = ""
         self.selected_patient_cpf = ""
+        self._clear_clinical_history()
+
+    def _load_selected_clinical_history_with_token(
+        self,
+        token: str,
+        *,
+        page: int,
+    ) -> None:
+        if not self.selected_patient_id:
+            self._clear_clinical_history()
+            return
+        with rx.session() as db:
+            history = admin_preview_patient_history(
+                db,
+                token=token,
+                patient_id=self.selected_patient_id,
+                page=page,
+            )
+        self.selected_clinical_history = [
+            _serialize_clinical_history_item(item) for item in history.items
+        ]
+        self.clinical_history_page = history.page
+        self.clinical_history_total_pages = history.total_pages
+        self.clinical_history_total_count = history.total_count
 
     @rx.event
     def update_patient_query(self, value: str) -> None:
@@ -254,19 +334,45 @@ class AdminPreviewState(rx.State):
         self._clear_patient_selection()
 
     @rx.event
-    def toggle_patient_selection(
+    async def toggle_patient_selection(
         self,
         patient_id: int,
         name: str,
         cpf_masked: str,
         checked: bool,
-    ) -> None:
-        if checked:
-            self.selected_patient_id = patient_id
-            self.selected_patient_name = name
-            self.selected_patient_cpf = cpf_masked
-        elif self.selected_patient_id == patient_id:
+    ):
+        self.error_message = ""
+        if not checked:
+            if self.selected_patient_id == patient_id:
+                self._clear_patient_selection()
+            return
+
+        self.selected_patient_id = patient_id
+        self.selected_patient_name = name
+        self.selected_patient_cpf = cpf_masked
+        self.is_loading_clinical_history = True
+        self._clear_clinical_history()
+        yield
+        try:
+            token = await self._token()
+            self._load_selected_clinical_history_with_token(token, page=1)
+        except LocalAdminPreviewDisabledError:
             self._clear_patient_selection()
+            yield rx.redirect(Role.ADMINISTRADOR.dashboard_path)
+        except AuthenticationRequiredError:
+            self._clear_patient_selection()
+            yield rx.redirect("/login")
+        except RoleForbiddenError:
+            self._clear_patient_selection()
+            yield rx.redirect("/acesso-negado")
+        except Exception:
+            self._clear_clinical_history()
+            self.error_message = (
+                "Não foi possível carregar o histórico clínico deste paciente agora."
+            )
+        finally:
+            self.is_loading_clinical_history = False
+            yield
 
     @rx.event
     def clear_patient_selection(self) -> None:
@@ -287,6 +393,63 @@ class AdminPreviewState(rx.State):
         if self.patient_page < total_pages:
             self.patient_page += 1
             self._clear_patient_selection()
+
+    @rx.event
+    async def previous_clinical_history_page(self):
+        if not self.selected_patient_id or self.clinical_history_page <= 1:
+            return
+        self.is_loading_clinical_history = True
+        yield
+        try:
+            token = await self._token()
+            self._load_selected_clinical_history_with_token(
+                token,
+                page=self.clinical_history_page - 1,
+            )
+        except LocalAdminPreviewDisabledError:
+            self._clear_patient_selection()
+            yield rx.redirect(Role.ADMINISTRADOR.dashboard_path)
+        except AuthenticationRequiredError:
+            self._clear_patient_selection()
+            yield rx.redirect("/login")
+        except RoleForbiddenError:
+            self._clear_patient_selection()
+            yield rx.redirect("/acesso-negado")
+        except Exception:
+            self.error_message = "Não foi possível atualizar o histórico clínico agora."
+        finally:
+            self.is_loading_clinical_history = False
+            yield
+
+    @rx.event
+    async def next_clinical_history_page(self):
+        if (
+            not self.selected_patient_id
+            or self.clinical_history_page >= self.clinical_history_total_pages
+        ):
+            return
+        self.is_loading_clinical_history = True
+        yield
+        try:
+            token = await self._token()
+            self._load_selected_clinical_history_with_token(
+                token,
+                page=self.clinical_history_page + 1,
+            )
+        except LocalAdminPreviewDisabledError:
+            self._clear_patient_selection()
+            yield rx.redirect(Role.ADMINISTRADOR.dashboard_path)
+        except AuthenticationRequiredError:
+            self._clear_patient_selection()
+            yield rx.redirect("/login")
+        except RoleForbiddenError:
+            self._clear_patient_selection()
+            yield rx.redirect("/acesso-negado")
+        except Exception:
+            self.error_message = "Não foi possível atualizar o histórico clínico agora."
+        finally:
+            self.is_loading_clinical_history = False
+            yield
 
     @rx.event
     async def load(self):
@@ -326,12 +489,24 @@ class AdminPreviewState(rx.State):
                         .limit(80)
                     ).all()
                 )
+                clinical_items = list(
+                    db.exec(
+                        select(ClinicalCareRecord)
+                        .order_by(ClinicalCareRecord.updated_at.desc())
+                        .limit(120)
+                    ).all()
+                )
 
                 patient_by_id = {
                     item.id: item for item in patient_items if item.id is not None
                 }
                 professional_by_id = {
                     item.id: item for item in professional_items if item.id is not None
+                }
+                clinical_by_consultation_id = {
+                    item.consultation_id: item
+                    for item in clinical_items
+                    if item.id is not None
                 }
 
             self.patients = [
@@ -366,6 +541,31 @@ class AdminPreviewState(rx.State):
                         "%d/%m/%Y · %H:%M UTC"
                     ),
                     "is_scheduled": item.consultation_id is not None,
+                    "has_clinical_record": (
+                        item.consultation_id in clinical_by_consultation_id
+                        if item.consultation_id is not None
+                        else False
+                    ),
+                    "chief_complaint": (
+                        clinical_by_consultation_id[item.consultation_id].chief_complaint
+                        if item.consultation_id in clinical_by_consultation_id
+                        else ""
+                    ),
+                    "anamnesis": (
+                        clinical_by_consultation_id[item.consultation_id].anamnesis
+                        if item.consultation_id in clinical_by_consultation_id
+                        else ""
+                    ),
+                    "diagnosis": (
+                        clinical_by_consultation_id[item.consultation_id].diagnosis
+                        if item.consultation_id in clinical_by_consultation_id
+                        else ""
+                    ),
+                    "conduct_notes": (
+                        clinical_by_consultation_id[item.consultation_id].conduct_notes
+                        if item.consultation_id in clinical_by_consultation_id
+                        else ""
+                    ),
                 }
                 for item in queue_items
                 if item.id is not None
@@ -466,6 +666,11 @@ class AdminPreviewState(rx.State):
                 )
             ):
                 self._clear_patient_selection()
+            elif self.selected_patient_id:
+                self._load_selected_clinical_history_with_token(
+                    token,
+                    page=self.clinical_history_page,
+                )
 
         except LocalAdminPreviewDisabledError:
             self._clear()

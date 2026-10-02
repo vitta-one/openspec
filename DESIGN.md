@@ -156,7 +156,8 @@ Mostra estado do sistema, identidade atual e role. Não exibe busca global, unid
 - label sempre visível;
 - validação pertence ao app, não a balões nativos do navegador;
 - inputs preservam geometria em loading/erro;
-- textareas usam `resize: none`;
+- textareas operacionais curtas usam `resize: none`;
+- a variante de texto clínico longo usa `resize: vertical`, altura inicial confortável e limite de altura para não quebrar a página;
 - Select reutiliza o owner acessível Reflex/Radix do projeto;
 - ações destrutivas permanecem separadas das primárias.
 
@@ -170,7 +171,7 @@ Transições de 120–180ms somente em hover, foco e seleção. Sem animação a
 
 ### Content and data visualization
 
-Nunca preencher dashboard, prontuário ou financeiro com conteúdo de demonstração apresentado como real. A Agenda usa apenas slots e Consultas persistidos. Projeções locais usam dados persistidos; módulos futuros mostram estados vazios claros. Prioridade clínica é sempre acompanhada por texto e nunca é inferida pela interface.
+Nunca preencher dashboard, histórico clínico ou financeiro com conteúdo de demonstração apresentado como real. Agenda usa slots/Consultas persistidos; Atendimento e histórico usam somente `ClinicalCareRecord` persistido. Projeções locais usam dados reais; módulos futuros mostram estados vazios claros. Prioridade clínica é sempre acompanhada por texto e nunca é inferida pela interface.
 
 ## Do's and Don'ts
 

@@ -99,7 +99,7 @@ Representa o compromisso clínico agendado entre paciente e profissional em uma 
 Agendada → Confirmada → Em andamento → Concluída
 ```
 
-`Cancelada` é um estado adicional possível antes da conclusão. As regras exatas de transição ainda precisam ser especificadas.
+`Cancelada` é um estado adicional possível antes da conclusão. No fluxo atual, a Recepção confirma a chegada (`AGENDADA → CONFIRMADA`), o Médico responsável inicia o atendimento ao chamar a fila (`CONFIRMADA → EM_ANDAMENTO`) e conclui ao finalizar sua entrada (`EM_ANDAMENTO → CONCLUIDA`).
 
 ### Regras estruturais
 
@@ -125,7 +125,13 @@ Representa as informações produzidas durante o atendimento médico relacionado
 
 ### Regras estruturais
 
-O atendimento deve estar relacionado à consulta e ao paciente correspondentes.
+- o Atendimento clínico é representado por `ClinicalCareRecord`;
+- cada Consulta possui no máximo um Atendimento clínico;
+- o Atendimento deve estar relacionado à Consulta e ao paciente correspondentes;
+- o Médico responsável é persistido no Atendimento;
+- nesta etapa, Atendimento clínico existe somente para Consulta agendada que entrou em `EM_ANDAMENTO`;
+- queixa principal, anamnese, diagnóstico e conduta/observações podem ser preenchidos incrementalmente;
+- após a Consulta `CONCLUIDA`, o Atendimento torna-se somente leitura.
 
 ## 8. Prontuário
 
@@ -137,7 +143,7 @@ Apresentar registros anteriores de forma cronológica para apoiar a compreensão
 
 ### Observação de modelagem
 
-Neste momento, prontuário é um conceito de domínio. A futura modelagem física poderá representá-lo como entidade própria ou como uma visão/agregação de atendimentos, desde que preserve o comportamento especificado.
+No escopo atual, prontuário **não é uma entidade física independente**. Ele é uma projeção paginada e cronológica dos `ClinicalCareRecord` associados a Consultas `CONCLUIDA` do paciente. Evoluções futuras podem ampliar essa visão sem duplicar a fonte de verdade do Atendimento.
 
 ## 9. Diagnóstico
 
@@ -194,8 +200,8 @@ Dashboard não é uma entidade independente do domínio. Ele representa uma proj
 
 1. Não permitir conflito de horário para o mesmo profissional.
 2. Toda consulta deve relacionar paciente, profissional e data/horário.
-3. Todo atendimento deve estar vinculado à consulta e ao paciente correspondentes.
-4. O prontuário deve manter o histórico clínico organizado cronologicamente.
+3. Cada Consulta possui no máximo um Atendimento clínico, vinculado à Consulta, paciente e Médico responsável.
+4. O prontuário deve projetar o histórico clínico concluído de forma cronológica, sem inventar registros.
 5. O acesso funcional é determinado pela role do usuário e pelo painel correspondente.
 6. Pagamentos podem ser associados às consultas.
 7. Dashboards apenas consolidam dados existentes.
@@ -208,8 +214,8 @@ Não definir neste documento:
 - tabelas e colunas PostgreSQL;
 - chaves primárias e estrangeiras;
 - ORM ou estratégia de migração;
-- cardinalidades não confirmadas pelos requisitos;
-- regras detalhadas das transições de consulta;
-- telas e ações exatas de cada painel.
+- cardinalidades ainda não confirmadas pelos requisitos;
+- modelagem de prescrições, exames e pagamentos;
+- telas e ações ainda não especificadas das capabilities futuras.
 
 Esses detalhes devem ser especificados nas changes em que se tornarem necessários.

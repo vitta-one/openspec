@@ -70,8 +70,8 @@ Quando aplicável, uma consulta também pode estar relacionada a um pagamento. U
 
 - um profissional não deve possuir consultas conflitantes no mesmo horário;
 - uma consulta deve relacionar paciente, profissional e data/horário;
-- um atendimento deve estar relacionado à consulta e ao paciente correspondentes;
-- o prontuário deve apresentar o histórico de atendimentos em ordem cronológica;
+- uma Consulta agendada em atendimento possui no máximo um registro clínico vinculado à Consulta, paciente e Médico responsável;
+- o prontuário atual é uma projeção cronológica dos Atendimentos de Consultas concluídas;
 - o dashboard consolida dados existentes e não é uma fonte independente de dados de negócio;
 - cada role deve visualizar apenas as informações e ações compatíveis com sua função;
 - os estados confirmados da consulta são `Agendada`, `Confirmada`, `Em andamento`, `Concluída` e `Cancelada`;
@@ -111,9 +111,12 @@ Não implementar todo o banco, todas as telas ou todos os módulos antecipadamen
 
 Permanecem para refinamento em changes específicas:
 
-- regras exatas de transição entre os estados de consulta;
-- quais atores podem executar cada transição em cada momento;
-- estrutura detalhada de telas e ações de cada painel por role.
+- regras e modelagem de prescrição/receita e assinatura ZapSign;
+- fluxo de exames, resultados e anexos Cloudinary;
+- regras financeiras e integração Asaas;
+- Atendimento clínico para walk-ins sem Consulta;
+- dashboards e demais projeções gerenciais;
+- ações de capabilities futuras que ainda não possuem especificação.
 
 Esses pontos não devem ser preenchidos por suposição.
 

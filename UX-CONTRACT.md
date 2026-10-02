@@ -112,7 +112,7 @@ Regras:
 - Mudar de página limpa a seleção para evitar contexto invisível; busca que elimina o paciente selecionado também limpa a seleção.
 - Cadastro, localização, entrada, reavaliação e retirada continuam exclusivos da Recepção.
 - Chamar/finalizar continua exclusivo do Médico.
-- Agenda usa somente slots e Consultas persistidos. Até as capabilities correspondentes existirem, prontuário, diagnóstico, prescrição e Financeiro não inventam registros, totais ou transições.
+- Agenda usa somente slots e Consultas persistidos. Atendimento clínico e histórico usam somente `ClinicalCareRecord` persistido; prescrição, exames e Financeiro continuam sem dados fictícios até suas capabilities existirem.
 - Botões sem backend real não são renderizados como ações habilitadas.
 
 ## 10. Agenda e disponibilidade
@@ -136,7 +136,23 @@ Regras:
 - O painel Médico identifica a origem “Consulta agendada” e mostra horário/profissional já persistidos, sem antecipar prontuário.
 - O preview local do Admin permanece somente leitura e pode exibir timestamps do lifecycle real.
 
-## 11. Acessibilidade e estabilidade
+## 11. Atendimento clínico e histórico
+
+- O formulário clínico aparece somente quando o Médico possui atendimento ativo originado de Consulta agendada.
+- Walk-in mantém o fluxo operacional atual e não recebe `ClinicalCareRecord` nesta capability.
+- O formulário possui quatro áreas: queixa principal, anamnese, diagnóstico e conduta/observações.
+- Os campos aceitam salvamento parcial e preservam o texto local quando um erro corrigível ocorre.
+- O estado textual **Salvo** / **Alterações não salvas** é a fonte primária de feedback do rascunho.
+- O fluxo normal de **Finalizar atendimento** fica indisponível enquanto houver alterações locais não salvas; o Médico pode salvar ou descartar o rascunho para continuar.
+- Textareas clínicas são a variante longa do formulário: mantêm foco visível e permitem `resize: vertical`; demais textareas do produto preservam o comportamento canônico existente.
+- O histórico clínico é somente leitura, inclui somente Consultas concluídas e usa paginação server-side de 10 registros.
+- O Médico acessa histórico somente no contexto do paciente do atendimento ativo autenticado.
+- Ao finalizar, perder autorização ou encerrar sessão, o State remove formulário e histórico clínico sensível.
+- O Admin QA local pode projetar histórico clínico persistido e Atendimento ativo somente em modo explicitamente habilitado e sem ações de edição.
+- Conteúdo clínico não é colocado em URL, log, mensagem de erro, toast detalhado ou telemetria.
+- Prescrição, exames, anexos, assinatura e financeiro permanecem fora deste fluxo.
+
+## 12. Acessibilidade e estabilidade
 
 - alvo WCAG 2.2 AA;
 - foco visível;

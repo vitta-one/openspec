@@ -8,6 +8,10 @@ from sqlmodel import Session, select
 from vitta_one.appointment_scheduling.domain import ConsultationStatus
 from vitta_one.appointment_scheduling.service import release_reserved_slot
 from vitta_one.models.appointment import Consultation, ProfessionalAvailabilitySlot
+from vitta_one.clinical_care.service import (
+    ClinicalCareConflictError,
+    create_record_for_consultation_start,
+)
 from vitta_one.models.auth import User
 from vitta_one.models.patient_queue import Patient, QueueEntry
 from vitta_one.models.professional import Professional
@@ -162,6 +166,18 @@ def start_linked_consultation(
         )
 
     timestamp = _as_utc(now)
+    try:
+        create_record_for_consultation_start(
+            db,
+            consultation=consultation,
+            doctor_user_id=doctor_user_id,
+            now=timestamp,
+        )
+    except ClinicalCareConflictError as exc:
+        raise CareLifecycleConflictError(
+            "Esta consulta já possui um registro clínico e não pode ser iniciada novamente."
+        ) from exc
+
     consultation.status = ConsultationStatus.EM_ANDAMENTO.value
     consultation.started_at = timestamp
     consultation.updated_at = timestamp

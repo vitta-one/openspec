@@ -19,8 +19,10 @@ from vitta_one.consultation_care.service import (
     CareLifecycleTransitionError,
     confirm_arrival,
 )
+from vitta_one.clinical_care.service import save_active_record
 from vitta_one.models.appointment import Consultation
 from vitta_one.models.auth import User
+from vitta_one.models.clinical_care import ClinicalCareRecord
 from vitta_one.models.patient_queue import QueueEntry
 from vitta_one.patient_queue.service import (
     DoctorAlreadyAttendingError,
@@ -161,3 +163,84 @@ def test_concurrent_claim_keeps_queue_and_consultation_in_sync() -> None:
         assert entry.status == "EM_ATENDIMENTO"
         assert consultation.status == ConsultationStatus.EM_ANDAMENTO.value
         assert consultation.started_at == entry.called_at
+        records = db.exec(
+            select(ClinicalCareRecord).where(
+                ClinicalCareRecord.consultation_id == consultation_id
+            )
+        ).all()
+        assert len(records) == 1
+
+@pytest.mark.skipif(
+    not _DATABASE_URL.startswith("postgresql"),
+    reason="Clinical record locking requires PostgreSQL.",
+)
+def test_concurrent_clinical_saves_are_serialized_without_mixed_payload() -> None:
+    engine = create_engine(_DATABASE_URL, pool_pre_ping=True)
+    doctor_id, consultation_id, base = _seed(engine, "246813579")
+    with Session(engine) as db:
+        entry = confirm_arrival(
+            db,
+            consultation_id=consultation_id,
+            symptoms="Relato para save concorrente",
+            priority="AMARELO",
+            now=base + timedelta(hours=1),
+        )
+        entry_id = entry.id
+        claim_next_patient(
+            db,
+            doctor_user_id=doctor_id,
+            now=base + timedelta(hours=2),
+        )
+
+    payloads = [
+        {
+            "chief_complaint": "Queixa A",
+            "anamnesis": "Anamnese A",
+            "diagnosis": "Diagnóstico A",
+            "conduct_notes": "Conduta A",
+        },
+        {
+            "chief_complaint": "Queixa B",
+            "anamnesis": "Anamnese B",
+            "diagnosis": "Diagnóstico B",
+            "conduct_notes": "Conduta B",
+        },
+    ]
+
+    def save(payload):
+        with Session(engine) as db:
+            item = save_active_record(
+                db,
+                entry_id=entry_id,
+                doctor_user_id=doctor_id,
+                **payload,
+            )
+            return (
+                item.chief_complaint,
+                item.anamnesis,
+                item.diagnosis,
+                item.conduct_notes,
+            )
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(save, payloads))
+
+    assert len(results) == 2
+    allowed = {
+        ("Queixa A", "Anamnese A", "Diagnóstico A", "Conduta A"),
+        ("Queixa B", "Anamnese B", "Diagnóstico B", "Conduta B"),
+    }
+    with Session(engine) as db:
+        record = db.exec(
+            select(ClinicalCareRecord).where(
+                ClinicalCareRecord.consultation_id == consultation_id
+            )
+        ).one()
+        stored = (
+            record.chief_complaint,
+            record.anamnesis,
+            record.diagnosis,
+            record.conduct_notes,
+        )
+        assert stored in allowed
+
