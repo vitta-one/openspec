@@ -4,7 +4,7 @@ Sistema acadêmico de gerenciamento de clínica médica desenvolvido com **Pytho
 
 ## Estado atual
 
-A fundação de acesso, paciente/fila, profissionais/especialidades, agenda, lifecycle da Consulta e o registro clínico básico do Atendimento estão implementados nesta branch. A capability consolidada está em `openspec/specs/patient-reception-queue/`, com a evolução correspondente de `openspec/specs/access-control/`. A autorização continua sendo revalidada no servidor em todas as leituras e mutações protegidas.
+A fundação de acesso, paciente/fila, profissionais/especialidades, agenda, lifecycle da Consulta, registro clínico e Prescrições estruturadas estão implementados nesta branch. A capability consolidada está em `openspec/specs/patient-reception-queue/`, com a evolução correspondente de `openspec/specs/access-control/`. A autorização continua sendo revalidada no servidor em todas as leituras e mutações protegidas.
 
 ## Stack definida
 
@@ -12,7 +12,7 @@ A fundação de acesso, paciente/fila, profissionais/especialidades, agenda, lif
 - Python;
 - PostgreSQL;
 - Cloudinary para anexos de exames;
-- ZapSign em sandbox para assinatura de prescrições;
+- ZapSign em sandbox para assinatura de prescrições (integração planejada; ainda não aplicada nesta capability);
 - Asaas em sandbox para operações financeiras.
 
 ## Estrutura principal
@@ -95,8 +95,8 @@ Com o flag habilitado e uma sessão `ADMINISTRADOR`, o shell local também expõ
 
 - `/admin/recepcao`: projeção da fila persistida;
 - `/admin/agenda`: projeção somente leitura dos slots e Consultas persistidos;
-- `/admin/atendimento`: contexto somente leitura de atendimentos ativos e conteúdo clínico persistido;
-- `/admin/pacientes`: pacientes persistidos + histórico operacional + histórico clínico concluído;
+- `/admin/atendimento`: contexto somente leitura de atendimentos ativos, conteúdo clínico e Prescrições persistidas;
+- `/admin/pacientes`: pacientes persistidos + histórico operacional + histórico clínico concluído com Prescrições;
 - `/admin/financeiro`: estado vazio honesto até a capability financeira existir.
 
 Sem esse flag, as rotas de preview redirecionam para `/admin`.
@@ -132,13 +132,14 @@ reflex compile --dry
 - `/login`: autenticação local, sem cadastro público;
 - `/admin`: gestão de especialidades, profissionais e slots explícitos de disponibilidade;
 - `/recepcao`: agenda de Consultas, confirmação de chegada, cadastro/localização de pacientes, entrada avulsa, reavaliação, retirada e acompanhamento da fila ativa;
-- `/medico`: fila elegível, chamada/finalização atômicas e, para Consulta agendada em andamento, registro de queixa principal, anamnese, diagnóstico, conduta/observações e histórico clínico concluído do paciente;
+- `/medico`: fila elegível, registro clínico, múltiplas Prescrições com itens e histórico concluído do paciente;
+- `/medico/prescricao/[prescription_id]`: visualização protegida e pronta para impressão da Prescrição do Médico autor, sem assinatura digital nesta etapa;
 - `/financeiro`: shell protegido do Financeiro;
 - `/acesso-negado`: estado autenticado para tentativa de acesso a uma role incompatível.
 
 Financeiro ainda permanece shell. Administrador executa a gestão do diretório e Recepção/Médico executam a capability de fila; prioridade é sempre informada pela operação (`VERMELHO`, `AMARELO`, `VERDE`) e nunca é calculada ou elevada automaticamente pelo Vitta-One. A autorização é revalidada no backend e não depende apenas de componentes escondidos no frontend.
 
-Uma Consulta agendada continua fora da fila até a Recepção usar **Confirmar chegada**. Nesse momento ela passa a `CONFIRMADA` e ganha uma QueueEntry `AGUARDANDO`; quando o Médico marcado chama o paciente, Consulta/fila passam atomicamente para `EM_ANDAMENTO`/`EM_ATENDIMENTO` e nasce um único `ClinicalCareRecord`. O Médico pode salvar o registro clínico incrementalmente e consultar o histórico concluído do mesmo paciente; ao finalizar, Consulta/fila passam para `CONCLUIDA`/`FINALIZADO` e o registro torna-se somente leitura. Walk-ins continuam sem Consulta e sem registro clínico nesta etapa.
+Uma Consulta agendada continua fora da fila até a Recepção usar **Confirmar chegada**. Quando o Médico marcado chama o paciente, nasce um único `ClinicalCareRecord`. Durante `EM_ANDAMENTO`, o Médico pode salvar o registro clínico e criar uma ou mais Prescrições com itens. Ao finalizar, Consulta/fila passam para `CONCLUIDA`/`FINALIZADO`; Atendimento e Prescrições tornam-se somente leitura e passam a integrar o histórico. A Prescrição possui visualização HTML/CSS para impressão, mas **a assinatura ZapSign ainda não está implementada**. Walk-ins continuam sem Consulta, registro clínico ou Prescrição nesta etapa.
 
 ## Fluxo de desenvolvimento
 
