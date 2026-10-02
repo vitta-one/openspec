@@ -406,9 +406,15 @@ class AdminPreviewState(rx.State):
                 token,
                 page=self.clinical_history_page - 1,
             )
-        except (LocalAdminPreviewDisabledError, AuthenticationRequiredError, RoleForbiddenError):
+        except LocalAdminPreviewDisabledError:
             self._clear_patient_selection()
             yield rx.redirect(Role.ADMINISTRADOR.dashboard_path)
+        except AuthenticationRequiredError:
+            self._clear_patient_selection()
+            yield rx.redirect("/login")
+        except RoleForbiddenError:
+            self._clear_patient_selection()
+            yield rx.redirect("/acesso-negado")
         except Exception:
             self.error_message = "Não foi possível atualizar o histórico clínico agora."
         finally:
@@ -430,9 +436,15 @@ class AdminPreviewState(rx.State):
                 token,
                 page=self.clinical_history_page + 1,
             )
-        except (LocalAdminPreviewDisabledError, AuthenticationRequiredError, RoleForbiddenError):
+        except LocalAdminPreviewDisabledError:
             self._clear_patient_selection()
             yield rx.redirect(Role.ADMINISTRADOR.dashboard_path)
+        except AuthenticationRequiredError:
+            self._clear_patient_selection()
+            yield rx.redirect("/login")
+        except RoleForbiddenError:
+            self._clear_patient_selection()
+            yield rx.redirect("/acesso-negado")
         except Exception:
             self.error_message = "Não foi possível atualizar o histórico clínico agora."
         finally:
