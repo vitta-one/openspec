@@ -256,29 +256,98 @@ def _preview_slot_row(row) -> rx.Component:
     )
 
 
+def _preview_lifecycle_meta(row) -> rx.Component:
+    return rx.vstack(
+        rx.cond(
+            row["confirmed_at"] != "",
+            rx.text(
+                "Chegada confirmada: ",
+                row["confirmed_at"],
+                size="1",
+                color="var(--vitta-text-subtle)",
+                class_name="vitta-tabular",
+            ),
+            rx.fragment(),
+        ),
+        rx.cond(
+            row["started_at"] != "",
+            rx.text(
+                "Atendimento iniciado: ",
+                row["started_at"],
+                size="1",
+                color="var(--vitta-text-subtle)",
+                class_name="vitta-tabular",
+            ),
+            rx.fragment(),
+        ),
+        rx.cond(
+            row["completed_at"] != "",
+            rx.text(
+                "Concluída: ",
+                row["completed_at"],
+                size="1",
+                color="var(--vitta-text-subtle)",
+                class_name="vitta-tabular",
+            ),
+            rx.fragment(),
+        ),
+        rx.cond(
+            row["cancelled_at"] != "",
+            rx.text(
+                "Cancelada: ",
+                row["cancelled_at"],
+                size="1",
+                color="var(--vitta-text-subtle)",
+                class_name="vitta-tabular",
+            ),
+            rx.fragment(),
+        ),
+        spacing="1",
+        align="start",
+        margin_top="0.4rem",
+    )
+
+
 def _preview_consultation_row(row) -> rx.Component:
     return rx.box(
         rx.flex(
             rx.box(
-                rx.text(row["scheduled_at"], font_weight="750", size="2", class_name="vitta-tabular"),
+                rx.text(
+                    row["scheduled_at"],
+                    font_weight="750",
+                    size="2",
+                    class_name="vitta-tabular",
+                ),
                 rx.text(row["patient_name"], size="2", margin_top="0.2rem"),
-                rx.text(row["professional_name"], size="1", color="var(--vitta-text-muted)", margin_top="0.1rem"),
+                rx.text(
+                    row["professional_name"],
+                    size="1",
+                    color="var(--vitta-text-muted)",
+                    margin_top="0.1rem",
+                ),
+                _preview_lifecycle_meta(row),
             ),
             rx.badge(
                 row["status_label"],
-                color_scheme=rx.cond(row["status"] == "CANCELADA", "red", "blue"),
+                color_scheme=rx.match(
+                    row["status"],
+                    ("CANCELADA", "red"),
+                    ("CONCLUIDA", "green"),
+                    ("EM_ANDAMENTO", "amber"),
+                    ("CONFIRMADA", "teal"),
+                    "blue",
+                ),
                 variant="soft",
             ),
             direction=rx.breakpoints(initial="column", sm="row"),
             justify="between",
-            align=rx.breakpoints(initial="stretch", sm="center"),
+            align=rx.breakpoints(initial="stretch", sm="start"),
             gap="0.6rem",
             width="100%",
         ),
         class_name="vitta-schedule-row",
         role="listitem",
     )
-
 
 def agenda_preview() -> rx.Component:
     """Read-only local QA projection of persisted scheduling data."""

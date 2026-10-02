@@ -4,7 +4,7 @@ Sistema acadêmico de gerenciamento de clínica médica desenvolvido com **Pytho
 
 ## Estado atual
 
-A fundação de acesso, o fluxo de paciente/fila, a gestão administrativa de profissionais/especialidades e a agenda por slots explícitos estão implementados nesta branch. A capability consolidada está em `openspec/specs/patient-reception-queue/`, com a evolução correspondente de `openspec/specs/access-control/`. A autorização continua sendo revalidada no servidor em todas as leituras e mutações protegidas.
+A fundação de acesso, o fluxo de paciente/fila, a gestão administrativa de profissionais/especialidades, a agenda por slots explícitos e o lifecycle Consulta → chegada → atendimento estão implementados nesta branch. A capability consolidada está em `openspec/specs/patient-reception-queue/`, com a evolução correspondente de `openspec/specs/access-control/`. A autorização continua sendo revalidada no servidor em todas as leituras e mutações protegidas.
 
 ## Stack definida
 
@@ -131,12 +131,14 @@ reflex compile --dry
 
 - `/login`: autenticação local, sem cadastro público;
 - `/admin`: gestão de especialidades, profissionais e slots explícitos de disponibilidade;
-- `/recepcao`: agenda de Consultas + cadastro/localização de pacientes, entrada, reavaliação, retirada e acompanhamento da fila ativa;
-- `/medico`: contagem da fila, chamada atômica do próximo paciente e finalização do próprio atendimento ativo;
+- `/recepcao`: agenda de Consultas, confirmação de chegada, cadastro/localização de pacientes, entrada avulsa, reavaliação, retirada e acompanhamento da fila ativa;
+- `/medico`: fila elegível do Médico, chamada atômica do próximo paciente e finalização do próprio atendimento; Consulta agendada vinculada transiciona junto com a fila;
 - `/financeiro`: shell protegido do Financeiro;
 - `/acesso-negado`: estado autenticado para tentativa de acesso a uma role incompatível.
 
 Financeiro ainda permanece shell. Administrador executa a gestão do diretório e Recepção/Médico executam a capability de fila; prioridade é sempre informada pela operação (`VERMELHO`, `AMARELO`, `VERDE`) e nunca é calculada ou elevada automaticamente pelo Vitta-One. A autorização é revalidada no backend e não depende apenas de componentes escondidos no frontend.
+
+Uma Consulta agendada continua fora da fila até a Recepção usar **Confirmar chegada**. Nesse momento ela passa a `CONFIRMADA` e ganha uma QueueEntry `AGUARDANDO`; quando o Médico marcado chama o paciente, Consulta/fila passam atomicamente para `EM_ANDAMENTO`/`EM_ATENDIMENTO`; ao finalizar, passam para `CONCLUIDA`/`FINALIZADO`. Walk-ins continuam sem Consulta vinculada.
 
 ## Fluxo de desenvolvimento
 

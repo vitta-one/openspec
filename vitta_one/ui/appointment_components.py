@@ -5,6 +5,7 @@ import reflex as rx
 from vitta_one.appointment_scheduling.domain import AvailabilitySlotStatus, ConsultationStatus
 from vitta_one.appointment_scheduling.state import AdminAvailabilityState, ReceptionAgendaState
 from vitta_one.ui.components import empty_state, feedback_region, field_label, section_panel
+from vitta_one.ui.queue_components import priority_select
 
 
 def _professional_select(
@@ -52,12 +53,30 @@ def _slot_status_badge(status, label) -> rx.Component:
 
 
 def _consultation_status_badge(status, label) -> rx.Component:
-    return rx.cond(
-        status == ConsultationStatus.CANCELADA.value,
-        rx.badge(label, color_scheme="red", variant="soft", high_contrast=True),
-        rx.badge(label, color_scheme="blue", variant="soft", high_contrast=True),
+    return rx.match(
+        status,
+        (
+            ConsultationStatus.AGENDADA.value,
+            rx.badge(label, color_scheme="blue", variant="soft", high_contrast=True),
+        ),
+        (
+            ConsultationStatus.CONFIRMADA.value,
+            rx.badge(label, color_scheme="teal", variant="soft", high_contrast=True),
+        ),
+        (
+            ConsultationStatus.EM_ANDAMENTO.value,
+            rx.badge(label, color_scheme="amber", variant="soft", high_contrast=True),
+        ),
+        (
+            ConsultationStatus.CONCLUIDA.value,
+            rx.badge(label, color_scheme="green", variant="soft", high_contrast=True),
+        ),
+        (
+            ConsultationStatus.CANCELADA.value,
+            rx.badge(label, color_scheme="red", variant="soft", high_contrast=True),
+        ),
+        rx.badge(label, color_scheme="gray", variant="soft"),
     )
-
 
 def _admin_slot_row(row) -> rx.Component:
     return rx.box(
@@ -288,49 +307,102 @@ def _available_slot_row(row) -> rx.Component:
     )
 
 
+def _consultation_actions(row) -> rx.Component:
+    return rx.match(
+        row["status"],
+        (
+            ConsultationStatus.AGENDADA.value,
+            rx.hstack(
+                rx.button(
+                    "Confirmar chegada",
+                    type="button",
+                    color_scheme="teal",
+                    high_contrast=True,
+                    size="2",
+                    on_click=ReceptionAgendaState.begin_arrival(
+                        row["id"],
+                        row["patient_name"],
+                        row["professional_name"],
+                        row["scheduled_at"],
+                    ),
+                    disabled=ReceptionAgendaState.is_submitting,
+                ),
+                rx.button(
+                    "Reagendar",
+                    type="button",
+                    variant="outline",
+                    color_scheme="teal",
+                    size="2",
+                    on_click=ReceptionAgendaState.begin_reschedule(
+                        row["id"], row["patient_name"]
+                    ),
+                    disabled=ReceptionAgendaState.is_submitting,
+                ),
+                rx.button(
+                    "Cancelar",
+                    type="button",
+                    variant="ghost",
+                    color_scheme="red",
+                    size="2",
+                    on_click=ReceptionAgendaState.begin_cancel(
+                        row["id"], row["patient_name"], row["scheduled_at"]
+                    ),
+                    disabled=ReceptionAgendaState.is_submitting,
+                ),
+                spacing="2",
+                align="center",
+                flex_wrap="wrap",
+            ),
+        ),
+        (
+            ConsultationStatus.CONFIRMADA.value,
+            rx.hstack(
+                rx.icon("users", size=15),
+                rx.text("Paciente na fila", size="1", font_weight="700"),
+                spacing="2",
+                align="center",
+                color="var(--vitta-primary)",
+            ),
+        ),
+        (
+            ConsultationStatus.EM_ANDAMENTO.value,
+            rx.hstack(
+                rx.icon("stethoscope", size=15),
+                rx.text("Atendimento em andamento", size="1", font_weight="700"),
+                spacing="2",
+                align="center",
+                color="var(--vitta-warning)",
+            ),
+        ),
+        rx.text("Somente histórico", size="1", color="var(--vitta-text-subtle)"),
+    )
+
+
 def _consultation_row(row) -> rx.Component:
     return rx.box(
         rx.flex(
             rx.box(
                 rx.hstack(
-                    rx.text(row["scheduled_at"], font_weight="750", size="2", class_name="vitta-tabular"),
+                    rx.text(
+                        row["scheduled_at"],
+                        font_weight="750",
+                        size="2",
+                        class_name="vitta-tabular",
+                    ),
                     _consultation_status_badge(row["status"], row["status_label"]),
                     spacing="2",
                     align="center",
                     flex_wrap="wrap",
                 ),
                 rx.text(row["patient_name"], size="2", margin_top="0.35rem"),
-                rx.text(row["professional_name"], size="1", color="var(--vitta-text-muted)", margin_top="0.15rem"),
-            ),
-            rx.cond(
-                row["status"] == ConsultationStatus.AGENDADA.value,
-                rx.hstack(
-                    rx.button(
-                        "Reagendar",
-                        type="button",
-                        variant="outline",
-                        color_scheme="teal",
-                        size="2",
-                        on_click=ReceptionAgendaState.begin_reschedule(row["id"], row["patient_name"]),
-                        disabled=ReceptionAgendaState.is_submitting,
-                    ),
-                    rx.button(
-                        "Cancelar",
-                        type="button",
-                        variant="ghost",
-                        color_scheme="red",
-                        size="2",
-                        on_click=ReceptionAgendaState.begin_cancel(
-                            row["id"], row["patient_name"], row["scheduled_at"]
-                        ),
-                        disabled=ReceptionAgendaState.is_submitting,
-                    ),
-                    spacing="2",
-                    align="center",
-                    flex_wrap="wrap",
+                rx.text(
+                    row["professional_name"],
+                    size="1",
+                    color="var(--vitta-text-muted)",
+                    margin_top="0.15rem",
                 ),
-                rx.text("Somente histórico", size="1", color="var(--vitta-text-subtle)"),
             ),
+            _consultation_actions(row),
             direction=rx.breakpoints(initial="column", md="row"),
             align=rx.breakpoints(initial="stretch", md="center"),
             justify="between",
@@ -341,6 +413,120 @@ def _consultation_row(row) -> rx.Component:
         role="listitem",
     )
 
+
+def _arrival_dialog() -> rx.Component:
+    return rx.dialog.root(
+        rx.dialog.content(
+            rx.dialog.title("Confirmar chegada"),
+            rx.dialog.description(
+                "Confirme que o paciente chegou à clínica. Informe somente o relato recebido e a prioridade definida pela operação.",
+                margin_top="0.35rem",
+                margin_bottom="1rem",
+            ),
+            rx.box(
+                rx.text(
+                    ReceptionAgendaState.arrival_patient_name,
+                    font_weight="800",
+                    size="3",
+                ),
+                rx.text(
+                    ReceptionAgendaState.arrival_professional_name,
+                    size="2",
+                    color="var(--vitta-text-muted)",
+                    margin_top="0.2rem",
+                ),
+                rx.text(
+                    ReceptionAgendaState.arrival_scheduled_at,
+                    size="1",
+                    color="var(--vitta-text-subtle)",
+                    class_name="vitta-tabular",
+                    margin_top="0.15rem",
+                ),
+                class_name="vitta-info-strip",
+                margin_bottom="1rem",
+            ),
+            rx.el.form(
+                rx.vstack(
+                    rx.box(
+                        field_label("Sintomas relatados", "arrival-symptoms"),
+                        rx.el.textarea(
+                            id="arrival-symptoms",
+                            name="symptoms",
+                            required=True,
+                            max_length=4000,
+                            rows=4,
+                            value=ReceptionAgendaState.arrival_symptoms,
+                            on_change=ReceptionAgendaState.update_arrival_symptoms,
+                            class_name="vitta-textarea",
+                            aria_describedby="arrival-help",
+                            margin_top="0.4rem",
+                            auto_focus=True,
+                        ),
+                        rx.text(
+                            "Registre o relato recebido. O Vitta-One não infere sintomas nem gravidade clínica.",
+                            id="arrival-help",
+                            size="1",
+                            color="var(--vitta-text-muted)",
+                            line_height="1.45",
+                            margin_top="0.35rem",
+                        ),
+                        width="100%",
+                    ),
+                    rx.box(
+                        field_label("Prioridade informada", "arrival-priority"),
+                        priority_select(
+                            name="priority",
+                            control_id="arrival-priority",
+                            value=ReceptionAgendaState.arrival_priority,
+                            on_change=ReceptionAgendaState.update_arrival_priority,
+                            described_by="arrival-priority-help",
+                            disabled=ReceptionAgendaState.is_submitting,
+                        ),
+                        rx.text(
+                            "Escolha exatamente a classificação recebida: Vermelho, Amarelo ou Verde.",
+                            id="arrival-priority-help",
+                            size="1",
+                            color="var(--vitta-text-muted)",
+                            margin_top="0.4rem",
+                        ),
+                        width="100%",
+                    ),
+                    rx.flex(
+                        rx.dialog.close(
+                            rx.button(
+                                "Voltar",
+                                type="button",
+                                variant="ghost",
+                                disabled=ReceptionAgendaState.is_submitting,
+                            )
+                        ),
+                        rx.button(
+                            "Confirmar chegada",
+                            type="submit",
+                            color_scheme="teal",
+                            high_contrast=True,
+                            disabled=ReceptionAgendaState.is_submitting,
+                            loading=ReceptionAgendaState.is_submitting,
+                        ),
+                        justify="end",
+                        gap="0.5rem",
+                        direction=rx.breakpoints(initial="column-reverse", sm="row"),
+                        width="100%",
+                    ),
+                    spacing="4",
+                    align="stretch",
+                    width="100%",
+                ),
+                on_submit=ReceptionAgendaState.confirm_arrival,
+                no_validate=True,
+                width="100%",
+            ),
+            class_name="vitta-dialog-content",
+            max_width="38rem",
+        ),
+        open=ReceptionAgendaState.arrival_dialog_open,
+        on_open_change=ReceptionAgendaState.set_arrival_dialog_open,
+    )
 
 def _reschedule_dialog() -> rx.Component:
     return rx.dialog.root(
@@ -647,6 +833,7 @@ def reception_agenda_panel() -> rx.Component:
                     align_items="start",
                 ),
             ),
+            _arrival_dialog(),
             _reschedule_dialog(),
             _cancel_dialog(),
             spacing="4",

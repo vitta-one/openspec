@@ -127,7 +127,14 @@ Regras:
 - Estados de slot e Consulta aparecem em texto; cor é apenas sinal secundário.
 - Filtros e tarefas principais retornam a uma coluna em tela estreita, sem exigir rolagem horizontal.
 - Horários são recebidos/exibidos no timezone IANA configurado da clínica e persistidos em UTC.
-- A fila operacional continua independente da agenda até uma change futura definir integração entre chegada e Consulta.
+- A ação **Confirmar chegada** existe somente para Consulta `AGENDADA` e representa chegada presencial confirmada pela Recepção; não representa confirmação antecipada por mensagem.
+- Confirmar chegada solicita sintomas + prioridade informados manualmente e cria a entrada de fila vinculada sem trocar o paciente da Consulta.
+- Consulta `CONFIRMADA` aparece como paciente já colocado na fila; reagendamento/cancelamento direto da Agenda deixam de ser ações válidas após essa etapa.
+- Consulta agendada na fila é elegível somente ao Médico vinculado ao profissional marcado; atendimentos avulsos continuam seguindo a fila compartilhada.
+- Ao Médico chamar uma Consulta confirmada, a UI passa a refletir `EM_ANDAMENTO`; ao finalizar, `CONCLUIDA`.
+- Retirar da fila uma Consulta confirmada cancela a Consulta e preserva o histórico; retirar walk-in não altera Agenda.
+- O painel Médico identifica a origem “Consulta agendada” e mostra horário/profissional já persistidos, sem antecipar prontuário.
+- O preview local do Admin permanece somente leitura e pode exibir timestamps do lifecycle real.
 
 ## 11. Acessibilidade e estabilidade
 

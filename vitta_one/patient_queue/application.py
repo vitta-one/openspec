@@ -79,8 +79,8 @@ def reception_withdraw(
 
 
 def doctor_waiting_count(db: Session, *, token: str) -> int:
-    require_role(db, token, Role.MEDICO)
-    return count_waiting_queue(db)
+    identity = require_role(db, token, Role.MEDICO)
+    return count_waiting_queue(db, doctor_user_id=identity.id)
 
 
 def doctor_active_queue_entry(db: Session, *, token: str) -> QueueItem | None:

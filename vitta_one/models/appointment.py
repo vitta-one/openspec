@@ -106,6 +106,18 @@ class Consultation(rx.Model, table=True):
         default=ConsultationStatus.AGENDADA.value,
         sa_column=Column(String(20), nullable=False, index=True),
     )
+    confirmed_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+    started_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+    completed_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
     cancelled_at: datetime | None = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), nullable=True),

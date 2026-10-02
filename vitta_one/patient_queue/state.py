@@ -4,6 +4,7 @@ from typing import TypedDict
 
 import reflex as rx
 
+from vitta_one.appointment_scheduling.temporal import format_clinic_datetime
 from vitta_one.auth.authorization import AuthenticationRequiredError, RoleForbiddenError
 from vitta_one.auth.state import AuthState
 from vitta_one.patient_queue.application import (
@@ -59,6 +60,9 @@ class QueueRow(TypedDict):
     priority: str
     priority_label: str
     entered_at: str
+    is_scheduled: bool
+    scheduled_at: str
+    professional_name: str
 
 
 def _serialize_queue_item(item) -> QueueRow:
@@ -69,6 +73,11 @@ def _serialize_queue_item(item) -> QueueRow:
         "priority": item.priority.value,
         "priority_label": item.priority.label,
         "entered_at": item.entered_at.strftime("%H:%M UTC"),
+        "is_scheduled": item.consultation_id is not None,
+        "scheduled_at": (
+            format_clinic_datetime(item.scheduled_at) if item.scheduled_at else ""
+        ),
+        "professional_name": item.professional_name or "",
     }
 
 
@@ -90,6 +99,7 @@ class ReceptionQueueState(rx.State):
 
     withdraw_entry_id: int = 0
     withdraw_patient_name: str = ""
+    withdraw_is_scheduled: bool = False
 
     @rx.var
     def has_queue(self) -> bool:
@@ -112,6 +122,7 @@ class ReceptionQueueState(rx.State):
     def _reset_withdraw(self) -> None:
         self.withdraw_entry_id = 0
         self.withdraw_patient_name = ""
+        self.withdraw_is_scheduled = False
 
     def _clear_sensitive_view(self) -> None:
         self.queue_rows = []
@@ -324,11 +335,17 @@ class ReceptionQueueState(rx.State):
             yield
 
     @rx.event
-    def begin_withdraw(self, entry_id: int, patient_name: str) -> None:
+    def begin_withdraw(
+        self,
+        entry_id: int,
+        patient_name: str,
+        is_scheduled: bool,
+    ) -> None:
         self._clear_feedback()
         self._reset_reassess()
         self.withdraw_entry_id = entry_id
         self.withdraw_patient_name = patient_name
+        self.withdraw_is_scheduled = is_scheduled
 
     @rx.event
     def cancel_withdraw(self) -> None:
@@ -352,6 +369,10 @@ class ReceptionQueueState(rx.State):
                     reason=str(form_data.get("reason", "")),
                 )
             self._load_queue_with_token(token)
+            from vitta_one.appointment_scheduling.state import ReceptionAgendaState
+
+            agenda_state = await self.get_state(ReceptionAgendaState)
+            agenda_state._load_with_token(token)
             self._reset_withdraw()
             self.success_message = "Paciente retirado da fila; o histórico foi preservado."
         except (QueueValidationError, QueueTransitionError) as exc:
@@ -379,6 +400,9 @@ class DoctorQueueState(rx.State):
     active_priority: str = ""
     active_priority_label: str = ""
     active_called_at: str = ""
+    active_is_scheduled: bool = False
+    active_scheduled_at: str = ""
+    active_professional_name: str = ""
     is_loading: bool = False
     is_submitting: bool = False
     error_message: str = ""
@@ -400,6 +424,9 @@ class DoctorQueueState(rx.State):
         self.active_priority = ""
         self.active_priority_label = ""
         self.active_called_at = ""
+        self.active_is_scheduled = False
+        self.active_scheduled_at = ""
+        self.active_professional_name = ""
 
     def _set_active(self, item) -> None:
         if item is None:
@@ -414,6 +441,11 @@ class DoctorQueueState(rx.State):
         self.active_called_at = (
             item.called_at.strftime("%H:%M UTC") if item.called_at else ""
         )
+        self.active_is_scheduled = item.consultation_id is not None
+        self.active_scheduled_at = (
+            format_clinic_datetime(item.scheduled_at) if item.scheduled_at else ""
+        )
+        self.active_professional_name = item.professional_name or ""
 
     def _load_with_token(self, token: str) -> None:
         with rx.session() as db:
@@ -468,7 +500,11 @@ class DoctorQueueState(rx.State):
         except QueueEmptyError:
             self.error_message = "Não há pacientes aguardando neste momento."
             self.waiting_count = 0
-        except DoctorAlreadyAttendingError as exc:
+        except (
+            DoctorAlreadyAttendingError,
+            QueueTransitionError,
+            QueueOwnershipError,
+        ) as exc:
             self.error_message = str(exc)
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
