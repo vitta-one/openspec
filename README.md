@@ -4,7 +4,7 @@ Sistema acadêmico de gerenciamento de clínica médica desenvolvido com **Pytho
 
 ## Estado atual
 
-A fundação de acesso, o fluxo de paciente/fila, a gestão administrativa de profissionais/especialidades, a agenda por slots explícitos e o lifecycle Consulta → chegada → atendimento estão implementados nesta branch. A capability consolidada está em `openspec/specs/patient-reception-queue/`, com a evolução correspondente de `openspec/specs/access-control/`. A autorização continua sendo revalidada no servidor em todas as leituras e mutações protegidas.
+A fundação de acesso, paciente/fila, profissionais/especialidades, agenda, lifecycle da Consulta e o registro clínico básico do Atendimento estão implementados nesta branch. A capability consolidada está em `openspec/specs/patient-reception-queue/`, com a evolução correspondente de `openspec/specs/access-control/`. A autorização continua sendo revalidada no servidor em todas as leituras e mutações protegidas.
 
 ## Stack definida
 
@@ -95,8 +95,8 @@ Com o flag habilitado e uma sessão `ADMINISTRADOR`, o shell local também expõ
 
 - `/admin/recepcao`: projeção da fila persistida;
 - `/admin/agenda`: projeção somente leitura dos slots e Consultas persistidos;
-- `/admin/atendimento`: contexto somente leitura de atendimentos operacionais ativos;
-- `/admin/pacientes`: pacientes persistidos + histórico operacional;
+- `/admin/atendimento`: contexto somente leitura de atendimentos ativos e conteúdo clínico persistido;
+- `/admin/pacientes`: pacientes persistidos + histórico operacional + histórico clínico concluído;
 - `/admin/financeiro`: estado vazio honesto até a capability financeira existir.
 
 Sem esse flag, as rotas de preview redirecionam para `/admin`.
@@ -132,13 +132,13 @@ reflex compile --dry
 - `/login`: autenticação local, sem cadastro público;
 - `/admin`: gestão de especialidades, profissionais e slots explícitos de disponibilidade;
 - `/recepcao`: agenda de Consultas, confirmação de chegada, cadastro/localização de pacientes, entrada avulsa, reavaliação, retirada e acompanhamento da fila ativa;
-- `/medico`: fila elegível do Médico, chamada atômica do próximo paciente e finalização do próprio atendimento; Consulta agendada vinculada transiciona junto com a fila;
+- `/medico`: fila elegível, chamada/finalização atômicas e, para Consulta agendada em andamento, registro de queixa principal, anamnese, diagnóstico, conduta/observações e histórico clínico concluído do paciente;
 - `/financeiro`: shell protegido do Financeiro;
 - `/acesso-negado`: estado autenticado para tentativa de acesso a uma role incompatível.
 
 Financeiro ainda permanece shell. Administrador executa a gestão do diretório e Recepção/Médico executam a capability de fila; prioridade é sempre informada pela operação (`VERMELHO`, `AMARELO`, `VERDE`) e nunca é calculada ou elevada automaticamente pelo Vitta-One. A autorização é revalidada no backend e não depende apenas de componentes escondidos no frontend.
 
-Uma Consulta agendada continua fora da fila até a Recepção usar **Confirmar chegada**. Nesse momento ela passa a `CONFIRMADA` e ganha uma QueueEntry `AGUARDANDO`; quando o Médico marcado chama o paciente, Consulta/fila passam atomicamente para `EM_ANDAMENTO`/`EM_ATENDIMENTO`; ao finalizar, passam para `CONCLUIDA`/`FINALIZADO`. Walk-ins continuam sem Consulta vinculada.
+Uma Consulta agendada continua fora da fila até a Recepção usar **Confirmar chegada**. Nesse momento ela passa a `CONFIRMADA` e ganha uma QueueEntry `AGUARDANDO`; quando o Médico marcado chama o paciente, Consulta/fila passam atomicamente para `EM_ANDAMENTO`/`EM_ATENDIMENTO` e nasce um único `ClinicalCareRecord`. O Médico pode salvar o registro clínico incrementalmente e consultar o histórico concluído do mesmo paciente; ao finalizar, Consulta/fila passam para `CONCLUIDA`/`FINALIZADO` e o registro torna-se somente leitura. Walk-ins continuam sem Consulta e sem registro clínico nesta etapa.
 
 ## Fluxo de desenvolvimento
 
