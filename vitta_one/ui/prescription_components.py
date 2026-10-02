@@ -5,6 +5,8 @@ import reflex as rx
 from vitta_one.clinical_prescription.state import PrintPrescriptionState
 from vitta_one.ui.components import brand_logo, loading_surface
 
+NO_DIGITAL_SIGNATURE_NOTICE = "Documento sem assinatura digital nesta etapa."
+
 
 def _print_item(item) -> rx.Component:
     return rx.box(
@@ -120,7 +122,7 @@ def _print_document() -> rx.Component:
         rx.box(
             rx.icon("shield_alert", size=18),
             rx.text(
-                "Documento sem assinatura digital nesta etapa.",
+                NO_DIGITAL_SIGNATURE_NOTICE,
                 font_weight="750",
                 size="2",
             ),
