@@ -8,6 +8,7 @@ from sqlmodel import Session, SQLModel, create_engine, select
 
 from vitta_one.appointment_scheduling.domain import ConsultationStatus
 from vitta_one.appointment_scheduling.service import create_availability_slot, schedule_consultation
+from vitta_one.appointment_scheduling.temporal import ensure_utc
 from vitta_one.auth.roles import Role
 from vitta_one.clinical_care.service import list_history_for_active_entry
 from vitta_one.clinical_prescription.service import (
@@ -445,7 +446,7 @@ def test_completed_consultation_makes_prescription_immutable_but_printable(
     assert printable.professional_name == professional.name
     assert printable.registration_identifier == professional.registration_identifier
     assert printable.prescription.id == created.id
-    assert printable.scheduled_at == consultation.scheduled_at
+    assert printable.scheduled_at == ensure_utc(consultation.scheduled_at)
 
 
 @pytest.mark.parametrize(
