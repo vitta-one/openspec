@@ -27,7 +27,7 @@ class PrintPrescriptionState(rx.State):
     is_loading: bool = False
     loaded: bool = False
     error_message: str = ""
-    prescription_id: int = 0
+    loaded_prescription_id: int = 0
     patient_name: str = ""
     professional_name: str = ""
     registration_identifier: str = ""
@@ -38,7 +38,7 @@ class PrintPrescriptionState(rx.State):
     def _clear(self) -> None:
         self.loaded = False
         self.error_message = ""
-        self.prescription_id = 0
+        self.loaded_prescription_id = 0
         self.patient_name = ""
         self.professional_name = ""
         self.registration_identifier = ""
@@ -63,7 +63,7 @@ class PrintPrescriptionState(rx.State):
                     token=auth.session_token,
                     prescription_id=prescription_id,
                 )
-            self.prescription_id = prescription_id
+            self.loaded_prescription_id = prescription_id
             self.patient_name = view.patient_name
             self.professional_name = view.professional_name
             self.registration_identifier = view.registration_identifier
