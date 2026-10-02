@@ -11,6 +11,8 @@ from vitta_one.models import (
     ClinicalCareRecord,
     Consultation,
     Patient,
+    Prescription,
+    PrescriptionItem,
     Professional,
     ProfessionalAvailabilitySlot,
     ProfessionalSpecialty,
@@ -48,6 +50,8 @@ _PERSISTENT_MODELS = (
     ProfessionalSpecialty,
     Consultation,
     ClinicalCareRecord,
+    Prescription,
+    PrescriptionItem,
 )
 
 app = rx.App(
