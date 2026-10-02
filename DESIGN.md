@@ -91,6 +91,7 @@ A base é fria e discreta para reduzir fadiga. O canvas `#F7F8FC` separa a pági
 Semântica operacional:
 
 - **Informação / Agendada:** `#0284C7` sobre `#F0F9FF`.
+- **Chegada confirmada / Na fila:** teal primário `#0F766E` sobre `#E8F5F3`.
 - **Atenção / Em andamento:** `#D97706` sobre `#FFFBEB`.
 - **Sucesso / Concluída:** `#059669` sobre `#ECFDF5`.
 - **Perigo / Cancelada, falha ou ação destrutiva:** `#E11D48` sobre `#FFF1F2`.
