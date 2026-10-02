@@ -716,13 +716,201 @@ def _patient_selection_bar() -> rx.Component:
     )
 
 
+def _readonly_clinical_value(label: str, value) -> rx.Component:
+    return rx.box(
+        rx.text(
+            label,
+            size="1",
+            font_weight="750",
+            color="var(--vitta-text-muted)",
+        ),
+        rx.cond(
+            value != "",
+            rx.text(
+                value,
+                size="2",
+                line_height="1.6",
+                white_space="pre-wrap",
+                overflow_wrap="anywhere",
+                margin_top="0.25rem",
+            ),
+            rx.text(
+                "Não registrado",
+                size="2",
+                color="var(--vitta-text-subtle)",
+                margin_top="0.25rem",
+            ),
+        ),
+        width="100%",
+    )
+
+
+def _admin_clinical_history_card(row) -> rx.Component:
+    return rx.box(
+        rx.vstack(
+            rx.flex(
+                rx.box(
+                    rx.text(row["completed_at"], size="2", font_weight="800"),
+                    rx.text(
+                        row["professional_name"],
+                        size="1",
+                        color="var(--vitta-text-muted)",
+                        margin_top="0.15rem",
+                    ),
+                ),
+                rx.badge(
+                    "Concluído",
+                    color_scheme="green",
+                    variant="soft",
+                    high_contrast=True,
+                ),
+                justify="between",
+                align="start",
+                gap="0.75rem",
+                width="100%",
+            ),
+            rx.grid(
+                _readonly_clinical_value("Queixa principal", row["chief_complaint"]),
+                _readonly_clinical_value("Anamnese", row["anamnesis"]),
+                _readonly_clinical_value("Diagnóstico", row["diagnosis"]),
+                _readonly_clinical_value(
+                    "Conduta e observações",
+                    row["conduct_notes"],
+                ),
+                columns=rx.breakpoints(initial="1", lg="2"),
+                gap="0.9rem",
+                width="100%",
+            ),
+            spacing="3",
+            align="stretch",
+            width="100%",
+        ),
+        class_name="vitta-clinical-history-card",
+        role="listitem",
+    )
+
+
+def _admin_clinical_history_panel() -> rx.Component:
+    return rx.box(
+        rx.flex(
+            rx.box(
+                rx.text("Histórico clínico", font_weight="750", size="2"),
+                rx.text(
+                    "Projeção local de QA · somente atendimentos concluídos",
+                    size="1",
+                    color="var(--vitta-text-subtle)",
+                    margin_top="0.15rem",
+                ),
+            ),
+            rx.cond(
+                AdminPreviewState.clinical_history_total_count > 0,
+                rx.badge(
+                    AdminPreviewState.clinical_history_total_count,
+                    " registros",
+                    color_scheme="gray",
+                    variant="soft",
+                ),
+                rx.fragment(),
+            ),
+            direction=rx.breakpoints(initial="column", sm="row"),
+            justify="between",
+            align=rx.breakpoints(initial="stretch", sm="start"),
+            gap="0.5rem",
+            width="100%",
+        ),
+        rx.cond(
+            AdminPreviewState.is_loading_clinical_history,
+            rx.center(
+                rx.vstack(
+                    rx.spinner(size="3"),
+                    rx.text(
+                        "Carregando histórico clínico…",
+                        size="2",
+                        color="var(--vitta-text-muted)",
+                    ),
+                    spacing="2",
+                    align="center",
+                ),
+                min_height="7rem",
+                width="100%",
+                role="status",
+                aria_live="polite",
+            ),
+            rx.cond(
+                AdminPreviewState.selected_clinical_history.length() > 0,
+                rx.vstack(
+                    rx.vstack(
+                        rx.foreach(
+                            AdminPreviewState.selected_clinical_history,
+                            _admin_clinical_history_card,
+                        ),
+                        spacing="3",
+                        align="stretch",
+                        width="100%",
+                        role="list",
+                    ),
+                    rx.flex(
+                        rx.text(
+                            "Página ",
+                            AdminPreviewState.clinical_history_page,
+                            " de ",
+                            AdminPreviewState.clinical_history_total_pages,
+                            size="1",
+                            color="var(--vitta-text-muted)",
+                        ),
+                        rx.hstack(
+                            rx.button(
+                                "Anterior",
+                                type="button",
+                                variant="outline",
+                                color_scheme="gray",
+                                size="2",
+                                on_click=AdminPreviewState.previous_clinical_history_page,
+                                disabled=~AdminPreviewState.can_previous_clinical_history_page
+                                | AdminPreviewState.is_loading_clinical_history,
+                            ),
+                            rx.button(
+                                "Próxima",
+                                type="button",
+                                variant="outline",
+                                color_scheme="gray",
+                                size="2",
+                                on_click=AdminPreviewState.next_clinical_history_page,
+                                disabled=~AdminPreviewState.can_next_clinical_history_page
+                                | AdminPreviewState.is_loading_clinical_history,
+                            ),
+                            spacing="2",
+                        ),
+                        direction=rx.breakpoints(initial="column", sm="row"),
+                        justify="between",
+                        align=rx.breakpoints(initial="stretch", sm="center"),
+                        gap="0.6rem",
+                        width="100%",
+                    ),
+                    spacing="3",
+                    align="stretch",
+                    width="100%",
+                    margin_top="0.8rem",
+                ),
+                empty_state(
+                    "file_text",
+                    "Sem histórico clínico concluído",
+                    "Este paciente ainda não possui Atendimento clínico persistido em Consulta concluída.",
+                ),
+            ),
+        ),
+        margin_top="0.9rem",
+        width="100%",
+    )
+
+
 def patients_preview() -> rx.Component:
-    """Paginated read-only patient browser based only on persisted patient/queue data."""
+    """Paginated read-only patient browser with operational and clinical history."""
     return rx.vstack(
         page_header(
             "Cadastros",
             "Pacientes",
-            "Pesquise pacientes persistidos, selecione um registro e consulte o histórico operacional já existente.",
+            "Pesquise pacientes persistidos e consulte histórico operacional e clínico real em modo local de QA.",
         ),
         _preview_notice(),
         rx.cond(
@@ -847,28 +1035,7 @@ def patients_preview() -> rx.Component:
                             ),
                         ),
                     ),
-                    rx.box(
-                        rx.hstack(
-                            rx.icon("file_text", size=18),
-                            rx.box(
-                                rx.text(
-                                    "Prontuário clínico",
-                                    font_weight="750",
-                                    size="2",
-                                ),
-                                rx.text(
-                                    "Diagnósticos, prescrições e exames serão exibidos somente após suas capabilities serem implementadas.",
-                                    size="2",
-                                    color="var(--vitta-text-muted)",
-                                    line_height="1.5",
-                                    margin_top="0.2rem",
-                                ),
-                            ),
-                            spacing="3",
-                            align="start",
-                        ),
-                        class_name="vitta-future-module",
-                    ),
+                    _admin_clinical_history_panel(),
                     spacing="4",
                     align="stretch",
                     width="100%",
@@ -909,35 +1076,52 @@ def _clinical_row(row) -> rx.Component:
             gap="1rem",
         ),
         rx.box(
-            rx.text("Relato recebido", font_size="0.72rem", font_weight="800", color="var(--vitta-text-subtle)"),
-            rx.text(row["symptoms"], size="2", line_height="1.55", margin_top="0.3rem"),
-            margin_top="1rem",
-        ),
-        rx.box(
-            rx.grid(
-                rx.box(
-                    rx.text("Queixa principal", font_weight="750", size="2"),
-                    rx.text("Aguardando capability clínica", size="1", color="var(--vitta-text-subtle)", margin_top="0.25rem"),
-                    class_name="vitta-clinical-placeholder",
-                ),
-                rx.box(
-                    rx.text("Anamnese", font_weight="750", size="2"),
-                    rx.text("Aguardando capability clínica", size="1", color="var(--vitta-text-subtle)", margin_top="0.25rem"),
-                    class_name="vitta-clinical-placeholder",
-                ),
-                rx.box(
-                    rx.text("Diagnóstico e conduta", font_weight="750", size="2"),
-                    rx.text("Aguardando capability clínica", size="1", color="var(--vitta-text-subtle)", margin_top="0.25rem"),
-                    class_name="vitta-clinical-placeholder",
-                ),
-                columns=rx.breakpoints(initial="1", md="3"),
-                gap="0.65rem",
-                width="100%",
+            rx.text(
+                "Relato recebido",
+                font_size="0.72rem",
+                font_weight="800",
+                color="var(--vitta-text-subtle)",
+            ),
+            rx.text(
+                row["symptoms"],
+                size="2",
+                line_height="1.55",
+                white_space="pre-wrap",
+                margin_top="0.3rem",
             ),
             margin_top="1rem",
         ),
+        rx.cond(
+            row["has_clinical_record"],
+            rx.grid(
+                _readonly_clinical_value("Queixa principal", row["chief_complaint"]),
+                _readonly_clinical_value("Anamnese", row["anamnesis"]),
+                _readonly_clinical_value("Diagnóstico", row["diagnosis"]),
+                _readonly_clinical_value(
+                    "Conduta e observações",
+                    row["conduct_notes"],
+                ),
+                columns=rx.breakpoints(initial="1", lg="2"),
+                gap="0.75rem",
+                width="100%",
+                margin_top="1rem",
+            ),
+            rx.box(
+                rx.hstack(
+                    rx.icon("info", size=16),
+                    rx.text(
+                        "Este atendimento não possui ClinicalCareRecord persistido neste fluxo.",
+                        size="2",
+                        color="var(--vitta-text-muted)",
+                    ),
+                    spacing="2",
+                    align="start",
+                ),
+                class_name="vitta-info-strip",
+                margin_top="1rem",
+            ),
+        ),
     )
-
 
 def clinical_preview() -> rx.Component:
     """Clinical-workspace structure using only currently active queue data."""
@@ -945,7 +1129,7 @@ def clinical_preview() -> rx.Component:
         page_header(
             "Médico",
             "Atendimento clínico",
-            "Visualize atendimentos operacionais ativos sem antecipar prontuário, diagnóstico ou prescrição.",
+            "Visualize atendimentos ativos e registros clínicos persistidos em modo local somente leitura.",
         ),
         _preview_notice(),
         rx.cond(
@@ -965,7 +1149,7 @@ def clinical_preview() -> rx.Component:
                 empty_state(
                     "stethoscope",
                     "Nenhum atendimento ativo",
-                    "Quando um Médico chamar um paciente da fila, o contexto operacional real aparecerá aqui. Campos clínicos continuarão bloqueados até a capability correspondente.",
+                    "Quando um Médico chamar uma Consulta agendada, o contexto e o registro clínico persistido aparecerão aqui em modo somente leitura.",
                 )
             ),
         ),
