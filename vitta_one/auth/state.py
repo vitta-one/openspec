@@ -350,8 +350,8 @@ class AuthState(rx.State):
         yield rx.redirect(identity.role.dashboard_path)
 
     @rx.event
-    def logout(self):
-        """Revoke the current server session before clearing the browser cookie."""
+    async def logout(self):
+        """Revoke the session and clear sensitive role state before leaving the app."""
         self.shell_error = ""
         token = self.session_token
 
@@ -363,6 +363,16 @@ class AuthState(rx.State):
                 self.shell_error = _LOGOUT_ERROR
                 yield
                 return
+
+        # Clear clinical/read-only QA projections held by sibling states before
+        # removing the authenticated browser context.
+        from vitta_one.admin_preview.state import AdminPreviewState
+        from vitta_one.patient_queue.state import DoctorQueueState
+
+        doctor_state = await self.get_state(DoctorQueueState)
+        doctor_state._clear_active()
+        admin_preview_state = await self.get_state(AdminPreviewState)
+        admin_preview_state._clear()
 
         self.session_token = ""
         self._clear_identity()
