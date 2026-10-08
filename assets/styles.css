@@ -697,6 +697,120 @@ button:disabled,
 }
 
 
+.vitta-prescription-workspace {
+  width: 100%;
+  padding-top: 1.15rem;
+  border-top: 1px solid var(--vitta-border);
+}
+
+.vitta-prescription-card {
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-panel);
+  background: var(--vitta-surface);
+  box-shadow: var(--vitta-shadow-xs);
+}
+
+.vitta-prescription-item {
+  width: 100%;
+  padding: 0.8rem 0.85rem;
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-control);
+  background: var(--vitta-surface-subtle);
+}
+
+.vitta-prescription-history-disclosure {
+  width: 100%;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-control);
+  background: var(--vitta-surface);
+}
+
+.vitta-disclosure-summary {
+  cursor: pointer;
+  list-style-position: inside;
+  border-radius: 0.45rem;
+}
+
+.vitta-disclosure-summary:focus-visible {
+  outline: 3px solid var(--vitta-focus);
+  outline-offset: 3px;
+}
+
+.vitta-print-page {
+  color: var(--vitta-text);
+}
+
+.vitta-print-controls {
+  margin-bottom: 1rem;
+}
+
+.vitta-print-document {
+  width: 100%;
+  padding: clamp(1.25rem, 3vw, 2.4rem);
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-large);
+  background: #ffffff;
+  box-shadow: var(--vitta-shadow-sm);
+}
+
+.vitta-print-kicker,
+.vitta-print-label {
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--vitta-primary);
+}
+
+.vitta-print-rule {
+  width: 100%;
+  height: 1px;
+  margin-top: 1.15rem;
+  background: var(--vitta-border-strong);
+}
+
+.vitta-print-prescription-item {
+  break-inside: avoid;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--vitta-border);
+}
+
+.vitta-print-prescription-item:last-child {
+  border-bottom: 0;
+}
+
+.vitta-print-notes {
+  break-inside: avoid;
+  padding: 0.9rem;
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-control);
+  background: var(--vitta-surface-subtle);
+}
+
+.vitta-print-signature-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-control);
+  color: var(--vitta-text-muted);
+  background: var(--vitta-surface-subtle);
+}
+
+.vitta-print-error-card {
+  width: min(100%, 34rem);
+  padding: 1.5rem;
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-large);
+  background: var(--vitta-surface);
+  box-shadow: var(--vitta-shadow-sm);
+}
+
+
 @media (max-width: 1180px) and (min-width: 861px) {
   .vitta-login-shell {
     grid-template-columns: minmax(21rem, 1fr) minmax(25rem, 0.95fr);
@@ -868,6 +982,47 @@ button:disabled,
 
   .vitta-topbar {
     align-items: flex-start;
+  }
+}
+
+
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  body {
+    background: #ffffff !important;
+  }
+
+  .vitta-print-controls {
+    display: none !important;
+  }
+
+  .vitta-print-page {
+    min-height: auto !important;
+    background: #ffffff !important;
+  }
+
+  .vitta-print-page > div,
+  .vitta-print-document {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .vitta-print-document {
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .vitta-print-signature-notice,
+  .vitta-print-notes,
+  .vitta-print-prescription-item {
+    break-inside: avoid;
   }
 }
 

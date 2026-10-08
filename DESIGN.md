@@ -161,6 +161,17 @@ Mostra estado do sistema, identidade atual e role. Não exibe busca global, unid
 - Select reutiliza o owner acessível Reflex/Radix do projeto;
 - ações destrutivas permanecem separadas das primárias.
 
+### Documentos clínicos imprimíveis
+
+A Prescrição imprimível é uma superfície documental, não um segundo shell da aplicação:
+
+- usa fundo branco, largura de leitura controlada e hierarquia tipográfica sóbria;
+- mantém logo Vitta-One, identificação do paciente/profissional e itens em fluxo vertical;
+- evita cartões decorativos, sidebar, topbar e navegação no papel;
+- controles de voltar/imprimir existem apenas na tela e desaparecem em `@media print`;
+- blocos de item, observações e aviso de assinatura evitam quebra interna quando possível;
+- ausência de assinatura digital é comunicada em texto, nunca por inferência visual.
+
 ### Iconography
 
 Ícones Lucide via `rx.icon` são permitidos quando comunicam função reconhecível. Ícone nunca substitui texto na navegação principal. Controles somente de ícone recebem nome acessível.
@@ -171,7 +182,7 @@ Transições de 120–180ms somente em hover, foco e seleção. Sem animação a
 
 ### Content and data visualization
 
-Nunca preencher dashboard, histórico clínico ou financeiro com conteúdo de demonstração apresentado como real. Agenda usa slots/Consultas persistidos; Atendimento e histórico usam somente `ClinicalCareRecord` persistido. Projeções locais usam dados reais; módulos futuros mostram estados vazios claros. Prioridade clínica é sempre acompanhada por texto e nunca é inferida pela interface.
+Nunca preencher dashboard, histórico clínico ou financeiro com conteúdo de demonstração apresentado como real. Agenda usa slots/Consultas persistidos; Atendimento, Prescrições e histórico usam somente registros persistidos. Projeções locais usam dados reais; módulos futuros mostram estados vazios claros. Prioridade clínica é sempre acompanhada por texto e nunca é inferida pela interface.
 
 ## Do's and Don'ts
 

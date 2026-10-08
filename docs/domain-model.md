@@ -153,11 +153,22 @@ Neste estágio não é necessário decidir se será uma entidade física indepen
 
 ## 10. Prescrição
 
-Representa uma prescrição produzida durante o atendimento.
+Representa um documento produzido pelo Médico durante um Atendimento clínico.
 
-### Integração
+### Estrutura confirmada
 
-A assinatura digital será realizada por meio do ZapSign em ambiente sandbox. O projeto acadêmico não exige validade jurídica da assinatura gerada.
+- um `ClinicalCareRecord` pode possuir zero, uma ou várias Prescrições;
+- cada Prescrição pertence a um único `ClinicalCareRecord`, à mesma Consulta e ao Médico responsável;
+- cada Prescrição persistida possui um ou mais itens;
+- cada item registra medicamento/item, orientação/posologia e observações opcionais;
+- a Prescrição pode possuir observações gerais;
+- criação, edição e exclusão são permitidas somente enquanto a Consulta está `EM_ANDAMENTO`;
+- após `CONCLUIDA`, Prescrição e itens tornam-se histórico somente leitura;
+- a visualização atual é HTML/CSS pronta para impressão e não gera PDF persistido.
+
+### Integração futura
+
+A assinatura digital será realizada por meio do ZapSign em ambiente sandbox em change própria. A versão atual da Prescrição **não possui assinatura digital** e não apresenta selo, QR Code ou status de assinatura.
 
 ## 11. Exame
 
@@ -215,7 +226,7 @@ Não definir neste documento:
 - chaves primárias e estrangeiras;
 - ORM ou estratégia de migração;
 - cardinalidades ainda não confirmadas pelos requisitos;
-- modelagem de prescrições, exames e pagamentos;
+- modelagem de exames, assinatura digital de prescrições e pagamentos;
 - telas e ações ainda não especificadas das capabilities futuras.
 
 Esses detalhes devem ser especificados nas changes em que se tornarem necessários.

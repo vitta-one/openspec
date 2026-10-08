@@ -26,6 +26,7 @@ from vitta_one.ui.components import (
     page_header,
     protected_workspace,
 )
+from vitta_one.ui.prescription_components import prescription_print_page
 from vitta_one.ui.queue_components import (
     active_queue_panel,
     doctor_active_panel,

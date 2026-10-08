@@ -111,7 +111,7 @@ Não implementar todo o banco, todas as telas ou todos os módulos antecipadamen
 
 Permanecem para refinamento em changes específicas:
 
-- regras e modelagem de prescrição/receita e assinatura ZapSign;
+- assinatura digital das Prescrições via ZapSign sandbox;
 - fluxo de exames, resultados e anexos Cloudinary;
 - regras financeiras e integração Asaas;
 - Atendimento clínico para walk-ins sem Consulta;

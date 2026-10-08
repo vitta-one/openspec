@@ -12,6 +12,10 @@ from vitta_one.models.appointment import Consultation
 from vitta_one.models.clinical_care import ClinicalCareRecord
 from vitta_one.models.patient_queue import QueueEntry
 from vitta_one.models.professional import Professional
+from vitta_one.clinical_prescription.service import (
+    PrescriptionView,
+    list_prescriptions_for_records,
+)
 from vitta_one.patient_queue.domain import QueueStatus
 
 CLINICAL_HISTORY_PAGE_SIZE = 10
@@ -70,6 +74,7 @@ class ClinicalHistoryItem:
     anamnesis: str
     diagnosis: str
     conduct_notes: str
+    prescriptions: tuple[PrescriptionView, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -309,6 +314,16 @@ def list_completed_history_for_patient(
         .limit(page_size)
     ).all()
 
+    record_ids = [
+        record.id
+        for record, _, _ in rows
+        if record.id is not None
+    ]
+    prescriptions_by_record = list_prescriptions_for_records(
+        db,
+        clinical_care_record_ids=record_ids,
+    )
+
     items: list[ClinicalHistoryItem] = []
     for record, consultation, professional in rows:
         if record.id is None or consultation.id is None or consultation.completed_at is None:
@@ -325,6 +340,7 @@ def list_completed_history_for_patient(
                 anamnesis=record.anamnesis,
                 diagnosis=record.diagnosis,
                 conduct_notes=record.conduct_notes,
+                prescriptions=prescriptions_by_record.get(record.id, ()),
             )
         )
 

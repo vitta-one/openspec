@@ -18,6 +18,22 @@ from vitta_one.clinical_care.service import (
     ClinicalCareTransitionError,
     ClinicalCareValidationError,
 )
+from vitta_one.clinical_prescription.application import (
+    doctor_add_prescription_item,
+    doctor_create_prescription,
+    doctor_delete_prescription,
+    doctor_list_current_prescriptions,
+    doctor_remove_prescription_item,
+    doctor_update_prescription_item,
+    doctor_update_prescription_notes,
+)
+from vitta_one.clinical_prescription.service import (
+    PrescriptionAuthorizationError,
+    PrescriptionConflictError,
+    PrescriptionNotFoundError,
+    PrescriptionTransitionError,
+    PrescriptionValidationError,
+)
 from vitta_one.patient_queue.application import (
     doctor_active_queue_entry,
     doctor_claim_next,
@@ -76,6 +92,24 @@ class QueueRow(TypedDict):
     professional_name: str
 
 
+class PrescriptionItemRow(TypedDict):
+    id: int
+    prescription_id: int
+    medication_or_item: str
+    instructions: str
+    notes: str
+
+
+class PrescriptionRow(TypedDict):
+    id: int
+    clinical_care_record_id: int
+    consultation_id: int
+    general_notes: str
+    created_at: str
+    items: list[PrescriptionItemRow]
+    item_count: int
+
+
 class ClinicalHistoryRow(TypedDict):
     record_id: int
     consultation_id: int
@@ -86,9 +120,37 @@ class ClinicalHistoryRow(TypedDict):
     anamnesis: str
     diagnosis: str
     conduct_notes: str
+    prescriptions: list[PrescriptionRow]
+    prescription_count: int
+
+
+def _serialize_prescription_item(item) -> PrescriptionItemRow:
+    return {
+        "id": item.id,
+        "prescription_id": item.prescription_id,
+        "medication_or_item": item.medication_or_item,
+        "instructions": item.instructions,
+        "notes": item.notes,
+    }
+
+
+def _serialize_prescription(item) -> PrescriptionRow:
+    serialized_items = [
+        _serialize_prescription_item(child) for child in item.items
+    ]
+    return {
+        "id": item.id,
+        "clinical_care_record_id": item.clinical_care_record_id,
+        "consultation_id": item.consultation_id,
+        "general_notes": item.general_notes,
+        "created_at": format_clinic_datetime(item.created_at),
+        "items": serialized_items,
+        "item_count": len(serialized_items),
+    }
 
 
 def _serialize_history_item(item) -> ClinicalHistoryRow:
+    prescriptions = [_serialize_prescription(value) for value in item.prescriptions]
     return {
         "record_id": item.record_id,
         "consultation_id": item.consultation_id,
@@ -99,6 +161,8 @@ def _serialize_history_item(item) -> ClinicalHistoryRow:
         "anamnesis": item.anamnesis,
         "diagnosis": item.diagnosis,
         "conduct_notes": item.conduct_notes,
+        "prescriptions": prescriptions,
+        "prescription_count": len(prescriptions),
     }
 
 
@@ -427,7 +491,7 @@ class ReceptionQueueState(rx.State):
 
 
 class DoctorQueueState(rx.State):
-    """Doctor-only queue and clinical-record state with server-side authorization."""
+    """Doctor queue, clinical-record and prescription state."""
 
     waiting_count: int = 0
     has_active: bool = False
@@ -455,6 +519,35 @@ class DoctorQueueState(rx.State):
     clinical_history_page: int = 1
     clinical_history_total_pages: int = 1
     clinical_history_total_count: int = 0
+
+    prescriptions: list[PrescriptionRow] = []
+    is_prescription_submitting: bool = False
+
+    new_prescription_dialog_open: bool = False
+    new_prescription_medication: str = ""
+    new_prescription_instructions: str = ""
+    new_prescription_item_notes: str = ""
+    new_prescription_general_notes: str = ""
+
+    prescription_item_dialog_open: bool = False
+    prescription_item_mode: str = "add"
+    prescription_target_id: int = 0
+    prescription_item_id: int = 0
+    prescription_item_medication: str = ""
+    prescription_item_instructions: str = ""
+    prescription_item_notes: str = ""
+
+    prescription_notes_dialog_open: bool = False
+    prescription_notes_target_id: int = 0
+    prescription_general_notes: str = ""
+
+    delete_prescription_dialog_open: bool = False
+    delete_prescription_id: int = 0
+
+    remove_prescription_item_dialog_open: bool = False
+    remove_prescription_id: int = 0
+    remove_prescription_item_id: int = 0
+    remove_prescription_item_name: str = ""
 
     is_loading: bool = False
     is_submitting: bool = False
@@ -491,6 +584,46 @@ class DoctorQueueState(rx.State):
         self.error_message = ""
         self.success_message = ""
 
+    def _reset_new_prescription(self) -> None:
+        self.new_prescription_dialog_open = False
+        self.new_prescription_medication = ""
+        self.new_prescription_instructions = ""
+        self.new_prescription_item_notes = ""
+        self.new_prescription_general_notes = ""
+
+    def _reset_prescription_item_dialog(self) -> None:
+        self.prescription_item_dialog_open = False
+        self.prescription_item_mode = "add"
+        self.prescription_target_id = 0
+        self.prescription_item_id = 0
+        self.prescription_item_medication = ""
+        self.prescription_item_instructions = ""
+        self.prescription_item_notes = ""
+
+    def _reset_prescription_notes_dialog(self) -> None:
+        self.prescription_notes_dialog_open = False
+        self.prescription_notes_target_id = 0
+        self.prescription_general_notes = ""
+
+    def _reset_delete_prescription(self) -> None:
+        self.delete_prescription_dialog_open = False
+        self.delete_prescription_id = 0
+
+    def _reset_remove_item(self) -> None:
+        self.remove_prescription_item_dialog_open = False
+        self.remove_prescription_id = 0
+        self.remove_prescription_item_id = 0
+        self.remove_prescription_item_name = ""
+
+    def _clear_prescriptions(self) -> None:
+        self.prescriptions = []
+        self._reset_new_prescription()
+        self._reset_prescription_item_dialog()
+        self._reset_prescription_notes_dialog()
+        self._reset_delete_prescription()
+        self._reset_remove_item()
+        self.is_prescription_submitting = False
+
     def _clear_clinical(self) -> None:
         self.clinical_record_id = 0
         self.clinical_chief_complaint = ""
@@ -505,6 +638,7 @@ class DoctorQueueState(rx.State):
         self.clinical_history_page = 1
         self.clinical_history_total_pages = 1
         self.clinical_history_total_count = 0
+        self._clear_prescriptions()
 
     def _clear_active(self) -> None:
         self.has_active = False
@@ -552,11 +686,26 @@ class DoctorQueueState(rx.State):
         self.persisted_diagnosis = item.diagnosis
         self.persisted_conduct_notes = item.conduct_notes
 
+    def _set_prescriptions(self, items) -> None:
+        self.prescriptions = [_serialize_prescription(item) for item in items]
+
     def _set_clinical_history(self, page) -> None:
         self.clinical_history = [_serialize_history_item(item) for item in page.items]
         self.clinical_history_page = page.page
         self.clinical_history_total_pages = page.total_pages
         self.clinical_history_total_count = page.total_count
+
+    def _load_prescriptions_with_token(self, token: str) -> None:
+        if not self.clinical_record_id:
+            self.prescriptions = []
+            return
+        with rx.session() as db:
+            items = doctor_list_current_prescriptions(
+                db,
+                token=token,
+                clinical_care_record_id=self.clinical_record_id,
+            )
+        self._set_prescriptions(items)
 
     def _load_clinical_with_token(self, token: str, *, page: int = 1) -> None:
         if not self.active_is_scheduled or not self.active_entry_id:
@@ -574,8 +723,14 @@ class DoctorQueueState(rx.State):
                 entry_id=self.active_entry_id,
                 page=page,
             )
+            prescriptions = doctor_list_current_prescriptions(
+                db,
+                token=token,
+                clinical_care_record_id=record.id,
+            )
         self._set_clinical_record(record)
         self._set_clinical_history(history)
+        self._set_prescriptions(prescriptions)
 
     def _load_history_with_token(self, token: str, *, page: int) -> None:
         if not self.active_is_scheduled or not self.active_entry_id:
@@ -610,6 +765,9 @@ class DoctorQueueState(rx.State):
         else:
             yield rx.redirect("/acesso-negado")
 
+    def _prescription_error(self, exc: Exception) -> None:
+        self.error_message = str(exc)
+
     @rx.event
     async def load(self):
         self.is_loading = True
@@ -625,6 +783,9 @@ class DoctorQueueState(rx.State):
             ClinicalCareAuthorizationError,
             ClinicalCareNotFoundError,
             ClinicalCareTransitionError,
+            PrescriptionAuthorizationError,
+            PrescriptionNotFoundError,
+            PrescriptionTransitionError,
         ) as exc:
             self.error_message = str(exc)
             self._clear_clinical()
@@ -640,7 +801,6 @@ class DoctorQueueState(rx.State):
 
     @rx.event
     async def claim_next(self):
-        """Claim exactly one eligible waiting entry after server-side authorization."""
         self.is_submitting = True
         self._clear_feedback()
         yield
@@ -664,6 +824,9 @@ class DoctorQueueState(rx.State):
             ClinicalCareAuthorizationError,
             ClinicalCareNotFoundError,
             ClinicalCareTransitionError,
+            PrescriptionAuthorizationError,
+            PrescriptionNotFoundError,
+            PrescriptionTransitionError,
         ) as exc:
             self.error_message = str(exc)
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
@@ -703,7 +866,6 @@ class DoctorQueueState(rx.State):
 
     @rx.event
     async def save_clinical(self, _form_data: dict[str, Any]):
-        """Save the clinical draft without changing queue or Consultation lifecycle."""
         self.is_saving_clinical = True
         self._clear_feedback()
         yield
@@ -744,6 +906,362 @@ class DoctorQueueState(rx.State):
             yield
 
     @rx.event
+    def open_prescription_print(self, prescription_id: int):
+        return rx.redirect(f"/medico/prescricao/{prescription_id}")
+
+    @rx.event
+    def begin_new_prescription(self) -> None:
+        self._clear_feedback()
+        self._reset_prescription_item_dialog()
+        self._reset_prescription_notes_dialog()
+        self._reset_delete_prescription()
+        self._reset_remove_item()
+        self.new_prescription_dialog_open = True
+
+    @rx.event
+    def set_new_prescription_dialog_open(self, is_open: bool) -> None:
+        if self.is_prescription_submitting and not is_open:
+            return
+        if is_open:
+            self.new_prescription_dialog_open = True
+        else:
+            self._reset_new_prescription()
+
+    @rx.event
+    def update_new_prescription_medication(self, value: str) -> None:
+        self.new_prescription_medication = value
+
+    @rx.event
+    def update_new_prescription_instructions(self, value: str) -> None:
+        self.new_prescription_instructions = value
+
+    @rx.event
+    def update_new_prescription_item_notes(self, value: str) -> None:
+        self.new_prescription_item_notes = value
+
+    @rx.event
+    def update_new_prescription_general_notes(self, value: str) -> None:
+        self.new_prescription_general_notes = value
+
+    @rx.event
+    async def create_prescription(self, _form_data: dict[str, Any]):
+        self.is_prescription_submitting = True
+        self._clear_feedback()
+        yield
+        try:
+            if not self.clinical_record_id:
+                raise PrescriptionNotFoundError(
+                    "Não há Atendimento clínico ativo para criar Prescrição."
+                )
+            token = await self._token()
+            with rx.session() as db:
+                doctor_create_prescription(
+                    db,
+                    token=token,
+                    clinical_care_record_id=self.clinical_record_id,
+                    medication_or_item=self.new_prescription_medication,
+                    instructions=self.new_prescription_instructions,
+                    notes=self.new_prescription_item_notes,
+                    general_notes=self.new_prescription_general_notes,
+                )
+            self._load_prescriptions_with_token(token)
+            self._reset_new_prescription()
+            self.success_message = "Prescrição criada."
+        except (
+            PrescriptionValidationError,
+            PrescriptionAuthorizationError,
+            PrescriptionTransitionError,
+            PrescriptionConflictError,
+            PrescriptionNotFoundError,
+        ) as exc:
+            self._prescription_error(exc)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.error_message = "Não foi possível criar a Prescrição agora."
+        finally:
+            self.is_prescription_submitting = False
+            yield
+
+    @rx.event
+    def begin_add_prescription_item(self, prescription_id: int) -> None:
+        self._clear_feedback()
+        self._reset_new_prescription()
+        self._reset_prescription_notes_dialog()
+        self._reset_delete_prescription()
+        self._reset_remove_item()
+        self.prescription_item_mode = "add"
+        self.prescription_target_id = prescription_id
+        self.prescription_item_dialog_open = True
+
+    @rx.event
+    def begin_edit_prescription_item(
+        self,
+        prescription_id: int,
+        item_id: int,
+        medication_or_item: str,
+        instructions: str,
+        notes: str,
+    ) -> None:
+        self._clear_feedback()
+        self._reset_new_prescription()
+        self._reset_prescription_notes_dialog()
+        self._reset_delete_prescription()
+        self._reset_remove_item()
+        self.prescription_item_mode = "edit"
+        self.prescription_target_id = prescription_id
+        self.prescription_item_id = item_id
+        self.prescription_item_medication = medication_or_item
+        self.prescription_item_instructions = instructions
+        self.prescription_item_notes = notes
+        self.prescription_item_dialog_open = True
+
+    @rx.event
+    def set_prescription_item_dialog_open(self, is_open: bool) -> None:
+        if self.is_prescription_submitting and not is_open:
+            return
+        if is_open:
+            self.prescription_item_dialog_open = True
+        else:
+            self._reset_prescription_item_dialog()
+
+    @rx.event
+    def update_prescription_item_medication(self, value: str) -> None:
+        self.prescription_item_medication = value
+
+    @rx.event
+    def update_prescription_item_instructions(self, value: str) -> None:
+        self.prescription_item_instructions = value
+
+    @rx.event
+    def update_prescription_item_notes(self, value: str) -> None:
+        self.prescription_item_notes = value
+
+    @rx.event
+    async def submit_prescription_item(self, _form_data: dict[str, Any]):
+        self.is_prescription_submitting = True
+        self._clear_feedback()
+        yield
+        try:
+            if not self.prescription_target_id:
+                raise PrescriptionNotFoundError("Selecione uma Prescrição válida.")
+            token = await self._token()
+            with rx.session() as db:
+                if self.prescription_item_mode == "edit":
+                    if not self.prescription_item_id:
+                        raise PrescriptionNotFoundError(
+                            "Selecione um item válido para editar."
+                        )
+                    doctor_update_prescription_item(
+                        db,
+                        token=token,
+                        prescription_id=self.prescription_target_id,
+                        item_id=self.prescription_item_id,
+                        medication_or_item=self.prescription_item_medication,
+                        instructions=self.prescription_item_instructions,
+                        notes=self.prescription_item_notes,
+                    )
+                    message = "Item da Prescrição atualizado."
+                else:
+                    doctor_add_prescription_item(
+                        db,
+                        token=token,
+                        prescription_id=self.prescription_target_id,
+                        medication_or_item=self.prescription_item_medication,
+                        instructions=self.prescription_item_instructions,
+                        notes=self.prescription_item_notes,
+                    )
+                    message = "Item adicionado à Prescrição."
+            self._load_prescriptions_with_token(token)
+            self._reset_prescription_item_dialog()
+            self.success_message = message
+        except (
+            PrescriptionValidationError,
+            PrescriptionAuthorizationError,
+            PrescriptionTransitionError,
+            PrescriptionConflictError,
+            PrescriptionNotFoundError,
+        ) as exc:
+            self._prescription_error(exc)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.error_message = "Não foi possível salvar o item da Prescrição agora."
+        finally:
+            self.is_prescription_submitting = False
+            yield
+
+    @rx.event
+    def begin_prescription_notes(self, prescription_id: int, general_notes: str) -> None:
+        self._clear_feedback()
+        self._reset_new_prescription()
+        self._reset_prescription_item_dialog()
+        self._reset_delete_prescription()
+        self._reset_remove_item()
+        self.prescription_notes_target_id = prescription_id
+        self.prescription_general_notes = general_notes
+        self.prescription_notes_dialog_open = True
+
+    @rx.event
+    def set_prescription_notes_dialog_open(self, is_open: bool) -> None:
+        if self.is_prescription_submitting and not is_open:
+            return
+        if is_open:
+            self.prescription_notes_dialog_open = True
+        else:
+            self._reset_prescription_notes_dialog()
+
+    @rx.event
+    def update_prescription_general_notes(self, value: str) -> None:
+        self.prescription_general_notes = value
+
+    @rx.event
+    async def save_prescription_notes(self, _form_data: dict[str, Any]):
+        self.is_prescription_submitting = True
+        self._clear_feedback()
+        yield
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                doctor_update_prescription_notes(
+                    db,
+                    token=token,
+                    prescription_id=self.prescription_notes_target_id,
+                    general_notes=self.prescription_general_notes,
+                )
+            self._load_prescriptions_with_token(token)
+            self._reset_prescription_notes_dialog()
+            self.success_message = "Observações gerais atualizadas."
+        except (
+            PrescriptionValidationError,
+            PrescriptionAuthorizationError,
+            PrescriptionTransitionError,
+            PrescriptionConflictError,
+            PrescriptionNotFoundError,
+        ) as exc:
+            self._prescription_error(exc)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.error_message = "Não foi possível salvar as observações agora."
+        finally:
+            self.is_prescription_submitting = False
+            yield
+
+    @rx.event
+    def begin_delete_prescription(self, prescription_id: int) -> None:
+        self._clear_feedback()
+        self._reset_new_prescription()
+        self._reset_prescription_item_dialog()
+        self._reset_prescription_notes_dialog()
+        self._reset_remove_item()
+        self.delete_prescription_id = prescription_id
+        self.delete_prescription_dialog_open = True
+
+    @rx.event
+    def set_delete_prescription_dialog_open(self, is_open: bool) -> None:
+        if self.is_prescription_submitting and not is_open:
+            return
+        if is_open:
+            self.delete_prescription_dialog_open = True
+        else:
+            self._reset_delete_prescription()
+
+    @rx.event
+    async def confirm_delete_prescription(self):
+        self.is_prescription_submitting = True
+        self._clear_feedback()
+        yield
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                doctor_delete_prescription(
+                    db,
+                    token=token,
+                    prescription_id=self.delete_prescription_id,
+                )
+            self._load_prescriptions_with_token(token)
+            self._reset_delete_prescription()
+            self.success_message = "Prescrição excluída do atendimento em andamento."
+        except (
+            PrescriptionAuthorizationError,
+            PrescriptionTransitionError,
+            PrescriptionConflictError,
+            PrescriptionNotFoundError,
+        ) as exc:
+            self._prescription_error(exc)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.error_message = "Não foi possível excluir a Prescrição agora."
+        finally:
+            self.is_prescription_submitting = False
+            yield
+
+    @rx.event
+    def begin_remove_prescription_item(
+        self,
+        prescription_id: int,
+        item_id: int,
+        medication_or_item: str,
+    ) -> None:
+        self._clear_feedback()
+        self._reset_new_prescription()
+        self._reset_prescription_item_dialog()
+        self._reset_prescription_notes_dialog()
+        self._reset_delete_prescription()
+        self.remove_prescription_id = prescription_id
+        self.remove_prescription_item_id = item_id
+        self.remove_prescription_item_name = medication_or_item
+        self.remove_prescription_item_dialog_open = True
+
+    @rx.event
+    def set_remove_prescription_item_dialog_open(self, is_open: bool) -> None:
+        if self.is_prescription_submitting and not is_open:
+            return
+        if is_open:
+            self.remove_prescription_item_dialog_open = True
+        else:
+            self._reset_remove_item()
+
+    @rx.event
+    async def confirm_remove_prescription_item(self):
+        self.is_prescription_submitting = True
+        self._clear_feedback()
+        yield
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                doctor_remove_prescription_item(
+                    db,
+                    token=token,
+                    prescription_id=self.remove_prescription_id,
+                    item_id=self.remove_prescription_item_id,
+                )
+            self._load_prescriptions_with_token(token)
+            self._reset_remove_item()
+            self.success_message = "Item removido da Prescrição."
+        except (
+            PrescriptionAuthorizationError,
+            PrescriptionTransitionError,
+            PrescriptionConflictError,
+            PrescriptionNotFoundError,
+        ) as exc:
+            self._prescription_error(exc)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.error_message = "Não foi possível remover o item agora."
+        finally:
+            self.is_prescription_submitting = False
+            yield
+
+    @rx.event
     async def previous_clinical_history_page(self):
         if not self.can_previous_clinical_history_page:
             return
@@ -751,10 +1269,7 @@ class DoctorQueueState(rx.State):
         yield
         try:
             token = await self._token()
-            self._load_history_with_token(
-                token,
-                page=self.clinical_history_page - 1,
-            )
+            self._load_history_with_token(token, page=self.clinical_history_page - 1)
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
@@ -776,10 +1291,7 @@ class DoctorQueueState(rx.State):
         yield
         try:
             token = await self._token()
-            self._load_history_with_token(
-                token,
-                page=self.clinical_history_page + 1,
-            )
+            self._load_history_with_token(token, page=self.clinical_history_page + 1)
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
@@ -795,11 +1307,16 @@ class DoctorQueueState(rx.State):
 
     @rx.event
     async def finish_active(self):
-        """Finish only the active queue entry owned by the authenticated doctor."""
         self._clear_feedback()
         if self.active_is_scheduled and self.clinical_is_dirty:
             self.error_message = (
                 "Salve ou descarte as alterações clínicas antes de finalizar o atendimento."
+            )
+            yield
+            return
+        if self.is_prescription_submitting:
+            self.error_message = (
+                "Aguarde a operação de Prescrição terminar antes de finalizar."
             )
             yield
             return
@@ -813,7 +1330,7 @@ class DoctorQueueState(rx.State):
             with rx.session() as db:
                 doctor_finish(db, token=token, entry_id=self.active_entry_id)
             self._clear_active()
-            self.success_message = "Atendimento finalizado e registro clínico preservado."
+            self.success_message = "Atendimento finalizado e histórico preservado."
             with rx.session() as db:
                 self.waiting_count = doctor_waiting_count(db, token=token)
         except (QueueTransitionError, QueueOwnershipError) as exc:
