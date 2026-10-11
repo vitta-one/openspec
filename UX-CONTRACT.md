@@ -112,7 +112,7 @@ Regras:
 - Mudar de página limpa a seleção para evitar contexto invisível; busca que elimina o paciente selecionado também limpa a seleção.
 - Cadastro, localização, entrada, reavaliação e retirada continuam exclusivos da Recepção.
 - Chamar/finalizar continua exclusivo do Médico.
-- Agenda usa somente slots e Consultas persistidos. Atendimento clínico e histórico usam somente `ClinicalCareRecord` persistido; prescrição, exames e Financeiro continuam sem dados fictícios até suas capabilities existirem.
+- Agenda usa somente slots e Consultas persistidos. Atendimento clínico, Prescrições e histórico usam somente registros persistidos (`ClinicalCareRecord`, `Prescription` e `PrescriptionItem` quando aplicáveis); exames e Financeiro continuam sem dados fictícios enquanto suas capabilities não forem implementadas.
 - Botões sem backend real não são renderizados como ações habilitadas.
 
 ## 10. Agenda e disponibilidade
