@@ -43,7 +43,7 @@
 | **17.7** | `test_printable_prescription_is_available_to_author_while_consultation_is_active` | Médico autor obtém campos e itens em Consulta `EM_ANDAMENTO` |
 | **18.7** | `test_postgresql_prescription_foreign_keys_and_indexes_match_migration` | Catálogo PostgreSQL 16 declara FKs, `ondelete` e índices esperados |
 
-**Estado inicial:** testes escritos e submetidos para validação no [PR #301](https://github.com/vitta-one/openspec/pull/301), aguardando execução do CI. Resultado registrado posteriormente somente mediante evidência dos logs. Nenhum checkbox de Prescrições deve ser marcado com base exclusivamente nesta tabela.
+**Resultado CI confirmado:** [run #38267759415](https://github.com/vitta-one/openspec/actions/runs/38267759415) — OpenSpec strict 7/7, PostgreSQL 16/migração aprovada, **145 testes aprovados**, Reflex compile aprovado. Os quatro testes novos passaram; **15.3, 17.6, 17.7 e 18.7** foram conciliados. O CI não executa QA humano nem E2E de navegador. Nenhum checkbox de Prescrições deve ser marcado com base exclusivamente nesta tabela.
 
 ## Auditoria de warnings (19.11)
 
@@ -57,7 +57,7 @@ Logs da baseline `develop`: [run #38264642517](https://github.com/vitta-one/open
 | Node `punycode` e `url.parse()` deprecated | Dependências transitivas do build | Avaliar atualização de toolchain no PR específico |
 | GitHub Actions `checkout@v4` e `setup-python@v5` usam Node 20 depreciado | Toolchain CI | Planejar atualização das actions e rodar regressão completa |
 
-**19.11 permanece pendente** até revisar lado a lado a baseline e o CI dos testes novos, confirmar que nenhum warning inédito foi introduzido e documentar a decisão aprovada pela equipe. **19.12 permanece pendente** até a execução do QA visual e revisão de regressões.
+**19.11 conciliada por auditoria comparativa:** a baseline [#38264642517](https://github.com/vitta-one/openspec/actions/runs/38264642517) e o run [#38267759415](https://github.com/vitta-one/openspec/actions/runs/38267759415) apresentam os mesmos avisos de depreciação identificados acima. Não foi identificado novo tipo de warning nesses logs. Tratar avisos antigos como dívida técnica, sem atualizar framework neste PR. **19.12 permanece pendente** até a execução do QA visual e revisão de regressões.
 
 ## Registro de execução humana
 
