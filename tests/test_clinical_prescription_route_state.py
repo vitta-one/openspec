@@ -100,3 +100,56 @@ def test_prescription_route_rejects_non_numeric_identifier_without_db_lookup(
     assert fake.patient_name == ""
     assert fake.items == []
     assert fake.loaded_prescription_id == 0
+def test_logout_clears_doctor_and_print_payloads_and_removes_session_cookie(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """15.11: a successful logout clears all sensitive sibling state projections."""
+    from vitta_one.admin_preview.state import AdminPreviewState
+    from vitta_one.auth import state as auth_state
+    from vitta_one.auth.state import AuthState
+    from vitta_one.patient_queue.state import DoctorQueueState
+
+    cleared = []
+
+    class _Sibling:
+        def __init__(self, name):
+            self.name = name
+
+        def _clear_active(self):
+            cleared.append(self.name)
+
+        def _clear(self):
+            cleared.append(self.name)
+
+    siblings = {
+        DoctorQueueState: _Sibling("doctor"),
+        PrintPrescriptionState: _Sibling("print"),
+        AdminPreviewState: _Sibling("admin"),
+    }
+
+    class _AuthDouble:
+        session_token = "valid-test-session"
+        shell_error = "previous error"
+        auth_checked = False
+
+        async def get_state(self, target):
+            return siblings[target]
+
+        def _clear_identity(self):
+            cleared.append("identity")
+
+    fake = _AuthDouble()
+    revoked = []
+    monkeypatch.setattr(auth_state.rx, "session", lambda: nullcontext(object()))
+    monkeypatch.setattr(auth_state, "revoke_session", lambda db, token: revoked.append(token))
+    monkeypatch.setattr(auth_state.rx, "remove_cookie", lambda name: ("cookie", name))
+    monkeypatch.setattr(auth_state.rx, "redirect", lambda path: ("redirect", path))
+
+    events = asyncio.run(_collect(AuthState.logout.fn(fake)))
+
+    assert revoked == ["valid-test-session"]
+    assert cleared == ["doctor", "print", "admin", "identity"]
+    assert fake.session_token == ""
+    assert fake.auth_checked is True
+    assert ("redirect", "/login") in events
+    assert any(isinstance(event, tuple) and event[0] == "cookie" for event in events)
