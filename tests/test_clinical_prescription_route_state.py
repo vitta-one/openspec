@@ -182,3 +182,48 @@ def test_print_document_render_contract_includes_required_labels_and_unsigned_no
             f"Missing required print document element: {label}"
         )
     assert "vitta-print-document" in rendered
+
+
+
+def test_print_route_state_does_not_copy_cpf_or_put_it_in_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """15.12: even a DTO with CPF must not propagate it to the print route/state."""
+    from datetime import datetime, timezone
+
+    secret_cpf = "12345678909"
+    state = _PrintStateDouble(token="doctor-author", route_id="77")
+    source_view = SimpleNamespace(
+        cpf=secret_cpf,
+        patient_name="Pessoa de teste",
+        professional_name="Dra. Exemplo",
+        registration_identifier="CRM-TEST",
+        scheduled_at=datetime(2026, 10, 2, 12, tzinfo=timezone.utc),
+        prescription=SimpleNamespace(
+            general_notes="Observações fictícias",
+            items=[
+                SimpleNamespace(
+                    medication_or_item="Item fictício",
+                    instructions="Orientação fictícia",
+                    notes="",
+                )
+            ],
+        ),
+    )
+    captured_ids = []
+
+    def load_prescription(db, *, token, prescription_id):
+        captured_ids.append(prescription_id)
+        assert token == "doctor-author"
+        return source_view
+
+    monkeypatch.setattr(prescription_state, "doctor_get_printable_prescription", load_prescription)
+    monkeypatch.setattr(prescription_state.rx, "session", lambda: nullcontext(object()))
+    asyncio.run(_collect(PrintPrescriptionState.load.fn(state)))
+    assert state.loaded is True
+    assert state.patient_name == "Pessoa de teste"
+    assert state.loaded_prescription_id == 77
+    assert captured_ids == [77]
+    assert state.router.page.params == {"prescription_id": "77"}
+    assert secret_cpf not in repr(vars(state))
+    assert all("cpf" not in key.lower() for key in vars(state))
