@@ -13,7 +13,7 @@ A implementação de Prescrições permanece sem assinatura digital, sem prontu�
 | [Chromium #38273941455](https://github.com/vitta-one/openspec/actions/runs/38273941455) | Reflex full-stack em modo produção, Chromium headless/Playwright, PostgreSQL 16 isolado, duas identidades MEDICO e consultas/prescrições fictícias | **6 testes E2E aprovados** |
 | [CI Python #38273939961](https://github.com/vitta-one/openspec/actions/runs/38273939961) | Migrações desde base vazia PostgreSQL 16, OpenSpec CLI estrito e pytest | **7/7 OpenSpec, 151 testes Python, migrations/compile aprovados** |
 | [Chromium #38273514533](https://github.com/vitta-one/openspec/actions/runs/38273514533) | Após correção do layout móvel de badges no histórico | **6/6 E2E aprovados** |
-| [Revisão das capturas #38273941455](https://github.com/vitta-one/openspec/actions/runs/38273941455) | PNGs com dados sintéticos: tela de impressão, diálogos e histórico em 320/375/768 px | Conferida visualmente pelo assistente; sem corte horizontal aparente |
+| [Revisão das capturas #38274780820](https://github.com/vitta-one/openspec/actions/runs/38274780820) | PNGs com dados sintéticos: tela de impressão, diálogos e histórico em 320/375/768 px | Conferida visualmente pelo assistente; sem corte horizontal aparente |
 
 ## Rastreabilidade das sete tarefas finais
 
@@ -38,6 +38,6 @@ A implementação de Prescrições permanece sem assinatura digital, sem prontu�
 - A revisão visual foi feita **sobre capturas reais geradas pelo Chromium**, e não mediante execução presencial em Android, iPhone ou leitor de tela assistivo.
 - Nenhuma pessoa da equipe fez homologação manual formal durante esta revisão. A seção de assinatura humana de `docs/qa-prescricoes-aceite-2026-10-12.md` permanece disponível; **não foi preenchida artificialmente**.
 - O app **não tem assinatura digital clínica**. Não utilizar a impressão como documento eletrônico assinado.
-- Screenshots são sintéticos e ficam temporariamente nos artefatos do GitHub Actions (retenção de até 90 dias em execuções posteriores). Logs de CI e arquivos de teste são versionados.
+- Screenshots são inteiramente sintéticos. O [artefato visual do Chromium #38274780820](https://github.com/vitta-one/openspec/actions/runs/38274780820/artifacts/11758033042) tem retenção registrada até **10/01/2027**. Logs de CI e arquivos de teste são versionados.
 
 **Decisão documental:** os critérios verificáveis das 235 tarefas acadêmicas receberam evidência, inclusive o browser QA dos últimos sete itens. Consolidar `clinical-prescription` em `openspec/specs/` e preservar a change original em `openspec/changes/archive/`. Homologação humana e em dispositivos físicos é recomendada antes de um eventual uso não acadêmico.
