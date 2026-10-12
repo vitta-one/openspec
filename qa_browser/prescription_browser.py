@@ -99,10 +99,56 @@ def test_doctor_prescription_dialog_keyboard_focus_and_responsive_layout(page: P
         first = dialog.locator("#new-prescription-medication")
         expect(first).to_be_focused(timeout=10000)
         assert first.get_attribute("aria-describedby") == "new-prescription-medication-help"
+        first.press("Tab")
+        expect(dialog.locator("#new-prescription-instructions")).to_be_focused(timeout=10000)
+        dialog.locator("#new-prescription-instructions").press("Shift+Tab")
+        expect(first).to_be_focused(timeout=10000)
         assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 2")
+        assert page.evaluate(
+            "getComputedStyle(document.documentElement).getPropertyValue('--vitta-focus').trim() != ''"
+        )
         assert page.evaluate(
             "getComputedStyle(document.querySelector('#new-prescription-medication')).animationDuration"
         ) in ("0s", "0.00001s", "1e-05s", "0.01ms")
         first.press("Escape")
         expect(dialog).to_have_count(0, timeout=15000)
         expect(trigger).to_be_focused(timeout=10000)
+
+
+
+def test_other_prescription_dialogs_start_with_safe_focus(page: Page) -> None:
+    """11.8: inspect initial focus for add/edit, notes, remove, delete dialogs."""
+    login(page, FIXTURE["doctor_a_email"])
+    cases = [
+        ("Adicionar item", "#prescription-item-medication"),
+        ("Editar", "#prescription-item-medication"),
+        ("Editar observações gerais", "#prescription-general-notes"),
+        ("Remover", "button:has-text('Manter item')"),
+        ("Excluir prescrição", "button:has-text('Manter prescrição')"),
+    ]
+    for label, target in cases:
+        trigger = page.get_by_role("button", name=label, exact=True).first
+        expect(trigger).to_be_enabled(timeout=15000)
+        trigger.focus()
+        trigger.press("Enter")
+        dialog = page.get_by_role("dialog")
+        expect(dialog).to_be_visible(timeout=15000)
+        expect(dialog.locator(target)).to_be_focused(timeout=15000)
+        dialog.locator(target).press("Escape")
+        expect(dialog).to_have_count(0, timeout=15000)
+
+
+def test_completed_history_and_prescriptions_fit_narrow_viewports(page: Page) -> None:
+    """13.8: render a nonempty history and expand an actual prescription disclosure."""
+    login(page, FIXTURE["doctor_a_email"])
+    expect(page.get_by_role("heading", name="Histórico clínico")).to_be_visible(timeout=15000)
+    disclosure = page.locator(".vitta-prescription-history-disclosure").first
+    expect(disclosure).to_be_visible(timeout=15000)
+    for width, height in ((320, 640), (375, 667), (768, 1024)):
+        page.set_viewport_size({"width": width, "height": height})
+        disclosure.locator("summary").click()
+        expect(disclosure.get_by_text("Histórico Fictício QA")).to_be_visible(timeout=15000)
+        assert page.evaluate(
+            "document.documentElement.scrollWidth <= window.innerWidth + 2"
+        ), f"horizontal overflow detected at {width}px with history open"
+        disclosure.locator("summary").click()
