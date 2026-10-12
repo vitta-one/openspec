@@ -560,3 +560,56 @@ def test_history_requires_active_context_and_never_returns_another_patient(db: S
             entry_id=entry.id,
             doctor_user_id=doctor.id,
         )
+
+
+def test_history_loads_prescriptions_only_for_records_on_selected_page(
+    db: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """17.6: pagination is applied before the prescription batch loader runs."""
+    from vitta_one.clinical_care import service as clinical_service
+
+    base = datetime(2026, 10, 2, 12, tzinfo=timezone.utc)
+    doctor = _doctor(db, "PAGE-PRESCRIPTION")
+    professional = _professional(db, suffix="PAGE-PRESCRIPTION", doctor_user_id=doctor.id)
+    patient = create_patient(db, name="Paciente paginação prescrição", cpf=_cpf("919101202"))
+    for position in range(11):
+        _, _, _, _, entry = _scheduled(
+            db,
+            suffix=f"RX-PAGE-{position}",
+            patient_prefix="808909010",
+            base=base,
+            doctor=doctor,
+            patient=patient,
+            professional=professional,
+            slot_days=position + 1,
+        )
+        claim_next_patient(
+            db, doctor_user_id=doctor.id,
+            now=base + timedelta(hours=position + 1),
+        )
+        finish_queue_entry(
+            db, entry_id=entry.id, doctor_user_id=doctor.id,
+            now=base + timedelta(hours=position + 1, minutes=5),
+        )
+
+    seen_ids: list[tuple[int, ...]] = []
+    actual_loader = clinical_service.list_prescriptions_for_records
+
+    def observed_loader(db_session, *, clinical_care_record_ids):
+        seen_ids.append(tuple(clinical_care_record_ids))
+        return actual_loader(
+            db_session, clinical_care_record_ids=clinical_care_record_ids
+        )
+
+    monkeypatch.setattr(clinical_service, "list_prescriptions_for_records", observed_loader)
+    first = clinical_service.list_completed_history_for_patient(db, patient_id=patient.id, page=1)
+    second = clinical_service.list_completed_history_for_patient(db, patient_id=patient.id, page=2)
+    assert first.total_count == 11
+    assert first.total_pages == 2
+    assert len(first.items) == 10
+    assert len(second.items) == 1
+    assert len(seen_ids) == 2
+    assert seen_ids[0] == tuple(item.record_id for item in first.items)
+    assert seen_ids[1] == tuple(item.record_id for item in second.items)
+    assert set(seen_ids[0]).isdisjoint(seen_ids[1])
