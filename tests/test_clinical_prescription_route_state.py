@@ -164,7 +164,7 @@ def test_print_document_render_contract_includes_required_labels_and_unsigned_no
     )
 
     # Reflex's Tag representation includes text nodes/vars in the component tree.
-    rendered = str(_print_document().render())
+    rendered = str(_print_document().render()).replace(r"\\u", r"\u")
     for label in (
         "PRESCRIÇÃO",
         "Paciente",
