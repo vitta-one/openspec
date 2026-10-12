@@ -348,3 +348,49 @@ def test_concurrent_delete_is_idempotently_safe_and_leaves_no_orphans() -> None:
                 PrescriptionItem.prescription_id == prescription_id
             )
         ).all() == []
+
+
+@pytest.mark.skipif(
+    not _DATABASE_URL.startswith("postgresql"),
+    reason="Prescription schema introspection requires PostgreSQL.",
+)
+def test_postgresql_prescription_foreign_keys_and_indexes_match_migration() -> None:
+    """18.7: verify database catalog constraints/indices, not just migration source."""
+    from sqlalchemy import inspect
+
+    engine = create_engine(_DATABASE_URL, pool_pre_ping=True)
+    inspector = inspect(engine)
+
+    def foreign_keys(table: str):
+        return {
+            tuple(item["constrained_columns"]): item
+            for item in inspector.get_foreign_keys(table)
+        }
+
+    documents = foreign_keys("prescriptions")
+    expected_restrict = {
+        ("clinical_care_record_id",): "clinical_care_records",
+        ("consultation_id",): "consultations",
+        ("doctor_user_id",): "auth_users",
+    }
+    for columns, referred_table in expected_restrict.items():
+        fk = documents[columns]
+        assert fk["referred_table"] == referred_table
+        assert fk.get("options", {}).get("ondelete", "").upper() == "RESTRICT"
+
+    items = foreign_keys("prescription_items")
+    item_fk = items[("prescription_id",)]
+    assert item_fk["referred_table"] == "prescriptions"
+    assert item_fk.get("options", {}).get("ondelete", "").upper() == "CASCADE"
+
+    prescription_indices = {
+        index["name"] for index in inspector.get_indexes("prescriptions")
+    }
+    item_indices = {
+        index["name"] for index in inspector.get_indexes("prescription_items")
+    }
+    assert {
+        "ix_prescriptions_record_created",
+        "ix_prescriptions_consultation_created",
+    } <= prescription_indices
+    assert "ix_prescription_items_prescription_created" in item_indices

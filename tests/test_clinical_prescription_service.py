@@ -617,3 +617,63 @@ def test_walkin_does_not_gain_prescription_context(db: Session) -> None:
     assert db.exec(select(ClinicalCareRecord)).all() == []
     assert db.exec(select(Prescription)).all() == []
     assert db.get(QueueEntry, entry.id).status == QueueStatus.EM_ATENDIMENTO.value
+
+
+def test_printable_prescription_is_available_to_author_while_consultation_is_active(
+    db: Session,
+) -> None:
+    """17.7: the doctor's active document is readable through the print domain contract."""
+    base = datetime(2026, 10, 2, 12, tzinfo=timezone.utc)
+    doctor, professional, patient, consultation, _, record = _start(
+        db, suffix="PRINT-ACTIVE", cpf_prefix="606707818", base=base
+    )
+    created = _create(db, record, doctor)
+    printable = get_printable_prescription(
+        db, prescription_id=created.id, doctor_user_id=doctor.id
+    )
+    assert db.get(Consultation, consultation.id).status == ConsultationStatus.EM_ANDAMENTO.value
+    assert printable.patient_name == patient.name
+    assert printable.professional_name == professional.name
+    assert printable.registration_identifier == professional.registration_identifier
+    assert printable.scheduled_at == ensure_utc(consultation.scheduled_at)
+    assert printable.prescription.id == created.id
+    assert printable.prescription.items[0].medication_or_item == "Medicamento A"
+    assert printable.prescription.items[0].instructions == "Orientação A"
+    assert printable.prescription.general_notes == "Geral A"
+
+
+def test_database_failure_never_echoes_sensitive_payload_to_functional_error(
+    db: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """15.3: SQLAlchemy exceptions are sanitized at the prescription service boundary."""
+    from sqlalchemy.exc import SQLAlchemyError
+
+    base = datetime(2026, 10, 2, 12, tzinfo=timezone.utc)
+    doctor, _, _, _, _, record = _start(
+        db, suffix="DB-ERROR", cpf_prefix="707808919", base=base
+    )
+    created = _create(db, record, doctor)
+    sensitive = "SENSITIVE_MEDICATION_SAMPLE"
+    original_rollback = db.rollback
+    rollback_calls = []
+
+    def fail_commit() -> None:
+        raise SQLAlchemyError(f"constraint violation: {sensitive}")
+
+    def checked_rollback() -> None:
+        rollback_calls.append(True)
+        original_rollback()
+
+    monkeypatch.setattr(db, "commit", fail_commit)
+    monkeypatch.setattr(db, "rollback", checked_rollback)
+    with pytest.raises(PrescriptionConflictError) as exc:
+        update_prescription_notes(
+            db,
+            prescription_id=created.id,
+            doctor_user_id=doctor.id,
+            general_notes=sensitive,
+        )
+    assert rollback_calls
+    assert sensitive not in str(exc.value)
+    assert "constraint" not in str(exc.value).lower()

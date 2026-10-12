@@ -1,4 +1,4 @@
-> **Conciliação documental (12/10/2026):** das 235 tarefas, **219 possuem evidência registrada** e **16 permanecem abertas**. As 173 tarefas reconhecidas por inspeção estática em 11/10/2026 continuam válidas; mais 46 foram conciliadas agora com testes existentes, auditoria estática delimitada e/ou CI da `develop` no commit `55018cce`. Cada uma das 62 tarefas revisadas (inclusive as 16 não marcadas) está relacionada à evidência e à limitação em `docs/openspec-evidencias-prescricoes-2026-10-12.md`. **CI verde não equivale a QA visual ou teste de rota no navegador; não arquivar esta change ainda.**
+> **Conciliação documental (12/10/2026):** das 235 tarefas, **228 possuem evidência registrada** e **7 permanecem abertas**. As 173 tarefas reconhecidas por inspeção estática em 11/10/2026 continuam válidas; mais 55 foram conciliadas por meio dos testes existentes e dos testes de aceitação adicionais no PR #301, auditoria estática delimitada e/ou CI da `develop` no commit `55018cce`. Cada uma das 62 tarefas revisadas (inclusive as 16 não marcadas) está relacionada à evidência e à limitação em `docs/openspec-evidencias-prescricoes-2026-10-12.md`. **CI verde não equivale a QA visual ou teste de rota no navegador; não arquivar esta change ainda.**
 
 ## 1. Modelo e migration
 
@@ -219,7 +219,7 @@
 
 - [x] 15.1 Auditar services/application/state para ausência de logging de payload prescrito.
 - [x] 15.2 Garantir que erros de validação não ecoem medicamento/posologia/observações.
-- [ ] 15.3 Garantir que erros de banco não exponham constraints/stack trace.
+- [x] 15.3 Garantir que erros de banco não exponham constraints/stack trace.
 - [x] 15.4 Testar Recepcionista sem leitura/mutação clínica de Prescrição.
 - [x] 15.5 Testar Financeiro sem leitura/mutação.
 - [x] 15.6 Testar Administrador normal sem API geral.
@@ -227,8 +227,8 @@
 - [x] 15.8 Testar sessão ausente/expirada.
 - [ ] 15.9 Testar URL de impressão por outro Médico.
 - [ ] 15.10 Testar URL de impressão sem sessão.
-- [ ] 15.11 Garantir que logout limpe payloads de dialogs/state.
-- [ ] 15.12 Garantir que CPF não seja introduzido em URL/State de Prescrição.
+- [x] 15.11 Garantir que logout limpe payloads de dialogs/state.
+- [x] 15.12 Garantir que CPF não seja introduzido em URL/State de Prescrição.
 
 ## 16. Testes de domínio
 
@@ -258,13 +258,13 @@
 - [x] 17.3 Testar que Consulta atual não entra no histórico anterior.
 - [x] 17.4 Testar múltiplas Prescrições no mesmo item de histórico.
 - [x] 17.5 Testar ordem de documentos/itens.
-- [ ] 17.6 Testar que carregamento fica limitado à página atual.
-- [ ] 17.7 Testar impressão de Prescription ativa pelo Médico autor.
+- [x] 17.6 Testar que carregamento fica limitado à página atual.
+- [x] 17.7 Testar impressão de Prescription ativa pelo Médico autor.
 - [x] 17.8 Testar reimpressão de Prescription concluída pelo Médico autor.
 - [x] 17.9 Testar negação de impressão para outro Médico.
 - [x] 17.10 Testar negação de impressão para role incompatível.
-- [ ] 17.11 Testar conteúdo obrigatório da visualização imprimível.
-- [ ] 17.12 Testar presença do aviso de ausência de assinatura digital.
+- [x] 17.11 Testar conteúdo obrigatório da visualização imprimível.
+- [x] 17.12 Testar presença do aviso de ausência de assinatura digital.
 
 ## 18. PostgreSQL e concorrência
 
@@ -274,7 +274,7 @@
 - [x] 18.4 Testar concorrência tentando remover os últimos itens.
 - [x] 18.5 Testar exclusão concorrente da Prescription.
 - [x] 18.6 Confirmar ausência de itens órfãos.
-- [ ] 18.7 Confirmar FKs/índices no PostgreSQL 16 real do CI.
+- [x] 18.7 Confirmar FKs/índices no PostgreSQL 16 real do CI.
 - [x] 18.8 Executar migration completa do zero até a nova revisão.
 
 ## 19. Documentação e validação final
@@ -289,5 +289,5 @@
 - [x] 19.8 Executar suíte completa.
 - [x] 19.9 Executar testes concorrentes PostgreSQL.
 - [x] 19.10 Executar `reflex compile --dry`.
-- [ ] 19.11 Auditar warnings novos do Reflex.
+- [x] 19.11 Auditar warnings novos do Reflex.
 - [ ] 19.12 Corrigir regressões antes de concluir a change.
