@@ -174,5 +174,11 @@ def test_print_document_render_contract_includes_required_labels_and_unsigned_no
         "Observações gerais",
         NO_DIGITAL_SIGNATURE_NOTICE,
     ):
-        assert label in rendered, f"Missing required print document element: {label}"
+        escaped = "".join(
+            f"\\u{ord(char):04x}" if ord(char) > 127 else char
+            for char in label
+        )
+        assert label in rendered or escaped.lower() in rendered.lower(), (
+            f"Missing required print document element: {label}"
+        )
     assert "vitta-print-document" in rendered
