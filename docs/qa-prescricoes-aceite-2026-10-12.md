@@ -77,3 +77,7 @@ Preencher **somente depois do teste real**:
 ## Complemento automatizado de State e árvore Reflex
 
 [GitHub Actions #38268988581](https://github.com/vitta-one/openspec/actions/runs/38268988581): **150 passed**, migrations PostgreSQL 16, OpenSpec 7/7, compilação aprovada. O novo `tests/test_clinical_prescription_route_state.py` testa o handler do print com parâmetros de rota e exceções de autenticação/autorização; confirma limpeza no logout e verifica os textos reais da árvore Reflex (com normalização da serialização Unicode). Esses testes sustentam **15.11, 17.11 e 17.12** no nível automatizado. **As verificações visuais e de acesso HTTP no navegador continuam não executadas.** Não registrar checkbox humano como aprovado.
+
+## Complemento de privacidade do print
+
+O [CI #38269431075](https://github.com/vitta-one/openspec/actions/runs/38269431075) aprovou **151 testes**, incluindo `test_print_route_state_does_not_copy_cpf_or_put_it_in_url`. O caso injeta um CPF fictício na projeção de origem e assegura que o carregamento do documento usa somente `prescription_id` numérico, sem copiar o CPF para o estado de impressão. **15.12 reconciliado via teste de State**; DevTools/URL no navegador real segue como recomendação de QA manual para defesa em apresentação.

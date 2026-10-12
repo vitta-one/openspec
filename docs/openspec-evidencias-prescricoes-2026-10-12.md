@@ -6,7 +6,7 @@
 
 Esta é uma conciliação **do checklist previamente pendente**, não uma auditoria E2E integral. Partimos do commit `55018cce390353d724d5323cc7d0afea46df314f` da `develop` e do [CI `develop` #38264642517](https://github.com/vitta-one/openspec/actions/runs/38264642517), que validou OpenSpec estrito (**7/7**), executou migrations contra um contêiner **PostgreSQL 16**, concluiu **141 testes sem falha ou skip** e executou `reflex compile --dry` com sucesso.
 
-**54 tarefas** foram marcadas por evidência explícita de testes executados no CI ou por verificação estática pontual e reproduzível (tarefa 15.1). **8 tarefas** foram mantidas abertas quando falta teste específico, execução visual ou verificação operacional. Isto soma **227 concluídas e 8 abertas, em 235** (incluindo as 173 já reconhecidas anteriormente por evidência estática).
+**55 tarefas** foram marcadas por evidência explícita de testes executados no CI ou por verificação estática pontual e reproduzível (tarefa 15.1). **7 tarefas** foram mantidas abertas quando falta teste específico, execução visual ou verificação operacional. Isto soma **228 concluídas e 7 abertas, em 235** (incluindo as 173 já reconhecidas anteriormente por evidência estática).
 
 Os links abaixo levam aos testes versionados. A existência da função só conta como execução nesta revisão porque o workflow `python -m pytest -q` descobriu a suíte inteira, apontou 141 aprovados e **não registrou skips**, com `DATABASE_URL` PostgreSQL no job. Nos itens não comprovados, um código implementado ou um teste parcial não substitui a asserção que falta.
 
@@ -50,7 +50,7 @@ Os links abaixo levam aos testes versionados. A existência da função só cont
 | **15.9** — Testar URL de impressão por outro Médico. | ⏳ Aberta | [`test_wrong_doctor_cannot_read_or_mutate_prescription`](../tests/test_clinical_prescription_service.py#L490) + [`vitta_one/clinical_prescription/state.py`](../vitta_one/clinical_prescription/state.py#L49). | Não há teste HTTP/Reflex de acesso direto à URL de impressão por outro Médico. |
 | **15.10** — Testar URL de impressão sem sessão. | ⏳ Aberta | [`test_print_requires_session_before_lookup`](../tests/test_clinical_prescription_authorization.py#L120) + [`vitta_one/clinical_prescription/state.py`](../vitta_one/clinical_prescription/state.py#L81). | Não há teste de acesso direto à URL sem sessão (apenas boundary e tratamento de State). |
 | **15.11** — Garantir que logout limpe payloads de dialogs/state. | ✅ Comprovada | [`test_clear_active_removes_clinical_form_and_history`](../tests/test_clinical_care_state.py#L12) + [`vitta_one/auth/state.py`](../vitta_one/auth/state.py#L353). | Teste cobre limpeza de State; não cobre o fluxo completo de logout/cookie e a superfície imprimível em conjunto. | <!-- evidência adicional: tests/test_clinical_prescription_route_state.py; CI #38268988581, 150 passed. Contrato State/árvore renderizada, não browser E2E. -->
-| **15.12** — Garantir que CPF não seja introduzido em URL/State de Prescrição. | ⏳ Aberta | [`vitta_one/clinical_prescription/state.py`](../vitta_one/clinical_prescription/state.py#L24) guarda identificador numérico e não tem campo CPF; [`vitta_one/patient_queue/state.py`](../vitta_one/patient_queue/state.py#L909) usa ID na rota. | Falta teste explícito assegurando ausência de CPF em URL/State clínico de impressão. |
+| **15.12** — Garantir que CPF não seja introduzido em URL/State de Prescrição. | ✅ Comprovada | [`vitta_one/clinical_prescription/state.py`](../vitta_one/clinical_prescription/state.py#L24) guarda identificador numérico e não tem campo CPF; [`vitta_one/patient_queue/state.py`](../vitta_one/patient_queue/state.py#L909) usa ID na rota. | Falta teste explícito assegurando ausência de CPF em URL/State clínico de impressão. | <!-- teste: test_print_route_state_does_not_copy_cpf_or_put_it_in_url, CI #38269431075 -->
 
 ## 16. Testes de domínio
 
@@ -119,7 +119,7 @@ Os links abaixo levam aos testes versionados. A existência da função só cont
 
 ## Pendências após conciliação
 
-Os **8 itens em aberto** são: `10.18`, `10.20`, `11.8`, `13.8`, `15.9`, `15.10`, `15.12`, `19.12`.
+Os **7 itens em aberto** são: `10.18`, `10.20`, `11.8`, `13.8`, `15.9`, `15.10`, `19.12`.
 
 **Nota sobre segurança:** o item 15.1 foi marcado após uma inspeção estática delimitada a quatro módulos, sem chamadas de `print`, `logging` ou `logger` para payload clínico. A evidência não equivale à auditoria de toda a infraestrutura de logs, e o item 15.3 permanece pendente de teste de falha injetada no banco.
 
@@ -134,3 +134,7 @@ Os **8 itens em aberto** são: `10.18`, `10.20`, `11.8`, `13.8`, `15.9`, `15.10`
 ### Complemento de segurança e impressão — CI #38268988581
 
 O [run #38268988581](https://github.com/vitta-one/openspec/actions/runs/38268988581) aprovou **150 testes**, incluindo `tests/test_clinical_prescription_route_state.py`: a chamada do loader de impressão por rota verifica sessão ausente, perfil de Médico alheio e limpeza de conteúdo; o fluxo de logout aciona limpeza dos states protegidos e cookie; a árvore de componentes do documento inclui labels obrigatórios e aviso literal de ausência de assinatura. Portanto **15.11, 17.11 e 17.12** foram conciliados no nível de State/contrato renderizado. A ausência de QA de browser/HTTP real mantém **15.9, 15.10, 15.12** e critérios visuais pendentes, conforme relatório de QA.
+
+### Privacidade da rota — CI #38269431075
+
+[Teste do State de impressão](../tests/test_clinical_prescription_route_state.py): o carregamento de prescrição com DTO contendo CPF sintético não transfere CPF para a URL nem para o `State` de impressão. [CI #38269431075](https://github.com/vitta-one/openspec/actions/runs/38269431075): **151 testes aprovados**, PostgreSQL/OpenSpec/Reflex aprovados. O item **15.12** foi conciliado no limite deste contrato de State. Inspeção da rede e do histórico do browser real continua como QA complementar (sem execução nesta sessão).

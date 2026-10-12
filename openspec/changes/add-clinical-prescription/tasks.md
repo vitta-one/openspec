@@ -1,4 +1,4 @@
-> **Conciliação documental (12/10/2026):** das 235 tarefas, **227 possuem evidência registrada** e **8 permanecem abertas**. As 173 tarefas reconhecidas por inspeção estática em 11/10/2026 continuam válidas; mais 54 foram conciliadas por meio dos testes existentes e dos testes de aceitação adicionais no PR #301, auditoria estática delimitada e/ou CI da `develop` no commit `55018cce`. Cada uma das 62 tarefas revisadas (inclusive as 16 não marcadas) está relacionada à evidência e à limitação em `docs/openspec-evidencias-prescricoes-2026-10-12.md`. **CI verde não equivale a QA visual ou teste de rota no navegador; não arquivar esta change ainda.**
+> **Conciliação documental (12/10/2026):** das 235 tarefas, **228 possuem evidência registrada** e **7 permanecem abertas**. As 173 tarefas reconhecidas por inspeção estática em 11/10/2026 continuam válidas; mais 55 foram conciliadas por meio dos testes existentes e dos testes de aceitação adicionais no PR #301, auditoria estática delimitada e/ou CI da `develop` no commit `55018cce`. Cada uma das 62 tarefas revisadas (inclusive as 16 não marcadas) está relacionada à evidência e à limitação em `docs/openspec-evidencias-prescricoes-2026-10-12.md`. **CI verde não equivale a QA visual ou teste de rota no navegador; não arquivar esta change ainda.**
 
 ## 1. Modelo e migration
 
@@ -228,7 +228,7 @@
 - [ ] 15.9 Testar URL de impressão por outro Médico.
 - [ ] 15.10 Testar URL de impressão sem sessão.
 - [x] 15.11 Garantir que logout limpe payloads de dialogs/state.
-- [ ] 15.12 Garantir que CPF não seja introduzido em URL/State de Prescrição.
+- [x] 15.12 Garantir que CPF não seja introduzido em URL/State de Prescrição.
 
 ## 16. Testes de domínio
 
