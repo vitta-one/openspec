@@ -73,3 +73,7 @@ Preencher **somente depois do teste real**:
 - Aprovação da revisão / data:
 
 **Critério para arquivar:** OpenSpec strict aprovado, migration + suite + compile aprovados, cobertura específica das pendências validada e resultado real de QA visual/segurança registrado. A existência deste arquivo não autoriza archive.
+
+## Complemento automatizado de State e árvore Reflex
+
+[GitHub Actions #38268988581](https://github.com/vitta-one/openspec/actions/runs/38268988581): **150 passed**, migrations PostgreSQL 16, OpenSpec 7/7, compilação aprovada. O novo `tests/test_clinical_prescription_route_state.py` testa o handler do print com parâmetros de rota e exceções de autenticação/autorização; confirma limpeza no logout e verifica os textos reais da árvore Reflex (com normalização da serialização Unicode). Esses testes sustentam **15.11, 17.11 e 17.12** no nível automatizado. **As verificações visuais e de acesso HTTP no navegador continuam não executadas.** Não registrar checkbox humano como aprovado.

@@ -1,4 +1,4 @@
-> **Conciliação documental (12/10/2026):** das 235 tarefas, **224 possuem evidência registrada** e **11 permanecem abertas**. As 173 tarefas reconhecidas por inspeção estática em 11/10/2026 continuam válidas; mais 51 foram conciliadas por meio dos testes existentes e dos quatro testes adicionados no PR #301, auditoria estática delimitada e/ou CI da `develop` no commit `55018cce`. Cada uma das 62 tarefas revisadas (inclusive as 16 não marcadas) está relacionada à evidência e à limitação em `docs/openspec-evidencias-prescricoes-2026-10-12.md`. **CI verde não equivale a QA visual ou teste de rota no navegador; não arquivar esta change ainda.**
+> **Conciliação documental (12/10/2026):** das 235 tarefas, **227 possuem evidência registrada** e **8 permanecem abertas**. As 173 tarefas reconhecidas por inspeção estática em 11/10/2026 continuam válidas; mais 54 foram conciliadas por meio dos testes existentes e dos testes de aceitação adicionais no PR #301, auditoria estática delimitada e/ou CI da `develop` no commit `55018cce`. Cada uma das 62 tarefas revisadas (inclusive as 16 não marcadas) está relacionada à evidência e à limitação em `docs/openspec-evidencias-prescricoes-2026-10-12.md`. **CI verde não equivale a QA visual ou teste de rota no navegador; não arquivar esta change ainda.**
 
 ## 1. Modelo e migration
 
@@ -227,7 +227,7 @@
 - [x] 15.8 Testar sessão ausente/expirada.
 - [ ] 15.9 Testar URL de impressão por outro Médico.
 - [ ] 15.10 Testar URL de impressão sem sessão.
-- [ ] 15.11 Garantir que logout limpe payloads de dialogs/state.
+- [x] 15.11 Garantir que logout limpe payloads de dialogs/state.
 - [ ] 15.12 Garantir que CPF não seja introduzido em URL/State de Prescrição.
 
 ## 16. Testes de domínio
@@ -263,8 +263,8 @@
 - [x] 17.8 Testar reimpressão de Prescription concluída pelo Médico autor.
 - [x] 17.9 Testar negação de impressão para outro Médico.
 - [x] 17.10 Testar negação de impressão para role incompatível.
-- [ ] 17.11 Testar conteúdo obrigatório da visualização imprimível.
-- [ ] 17.12 Testar presença do aviso de ausência de assinatura digital.
+- [x] 17.11 Testar conteúdo obrigatório da visualização imprimível.
+- [x] 17.12 Testar presença do aviso de ausência de assinatura digital.
 
 ## 18. PostgreSQL e concorrência
 
