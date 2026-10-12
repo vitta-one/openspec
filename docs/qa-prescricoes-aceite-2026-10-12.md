@@ -43,7 +43,7 @@
 | **17.7** | `test_printable_prescription_is_available_to_author_while_consultation_is_active` | Médico autor obtém campos e itens em Consulta `EM_ANDAMENTO` |
 | **18.7** | `test_postgresql_prescription_foreign_keys_and_indexes_match_migration` | Catálogo PostgreSQL 16 declara FKs, `ondelete` e índices esperados |
 
-**Estado inicial:** testes escritos, aguardando execução do CI do PR. Nenhum checkbox de Prescrições deve ser marcado com base exclusivamente nesta tabela.
+**Estado inicial:** testes escritos e submetidos para validação no [PR #301](https://github.com/vitta-one/openspec/pull/301), aguardando execução do CI. Resultado registrado posteriormente somente mediante evidência dos logs. Nenhum checkbox de Prescrições deve ser marcado com base exclusivamente nesta tabela.
 
 ## Auditoria de warnings (19.11)
 
