@@ -51,6 +51,30 @@ def login(page: Page, email: str) -> None:
     expect(page.get_by_role("heading", name=re.compile("Médico|Atendimento|Fila", re.I)).first).to_be_visible(timeout=30000)
 
 
+
+
+def overflowing_elements(page: Page):
+    return page.evaluate("""() => {
+        const width = window.innerWidth;
+        return [...document.querySelectorAll('body *')]
+            .map((el) => {
+                const rect = el.getBoundingClientRect();
+                return {
+                    element: el.tagName.toLowerCase(),
+                    className: String(el.className).slice(0, 100),
+                    text: (el.textContent || '').trim().slice(0, 48),
+                    left: Math.round(rect.left),
+                    right: Math.round(rect.right),
+                    width: Math.round(rect.width),
+                    scrollWidth: el.scrollWidth,
+                    clientWidth: el.clientWidth
+                };
+            })
+            .filter(el => el.right > width + 2 && el.width > 2)
+            .sort((a, b) => b.right - a.right)
+            .slice(0, 12);
+    }""")
+
 def print_url() -> str:
     return f"{BASE}/medico/prescricao/{FIXTURE['prescription_id']}"
 
@@ -103,7 +127,7 @@ def test_doctor_prescription_dialog_keyboard_focus_and_responsive_layout(page: P
         expect(dialog.locator("#new-prescription-instructions")).to_be_focused(timeout=10000)
         dialog.locator("#new-prescription-instructions").press("Shift+Tab")
         expect(first).to_be_focused(timeout=10000)
-        assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 2")
+        assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 2"), overflowing_elements(page)
         assert page.evaluate(
             "getComputedStyle(document.documentElement).getPropertyValue('--vitta-focus').trim() != ''"
         )
@@ -150,5 +174,5 @@ def test_completed_history_and_prescriptions_fit_narrow_viewports(page: Page) ->
         expect(disclosure.get_by_text("Histórico Fictício QA")).to_be_visible(timeout=15000)
         assert page.evaluate(
             "document.documentElement.scrollWidth <= window.innerWidth + 2"
-        ), f"horizontal overflow detected at {width}px with history open"
+        ), f"horizontal overflow detected at {width}px with history open: {overflowing_elements(page)}"
         disclosure.locator("summary").click()
