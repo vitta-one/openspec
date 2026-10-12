@@ -62,7 +62,7 @@ jobs:
       - name: Migrate disposable PostgreSQL
         run: reflex db migrate
       - name: Create strictly synthetic prescription data
-        run: python scripts/qa_seed_prescriptions.py
+        run: python -m scripts.qa_seed_prescriptions
       - name: Launch Reflex production server
         run: |
           set -euo pipefail
