@@ -84,4 +84,4 @@ jobs:
         with:
           name: prescription-qa-visual-evidence
           path: qa-artifacts/
-          retention-days: 3
+          retention-days: 90
