@@ -1,4 +1,4 @@
-> **Conciliação documental (12/10/2026):** das 235 tarefas, **228 possuem evidência registrada** e **7 permanecem abertas**. As 173 tarefas reconhecidas por inspeção estática em 11/10/2026 continuam válidas; mais 55 foram conciliadas por meio dos testes existentes e dos testes de aceitação adicionais no PR #301, auditoria estática delimitada e/ou CI da `develop` no commit `55018cce`. Cada uma das 62 tarefas revisadas (inclusive as 16 não marcadas) está relacionada à evidência e à limitação em `docs/openspec-evidencias-prescricoes-2026-10-12.md`. **CI verde não equivale a QA visual ou teste de rota no navegador; não arquivar esta change ainda.**
+> **Aceite final com evidências (12/10/2026):** **235/235 tarefas comprovadas no escopo acadêmico**. As 228 previamente conciliadas foram preservadas; as últimas 7 foram verificadas em **Chromium real** contra Reflex + PostgreSQL 16 descartável, com dados inteiramente fictícios: [CI E2E #38273941455](https://github.com/vitta-one/openspec/actions/runs/38273941455) (**6 testes E2E aprovados**) e [CI comum #38273939961](https://github.com/vitta-one/openspec/actions/runs/38273939961) (**151 testes Python, OpenSpec strict 7/7, migrações e compile aprovados**). Foram corrigidos retorno de foco e overflow mobile, e as capturas sintéticas foram inspecionadas para validar apresentação. Rastreabilidade em `docs/qa-prescricoes-resultado-2026-10-12.md`. **Não houve teste físico presencial em múltiplos dispositivos nem homologação humana formal; essas verificações são recomendadas antes de uso clínico real.**
 
 ## 1. Modelo e migration
 
@@ -155,9 +155,9 @@
 - [x] 10.15 Adicionar ação “Excluir prescrição”.
 - [x] 10.16 Adicionar ação “Visualizar para impressão”.
 - [x] 10.17 Manter ações responsivas em uma coluna quando necessário.
-- [ ] 10.18 Preservar foco visível, labels e navegação por teclado.
+- [x] 10.18 Preservar foco visível, labels e navegação por teclado.
 - [x] 10.19 Não usar `window.confirm`/alert para fluxos destrutivos.
-- [ ] 10.20 Preservar reduced-motion e tokens visuais do produto.
+- [x] 10.20 Preservar reduced-motion e tokens visuais do produto.
 
 ## 11. Dialogs de Prescrição
 
@@ -168,7 +168,7 @@
 - [x] 11.5 Criar dialog acessível de editar item.
 - [x] 11.6 Criar dialog acessível de editar observações gerais.
 - [x] 11.7 Criar dialog de confirmação de exclusão da Prescription.
-- [ ] 11.8 Garantir foco inicial adequado.
+- [x] 11.8 Garantir foco inicial adequado.
 - [x] 11.9 Não fechar dialog automaticamente em erro corrigível.
 - [x] 11.10 Fechar/limpar payload somente em sucesso ou cancelamento explícito.
 
@@ -202,7 +202,7 @@
 - [x] 13.5 Mostrar estado “Sem prescrições” quando vazio.
 - [x] 13.6 Preservar paginação do histórico.
 - [x] 13.7 Evitar expandir automaticamente grandes conteúdos.
-- [ ] 13.8 Manter viewport estreita sem rolagem horizontal obrigatória.
+- [x] 13.8 Manter viewport estreita sem rolagem horizontal obrigatória.
 
 ## 14. Admin QA
 
@@ -225,8 +225,8 @@
 - [x] 15.6 Testar Administrador normal sem API geral.
 - [x] 15.7 Testar Médico diferente sem leitura/mutação.
 - [x] 15.8 Testar sessão ausente/expirada.
-- [ ] 15.9 Testar URL de impressão por outro Médico.
-- [ ] 15.10 Testar URL de impressão sem sessão.
+- [x] 15.9 Testar URL de impressão por outro Médico.
+- [x] 15.10 Testar URL de impressão sem sessão.
 - [x] 15.11 Garantir que logout limpe payloads de dialogs/state.
 - [x] 15.12 Garantir que CPF não seja introduzido em URL/State de Prescrição.
 
@@ -290,4 +290,4 @@
 - [x] 19.9 Executar testes concorrentes PostgreSQL.
 - [x] 19.10 Executar `reflex compile --dry`.
 - [x] 19.11 Auditar warnings novos do Reflex.
-- [ ] 19.12 Corrigir regressões antes de concluir a change.
+- [x] 19.12 Corrigir regressões antes de concluir a change.

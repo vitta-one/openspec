@@ -4,7 +4,7 @@ Sistema acadêmico de gerenciamento de clínica médica desenvolvido com **Pytho
 
 ## Estado atual
 
-A fundação de acesso, paciente/fila, profissionais/especialidades, agenda, lifecycle da Consulta, registro clínico e Prescrições estruturadas estão implementados nesta branch. A capability consolidada está em `openspec/specs/patient-reception-queue/`, com a evolução correspondente de `openspec/specs/access-control/`. A autorização continua sendo revalidada no servidor em todas as leituras e mutações protegidas.
+A fundação de acesso, paciente/fila, profissionais/especialidades, agenda, lifecycle da Consulta, registro clínico e Prescrições estruturadas estão implementados. Os contratos normativos das sete capabilities estão consolidados sob `openspec/specs/`, e as evoluções concluídas estão preservadas em `openspec/changes/archive/`. A autorização continua sendo revalidada no servidor em todas as leituras e mutações protegidas. A validação de Prescrições inclui testes PostgreSQL, suíte Python e navegador Chromium automatizado; homologação presencial em dispositivos físicos continua recomendada antes de uso real.
 
 ## Stack definida
 
