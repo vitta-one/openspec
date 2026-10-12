@@ -13,10 +13,10 @@ from sqlmodel import Session, create_engine
 from vitta_one.appointment_scheduling.service import create_availability_slot, schedule_consultation
 from vitta_one.auth.roles import Role
 from vitta_one.auth.security import hash_password
-from vitta_one.clinical_prescription.service import create_prescription
+from vitta_one.clinical_prescription.service import add_prescription_item, create_prescription
 from vitta_one.consultation_care.service import confirm_arrival
 from vitta_one.models.auth import User
-from vitta_one.patient_queue.service import claim_next_patient, create_patient
+from vitta_one.patient_queue.service import claim_next_patient, create_patient, finish_queue_entry
 from vitta_one.professional_directory.service import create_professional, create_specialty
 
 
@@ -57,6 +57,32 @@ def main() -> None:
             specialty_ids=[specialty.id], user_id=doctor.id,
         )
         patient = create_patient(db, name="Paciente Fictício QA Navegador", cpf=_cpf("123456789"))
+        # Preserve a completed historical encounter for responsive history QA.
+        old_slot = create_availability_slot(
+            db, professional_id=professional.id, starts_at=now + timedelta(days=4), now=now
+        )
+        old_consultation = schedule_consultation(
+            db, patient_id=patient.id, slot_id=old_slot.id, now=now
+        )
+        old_entry = confirm_arrival(
+            db, consultation_id=old_consultation.id, symptoms="Sintoma histórico fictício QA",
+            priority="VERDE", now=now + timedelta(minutes=3)
+        )
+        claim_next_patient(db, doctor_user_id=doctor.id, now=now + timedelta(minutes=4))
+        from sqlmodel import select
+        from vitta_one.models.clinical_care import ClinicalCareRecord
+        old_record = db.exec(
+            select(ClinicalCareRecord).where(ClinicalCareRecord.consultation_id == old_consultation.id)
+        ).one()
+        create_prescription(
+            db, clinical_care_record_id=old_record.id, doctor_user_id=doctor.id,
+            medication_or_item="Histórico Fictício QA", instructions="Orientação histórica fictícia",
+            general_notes="Observação histórica fictícia",
+        )
+        finish_queue_entry(
+            db, entry_id=old_entry.id, doctor_user_id=doctor.id, now=now + timedelta(minutes=9)
+        )
+        # Create a second, active encounter for the same patient.
         slot = create_availability_slot(
             db, professional_id=professional.id, starts_at=now + timedelta(days=5), now=now
         )
@@ -78,6 +104,11 @@ def main() -> None:
             medication_or_item="Medicamento Fictício QA",
             instructions="Uso fictício, somente para testes de software",
             notes="Observação fictícia", general_notes="Não é uma prescrição clínica real",
+        )
+        add_prescription_item(
+            db, prescription_id=prescription.id, doctor_user_id=doctor.id,
+            medication_or_item="Segundo item fictício QA",
+            instructions="Segunda orientação fictícia",
         )
         fixture = {
             "prescription_id": prescription.id,
