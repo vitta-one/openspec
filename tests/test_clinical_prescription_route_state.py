@@ -153,3 +153,26 @@ def test_logout_clears_doctor_and_print_payloads_and_removes_session_cookie(
     assert fake.auth_checked is True
     assert ("redirect", "/login") in events
     assert any(isinstance(event, tuple) and event[0] == "cookie" for event in events)
+
+
+
+def test_print_document_render_contract_includes_required_labels_and_unsigned_notice() -> None:
+    """17.11/17.12: verify the actual Reflex document component tree, not only the constant."""
+    from vitta_one.ui.prescription_components import (
+        NO_DIGITAL_SIGNATURE_NOTICE,
+        _print_document,
+    )
+
+    # Reflex's Tag representation includes text nodes/vars in the component tree.
+    rendered = str(_print_document().render())
+    for label in (
+        "PRESCRIÇÃO",
+        "Paciente",
+        "Consulta",
+        "Profissional",
+        "Itens prescritos",
+        "Observações gerais",
+        NO_DIGITAL_SIGNATURE_NOTICE,
+    ):
+        assert label in rendered, f"Missing required print document element: {label}"
+    assert "vitta-print-document" in rendered
