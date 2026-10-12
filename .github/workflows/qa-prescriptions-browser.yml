@@ -6,7 +6,7 @@ on:
       - develop
     paths:
       - "scripts/qa_seed_prescriptions.py"
-      - "tests/e2e/test_prescription_browser.py"
+      - "qa_browser/prescription_browser.py"
       - ".github/workflows/qa-prescriptions-browser.yml"
       - "vitta_one/**"
       - "assets/styles.css"
@@ -77,7 +77,7 @@ jobs:
           tail -n 180 qa-artifacts/reflex.log
           exit 1
       - name: Browser QA — security, keyboard and responsive
-        run: python -m pytest tests/e2e/test_prescription_browser.py -q
+        run: python -m pytest qa_browser/prescription_browser.py -q
       - name: Upload synthetic QA evidence on failure
         if: failure()
         uses: actions/upload-artifact@v4
