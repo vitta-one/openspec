@@ -106,6 +106,7 @@ def test_author_sees_print_document_and_signature_notice(page: Page) -> None:
     expect(page.get_by_text("Medicamento Fictício QA")).to_be_visible()
     expect(page.get_by_text("Documento sem assinatura digital nesta etapa.")).to_be_visible()
     expect(page.get_by_role("button", name="Imprimir")).to_be_visible()
+    page.screenshot(path="qa-artifacts/documento-imprimivel.png", full_page=True)
 
 
 def test_doctor_prescription_dialog_keyboard_focus_and_responsive_layout(page: Page) -> None:
@@ -134,6 +135,7 @@ def test_doctor_prescription_dialog_keyboard_focus_and_responsive_layout(page: P
         assert page.evaluate(
             "getComputedStyle(document.querySelector('#new-prescription-medication')).animationDuration"
         ) in ("0s", "0.00001s", "1e-05s", "0.01ms")
+        page.screenshot(path=f"qa-artifacts/dialogo-nova-prescricao-{width}px.png", full_page=True)
         first.press("Escape")
         expect(dialog).to_have_count(0, timeout=15000)
         expect(trigger).to_be_focused(timeout=10000)
@@ -175,4 +177,5 @@ def test_completed_history_and_prescriptions_fit_narrow_viewports(page: Page) ->
         assert page.evaluate(
             "document.documentElement.scrollWidth <= window.innerWidth + 2"
         ), f"horizontal overflow detected at {width}px with history open: {overflowing_elements(page)}"
+        page.screenshot(path=f"qa-artifacts/historico-{width}px.png", full_page=True)
         disclosure.locator("summary").click()
