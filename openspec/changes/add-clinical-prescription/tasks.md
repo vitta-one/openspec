@@ -1,4 +1,4 @@
-> **Regularização documental (11/10/2026):** os itens marcados abaixo possuem evidência **estática** nos modelos, serviços, estados, componentes ou documentação já versionados. Isso **não certifica** execução de testes, validação visual, segurança operacional nem aprovação de arquivamento. As tarefas não marcadas permanecem abertas até verificação independente. Rastreabilidade e pendências: `docs/openspec-auditoria-2026-10-11.md`.
+> **Conciliação documental (12/10/2026):** das 235 tarefas, **219 possuem evidência registrada** e **16 permanecem abertas**. As 173 tarefas reconhecidas por inspeção estática em 11/10/2026 continuam válidas; mais 46 foram conciliadas agora com testes existentes, auditoria estática delimitada e/ou CI da `develop` no commit `55018cce`. Cada uma das 62 tarefas revisadas (inclusive as 16 não marcadas) está relacionada à evidência e à limitação em `docs/openspec-evidencias-prescricoes-2026-10-12.md`. **CI verde não equivale a QA visual ou teste de rota no navegador; não arquivar esta change ainda.**
 
 ## 1. Modelo e migration
 
@@ -16,7 +16,7 @@
 - [x] 1.12 Criar migration incremental sobre `a6b3c9d2e5f1`.
 - [x] 1.13 Revisar ordem correta de criação de tabelas/FKs/índices.
 - [x] 1.14 Revisar downgrade removendo itens antes de Prescrições.
-- [ ] 1.15 Validar migration em PostgreSQL 16 descartável.
+- [x] 1.15 Validar migration em PostgreSQL 16 descartável.
 
 ## 2. Domínio e validação
 
@@ -217,14 +217,14 @@
 
 ## 15. Segurança e privacidade
 
-- [ ] 15.1 Auditar services/application/state para ausência de logging de payload prescrito.
-- [ ] 15.2 Garantir que erros de validação não ecoem medicamento/posologia/observações.
+- [x] 15.1 Auditar services/application/state para ausência de logging de payload prescrito.
+- [x] 15.2 Garantir que erros de validação não ecoem medicamento/posologia/observações.
 - [ ] 15.3 Garantir que erros de banco não exponham constraints/stack trace.
-- [ ] 15.4 Testar Recepcionista sem leitura/mutação clínica de Prescrição.
-- [ ] 15.5 Testar Financeiro sem leitura/mutação.
-- [ ] 15.6 Testar Administrador normal sem API geral.
-- [ ] 15.7 Testar Médico diferente sem leitura/mutação.
-- [ ] 15.8 Testar sessão ausente/expirada.
+- [x] 15.4 Testar Recepcionista sem leitura/mutação clínica de Prescrição.
+- [x] 15.5 Testar Financeiro sem leitura/mutação.
+- [x] 15.6 Testar Administrador normal sem API geral.
+- [x] 15.7 Testar Médico diferente sem leitura/mutação.
+- [x] 15.8 Testar sessão ausente/expirada.
 - [ ] 15.9 Testar URL de impressão por outro Médico.
 - [ ] 15.10 Testar URL de impressão sem sessão.
 - [ ] 15.11 Garantir que logout limpe payloads de dialogs/state.
@@ -232,50 +232,50 @@
 
 ## 16. Testes de domínio
 
-- [ ] 16.1 Testar criação de Prescription + primeiro item atomicamente.
-- [ ] 16.2 Testar primeiro item inválido sem documento vazio.
-- [ ] 16.3 Testar múltiplas Prescrições no mesmo ClinicalCareRecord.
-- [ ] 16.4 Testar múltiplos itens no mesmo documento.
-- [ ] 16.5 Testar limites de medicamento/item.
-- [ ] 16.6 Testar limites de orientação/posologia.
-- [ ] 16.7 Testar limites de observações do item.
-- [ ] 16.8 Testar limite de observações gerais.
-- [ ] 16.9 Testar edição de item.
-- [ ] 16.10 Testar item pertencente a outra Prescrição.
-- [ ] 16.11 Testar remoção com dois ou mais itens.
-- [ ] 16.12 Testar rejeição da remoção do último item.
-- [ ] 16.13 Testar exclusão da Prescription em `EM_ANDAMENTO`.
-- [ ] 16.14 Testar rejeição de exclusão pós-conclusão.
-- [ ] 16.15 Testar edição de observações gerais.
-- [ ] 16.16 Testar mutações sem alterar lifecycle.
-- [ ] 16.17 Testar mutação em estado diferente de `EM_ANDAMENTO`.
-- [ ] 16.18 Testar walk-in sem capability de Prescrição.
+- [x] 16.1 Testar criação de Prescription + primeiro item atomicamente.
+- [x] 16.2 Testar primeiro item inválido sem documento vazio.
+- [x] 16.3 Testar múltiplas Prescrições no mesmo ClinicalCareRecord.
+- [x] 16.4 Testar múltiplos itens no mesmo documento.
+- [x] 16.5 Testar limites de medicamento/item.
+- [x] 16.6 Testar limites de orientação/posologia.
+- [x] 16.7 Testar limites de observações do item.
+- [x] 16.8 Testar limite de observações gerais.
+- [x] 16.9 Testar edição de item.
+- [x] 16.10 Testar item pertencente a outra Prescrição.
+- [x] 16.11 Testar remoção com dois ou mais itens.
+- [x] 16.12 Testar rejeição da remoção do último item.
+- [x] 16.13 Testar exclusão da Prescription em `EM_ANDAMENTO`.
+- [x] 16.14 Testar rejeição de exclusão pós-conclusão.
+- [x] 16.15 Testar edição de observações gerais.
+- [x] 16.16 Testar mutações sem alterar lifecycle.
+- [x] 16.17 Testar mutação em estado diferente de `EM_ANDAMENTO`.
+- [x] 16.18 Testar walk-in sem capability de Prescrição.
 
 ## 17. Testes de histórico e impressão
 
-- [ ] 17.1 Testar histórico concluído trazendo Prescrições corretas.
-- [ ] 17.2 Testar histórico sem Prescrição.
-- [ ] 17.3 Testar que Consulta atual não entra no histórico anterior.
-- [ ] 17.4 Testar múltiplas Prescrições no mesmo item de histórico.
-- [ ] 17.5 Testar ordem de documentos/itens.
+- [x] 17.1 Testar histórico concluído trazendo Prescrições corretas.
+- [x] 17.2 Testar histórico sem Prescrição.
+- [x] 17.3 Testar que Consulta atual não entra no histórico anterior.
+- [x] 17.4 Testar múltiplas Prescrições no mesmo item de histórico.
+- [x] 17.5 Testar ordem de documentos/itens.
 - [ ] 17.6 Testar que carregamento fica limitado à página atual.
 - [ ] 17.7 Testar impressão de Prescription ativa pelo Médico autor.
-- [ ] 17.8 Testar reimpressão de Prescription concluída pelo Médico autor.
-- [ ] 17.9 Testar negação de impressão para outro Médico.
-- [ ] 17.10 Testar negação de impressão para role incompatível.
+- [x] 17.8 Testar reimpressão de Prescription concluída pelo Médico autor.
+- [x] 17.9 Testar negação de impressão para outro Médico.
+- [x] 17.10 Testar negação de impressão para role incompatível.
 - [ ] 17.11 Testar conteúdo obrigatório da visualização imprimível.
 - [ ] 17.12 Testar presença do aviso de ausência de assinatura digital.
 
 ## 18. PostgreSQL e concorrência
 
-- [ ] 18.1 Testar criação concorrente de documentos/itens sem registro parcial.
-- [ ] 18.2 Testar dois saves concorrentes no mesmo PrescriptionItem.
-- [ ] 18.3 Testar remoção concorrente versus edição do mesmo item.
-- [ ] 18.4 Testar concorrência tentando remover os últimos itens.
-- [ ] 18.5 Testar exclusão concorrente da Prescription.
-- [ ] 18.6 Confirmar ausência de itens órfãos.
+- [x] 18.1 Testar criação concorrente de documentos/itens sem registro parcial.
+- [x] 18.2 Testar dois saves concorrentes no mesmo PrescriptionItem.
+- [x] 18.3 Testar remoção concorrente versus edição do mesmo item.
+- [x] 18.4 Testar concorrência tentando remover os últimos itens.
+- [x] 18.5 Testar exclusão concorrente da Prescription.
+- [x] 18.6 Confirmar ausência de itens órfãos.
 - [ ] 18.7 Confirmar FKs/índices no PostgreSQL 16 real do CI.
-- [ ] 18.8 Executar migration completa do zero até a nova revisão.
+- [x] 18.8 Executar migration completa do zero até a nova revisão.
 
 ## 19. Documentação e validação final
 
@@ -284,10 +284,10 @@
 - [x] 19.3 Atualizar `UX-CONTRACT.md` com Prescrições, dialogs e impressão.
 - [x] 19.4 Atualizar `DESIGN.md` somente para padrões visuais duráveis de documento imprimível.
 - [x] 19.5 Atualizar README sem anunciar ZapSign como implementado.
-- [ ] 19.6 Validar OpenSpec strict.
-- [ ] 19.7 Executar migration PostgreSQL.
-- [ ] 19.8 Executar suíte completa.
-- [ ] 19.9 Executar testes concorrentes PostgreSQL.
-- [ ] 19.10 Executar `reflex compile --dry`.
+- [x] 19.6 Validar OpenSpec strict.
+- [x] 19.7 Executar migration PostgreSQL.
+- [x] 19.8 Executar suíte completa.
+- [x] 19.9 Executar testes concorrentes PostgreSQL.
+- [x] 19.10 Executar `reflex compile --dry`.
 - [ ] 19.11 Auditar warnings novos do Reflex.
 - [ ] 19.12 Corrigir regressões antes de concluir a change.
