@@ -961,9 +961,11 @@ def _clinical_history_card(row) -> rx.Component:
                         high_contrast=True,
                     ),
                     spacing="2",
+                    flex_wrap="wrap",
                 ),
+                direction=rx.breakpoints(initial="column", sm="row"),
                 justify="between",
-                align="start",
+                align=rx.breakpoints(initial="stretch", sm="start"),
                 gap="0.75rem",
                 width="100%",
             ),
@@ -1297,6 +1299,7 @@ def prescription_panel() -> rx.Component:
             ),
             rx.button(
                 "Nova prescrição",
+                id="vitta-new-prescription-trigger",
                 type="button",
                 color_scheme="teal",
                 high_contrast=True,
@@ -1453,6 +1456,9 @@ def _new_prescription_dialog() -> rx.Component:
                 on_submit=DoctorQueueState.create_prescription,
                 no_validate=True,
                 width="100%",
+            ),
+            on_close_auto_focus=rx.call_script(
+                "document.getElementById('vitta-new-prescription-trigger')?.focus()"
             ),
             class_name="vitta-dialog-content",
             max_width="42rem",
