@@ -8,7 +8,10 @@ from vitta_one.auth.state import AuthState
 
 _NAV_BY_ROLE = {
     Role.RECEPCIONISTA: (
-        ("Recepção", "/recepcao", "users", "recepcao"),
+        ("Visão geral", "/recepcao", "layout_dashboard", "recepcao"),
+        ("Agenda e check-in", "/recepcao/agenda", "calendar_days", "agenda"),
+        ("Pacientes", "/recepcao/pacientes", "users", "pacientes"),
+        ("Fila de espera", "/recepcao/fila", "list_ordered", "fila"),
     ),
     Role.MEDICO: (
         ("Atendimento clínico", "/medico", "stethoscope", "atendimento"),

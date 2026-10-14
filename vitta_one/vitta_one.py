@@ -23,6 +23,7 @@ from vitta_one.models import (
 )
 from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
 from vitta_one.professional_directory.state import AdminDirectoryState
+from vitta_one.reception.dashboard.state import ReceptionDashboardState
 from vitta_one.ui.pages import (
     admin_agenda_preview_page,
     admin_clinical_preview_page,
@@ -39,6 +40,9 @@ from vitta_one.ui.pages import (
     first_access_page,
     prescription_print_page,
     reception_page,
+    reception_agenda_page,
+    reception_patients_page,
+    reception_queue_page,
     root_page,
 )
 
@@ -140,7 +144,25 @@ app.add_page(
     reception_page,
     route=Role.RECEPCIONISTA.dashboard_path,
     title="Painel de recepção | Vitta-One",
-    on_load=[AuthState.load_protected, ReceptionQueueState.load, ReceptionAgendaState.load],
+    on_load=[AuthState.load_protected, ReceptionDashboardState.load],
+)
+app.add_page(
+    reception_agenda_page,
+    route="/recepcao/agenda",
+    title="Agenda e check-in | Vitta-One",
+    on_load=[AuthState.load_protected, ReceptionAgendaState.load],
+)
+app.add_page(
+    reception_patients_page,
+    route="/recepcao/pacientes",
+    title="Pacientes | Vitta-One",
+    on_load=[AuthState.load_protected, ReceptionQueueState.load],
+)
+app.add_page(
+    reception_queue_page,
+    route="/recepcao/fila",
+    title="Fila de espera | Vitta-One",
+    on_load=[AuthState.load_protected, ReceptionQueueState.load],
 )
 app.add_page(
     doctor_page,

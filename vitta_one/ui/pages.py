@@ -7,6 +7,7 @@ from vitta_one.auth.roles import Role
 from vitta_one.auth.state import AuthState
 from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
 from vitta_one.professional_directory.state import AdminDirectoryState
+from vitta_one.reception.dashboard.components import reception_dashboard
 from vitta_one.ui.admin_directory_components import (
     admin_directory_workspace,
     specialties_management_workspace,
@@ -294,14 +295,64 @@ def admin_professionals_page() -> rx.Component:
 
 
 def reception_page() -> rx.Component:
+    """Reception's operational home; no patient clinical data is exposed here."""
+    return protected_workspace(
+        Role.RECEPCIONISTA,
+        reception_dashboard(),
+        active="recepcao",
+    )
+
+
+def reception_agenda_page() -> rx.Component:
+    """Scheduling, rescheduling, cancellation and check-in; preserved services."""
     return protected_workspace(
         Role.RECEPCIONISTA,
         page_header(
-            "Operação",
-            "Recepção, agenda e fila",
-            "Agende Consultas, localize pacientes e acompanhe a fila ativa sem misturar os dois fluxos.",
+            "Agenda",
+            "Agenda e check-in",
+            "Consulte horários por profissional, agende, reagende e confirme a chegada.",
         ),
         reception_agenda_panel(),
+        active="agenda",
+        verified_path="/recepcao/agenda",
+    )
+
+
+def reception_patients_page() -> rx.Component:
+    """Existing patient creation and lookup, now accessible as its own workspace."""
+    return protected_workspace(
+        Role.RECEPCIONISTA,
+        page_header(
+            "Pacientes",
+            "Cadastro e localização",
+            "Identifique um paciente existente pelo CPF ou cadastre com validação.",
+        ),
+        feedback_region(
+            ReceptionQueueState.error_message,
+            ReceptionQueueState.success_message,
+        ),
+        patient_identity_panel(),
+        rx.hstack(
+            rx.link("Ir para fila de espera", href="/recepcao/fila",
+                    class_name="vitta-context-link"),
+            rx.link("Abrir agenda", href="/recepcao/agenda",
+                    class_name="vitta-context-link"),
+            flex_wrap="wrap", gap="2",
+        ),
+        active="pacientes",
+        verified_path="/recepcao/pacientes",
+    )
+
+
+def reception_queue_page() -> rx.Component:
+    """Reception queue, walk-in entry, re-evaluation and withdrawal."""
+    return protected_workspace(
+        Role.RECEPCIONISTA,
+        page_header(
+            "Fila",
+            "Fila de espera",
+            "Acompanhe prioridades informadas, entradas avulsas, reavaliações e retiradas.",
+        ),
         feedback_region(
             ReceptionQueueState.error_message,
             ReceptionQueueState.success_message,
@@ -310,14 +361,13 @@ def reception_page() -> rx.Component:
             patient_identity_panel(),
             enqueue_panel(),
             direction=rx.breakpoints(initial="column", xl="row"),
-            gap="1rem",
-            align="start",
-            width="100%",
+            gap="1rem", align="start", width="100%",
         ),
         active_queue_panel(),
         reassess_panel(),
         withdraw_panel(),
-        active="recepcao",
+        active="fila",
+        verified_path="/recepcao/fila",
     )
 
 

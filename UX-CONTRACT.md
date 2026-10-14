@@ -44,7 +44,7 @@ Este contrato define o comportamento observável do login, shell autenticado e n
 ## 4. Navegação por role
 
 - Administrador: `/admin`.
-- Recepcionista: `/recepcao`.
+- Recepcionista: `/recepcao` (dashboard), `/recepcao/agenda`, `/recepcao/pacientes`, `/recepcao/fila`. Cada rota revalida sessão e role no servidor.
 - Médico: `/medico`.
 - Financeiro: `/financeiro`.
 - A tentativa de acessar outra role mantém a resposta de acesso negado.
@@ -199,3 +199,12 @@ Regras:
 - scrollbars permanecem visíveis;
 - `prefers-reduced-motion` reduz transições;
 - loading e feedback não deslocam ações principais desnecessariamente.
+
+## 12. Área modular de Recepção
+
+- A navegação da Recepção separa Visão geral, Agenda e check-in, Pacientes e Fila, mantendo os services atuais de domínio.
+- O dashboard lê indicadores persistidos e apresenta fonte/período de cada métrica. Dia clínico no fuso IANA configurado; espera e atendimento são estoque atual.
+- Atualização é manual nesta fase, com horário real da leitura; a UI não se anuncia como tempo real por push.
+- A lista de próximas consultas mostra somente paciente, profissional e horário, sem detalhes clínicos.
+- `/recepcao/agenda` inclui check-in; ainda não há central independente nem calendário de duração de consultas.
+- O dashboard não executa chamadas nem finalização clínica e não altera prioridades.
