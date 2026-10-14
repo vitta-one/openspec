@@ -569,6 +569,17 @@ def professional_row(row) -> rx.Component:
                 ),
                 width="100%",
             ),
+            rx.cond(
+                (row["onboarding_email_status"] == "FAILED") |
+                (row["onboarding_email_status"] == "UNKNOWN") |
+                (row["onboarding_email_status"] == "NOT_CONFIGURED"),
+                rx.button(
+                    "Reenviar acesso", type="button", variant="outline",
+                    on_click=AdminDirectoryState.begin_medical_reissue(row["id"]),
+                    disabled=AdminDirectoryState.is_submitting,
+                ),
+                rx.fragment(),
+            ),
             rx.flex(
                 rx.button(
                     "Editar",
@@ -773,9 +784,47 @@ def admin_directory_workspace() -> rx.Component:
         ),
         specialty_dialog(),
         professional_dialog(),
+        medical_reissue_dialog(),
         spacing="5",
         width="100%",
         align="stretch",
+    )
+
+
+def medical_reissue_dialog() -> rx.Component:
+    """Explicitly confirm rotation before reissuing a failed/unknown credential."""
+    return rx.dialog.root(
+        rx.dialog.content(
+            rx.dialog.title("Reenviar acesso médico"),
+            rx.dialog.description(
+                "Uma nova senha temporária substituirá a anterior, inclusive se outro e-mail "
+                "tiver sido entregue. Confirme somente depois de verificar a situação do envio.",
+                margin_top="0.5rem",
+            ),
+            rx.cond(
+                AdminDirectoryState.error_message != "",
+                error_banner(AdminDirectoryState.error_message, "reissue-error"),
+                rx.fragment(),
+            ),
+            rx.flex(
+                rx.button(
+                    "Cancelar", type="button", variant="ghost",
+                    on_click=AdminDirectoryState.cancel_medical_reissue,
+                    disabled=AdminDirectoryState.is_submitting,
+                ),
+                rx.button(
+                    "Confirmar reenvio", type="button", color_scheme="teal",
+                    loading=AdminDirectoryState.is_submitting,
+                    disabled=AdminDirectoryState.is_submitting,
+                    on_click=AdminDirectoryState.confirm_medical_reissue,
+                ),
+                justify="end", gap="0.75rem", flex_wrap="wrap",
+                margin_top="1.25rem",
+            ),
+            class_name="vitta-dialog-content",
+        ),
+        open=AdminDirectoryState.reissue_dialog_open,
+        on_open_change=AdminDirectoryState.set_medical_reissue_dialog_open,
     )
 
 
@@ -929,6 +978,7 @@ def specialties_management_workspace() -> rx.Component:
         ),
         specialty_dialog(),
         professional_dialog(),
+        medical_reissue_dialog(),
         spacing="4", align="stretch", width="100%",
     )
 
@@ -969,5 +1019,6 @@ def professionals_management_workspace() -> rx.Component:
         ),
         professional_dialog(),
         specialty_dialog(),
+        medical_reissue_dialog(),
         spacing="4", align="stretch", width="100%",
     )
