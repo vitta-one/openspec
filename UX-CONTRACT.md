@@ -151,6 +151,12 @@ Regras:
 - O painel Médico identifica a origem “Consulta agendada” e mostra horário/profissional já persistidos, sem antecipar prontuário.
 - O preview local do Admin permanece somente leitura e pode exibir timestamps do lifecycle real.
 
+### Exibição diária dos horários
+
+- Horários reais da agenda são agrupados por dia no fuso configurado, com hora, profissional e situação legíveis; o usuário não precisa conhecer o termo “slot”.
+- A Administração escolhe profissional, data e hora em controles separados, mantendo as validações e a persistência UTC existentes.
+- A Recepção preserva as regras de reserva, chegada, reagendamento e cancelamento e visualiza as opções disponíveis agrupadas por dia, sem geração de intervalos ou recorrências automáticas.
+
 ## 11. Atendimento clínico e histórico
 
 - O formulário clínico aparece somente quando o Médico possui atendimento ativo originado de Consulta agendada.

@@ -84,7 +84,7 @@ def _admin_slot_row(row) -> rx.Component:
             rx.hstack(
                 rx.box(rx.icon("calendar_clock", size=18), class_name="vitta-patient-avatar"),
                 rx.box(
-                    rx.text(row["starts_at"], font_weight="750", size="2", class_name="vitta-tabular"),
+                    rx.text(row["time_label"], font_weight="750", size="4", class_name="vitta-tabular"),
                     rx.text(row["professional_name"], size="1", color="var(--vitta-text-muted)", margin_top="0.15rem"),
                 ),
                 spacing="3",
@@ -125,6 +125,28 @@ def _admin_slot_row(row) -> rx.Component:
     )
 
 
+def _admin_slot_day(day) -> rx.Component:
+    return rx.box(
+        rx.heading(day["date_label"], size="3", color="var(--vitta-text)", margin_bottom="0.75rem"),
+        rx.vstack(
+            rx.foreach(day["slots"], _admin_slot_row),
+            spacing="2", width="100%", align="stretch", role="list",
+        ),
+        width="100%", class_name="vitta-day-group",
+    )
+
+
+def _reception_slot_day(day) -> rx.Component:
+    return rx.box(
+        rx.heading(day["date_label"], size="3", margin_bottom="0.75rem"),
+        rx.vstack(
+            rx.foreach(day["slots"], _available_slot_row),
+            spacing="2", width="100%", align="stretch", role="list",
+        ),
+        width="100%", class_name="vitta-day-group",
+    )
+
+
 def admin_availability_panel() -> rx.Component:
     """Administrator availability surface: explicit slots, no calendar complexity."""
     return section_panel(
@@ -132,9 +154,9 @@ def admin_availability_panel() -> rx.Component:
             rx.flex(
                 rx.box(
                     rx.text("AGENDA", class_name="vitta-section-kicker"),
-                    rx.heading("Disponibilidade dos profissionais", size="5", margin_top="0.25rem"),
+                    rx.heading("Horários de atendimento", size="5", margin_top="0.25rem"),
                     rx.text(
-                        "Cadastre horários explícitos. Duração, recorrência e bloqueios em massa continuam fora desta etapa.",
+                        "Escolha um profissional, a data e a hora em que ele poderá atender. Veja abaixo os horários já cadastrados.",
                         size="2",
                         color="var(--vitta-text-muted)",
                         line_height="1.55",
@@ -142,7 +164,7 @@ def admin_availability_panel() -> rx.Component:
                         max_width="72ch",
                     ),
                 ),
-                rx.badge("Slots explícitos", color_scheme="teal", variant="soft"),
+                rx.badge("Horários disponíveis", color_scheme="teal", variant="soft"),
                 direction=rx.breakpoints(initial="column", md="row"),
                 justify="between",
                 align=rx.breakpoints(initial="stretch", md="start"),
@@ -170,12 +192,26 @@ def admin_availability_panel() -> rx.Component:
                         ),
                     ),
                     rx.box(
-                        field_label("Data e horário", "admin-slot-datetime"),
+                        field_label("Data do atendimento", "admin-slot-date"),
                         rx.el.input(
-                            id="admin-slot-datetime",
-                            type="datetime-local",
-                            value=AdminAvailabilityState.slot_datetime_local,
-                            on_change=AdminAvailabilityState.update_slot_datetime,
+                            id="admin-slot-date",
+                            name="date",
+                            type="date",
+                            value=AdminAvailabilityState.slot_date_local,
+                            on_change=AdminAvailabilityState.update_slot_date,
+                            required=True,
+                            class_name="vitta-input",
+                            margin_top="0.4rem",
+                        ),
+                    ),
+                    rx.box(
+                        field_label("Hora do atendimento", "admin-slot-time"),
+                        rx.el.input(
+                            id="admin-slot-time",
+                            name="time",
+                            type="time",
+                            value=AdminAvailabilityState.slot_time_local,
+                            on_change=AdminAvailabilityState.update_slot_time,
                             required=True,
                             class_name="vitta-input",
                             margin_top="0.4rem",
@@ -191,13 +227,13 @@ def admin_availability_panel() -> rx.Component:
                         disabled=AdminAvailabilityState.is_submitting | ~AdminAvailabilityState.has_professionals,
                         loading=AdminAvailabilityState.is_submitting,
                     ),
-                    columns=rx.breakpoints(initial="1", md="minmax(14rem, 1fr) minmax(14rem, 1fr) auto"),
+                    columns=rx.breakpoints(initial="1", md="repeat(2, minmax(0, 1fr))", xl="minmax(13rem, 1.5fr) minmax(9rem, 1fr) minmax(9rem, 1fr) auto"),
                     gap="0.75rem",
                     align_items="end",
                     width="100%",
                 ),
                 on_submit=AdminAvailabilityState.create_slot,
-                no_validate=True,
+                no_validate=False,
                 width="100%",
             ),
             rx.box(
@@ -216,7 +252,7 @@ def admin_availability_panel() -> rx.Component:
                         ),
                     ),
                     rx.box(
-                        field_label("De", "admin-filter-start"),
+                        field_label("Data inicial", "admin-filter-start"),
                         rx.el.input(
                             id="admin-filter-start",
                             type="date",
@@ -227,7 +263,7 @@ def admin_availability_panel() -> rx.Component:
                         ),
                     ),
                     rx.box(
-                        field_label("Até", "admin-filter-end"),
+                        field_label("Data final", "admin-filter-end"),
                         rx.el.input(
                             id="admin-filter-end",
                             type="date",
@@ -260,7 +296,7 @@ def admin_availability_panel() -> rx.Component:
                 rx.cond(
                     AdminAvailabilityState.has_slots,
                     rx.vstack(
-                        rx.foreach(AdminAvailabilityState.slots, _admin_slot_row),
+                        rx.foreach(AdminAvailabilityState.slots_by_day, _admin_slot_day),
                         spacing="2",
                         align="stretch",
                         width="100%",
@@ -284,7 +320,7 @@ def _available_slot_row(row) -> rx.Component:
     return rx.box(
         rx.flex(
             rx.box(
-                rx.text(row["starts_at"], font_weight="750", size="2", class_name="vitta-tabular"),
+                rx.text(row["time_label"], font_weight="750", size="4", class_name="vitta-tabular"),
                 rx.text(row["professional_name"], size="1", color="var(--vitta-text-muted)", margin_top="0.15rem"),
             ),
             rx.button(
@@ -650,7 +686,7 @@ def reception_agenda_panel() -> rx.Component:
                         margin_top="0.35rem",
                     ),
                 ),
-                rx.badge("Sem duração fixa", color_scheme="gray", variant="soft"),
+                rx.fragment(),
                 direction=rx.breakpoints(initial="column", md="row"),
                 justify="between",
                 align=rx.breakpoints(initial="stretch", md="start"),
@@ -677,7 +713,7 @@ def reception_agenda_panel() -> rx.Component:
                     ),
                 ),
                 rx.box(
-                    field_label("De", "reception-filter-start"),
+                    field_label("Data inicial", "reception-filter-start"),
                     rx.el.input(
                         id="reception-filter-start",
                         type="date",
@@ -688,7 +724,7 @@ def reception_agenda_panel() -> rx.Component:
                     ),
                 ),
                 rx.box(
-                    field_label("Até", "reception-filter-end"),
+                    field_label("Data final", "reception-filter-end"),
                     rx.el.input(
                         id="reception-filter-end",
                         type="date",
@@ -792,7 +828,7 @@ def reception_agenda_panel() -> rx.Component:
                         rx.cond(
                             ReceptionAgendaState.has_available_slots,
                             rx.vstack(
-                                rx.foreach(ReceptionAgendaState.available_slots, _available_slot_row),
+                                rx.foreach(ReceptionAgendaState.available_slots_by_day, _reception_slot_day),
                                 spacing="2",
                                 align="stretch",
                                 width="100%",
@@ -802,7 +838,7 @@ def reception_agenda_panel() -> rx.Component:
                             empty_state(
                                 "calendar",
                                 "Sem horários disponíveis",
-                                "Ajuste o período/profissional ou aguarde novos slots da Administração.",
+                                "Tente outro profissional ou período. A Administração poderá adicionar novos horários.",
                             ),
                         ),
                         min_width="0",
