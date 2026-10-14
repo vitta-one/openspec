@@ -1,6 +1,7 @@
 """Reflex state for administrator professional and specialty management."""
 
 from typing import Any, TypedDict
+import asyncio
 
 import reflex as rx
 
@@ -9,6 +10,8 @@ from vitta_one.auth.state import AuthState
 from vitta_one.professional_directory.application import (
     admin_create_professional,
     admin_create_specialty,
+    admin_register_medical_professional,
+    admin_set_onboarding_email_status,
     admin_list_available_medical_accounts,
     admin_list_professionals,
     admin_list_specialties,
@@ -19,6 +22,7 @@ from vitta_one.professional_directory.application import (
     admin_set_specialty_active,
     admin_update_professional,
 )
+from vitta_one.professional_directory.email_sender import send_medical_welcome
 from vitta_one.professional_directory.service import (
     DirectoryConflictError,
     DirectoryNotFoundError,
@@ -63,6 +67,7 @@ class ProfessionalRow(TypedDict):
     specialty_ids: list[int]
     specialty_names: str
     has_inactive_specialty: bool
+    onboarding_email_status: str
 
 
 def _specialty_row(item) -> SpecialtyRow:
@@ -91,6 +96,7 @@ def _professional_row(item) -> ProfessionalRow:
         "has_inactive_specialty": any(
             not specialty.is_active for specialty in item.specialties
         ),
+        "onboarding_email_status": item.onboarding_email_status,
     }
 
 
@@ -127,6 +133,7 @@ class AdminDirectoryState(rx.State):
 
     editing_professional_id: int = 0
     professional_name: str = ""
+    professional_email: str = ""
     registration_identifier: str = ""
     selected_medical_user: str = "__none__"
 
@@ -245,6 +252,7 @@ class AdminDirectoryState(rx.State):
     def _reset_professional_form(self) -> None:
         self.editing_professional_id = 0
         self.professional_name = ""
+        self.professional_email = ""
         self.registration_identifier = ""
         self.selected_medical_user = "__none__"
         self.specialty_options = [
@@ -535,10 +543,12 @@ class AdminDirectoryState(rx.State):
         registration_identifier: str,
         user_id: int,
         specialty_ids: list[int],
+        user_email: str,
     ):
         self._clear_feedback()
         self.editing_professional_id = professional_id
         self.professional_name = name
+        self.professional_email = user_email if user_id else ""
         self.registration_identifier = registration_identifier
         self.selected_medical_user = str(user_id) if user_id else "__none__"
         selected = set(specialty_ids)
@@ -578,6 +588,11 @@ class AdminDirectoryState(rx.State):
     @rx.event
     def update_professional_name(self, value: str) -> None:
         self.professional_name = value
+
+    @rx.event
+    def update_professional_email(self, value: str) -> None:
+        if not self.editing_professional_id:
+            self.professional_email = value
 
     @rx.event
     def update_registration_identifier(self, value: str) -> None:
@@ -623,15 +638,33 @@ class AdminDirectoryState(rx.State):
                     )
                     message = "Profissional atualizado."
                 else:
-                    admin_create_professional(
-                        db,
-                        token=token,
-                        name=self.professional_name,
-                        registration_identifier=self.registration_identifier,
-                        specialty_ids=specialty_ids,
-                        user_id=user_id,
+                    registration = admin_register_medical_professional(
+                        db, token=token, name=self.professional_name,
+                        email=self.professional_email, specialty_ids=specialty_ids,
                     )
                     message = "Profissional cadastrado."
+            if not self.editing_professional_id and registration.temporary_password:
+                delivery = await asyncio.to_thread(
+                    send_medical_welcome,
+                    name=registration.name,
+                    email=registration.email,
+                    temporary_password=registration.temporary_password,
+                    professional_id=registration.professional_id,
+                )
+                with rx.session() as db:
+                    admin_set_onboarding_email_status(
+                        db, token=token, professional_id=registration.professional_id,
+                        status=delivery.status, message_id=delivery.message_id,
+                    )
+                if delivery.status == "ACCEPTED":
+                    message = "Profissional cadastrado. E-mail aceito pelo provedor."
+                elif delivery.status == "NOT_CONFIGURED":
+                    message = "Profissional cadastrado. Resend não configurado; e-mail não enviado."
+                else:
+                    message = (
+                        "Profissional cadastrado. Não foi possível confirmar o envio do e-mail. "
+                        "Verifique a situação antes de reenviar o acesso."
+                    )
             self._reset_professional_form()
             self.professional_dialog_open = False
             self._load_with_token(token)
