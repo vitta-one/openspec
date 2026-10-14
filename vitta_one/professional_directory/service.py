@@ -119,10 +119,20 @@ def create_specialty(db: Session, *, name: str) -> Specialty:
     return specialty
 
 
-def list_specialties(db: Session) -> list[SpecialtyItem]:
-    rows = db.exec(
-        select(Specialty).order_by(Specialty.name, Specialty.id)
-    ).all()
+def list_specialties(
+    db: Session, *, recent_limit: int | None = None
+) -> list[SpecialtyItem]:
+    """List all specialties or the N most recently created ones for a dashboard."""
+    statement = select(Specialty)
+    if recent_limit is not None:
+        if not 1 <= recent_limit <= 100:
+            raise ValueError("Limite de resultados inválido.")
+        statement = statement.order_by(
+            Specialty.created_at.desc(), Specialty.id.desc()
+        ).limit(recent_limit)
+    else:
+        statement = statement.order_by(Specialty.name, Specialty.id)
+    rows = db.exec(statement).all()
     return [
         SpecialtyItem(id=row.id, name=row.name, is_active=row.is_active)
         for row in rows
@@ -374,10 +384,20 @@ def set_professional_active(
     return professional
 
 
-def list_professionals(db: Session) -> list[ProfessionalItem]:
-    professionals = db.exec(
-        select(Professional).order_by(Professional.name, Professional.id)
-    ).all()
+def list_professionals(
+    db: Session, *, recent_limit: int | None = None
+) -> list[ProfessionalItem]:
+    """List professionals in directory order, or newest first with an SQL limit."""
+    statement = select(Professional)
+    if recent_limit is not None:
+        if not 1 <= recent_limit <= 100:
+            raise ValueError("Limite de resultados inválido.")
+        statement = statement.order_by(
+            Professional.created_at.desc(), Professional.id.desc()
+        ).limit(recent_limit)
+    else:
+        statement = statement.order_by(Professional.name, Professional.id)
+    professionals = db.exec(statement).all()
     output: list[ProfessionalItem] = []
 
     for professional in professionals:
