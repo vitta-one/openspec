@@ -912,15 +912,28 @@ button:disabled,
 
 @media (max-width: 1050px) {
   .vitta-shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    max-width: 100%;
   }
 
   .vitta-sidebar {
     position: sticky;
     height: auto;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
     padding: 0.75rem 1rem;
     border-right: 0;
     border-bottom: 1px solid var(--vitta-border);
+  }
+
+  .vitta-main {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .vitta-sidebar-brand,
@@ -935,8 +948,12 @@ button:disabled,
 
   .vitta-sidebar-nav {
     flex-direction: row;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
     overflow-x: auto;
-    scrollbar-gutter: stable;
+    overflow-y: hidden;
+    scrollbar-gutter: auto;
     padding-bottom: 0.1rem;
   }
 

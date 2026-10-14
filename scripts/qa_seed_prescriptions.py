@@ -57,6 +57,12 @@ def main() -> None:
             role=Role.ADMINISTRADOR.value,
         )
         db.add(admin)
+        receptionist = User(
+            email="qa-reception-dashboard@example.invalid",
+            password_hash=hash_password(password),
+            role=Role.RECEPCIONISTA.value,
+        )
+        db.add(receptionist)
         db.commit()
         specialty = create_specialty(db, name="Medicina QA Navegador")
         for number in range(1, 13):
@@ -131,6 +137,7 @@ def main() -> None:
             "doctor_a_email": doctors[0].email,
             "doctor_b_email": doctors[1].email,
             "admin_email": admin.email,
+            "reception_email": receptionist.email,
         }
     path = Path("qa-artifacts/fixture.json")
     path.parent.mkdir(exist_ok=True)
