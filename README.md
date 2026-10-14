@@ -409,7 +409,8 @@ Execute o bootstrap **uma única vez** no banco QA, depois das migrations. No ma
 
 ~~~bash
 export VITTA_ONE_BOOTSTRAP_ADMIN_EMAIL='qa-admin@example.invalid'
-read -r -s -p "Senha forte do novo Admin QA: " VITTA_ONE_BOOTSTRAP_ADMIN_PASSWORD
+printf "Senha forte do novo Admin QA (não aparece): "
+IFS= read -r -s VITTA_ONE_BOOTSTRAP_ADMIN_PASSWORD
 echo
 export VITTA_ONE_BOOTSTRAP_ADMIN_PASSWORD
 python -m vitta_one.auth.bootstrap
@@ -426,6 +427,50 @@ No PowerShell, defina as variáveis equivalentes e execute `.\.venv\Scripts\pyth
 | Financeiro | `/financeiro` |
 
 Uma instalação de QA anterior pode conter os usuários sintéticos `qa-recepcao@example.invalid`, `qa-medico-a@example.invalid`, `qa-medico-b@example.invalid` e `qa-financeiro@example.invalid`. **Eles não surgem automaticamente do `git clone`**: precisam ser criados por um procedimento de seed autorizado. Não há senha de teste padrão no repositório.
+
+**Opcional — criar as quatro identidades fictícias para QA (macOS/Linux):** execute **somente** no banco `vitta_one_qa` local, após as migrations e com venv/variáveis carregadas. O código confirma o destino, não altera contas existentes e não cadastra pacientes. Isso permite testar login de Recepção/Financeiro e vincular as contas Médicas existentes pelo cadastro de profissional no Administrador.
+
+~~~bash
+printf "Senha única de QA para quatro contas (mínimo 12 caracteres): "
+IFS= read -r -s VITTA_QA_USERS_PASSWORD
+echo
+export VITTA_QA_USERS_PASSWORD
+
+python - <<'PY'
+import os
+import reflex as rx
+from sqlalchemy.engine import make_url
+from vitta_one.auth.roles import Role
+from vitta_one.auth.security import hash_password
+from vitta_one.auth.service import find_user_by_email
+from vitta_one.models.auth import User
+
+url = make_url(os.environ["DATABASE_URL"])
+assert url.host in {"127.0.0.1", "localhost"} and url.database == "vitta_one_qa"
+password = os.environ["VITTA_QA_USERS_PASSWORD"]
+assert len(password) >= 12, "Senha QA precisa ter no mínimo 12 caracteres."
+accounts = (
+    ("qa-recepcao@example.invalid", Role.RECEPCIONISTA),
+    ("qa-medico-a@example.invalid", Role.MEDICO),
+    ("qa-medico-b@example.invalid", Role.MEDICO),
+    ("qa-financeiro@example.invalid", Role.FINANCEIRO),
+)
+with rx.session() as db:
+    for email, role in accounts:
+        existing = find_user_by_email(db, email)
+        if existing:
+            assert existing.role == role.value, "Role divergente: " + email
+            print("Identidade existente preservada:", email)
+        else:
+            db.add(User(email=email, role=role.value,
+                        password_hash=hash_password(password)))
+            print("Nova identidade fictícia:", email)
+    db.commit()
+PY
+unset VITTA_QA_USERS_PASSWORD
+~~~
+
+As contas Médicas fictícias começam **sem profissional vinculado**; associe-as pela interface do Administrador informando o mesmo e-mail e uma especialidade válida. Em Windows, adapte a entrada segura de senha ao PowerShell e execute o mesmo Python com ` .\.venv\Scripts\python.exe ` (sem espaços dentro do comando). **Não execute esse seed em produção.**
 
 Administradores podem usar **Novo profissional** (nome, e-mail, especialidades) para criar a conta Médica; o primeiro acesso precisa de troca de senha em `/primeiro-acesso`. Sem Resend, a criação local **não envia credenciais** ao médico.
 
@@ -471,7 +516,7 @@ export QA_ORIGINAL_DATABASE_URL="$DATABASE_URL"
 export DATABASE_URL="$(python - <<'PY'
 import os
 from sqlalchemy.engine import make_url
-print(make_url(os.environ["DATABASE_URL"]).set(database="vitta_one_test"))
+print(make_url(os.environ["DATABASE_URL"]).set(database="vitta_one_test").render_as_string(hide_password=False))
 PY
 )"
 
@@ -570,7 +615,9 @@ Os valores acima são placeholders, **não credenciais funcionais**. O remetente
 ## Rotas protegidas
 
 - `/login`: autenticação local, sem cadastro público;
-- `/admin`: gestão de especialidades, profissionais e slots explícitos de disponibilidade;
+- `/admin`: painel com três especialidades e três profissionais recentes e horários de atendimento agrupados por dia;
+- `/admin/especialidades` e `/admin/profissionais`: diretórios completos com busca, filtros e paginação, exclusivos do Administrador;
+- `/primeiro-acesso`: troca obrigatória de senha temporária Médica;
 - `/recepcao`: agenda de Consultas, confirmação de chegada, cadastro/localização de pacientes, entrada avulsa, reavaliação, retirada e acompanhamento da fila ativa;
 - `/medico`: fila elegível, registro clínico, múltiplas Prescrições com itens e histórico concluído do paciente;
 - `/medico/prescricao/[prescription_id]`: visualização protegida e pronta para impressão da Prescrição do Médico autor, sem assinatura digital nesta etapa;
