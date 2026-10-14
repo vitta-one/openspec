@@ -24,6 +24,8 @@ from vitta_one.professional_directory.service import (
     DirectoryValidationError,
     register_medical_professional,
     create_specialty,
+    reissue_medical_temporary_password,
+    update_professional_onboarding_status,
 )
 
 
@@ -220,3 +222,26 @@ def test_timeout_is_unknown_not_a_false_failed_or_success(monkeypatch):
         temporary_password="dummy", professional_id=5,
     )
     assert result.status == "UNKNOWN"
+
+
+def test_manual_reissue_invalidates_previous_temporary_password(db):
+    specialty = _specialty(db)
+    result = register_medical_professional(
+        db, name="Dra. Retry", email="retry@example.invalid",
+        specialty_ids=[specialty.id],
+    )
+    update_professional_onboarding_status(
+        db, professional_id=result.professional_id, status="NOT_CONFIGURED",
+    )
+    old = result.temporary_password
+    next_issue = reissue_medical_temporary_password(
+        db, professional_id=result.professional_id,
+    )
+    user = db.get(User, result.user_id)
+    assert next_issue.temporary_password != old
+    assert verify_password(user.password_hash, next_issue.temporary_password)
+    assert not verify_password(user.password_hash, old)
+    assert user.must_change_password
+    assert db.get(Professional, result.professional_id).onboarding_email_status == "PENDING"
+    with pytest.raises(DirectoryConflictError):
+        reissue_medical_temporary_password(db, professional_id=result.professional_id)
