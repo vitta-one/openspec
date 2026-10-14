@@ -350,9 +350,12 @@ def test_medical_registration_modal_mobile_form(page: Page) -> None:
         expect(dlg).to_be_visible(timeout=15000)
         expect(dlg.locator("#professional-name")).to_be_visible()
         expect(dlg.locator("#professional-email")).to_be_visible()
-        assert page.evaluate(
-            "document.documentElement.scrollWidth <= window.innerWidth + 2"
-        ), overflowing_elements(page)
+        # Radix's modal can reserve hidden scroll-padding in the document's
+        # scrollWidth. Verify the real rendered controls do not spill off-screen.
+        assert not overflowing_elements(page), overflowing_elements(page)
+        bounds = dlg.bounding_box()
+        assert bounds is not None
+        assert bounds["x"] >= -2 and bounds["x"] + bounds["width"] <= width + 2
         page.screenshot(path=f"qa-artifacts/cadastro-medico-{width}px.png", full_page=True)
         dlg.locator("#professional-email").press("Escape")
         expect(dlg).to_have_count(0, timeout=15000)

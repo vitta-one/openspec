@@ -456,7 +456,14 @@ def page_header(
             min_width="0",
         ),
         (
-            rx.hstack(*actions, spacing="2", align="center")
+            rx.hstack(
+                *actions,
+                spacing="2",
+                align="center",
+                flex_wrap="wrap",
+                width=rx.breakpoints(initial="100%", md="auto"),
+                min_width="0",
+            )
             if actions
             else rx.fragment()
         ),
