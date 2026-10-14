@@ -15,6 +15,12 @@ class EmailDelivery:
     message_id: str | None = None
 
 
+def is_resend_configured() -> bool:
+    return bool(os.environ.get("RESEND_API_KEY", "").strip()) and bool(
+        os.environ.get("RESEND_FROM_EMAIL", "").strip()
+    )
+
+
 def send_medical_welcome(
     *, name: str, email: str, temporary_password: str, professional_id: int
 ) -> EmailDelivery:
