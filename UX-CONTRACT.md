@@ -102,6 +102,14 @@ Regras:
 - listas são atualizadas após commit;
 - erro server-side não apaga silenciosamente o que ainda precisa ser corrigido.
 
+### Diretórios completos e resumo administrativo
+
+- O painel `/admin` consulta e mostra somente os três últimos profissionais e as três últimas especialidades, por data de cadastro e ID; detalhes completos são carregados apenas na página correspondente ou na abertura de formulário.
+- Os links “Ver todas” e “Ver todos” navegam para `/admin/especialidades` e `/admin/profissionais`, com as mesmas verificações server-side da role Administrador.
+- As páginas completas têm busca, filtro e paginação; mudanças de filtro reiniciam a página. A paginação inicial é no State e deve ser trocada por paginação SQL quando o volume exigir.
+- Só botões e links acionáveis exibem cursor pointer, foco visível e feedback de hover; informação não interativa não simula clique.
+- O dashboard conserva os diálogos existentes, sem duplicar validações ou operações de domínio.
+
 ## 9. Pacientes, fila e módulos futuros
 
 - Admin local visualiza pacientes/fila somente leitura.
@@ -135,6 +143,12 @@ Regras:
 - Retirar da fila uma Consulta confirmada cancela a Consulta e preserva o histórico; retirar walk-in não altera Agenda.
 - O painel Médico identifica a origem “Consulta agendada” e mostra horário/profissional já persistidos, sem antecipar prontuário.
 - O preview local do Admin permanece somente leitura e pode exibir timestamps do lifecycle real.
+
+### Exibição diária dos horários
+
+- Horários reais da agenda são agrupados por dia no fuso configurado, com hora, profissional e situação legíveis; o usuário não precisa conhecer o termo “slot”.
+- A Administração escolhe profissional, data e hora em controles separados, mantendo as validações e a persistência UTC existentes.
+- A Recepção preserva as regras de reserva, chegada, reagendamento e cancelamento e visualiza as opções disponíveis agrupadas por dia, sem geração de intervalos ou recorrências automáticas.
 
 ## 11. Atendimento clínico e histórico
 
