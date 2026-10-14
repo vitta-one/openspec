@@ -102,6 +102,21 @@ Regras:
 - listas são atualizadas após commit;
 - erro server-side não apaga silenciosamente o que ainda precisa ser corrigido.
 
+### Diretórios completos e resumo administrativo
+
+- O painel `/admin` consulta e mostra somente os três últimos profissionais e as três últimas especialidades, por data de cadastro e ID; detalhes completos são carregados apenas na página correspondente ou na abertura de formulário.
+- Os links “Ver todas” e “Ver todos” navegam para `/admin/especialidades` e `/admin/profissionais`, com as mesmas verificações server-side da role Administrador.
+- As páginas completas têm busca, filtro e paginação; mudanças de filtro reiniciam a página. A paginação inicial é no State e deve ser trocada por paginação SQL quando o volume exigir.
+- Só botões e links acionáveis exibem cursor pointer, foco visível e feedback de hover; informação não interativa não simula clique.
+- O dashboard conserva os diálogos existentes, sem duplicar validações ou operações de domínio.
+
+### Cadastro e primeiro acesso de Médicos
+
+- “Novo profissional” solicita nome, e-mail e especialidades; o servidor gera o identificador interno e cria ou reutiliza a identidade Médica quando autorizado.
+- A senha inicial é aleatória, temporária e nunca aparece em interface, armazenamento client-side ou logs. O primeiro login leva à troca obrigatória em `/primeiro-acesso` e não libera operações clínicas até a rotação.
+- Credenciais expiram em 24 horas; o Resend é usado exclusivamente no servidor e pode estar desconfigurado. A tela distingue “e-mail aceito pelo provedor” de “não enviado”/“envio não confirmado”, sem inferir entrega na caixa postal.
+- Reemissão requer confirmação explícita do Administrador, invalida a senha provisória anterior e não ocorre automaticamente após timeout.
+
 ## 9. Pacientes, fila e módulos futuros
 
 - Admin local visualiza pacientes/fila somente leitura.
