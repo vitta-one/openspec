@@ -144,8 +144,8 @@ def specialty_option(option) -> rx.Component:
             rx.checkbox(
                 option["name"],
                 checked=option["selected"],
-                on_change=lambda _checked: AdminDirectoryState.toggle_professional_specialty(
-                    option["id"]
+                on_change=lambda checked: AdminDirectoryState.set_professional_specialty(
+                    option["id"], checked
                 ),
                 disabled=AdminDirectoryState.is_submitting | option["locked"],
                 color_scheme="teal",
