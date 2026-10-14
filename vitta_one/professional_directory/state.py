@@ -143,6 +143,14 @@ class AdminDirectoryState(rx.State):
     selected_medical_user: str = "__none__"
 
     @rx.var
+    def has_recent_specialties(self) -> bool:
+        return bool(self.recent_specialties)
+
+    @rx.var
+    def has_recent_professionals(self) -> bool:
+        return bool(self.recent_professionals)
+
+    @rx.var
     def has_specialties(self) -> bool:
         return bool(self.specialties)
 
@@ -281,18 +289,25 @@ class AdminDirectoryState(rx.State):
         ]
 
     def _load_with_token(self, token: str) -> None:
+        """Dashboard queries only its latest three rows; full pages load the directory."""
+        is_dashboard = self.router.route_id == "/admin"
         with rx.session() as db:
-            specialty_items = admin_list_specialties(db, token=token)
-            professional_items = admin_list_professionals(db, token=token)
-            recent_specialty_items = admin_list_recent_specialties(db, token=token)
-            recent_professional_items = admin_list_recent_professionals(db, token=token)
-            account_items = admin_list_available_medical_accounts(db, token=token)
+            if is_dashboard:
+                recent_specialty_items = admin_list_recent_specialties(db, token=token)
+                recent_professional_items = admin_list_recent_professionals(db, token=token)
+                specialty_items = []
+                professional_items = []
+            else:
+                specialty_items = admin_list_specialties(db, token=token)
+                professional_items = admin_list_professionals(db, token=token)
+                recent_specialty_items = []
+                recent_professional_items = []
 
         self.specialties = [_specialty_row(item) for item in specialty_items]
         self.professionals = [_professional_row(item) for item in professional_items]
         self.recent_specialties = [_specialty_row(item) for item in recent_specialty_items]
         self.recent_professionals = [_professional_row(item) for item in recent_professional_items]
-        self._set_medical_accounts(account_items)
+        self.medical_accounts = []
         if not self.editing_professional_id:
             self._reset_professional_form()
 
@@ -599,18 +614,20 @@ class AdminDirectoryState(rx.State):
     @rx.event
     async def start_new_professional(self):
         self._clear_feedback()
-        self._reset_professional_form()
         try:
             token = await self._token()
             with rx.session() as db:
+                specialties = admin_list_specialties(db, token=token)
                 accounts = admin_list_available_medical_accounts(db, token=token)
+            self.specialties = [_specialty_row(item) for item in specialties]
+            self._reset_professional_form()
             self._set_medical_accounts(accounts)
             self.professional_dialog_open = True
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
-            self.error_message = "Não foi possível carregar as contas Médicas disponíveis."
+            self.error_message = "Não foi possível preparar o cadastro. Tente novamente."
 
     @rx.event
     async def begin_professional_edit(
