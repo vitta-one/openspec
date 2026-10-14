@@ -3,6 +3,18 @@
 ### Requirement: Administrador gerencia profissionais
 O sistema MUST permitir cadastrar profissional com nome, e-mail único e ao menos uma especialidade ativa sem pedir identificador interno nem vínculo manual de conta. MUST gerar identificador interno único, sem simular CRM, e vincular exatamente uma identidade `MEDICO` válida. Edição legada MUST preservar vínculos existentes.
 
+#### Scenario: Novo profissional válido
+- **WHEN** o Administrador informa nome, e-mail profissional válido e ao menos uma especialidade ativa
+- **THEN** o sistema cria exatamente um profissional ativo, associações e identidade Médica vinculada sem exigir preenchimento do identificador interno
+
+#### Scenario: Identificador profissional duplicado
+- **WHEN** a operação legada de domínio tenta cadastrar ou editar um profissional com identificador interno já atribuído
+- **THEN** o servidor rejeita a duplicidade sem alterar registros existentes; o fluxo simplificado gera identificador interno único
+
+#### Scenario: Profissional sem especialidade
+- **WHEN** o Administrador tenta salvar um profissional sem especialidades
+- **THEN** o servidor rejeita a operação sem criar identidade órfã ou profissional parcial
+
 #### Scenario: Cadastro médico novo
 - **WHEN** o Administrador salva nome, e-mail e especialidades válidas
 - **THEN** o sistema persiste profissional, conta MEDICO e associações atomicamente, gerando identificador interno e credencial temporária segura
