@@ -127,6 +127,21 @@ python -m pytest -q
 reflex compile --dry
 ```
 
+## Cadastro médico simplificado (QA / Resend)
+
+O fluxo de **Novo profissional** aceita nome, e-mail e uma ou mais especialidades. Se o e-mail ainda não possuir conta local, o servidor cria a identidade `MEDICO` com senha aleatória temporária (somente hash Argon2id em persistência), obrigando troca em `/primeiro-acesso` dentro de 24 horas.
+
+Para ativar o envio real **somente em ambiente autorizado**:
+
+```bash
+export RESEND_API_KEY='<chave-real-somente-no-ambiente-do-servidor>'
+export RESEND_FROM_EMAIL='Vitta-One <acesso@dominio-verificado.example>'
+```
+
+Os valores acima são placeholders, **não credenciais funcionais**. O remetente precisa existir e ser validado no Resend. Nunca versionar chaves. O código utiliza a API REST via httpx no servidor, com timeout explícito e chave de idempotência por operação. Um status `ACCEPTED` confirma apenas aceitação do pedido HTTP pelo provedor, **não entrega ou leitura** do e-mail. Sem configuração, o usuário é criado com `NOT_CONFIGURED`, sem qualquer envio e sem falso aviso de sucesso. Em timeout incerto, não há reenvio automático da mesma senha.
+
+**Segurança:** envio de senha temporária por e-mail possui riscos e não substitui um onboarding baseado em token único. Antes de liberar isso para dados reais, aprovar política de recuperação, retenção, remetente/domínio e monitoramento. A migration `f2a4c9d8e721` é aditiva, mas deve ser testada em banco isolado antes de aplicar a qualquer ambiente com dados.
+
 ## Rotas protegidas
 
 - `/login`: autenticação local, sem cadastro público;
