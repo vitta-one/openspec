@@ -53,11 +53,18 @@ class SlotRow(TypedDict):
     professional_id: int
     professional_name: str
     starts_at: str
+    date_label: str
+    time_label: str
     status: str
     status_label: str
     confirmed_at: str
     started_at: str
     completed_at: str
+
+
+class SlotDayGroup(TypedDict):
+    date_label: str
+    slots: list[SlotRow]
 
 
 class ConsultationRow(TypedDict):
@@ -91,6 +98,8 @@ def _slot_rows(items) -> list[SlotRow]:
             "professional_id": item.professional_id,
             "professional_name": item.professional_name,
             "starts_at": format_clinic_datetime(item.starts_at),
+            "date_label": format_clinic_datetime(item.starts_at).split(" às ")[0],
+            "time_label": format_clinic_datetime(item.starts_at).split(" às ")[1],
             "status": item.status.value,
             "status_label": item.status.label,
             "confirmed_at": (
@@ -104,6 +113,17 @@ def _slot_rows(items) -> list[SlotRow]:
             ),
         }
         for item in items
+    ]
+
+
+def group_slots_by_day(slots: list[SlotRow]) -> list[SlotDayGroup]:
+    """Group already chronologically sorted persisted slots without changing data."""
+    by_date: dict[str, list[SlotRow]] = {}
+    for slot in slots:
+        by_date.setdefault(slot["date_label"], []).append(slot)
+    return [
+        {"date_label": date_label, "slots": items}
+        for date_label, items in by_date.items()
     ]
 
 
@@ -132,6 +152,8 @@ class AdminAvailabilityState(rx.State):
 
     selected_professional: str = "__none__"
     slot_datetime_local: str = ""
+    slot_date_local: str = ""
+    slot_time_local: str = ""
     filter_professional: str = "__all__"
     filter_start_date: str = ""
     filter_end_date: str = ""
@@ -148,6 +170,10 @@ class AdminAvailabilityState(rx.State):
     @rx.var
     def has_slots(self) -> bool:
         return bool(self.slots)
+
+    @rx.var
+    def slots_by_day(self) -> list[SlotDayGroup]:
+        return group_slots_by_day(self.slots)
 
     async def _token(self) -> str:
         auth = await self.get_state(AuthState)
@@ -224,6 +250,14 @@ class AdminAvailabilityState(rx.State):
         self.slot_datetime_local = value
 
     @rx.event
+    def update_slot_date(self, value: str) -> None:
+        self.slot_date_local = value
+
+    @rx.event
+    def update_slot_time(self, value: str) -> None:
+        self.slot_time_local = value
+
+    @rx.event
     def update_filter_professional(self, value: str) -> None:
         self.filter_professional = value
 
@@ -263,14 +297,26 @@ class AdminAvailabilityState(rx.State):
             if self.selected_professional == "__none__":
                 raise SchedulingValidationError("Selecione um profissional ativo.")
             token = await self._token()
+            # Existing callers may still provide the combined field; the new
+            # administrator form supplies separate date/time instead.
+            if self.slot_date_local or self.slot_time_local:
+                if not self.slot_date_local or not self.slot_time_local:
+                    raise SchedulingValidationError("Informe a data e a hora do atendimento.")
+                starts_at_local = f"{self.slot_date_local}T{self.slot_time_local}"
+            elif self.slot_datetime_local:
+                starts_at_local = self.slot_datetime_local
+            else:
+                raise SchedulingValidationError("Informe a data e a hora do atendimento.")
             with rx.session() as db:
                 admin_create_availability_slot(
                     db,
                     token=token,
                     professional_id=int(self.selected_professional),
-                    starts_at_local=self.slot_datetime_local,
+                    starts_at_local=starts_at_local,
                 )
             self.slot_datetime_local = ""
+            self.slot_date_local = ""
+            self.slot_time_local = ""
             self._load_with_token(token)
             self.success_message = "Horário disponibilizado."
         except (
@@ -372,6 +418,10 @@ class ReceptionAgendaState(rx.State):
             for row in self.slots
             if row["status"] == AvailabilitySlotStatus.AVAILABLE.value
         ]
+
+    @rx.var
+    def available_slots_by_day(self) -> list[SlotDayGroup]:
+        return group_slots_by_day(self.available_slots)
 
     @rx.var
     def has_available_slots(self) -> bool:
