@@ -33,19 +33,35 @@ O sistema MUST permitir que o Administrador altere uma especialidade entre ativa
 - **THEN** a especialidade volta a poder ser selecionada em novas associações
 
 ### Requirement: Administrador gerencia profissionais
-O sistema MUST permitir que um Administrador cadastre, consulte e edite profissionais com nome, identificador profissional único e estado ativo/inativo.
+O sistema MUST permitir cadastrar profissional com nome, e-mail único e ao menos uma especialidade ativa sem pedir identificador interno nem vínculo manual de conta. MUST gerar identificador interno único, sem simular CRM, e vincular exatamente uma identidade `MEDICO` válida. Edição legada MUST preservar vínculos existentes.
 
 #### Scenario: Novo profissional válido
-- **WHEN** o Administrador informa nome, identificador profissional válido e ao menos uma especialidade ativa
-- **THEN** o sistema cria exatamente um profissional ativo com suas associações de especialidade
+- **WHEN** o Administrador informa nome, e-mail profissional válido e ao menos uma especialidade ativa
+- **THEN** o sistema cria exatamente um profissional ativo, associações e identidade Médica vinculada sem exigir preenchimento do identificador interno
 
 #### Scenario: Identificador profissional duplicado
-- **WHEN** o Administrador tenta cadastrar ou editar um profissional usando identificador profissional já atribuído a outro profissional
-- **THEN** o servidor rejeita a operação sem alterar o registro existente
+- **WHEN** a operação legada de domínio tenta cadastrar ou editar um profissional com identificador interno já atribuído
+- **THEN** o servidor rejeita a duplicidade sem alterar registros existentes; o fluxo simplificado gera identificador interno único
 
 #### Scenario: Profissional sem especialidade
-- **WHEN** o Administrador tenta salvar um profissional sem nenhuma especialidade associada
-- **THEN** o servidor rejeita a operação
+- **WHEN** o Administrador tenta salvar um profissional sem especialidades
+- **THEN** o servidor rejeita a operação sem criar identidade órfã ou profissional parcial
+
+#### Scenario: Cadastro médico novo
+- **WHEN** o Administrador salva nome, e-mail e especialidades válidas
+- **THEN** o sistema persiste profissional, conta MEDICO e associações atomicamente, gerando identificador interno e credencial temporária segura
+
+#### Scenario: E-mail já cadastrado
+- **WHEN** o e-mail normalizado pertence a conta de outra role ou Médico já vinculado
+- **THEN** o servidor rejeita o cadastro sem alterar registros ou senhas existentes
+
+#### Scenario: Conta Médica disponível
+- **WHEN** o e-mail pertence a conta MEDICO sem vínculo
+- **THEN** o servidor reutiliza essa identidade sem redefinir a senha e cria associação única
+
+#### Scenario: Falha na associação
+- **WHEN** associação ou constraint falha após iniciar o cadastro
+- **THEN** nenhuma identidade órfã ou profissional parcial é persistido
 
 ### Requirement: Relação entre profissionais e especialidades é muitos-para-muitos
 O sistema MUST permitir que um profissional esteja associado a uma ou mais especialidades e MUST permitir que uma especialidade esteja associada a vários profissionais.
@@ -148,3 +164,51 @@ O painel administrativo MUST apresentar estados de carregamento, vazio, erro e s
 #### Scenario: Erro server-side
 - **WHEN** uma operação administrativa falha
 - **THEN** a interface apresenta feedback acessível sem expor stack trace, credenciais ou outros dados sensíveis
+
+### Requirement: Painel administrativo exibe um resumo recente do diretório
+O sistema MUST limitar o painel inicial às três especialidades e aos três profissionais mais recentemente criados, ordenados por data de criação decrescente e ID decrescente em empate, com dados reais e identidade de situação.
+
+#### Scenario: Há mais de três especialidades
+- **WHEN** o Administrador abre o painel com cinco especialidades persistidas
+- **THEN** a superfície inicial apresenta apenas as três mais recentes e o link "Ver todas" abre a tela completa
+
+#### Scenario: Há mais de três profissionais
+- **WHEN** o Administrador abre o painel com cinco profissionais persistidos
+- **THEN** o painel apresenta apenas os três mais recentes e o link "Ver todos" abre a tela completa
+
+#### Scenario: Nenhum registro
+- **WHEN** ainda não existem especialidades ou profissionais
+- **THEN** o respectivo card mostra uma orientação clara com ação de cadastro
+
+### Requirement: Especialidades e profissionais possuem páginas completas de gestão
+O sistema MUST oferecer páginas administrativas distintas para listagem, pesquisa, filtro de situação, paginação e operações de edição e ativação existentes.
+
+#### Scenario: Pesquisa sem resultado
+- **WHEN** a pesquisa não encontra registros
+- **THEN** a página apresenta estado vazio apropriado, sem apagar ou modificar dados
+
+#### Scenario: Navegação e paginação
+- **WHEN** o Administrador abre uma página completa e avança entre páginas
+- **THEN** os controles informam estado atual e evitam navegação fora dos limites
+
+### Requirement: Interações administrativas são acessíveis
+Links e botões habilitados MUST oferecer feedback visual de interação, foco visível, tamanho adequado e ações por teclado, sem atribuir falsa interatividade a containers estáticos.
+
+#### Scenario: Navegar sem mouse
+- **WHEN** o Administrador usa Tab e Enter para acessar "Ver todas"
+- **THEN** o foco está visível e a rota de destino abre corretamente
+
+### Requirement: E-mail de onboarding reflete status real
+O sistema MUST registrar se um e-mail de boas-vindas foi aceito pelo serviço externo, não enviado, falhou ou está indeterminado. MUST impedir que ausência de credenciais Resend seja apresentada como envio concluído.
+
+#### Scenario: Resend não configurado
+- **WHEN** não há configuração válida do Resend no servidor
+- **THEN** o cadastro local pode concluir, mas o sistema informa que o e-mail não foi enviado
+
+#### Scenario: Provedor confirma aceitação
+- **WHEN** a API Resend aceita a requisição de boas-vindas
+- **THEN** o estado registrado indica aceitação pelo provedor, sem afirmar entrega ou leitura
+
+#### Scenario: Erro ou timeout
+- **WHEN** o provedor falha ou não fornece confirmação conclusiva
+- **THEN** o servidor não expõe segredo e sinaliza falha ou estado indeterminado, sem reenvio cego

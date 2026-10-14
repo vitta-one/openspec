@@ -107,3 +107,33 @@ O campo de senha MUST iniciar mascarado e MUST permitir revelar ou ocultar o val
 #### Scenario: Ocultar senha
 - **WHEN** o usuário aciona novamente o controle
 - **THEN** o campo volta a mascarar o valor e o controle comunica estado e nome acessível equivalentes a “Mostrar senha”
+
+### Requirement: Subrotas administrativas conservam RBAC server-side
+O sistema MUST validar sessão e role ADMINISTRADOR antes de disponibilizar conteúdo das rotas `/admin/especialidades` e `/admin/profissionais`, independentemente do estado da interface.
+
+#### Scenario: Acesso sem sessão
+- **WHEN** um visitante solicita diretamente uma das rotas de diretório
+- **THEN** o acesso é negado e o usuário é direcionado para autenticação sem divulgar dados do diretório
+
+#### Scenario: Acesso por outra role
+- **WHEN** Médico, Recepcionista ou Financeiro solicita uma das rotas
+- **THEN** a aplicação não apresenta a lista protegida e direciona para acesso negado
+
+### Requirement: Senha inicial temporária impede acesso clínico antes de troca
+O sistema MUST exigir troca de senha inicial temporária no primeiro login; MUST aplicar expiração da credencial, validar a senha nova e bloquear operações protegidas enquanto a troca não estiver concluída.
+
+#### Scenario: Login com senha inicial válida
+- **WHEN** Médico apresenta credencial temporária válida dentro do prazo
+- **THEN** o servidor cria contexto provisório e direciona somente ao fluxo de troca obrigatória
+
+#### Scenario: Tentativa de acesso direto a operação clínica
+- **WHEN** a identidade Médica provisória chama uma operação server-side que exige role MEDICO
+- **THEN** o servidor nega a operação sem acessar dados clínicos
+
+#### Scenario: Senha inicial expirada
+- **WHEN** Médico tenta autenticar usando senha inicial fora do prazo
+- **THEN** a autenticação não libera acesso e comunica necessidade de reemissão administrativa
+
+#### Scenario: Conclusão da troca
+- **WHEN** Médico confirma a senha atual e escolhe nova senha válida
+- **THEN** o hash é atualizado, o requisito de troca é removido e o acesso normal pode prosseguir
