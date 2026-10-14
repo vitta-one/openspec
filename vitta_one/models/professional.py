@@ -43,6 +43,13 @@ class Professional(rx.Model, table=True):
     registration_identifier: str = Field(
         sa_column=Column(String(80), nullable=False, unique=True, index=True)
     )
+    onboarding_email_status: str = Field(
+        default="NOT_REQUIRED",
+        sa_column=Column(String(32), nullable=False, server_default="NOT_REQUIRED"),
+    )
+    onboarding_email_message_id: str | None = Field(
+        default=None, sa_column=Column(String(128), nullable=True)
+    )
     is_active: bool = Field(
         default=True,
         sa_column=Column(Boolean, nullable=False, index=True, default=True),
