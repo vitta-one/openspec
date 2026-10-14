@@ -172,10 +172,10 @@ class AdminDirectoryState(rx.State):
 
     @rx.var
     def professional_specialty_filter_options(self) -> list[DirectorySpecialtyFilterRow]:
+        """Keep inactive historical areas filterable in the full directory."""
         return [
             {"value": str(item["id"]), "name": item["name"]}
             for item in self.specialties
-            if item["is_active"]
         ]
 
     @rx.var
