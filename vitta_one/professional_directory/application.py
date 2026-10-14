@@ -26,6 +26,14 @@ def admin_list_specialties(db: Session, *, token: str) -> list[SpecialtyItem]:
     return list_specialties(db)
 
 
+def admin_list_recent_specialties(
+    db: Session, *, token: str, limit: int = 3
+) -> list[SpecialtyItem]:
+    """Read dashboard specialties with RBAC and a server-side row limit."""
+    require_role(db, token, Role.ADMINISTRADOR)
+    return list_specialties(db, recent_limit=limit)
+
+
 def admin_create_specialty(db: Session, *, token: str, name: str) -> Specialty:
     require_role(db, token, Role.ADMINISTRADOR)
     return create_specialty(db, name=name)
@@ -48,6 +56,14 @@ def admin_set_specialty_active(
 def admin_list_professionals(db: Session, *, token: str) -> list[ProfessionalItem]:
     require_role(db, token, Role.ADMINISTRADOR)
     return list_professionals(db)
+
+
+def admin_list_recent_professionals(
+    db: Session, *, token: str, limit: int = 3
+) -> list[ProfessionalItem]:
+    """Read dashboard professionals with RBAC and a server-side row limit."""
+    require_role(db, token, Role.ADMINISTRADOR)
+    return list_professionals(db, recent_limit=limit)
 
 
 def admin_create_professional(

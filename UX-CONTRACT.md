@@ -102,6 +102,14 @@ Regras:
 - listas são atualizadas após commit;
 - erro server-side não apaga silenciosamente o que ainda precisa ser corrigido.
 
+### Diretórios completos e resumo administrativo
+
+- O painel `/admin` consulta e mostra somente os três últimos profissionais e as três últimas especialidades, por data de cadastro e ID; detalhes completos são carregados apenas na página correspondente ou na abertura de formulário.
+- Os links “Ver todas” e “Ver todos” navegam para `/admin/especialidades` e `/admin/profissionais`, com as mesmas verificações server-side da role Administrador.
+- As páginas completas têm busca, filtro e paginação; mudanças de filtro reiniciam a página. A paginação inicial é no State e deve ser trocada por paginação SQL quando o volume exigir.
+- Só botões e links acionáveis exibem cursor pointer, foco visível e feedback de hover; informação não interativa não simula clique.
+- O dashboard conserva os diálogos existentes, sem duplicar validações ou operações de domínio.
+
 ## 9. Pacientes, fila e módulos futuros
 
 - Admin local visualiza pacientes/fila somente leitura.

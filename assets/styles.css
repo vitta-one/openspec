@@ -196,6 +196,49 @@ button:disabled,
   cursor: not-allowed;
 }
 
+/* Interactive controls: preserve native semantics, focus and touch targets. */
+:where(button:not(:disabled), a[href]:not([aria-disabled="true"]),
+  [role="button"]:not([aria-disabled="true"]), [role="link"]) {
+  cursor: pointer;
+}
+
+:where(button:not(.vitta-password-toggle), .rt-Button) {
+  min-height: 2.75rem;
+  padding-inline: 1.125rem;
+  font-weight: 600;
+  text-align: center;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+:where(button, a[href], [role="button"], [role="link"]):focus-visible {
+  outline: 3px solid var(--vitta-focus);
+  outline-offset: 3px;
+}
+
+:where(button, [role="button"]):disabled,
+:where([aria-disabled="true"]) {
+  cursor: not-allowed;
+}
+
+.vitta-text-link {
+  color: var(--vitta-primary);
+  font-weight: 650;
+  text-decoration: none;
+  text-underline-offset: 0.2em;
+  min-height: 2.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.35rem;
+}
+
+.vitta-text-link:hover,
+.vitta-text-link:focus-visible {
+  text-decoration: underline;
+}
+
 /* Login */
 .vitta-login-shell {
   min-height: 100dvh;

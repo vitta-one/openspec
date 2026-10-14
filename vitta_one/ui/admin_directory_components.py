@@ -78,17 +78,18 @@ def specialties_list_panel() -> rx.Component:
                 rx.box(
                     rx.heading("Especialidades", size="5"),
                     rx.text(
-                        "Áreas usadas no diretório. Desativar é reversível e preserva vínculos históricos.",
+                        "Consulte as áreas da clínica. Uma especialidade desativada pode ser reativada.",
                         size="2",
                         color="var(--vitta-text-muted)",
                         margin_top="0.3rem",
                         line_height="1.5",
                     ),
                 ),
-                rx.text(
-                    "Ativas e inativas",
-                    size="1",
-                    color="var(--vitta-text-subtle)",
+                rx.link(
+                    "Ver todas",
+                    href="/admin/especialidades",
+                    class_name="vitta-text-link",
+                    aria_label="Ver todas as especialidades",
                     white_space="nowrap",
                 ),
                 justify="between",
@@ -97,9 +98,9 @@ def specialties_list_panel() -> rx.Component:
                 gap="0.75rem",
             ),
             rx.cond(
-                AdminDirectoryState.has_specialties,
+                AdminDirectoryState.has_recent_specialties,
                 rx.vstack(
-                    rx.foreach(AdminDirectoryState.specialties, specialty_row),
+                    rx.foreach(AdminDirectoryState.recent_specialties, specialty_row),
                     spacing="3",
                     width="100%",
                     role="list",
@@ -143,8 +144,8 @@ def specialty_option(option) -> rx.Component:
             rx.checkbox(
                 option["name"],
                 checked=option["selected"],
-                on_change=lambda _checked: AdminDirectoryState.toggle_professional_specialty(
-                    option["id"]
+                on_change=lambda checked: AdminDirectoryState.set_professional_specialty(
+                    option["id"], checked
                 ),
                 disabled=AdminDirectoryState.is_submitting | option["locked"],
                 color_scheme="teal",
@@ -605,23 +606,60 @@ def professional_row(row) -> rx.Component:
     )
 
 
+def professional_summary_row(row) -> rx.Component:
+    """Compact dashboard item; detailed fields remain on the complete page."""
+    return rx.box(
+        rx.flex(
+            rx.box(
+                rx.text(row["name"], font_weight="700", size="3"),
+                rx.text(
+                    row["specialty_names"], size="2",
+                    color="var(--vitta-text-muted)", margin_top="0.3rem",
+                    overflow_wrap="anywhere",
+                ),
+                min_width="0",
+            ),
+            status_badge(row["is_active"], "Ativo", "Inativo"),
+            justify="between", gap="1rem", width="100%", align="start",
+        ),
+        padding="1rem",
+        border="1px solid var(--vitta-border)",
+        border_radius="var(--vitta-radius-control)",
+        background="var(--vitta-surface)",
+        width="100%", role="listitem",
+    )
+
+
 def professionals_list_panel() -> rx.Component:
     return section_panel(
         rx.vstack(
-            rx.box(
-                rx.heading("Diretório de profissionais", size="5"),
-                rx.text(
-                    "Profissionais inativos permanecem no histórico e podem ser reativados.",
-                    size="2",
-                    color="var(--vitta-text-muted)",
-                    margin_top="0.3rem",
+            rx.flex(
+                rx.box(
+                    rx.heading("Profissionais", size="5"),
+                    rx.text(
+                        "Equipe cadastrada na clínica.",
+                        size="2",
+                        color="var(--vitta-text-muted)",
+                        margin_top="0.3rem",
+                    ),
+                    min_width="0",
                 ),
+                rx.link(
+                    "Ver todos",
+                    href="/admin/profissionais",
+                    class_name="vitta-text-link",
+                    aria_label="Ver todos os profissionais",
+                    white_space="nowrap",
+                ),
+                justify="between",
+                gap="1rem",
+                align="start",
                 width="100%",
             ),
             rx.cond(
-                AdminDirectoryState.has_professionals,
+                AdminDirectoryState.has_recent_professionals,
                 rx.vstack(
-                    rx.foreach(AdminDirectoryState.professionals, professional_row),
+                    rx.foreach(AdminDirectoryState.recent_professionals, professional_summary_row),
                     spacing="3",
                     width="100%",
                     role="list",
@@ -664,7 +702,7 @@ def admin_directory_workspace() -> rx.Component:
         page_header(
             "Administração",
             "Profissionais e especialidades",
-            "Mantenha o diretório que servirá de base para agenda e consultas. Horários e agendamentos entram pela capability específica.",
+            "Organize a equipe e as áreas de atendimento da clínica.",
             rx.button(
                 rx.hstack(
                     rx.icon("plus", size=17),
@@ -732,4 +770,198 @@ def admin_directory_workspace() -> rx.Component:
         spacing="5",
         width="100%",
         align="stretch",
+    )
+
+
+def _directory_status_filter(*, is_professional: bool) -> rx.Component:
+    """Shared accessible status filter for both complete admin directories."""
+    control_id = "professional-status-filter" if is_professional else "specialty-status-filter"
+    value = (
+        AdminDirectoryState.professional_status
+        if is_professional else AdminDirectoryState.specialty_status
+    )
+    update = (
+        AdminDirectoryState.update_professional_status
+        if is_professional else AdminDirectoryState.update_specialty_status
+    )
+    return rx.select.root(
+        rx.select.trigger(id=control_id, width="100%", class_name="vitta-select-trigger"),
+        rx.select.content(
+            rx.select.item("Todas as situações", value="all"),
+            rx.select.item("Ativas" if not is_professional else "Ativos", value="active"),
+            rx.select.item("Inativas" if not is_professional else "Inativos", value="inactive"),
+        ),
+        value=value,
+        on_change=update,
+        size="3",
+    )
+
+
+def _directory_professional_specialty_filter() -> rx.Component:
+    """Optional specialty filter backed by the loaded authorized directory."""
+    return rx.select.root(
+        rx.select.trigger(
+            id="professional-specialty-filter", width="100%",
+            class_name="vitta-select-trigger",
+        ),
+        rx.select.content(
+            rx.select.item("Todas as especialidades", value="all"),
+            rx.foreach(
+                AdminDirectoryState.professional_specialty_filter_options,
+                lambda option: rx.select.item(option["name"], value=option["value"]),
+            ),
+        ),
+        value=AdminDirectoryState.professional_specialty_filter,
+        on_change=AdminDirectoryState.update_professional_specialty_filter,
+        size="3",
+    )
+
+
+def _directory_filters(*, is_professional: bool) -> rx.Component:
+    """Search/filter region; inputs keep labels visible on narrow screens."""
+    search_id = "professional-directory-search" if is_professional else "specialty-directory-search"
+    value = (
+        AdminDirectoryState.professional_search
+        if is_professional else AdminDirectoryState.specialty_search
+    )
+    update = (
+        AdminDirectoryState.update_professional_search
+        if is_professional else AdminDirectoryState.update_specialty_search
+    )
+    return rx.grid(
+        rx.box(
+            field_label("Buscar profissional" if is_professional else "Buscar especialidade", search_id),
+            rx.el.input(
+                id=search_id, type="search", value=value, on_change=update,
+                placeholder="Nome ou e-mail" if is_professional else "Nome da especialidade",
+                class_name="vitta-input", margin_top="0.4rem",
+                auto_complete="off",
+            ),
+        ),
+        rx.box(
+            field_label("Situação", "professional-status-filter" if is_professional else "specialty-status-filter"),
+            rx.box(_directory_status_filter(is_professional=is_professional), margin_top="0.4rem"),
+        ),
+        *(
+            [
+                rx.box(
+                    field_label("Especialidade", "professional-specialty-filter"),
+                    rx.box(_directory_professional_specialty_filter(), margin_top="0.4rem"),
+                )
+            ]
+            if is_professional else []
+        ),
+        columns=rx.breakpoints(initial="1", sm="repeat(2, minmax(0, 1fr))",
+                               lg="repeat(3, minmax(0, 1fr))" if is_professional
+                               else "repeat(2, minmax(0, 1fr))"),
+        gap="1rem",
+        width="100%",
+    )
+
+
+def _directory_pagination(*, is_professional: bool) -> rx.Component:
+    page = (
+        AdminDirectoryState.professional_page
+        if is_professional else AdminDirectoryState.specialty_page
+    )
+    count = (
+        AdminDirectoryState.professional_page_count
+        if is_professional else AdminDirectoryState.specialty_page_count
+    )
+    move = (
+        AdminDirectoryState.move_professional_page
+        if is_professional else AdminDirectoryState.move_specialty_page
+    )
+    return rx.cond(
+        count > 1,
+        rx.flex(
+            rx.button("Anterior", variant="outline", type="button",
+                      disabled=page <= 1, on_click=move(-1)),
+            rx.text("Página ", page, " de ", count, color="var(--vitta-text-muted)", size="2"),
+            rx.button("Próxima", variant="outline", type="button",
+                      disabled=page >= count, on_click=move(1)),
+            align="center", justify="center", gap="1rem", flex_wrap="wrap",
+            width="100%", margin_top="0.5rem",
+        ),
+        rx.fragment(),
+    )
+
+
+def specialties_management_workspace() -> rx.Component:
+    """All specialties live on a dedicated authenticated management page."""
+    return rx.vstack(
+        page_header(
+            "Administração", "Todas as especialidades",
+            "Organize as áreas de atendimento cadastradas.",
+            rx.button("Nova especialidade", type="button", color_scheme="teal",
+                      on_click=AdminDirectoryState.start_new_specialty),
+        ),
+        rx.link("← Voltar ao painel", href="/admin", class_name="vitta-text-link"),
+        feedback_region(AdminDirectoryState.error_message, AdminDirectoryState.success_message),
+        section_panel(
+            rx.vstack(
+                _directory_filters(is_professional=False),
+                rx.cond(
+                    AdminDirectoryState.is_loading,
+                    rx.center(rx.spinner(size="3"), min_height="8rem", width="100%"),
+                    rx.cond(
+                        AdminDirectoryState.has_filtered_specialties,
+                        rx.vstack(
+                            rx.foreach(AdminDirectoryState.paged_specialties, specialty_row),
+                            spacing="3", align="stretch", width="100%", role="list",
+                        ),
+                        rx.center(
+                            rx.text("Nenhuma especialidade encontrada. Ajuste a busca ou os filtros.",
+                                    color="var(--vitta-text-muted)", text_align="center"),
+                            min_height="8rem", width="100%",
+                        ),
+                    ),
+                ),
+                _directory_pagination(is_professional=False),
+                spacing="4", align="stretch", width="100%",
+            )
+        ),
+        specialty_dialog(),
+        professional_dialog(),
+        spacing="4", align="stretch", width="100%",
+    )
+
+
+def professionals_management_workspace() -> rx.Component:
+    """All professionals live on a dedicated authenticated management page."""
+    return rx.vstack(
+        page_header(
+            "Administração", "Todos os profissionais",
+            "Encontre, cadastre e organize a equipe da clínica.",
+            rx.button("Novo profissional", type="button", color_scheme="teal",
+                      on_click=AdminDirectoryState.start_new_professional),
+        ),
+        rx.link("← Voltar ao painel", href="/admin", class_name="vitta-text-link"),
+        feedback_region(AdminDirectoryState.error_message, AdminDirectoryState.success_message),
+        section_panel(
+            rx.vstack(
+                _directory_filters(is_professional=True),
+                rx.cond(
+                    AdminDirectoryState.is_loading,
+                    rx.center(rx.spinner(size="3"), min_height="8rem", width="100%"),
+                    rx.cond(
+                        AdminDirectoryState.has_filtered_professionals,
+                        rx.vstack(
+                            rx.foreach(AdminDirectoryState.paged_professionals, professional_row),
+                            spacing="3", align="stretch", width="100%", role="list",
+                        ),
+                        rx.center(
+                            rx.text("Nenhum profissional encontrado. Ajuste a busca ou os filtros.",
+                                    color="var(--vitta-text-muted)", text_align="center"),
+                            min_height="8rem", width="100%",
+                        ),
+                    ),
+                ),
+                _directory_pagination(is_professional=True),
+                spacing="4", align="stretch", width="100%",
+            )
+        ),
+        professional_dialog(),
+        specialty_dialog(),
+        spacing="4", align="stretch", width="100%",
     )

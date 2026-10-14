@@ -7,7 +7,11 @@ from vitta_one.auth.roles import Role
 from vitta_one.auth.state import AuthState
 from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
 from vitta_one.professional_directory.state import AdminDirectoryState
-from vitta_one.ui.admin_directory_components import admin_directory_workspace
+from vitta_one.ui.admin_directory_components import (
+    admin_directory_workspace,
+    specialties_management_workspace,
+    professionals_management_workspace,
+)
 from vitta_one.ui.appointment_components import admin_availability_panel, reception_agenda_panel
 from vitta_one.ui.admin_preview_components import (
     agenda_preview,
@@ -185,6 +189,26 @@ def admin_page() -> rx.Component:
         admin_directory_workspace(),
         admin_availability_panel(),
         active="administracao",
+    )
+
+
+def admin_specialties_page() -> rx.Component:
+    """Administrator-only full specialty directory."""
+    return protected_workspace(
+        Role.ADMINISTRADOR,
+        specialties_management_workspace(),
+        active="administracao",
+        verified_path="/admin/especialidades",
+    )
+
+
+def admin_professionals_page() -> rx.Component:
+    """Administrator-only full professional directory."""
+    return protected_workspace(
+        Role.ADMINISTRADOR,
+        professionals_management_workspace(),
+        active="administracao",
+        verified_path="/admin/profissionais",
     )
 
 

@@ -26,7 +26,11 @@ _LOGIN_REQUIRED = "Preencha o e-mail e a senha para continuar."
 _SYSTEM_LOGIN_ERROR = "Não foi possível concluir o acesso agora. Tente novamente."
 _LOGOUT_ERROR = "Não foi possível encerrar a sessão agora. Tente novamente."
 
-_ROLE_BY_ROUTE = {role.dashboard_path: role for role in Role}
+_ROLE_BY_ROUTE = {
+    **{role.dashboard_path: role for role in Role},
+    "/admin/especialidades": Role.ADMINISTRADOR,
+    "/admin/profissionais": Role.ADMINISTRADOR,
+}
 _ADMIN_PREVIEW_ROUTES = frozenset(
     {
         "/admin/recepcao",
@@ -251,7 +255,7 @@ class AuthState(rx.State):
         self._set_identity(
             email=identity.email,
             role=identity.role,
-            verified_path=required_role.dashboard_path,
+            verified_path=self.router.route_id,
         )
         self.auth_checked = True
         yield

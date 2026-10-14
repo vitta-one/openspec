@@ -609,6 +609,7 @@ def protected_workspace(
     role: Role,
     *children: rx.Component,
     active: str | None = None,
+    verified_path: str | None = None,
 ) -> rx.Component:
     """Render an authorized operational workspace using the premium product shell."""
     active_key = active or {
@@ -623,7 +624,7 @@ def protected_workspace(
     return rx.cond(
         AuthState.auth_checked
         & (AuthState.current_role == role.value)
-        & (AuthState.verified_path == role.dashboard_path),
+        & (AuthState.verified_path == (verified_path or role.dashboard_path)),
         protected_content,
         loading_surface(),
     )
