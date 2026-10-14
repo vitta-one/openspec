@@ -78,7 +78,7 @@ def specialties_list_panel() -> rx.Component:
                 rx.box(
                     rx.heading("Especialidades", size="5"),
                     rx.text(
-                        "Áreas usadas no diretório. Desativar é reversível e preserva vínculos históricos.",
+                        "Consulte as áreas da clínica. Uma especialidade desativada pode ser reativada.",
                         size="2",
                         color="var(--vitta-text-muted)",
                         margin_top="0.3rem",
@@ -702,7 +702,7 @@ def admin_directory_workspace() -> rx.Component:
         page_header(
             "Administração",
             "Profissionais e especialidades",
-            "Mantenha o diretório que servirá de base para agenda e consultas. Horários e agendamentos entram pela capability específica.",
+            "Organize a equipe e as áreas de atendimento da clínica.",
             rx.button(
                 rx.hstack(
                     rx.icon("plus", size=17),
