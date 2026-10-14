@@ -24,7 +24,7 @@ from vitta_one.professional_directory.application import (
     admin_update_professional,
 )
 from vitta_one.professional_directory.email_sender import (
-    send_medical_welcome, is_resend_configured,
+    EmailDelivery, send_medical_welcome, is_resend_configured,
 )
 from vitta_one.professional_directory.service import (
     DirectoryConflictError,
@@ -708,8 +708,11 @@ class AdminDirectoryState(rx.State):
 
     @rx.event
     async def save_professional(self, _form_data: dict[str, Any]):
+        if self.is_submitting:
+            return
         self.is_submitting = True
         self._clear_feedback()
+        was_saved = False
         yield
         try:
             token = await self._token()
@@ -737,14 +740,22 @@ class AdminDirectoryState(rx.State):
                         email=self.professional_email, specialty_ids=specialty_ids,
                     )
                     message = "Profissional cadastrado."
+            # Domain services commit before the external provider request.
+            # Once committed, do not report an e-mail failure as a failed registration.
+            was_saved = True
             if not self.editing_professional_id and registration.temporary_password:
-                delivery = await asyncio.to_thread(
-                    send_medical_welcome,
-                    name=registration.name,
-                    email=registration.email,
-                    temporary_password=registration.temporary_password,
-                    professional_id=registration.professional_id,
-                )
+                try:
+                    delivery = await asyncio.to_thread(
+                        send_medical_welcome,
+                        name=registration.name,
+                        email=registration.email,
+                        temporary_password=registration.temporary_password,
+                        professional_id=registration.professional_id,
+                    )
+                except Exception:
+                    # Treat unexpected transport/runtime errors as unknown, never
+                    # automatically retry credentials that may already have arrived.
+                    delivery = EmailDelivery(status="UNKNOWN")
                 with rx.session() as db:
                     admin_set_onboarding_email_status(
                         db, token=token, professional_id=registration.professional_id,
@@ -773,7 +784,14 @@ class AdminDirectoryState(rx.State):
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
-            self.error_message = "Não foi possível salvar o profissional agora."
+            if was_saved:
+                self.professional_dialog_open = False
+                self.success_message = (
+                    "Profissional salvo. Não foi possível atualizar ou confirmar o status do e-mail. "
+                    "Atualize a página para verificar o cadastro antes de tentar novamente."
+                )
+            else:
+                self.error_message = "Não foi possível salvar o profissional agora."
         finally:
             self.is_submitting = False
             yield
