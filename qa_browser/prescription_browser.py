@@ -196,14 +196,15 @@ def test_admin_dashboard_is_compact_and_routes_to_complete_directory(page: Page)
     expect(page.get_by_role("link", name="Ver todas as especialidades")).to_be_visible()
     expect(page.get_by_role("link", name="Ver todos os profissionais")).to_be_visible()
     expect(page.get_by_text("Especialidade QA Extra 4", exact=True)).to_be_visible(timeout=15000)
-    # The oldest row exists in DB but is not rendered on the dashboard.
-    expect(page.get_by_text("Medicina QA Navegador", exact=True)).not_to_be_visible()
+    # Verify the dashboard card itself rather than other areas referencing the specialty.
+    specialty_panel = page.get_by_role("heading", name="Especialidades", exact=True).locator("xpath=../../../..")
+    assert specialty_panel.locator('[role="listitem"]').count() == 3
     link = page.get_by_role("link", name="Ver todas as especialidades")
     assert link.evaluate("(el) => getComputedStyle(el).cursor") == "pointer"
     link.focus()
     link.press("Enter")
     expect(page).to_have_url(re.compile(r"/admin/especialidades/?$"), timeout=30000)
-    expect(page.get_by_text("Medicina QA Navegador", exact=True)).to_be_visible(timeout=15000)
+    expect(page.locator('[role="listitem"]').get_by_text("Medicina QA Navegador", exact=True).first).to_be_visible(timeout=15000)
     expect(page.get_by_role("heading", name="Todas as especialidades")).to_be_visible()
 
 
