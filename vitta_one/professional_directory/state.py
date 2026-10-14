@@ -158,6 +158,14 @@ class AdminDirectoryState(rx.State):
         ]
 
     @rx.var
+    def has_filtered_specialties(self) -> bool:
+        return bool(self.filtered_specialties)
+
+    @rx.var
+    def has_filtered_professionals(self) -> bool:
+        return bool(self.filtered_professionals)
+
+    @rx.var
     def specialty_page_count(self) -> int:
         return max(1, (len(self.filtered_specialties) + self.directory_page_size - 1)
                    // self.directory_page_size)
