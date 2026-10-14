@@ -41,6 +41,11 @@ class SpecialtyOption(TypedDict):
     locked: bool
 
 
+class DirectorySpecialtyFilterRow(TypedDict):
+    value: str
+    name: str
+
+
 class MedicalAccountRow(TypedDict):
     id: int
     value: str
@@ -102,6 +107,7 @@ class AdminDirectoryState(rx.State):
     specialty_page: int = 1
     professional_search: str = ""
     professional_status: str = "all"
+    professional_specialty_filter: str = "all"
     professional_page: int = 1
     directory_page_size: int = 10
     medical_accounts: list[MedicalAccountRow] = []
@@ -145,6 +151,14 @@ class AdminDirectoryState(rx.State):
         ]
 
     @rx.var
+    def professional_specialty_filter_options(self) -> list[DirectorySpecialtyFilterRow]:
+        return [
+            {"value": str(item["id"]), "name": item["name"]}
+            for item in self.specialties
+            if item["is_active"]
+        ]
+
+    @rx.var
     def filtered_professionals(self) -> list[ProfessionalRow]:
         term = self.professional_search.strip().casefold()
         return [
@@ -154,6 +168,12 @@ class AdminDirectoryState(rx.State):
             and (
                 self.professional_status == "all"
                 or item["is_active"] == (self.professional_status == "active")
+            )
+            and (
+                self.professional_specialty_filter == "all"
+                or self.professional_specialty_filter in [
+                    str(specialty_id) for specialty_id in item["specialty_ids"]
+                ]
             )
         ]
 
@@ -321,6 +341,14 @@ class AdminDirectoryState(rx.State):
     def update_professional_status(self, value: str) -> None:
         if value in {"all", "active", "inactive"}:
             self.professional_status = value
+            self.professional_page = 1
+
+    @rx.event
+    def update_professional_specialty_filter(self, value: str) -> None:
+        if value == "all" or any(
+            option["value"] == value for option in self.professional_specialty_filter_options
+        ):
+            self.professional_specialty_filter = value
             self.professional_page = 1
 
     @rx.event
