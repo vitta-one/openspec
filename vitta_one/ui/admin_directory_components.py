@@ -606,6 +606,30 @@ def professional_row(row) -> rx.Component:
     )
 
 
+def professional_summary_row(row) -> rx.Component:
+    """Compact dashboard item; detailed fields remain on the complete page."""
+    return rx.box(
+        rx.flex(
+            rx.box(
+                rx.text(row["name"], font_weight="700", size="3"),
+                rx.text(
+                    row["specialty_names"], size="2",
+                    color="var(--vitta-text-muted)", margin_top="0.3rem",
+                    overflow_wrap="anywhere",
+                ),
+                min_width="0",
+            ),
+            status_badge(row["is_active"], "Ativo", "Inativo"),
+            justify="between", gap="1rem", width="100%", align="start",
+        ),
+        padding="1rem",
+        border="1px solid var(--vitta-border)",
+        border_radius="var(--vitta-radius-control)",
+        background="var(--vitta-surface)",
+        width="100%", role="listitem",
+    )
+
+
 def professionals_list_panel() -> rx.Component:
     return section_panel(
         rx.vstack(
@@ -635,7 +659,7 @@ def professionals_list_panel() -> rx.Component:
             rx.cond(
                 AdminDirectoryState.has_professionals,
                 rx.vstack(
-                    rx.foreach(AdminDirectoryState.recent_professionals, professional_row),
+                    rx.foreach(AdminDirectoryState.recent_professionals, professional_summary_row),
                     spacing="3",
                     width="100%",
                     role="list",
@@ -773,6 +797,26 @@ def _directory_status_filter(*, is_professional: bool) -> rx.Component:
     )
 
 
+def _directory_professional_specialty_filter() -> rx.Component:
+    """Optional specialty filter backed by the loaded authorized directory."""
+    return rx.select.root(
+        rx.select.trigger(
+            id="professional-specialty-filter", width="100%",
+            class_name="vitta-select-trigger",
+        ),
+        rx.select.content(
+            rx.select.item("Todas as especialidades", value="all"),
+            rx.foreach(
+                AdminDirectoryState.professional_specialty_filter_options,
+                lambda option: rx.select.item(option["name"], value=option["value"]),
+            ),
+        ),
+        value=AdminDirectoryState.professional_specialty_filter,
+        on_change=AdminDirectoryState.update_professional_specialty_filter,
+        size="3",
+    )
+
+
 def _directory_filters(*, is_professional: bool) -> rx.Component:
     """Search/filter region; inputs keep labels visible on narrow screens."""
     search_id = "professional-directory-search" if is_professional else "specialty-directory-search"
@@ -798,7 +842,18 @@ def _directory_filters(*, is_professional: bool) -> rx.Component:
             field_label("Situação", "professional-status-filter" if is_professional else "specialty-status-filter"),
             rx.box(_directory_status_filter(is_professional=is_professional), margin_top="0.4rem"),
         ),
-        columns=rx.breakpoints(initial="1", md="minmax(0, 2fr) minmax(12rem, 1fr)"),
+        *(
+            [
+                rx.box(
+                    field_label("Especialidade", "professional-specialty-filter"),
+                    rx.box(_directory_professional_specialty_filter(), margin_top="0.4rem"),
+                )
+            ]
+            if is_professional else []
+        ),
+        columns=rx.breakpoints(initial="1", md="repeat(2, minmax(0, 1fr))",
+                               lg="repeat(3, minmax(0, 1fr))" if is_professional
+                               else "repeat(2, minmax(0, 1fr))"),
         gap="1rem",
         width="100%",
     )
