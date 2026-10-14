@@ -36,6 +36,7 @@ from vitta_one.ui.pages import (
     finance_page,
     forbidden_page,
     login_page,
+    first_access_page,
     prescription_print_page,
     reception_page,
     root_page,
@@ -79,6 +80,12 @@ app.add_page(
     route="/login",
     title="Entrar | Vitta-One",
     on_load=AuthState.prepare_login,
+)
+app.add_page(
+    first_access_page,
+    route="/primeiro-acesso",
+    title="Primeiro acesso | Vitta-One",
+    on_load=AuthState.load_first_access,
 )
 app.add_page(
     admin_page,

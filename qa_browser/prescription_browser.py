@@ -265,3 +265,36 @@ def test_admin_specialty_create_and_rename_keep_history(page: Page) -> None:
     expect(page.locator('[role="listitem"]').filter(
         has_text="Área Clínica QA Nova"
     )).to_have_count(0)
+
+
+def test_admin_registers_medical_professional_without_resend_and_prevents_duplicate(page: Page) -> None:
+    """Real full-stack flow on a disposable database with no Resend API key."""
+    login_as_admin(page)
+    page.get_by_role("button", name="Novo profissional").click()
+    dialog = page.get_by_role("dialog")
+    expect(dialog).to_be_visible(timeout=15000)
+    dialog.locator("#professional-name").fill("Dra. Onboarding QA")
+    dialog.locator("#professional-email").fill("onboarding-qa@example.invalid")
+    checkbox = dialog.get_by_role("checkbox", name="Especialidade QA Extra 2")
+    checkbox.click()
+    expect(checkbox).to_be_checked(timeout=15000)
+    dialog.get_by_role("button", name="Cadastrar profissional").click()
+    expect(dialog).to_have_count(0, timeout=30000)
+    expect(page.get_by_text("Resend não configurado; e-mail não enviado.", exact=False)).to_be_visible(timeout=15000)
+
+    page.goto(BASE + "/admin/profissionais", wait_until="domcontentloaded")
+    expect(page.get_by_role("heading", name="Todos os profissionais")).to_be_visible(timeout=30000)
+    row = page.locator('[role="listitem"]').filter(has_text="Dra. Onboarding QA")
+    expect(row).to_be_visible(timeout=20000)
+    expect(row.get_by_text("E-mail de acesso ainda não enviado.")).to_be_visible()
+
+    page.get_by_role("button", name="Novo profissional").click()
+    dialog = page.get_by_role("dialog")
+    dialog.locator("#professional-name").fill("Dra. Duplicada QA")
+    dialog.locator("#professional-email").fill("ONBOARDING-QA@example.invalid")
+    checkbox = dialog.get_by_role("checkbox", name="Especialidade QA Extra 2")
+    checkbox.click()
+    expect(checkbox).to_be_checked(timeout=15000)
+    dialog.get_by_role("button", name="Cadastrar profissional").click()
+    expect(dialog).to_be_visible(timeout=15000)
+    expect(dialog.get_by_text("Este e-mail já está vinculado a um profissional.")).to_be_visible(timeout=15000)

@@ -2,3 +2,4 @@ reflex[db]==0.9.10.post2
 sqlalchemy[asyncio]>=2.0,<3.0
 argon2-cffi==25.1.0
 psycopg[binary]==3.3.6
+httpx>=0.26,<1.0

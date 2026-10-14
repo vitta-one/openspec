@@ -19,6 +19,10 @@ class RoleForbiddenError(PermissionError):
         self.required_role = required_role
 
 
+class PasswordChangeRequiredError(PermissionError):
+    """Identity may only reach the initial password rotation surface."""
+
+
 def require_authenticated(db: Session, token: str) -> AuthenticatedUser:
     """Resolve an authenticated identity or reject the protected server operation."""
     identity = resolve_session(db, token)
@@ -32,4 +36,6 @@ def require_role(db: Session, token: str, required_role: Role) -> AuthenticatedU
     identity = require_authenticated(db, token)
     if identity.role is not required_role:
         raise RoleForbiddenError(identity, required_role)
+    if identity.must_change_password:
+        raise PasswordChangeRequiredError("Troca de senha inicial obrigatória.")
     return identity

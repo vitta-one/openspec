@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 
 import reflex as rx
-from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKey, Integer, String, text
 from sqlmodel import Field
 
 from vitta_one.auth.roles import Role
@@ -30,6 +30,13 @@ class User(rx.Model, table=True):
     )
     password_hash: str = Field(sa_column=Column(String(512), nullable=False))
     role: str = Field(sa_column=Column(String(32), nullable=False))
+    must_change_password: bool = Field(
+        default=False,
+        sa_column=Column(Boolean, nullable=False, server_default=text("false")),
+    )
+    temporary_password_expires_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
     created_at: datetime = Field(
         default_factory=utc_now,
         sa_column=Column(DateTime(timezone=True), nullable=False),
