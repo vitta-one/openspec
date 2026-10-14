@@ -51,7 +51,22 @@ def main() -> None:
             db.refresh(user)
             doctors.append(user)
         doctor = doctors[0]
+        admin = User(
+            email="qa-admin-directory@example.invalid",
+            password_hash=hash_password(password),
+            role=Role.ADMINISTRADOR.value,
+        )
+        db.add(admin)
+        db.commit()
         specialty = create_specialty(db, name="Medicina QA Navegador")
+        for number in range(1, 5):
+            create_specialty(db, name=f"Especialidade QA Extra {number}")
+        for number in range(1, 5):
+            create_professional(
+                db, name=f"Dr. QA Extra {number}",
+                registration_identifier=f"INT-QA-{number}",
+                specialty_ids=[specialty.id], user_id=None,
+            )
         professional = create_professional(
             db, name="Dra. QA Navegador", registration_identifier="CRM-QA-2026",
             specialty_ids=[specialty.id], user_id=doctor.id,
@@ -115,6 +130,7 @@ def main() -> None:
             "patient_name": patient.name,
             "doctor_a_email": doctors[0].email,
             "doctor_b_email": doctors[1].email,
+            "admin_email": admin.email,
         }
     path = Path("qa-artifacts/fixture.json")
     path.parent.mkdir(exist_ok=True)
