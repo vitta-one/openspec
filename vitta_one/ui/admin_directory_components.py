@@ -900,7 +900,7 @@ def _directory_filters(*, is_professional: bool) -> rx.Component:
             ]
             if is_professional else []
         ),
-        columns=rx.breakpoints(initial="1", md="repeat(2, minmax(0, 1fr))",
+        columns=rx.breakpoints(initial="1", sm="repeat(2, minmax(0, 1fr))",
                                lg="repeat(3, minmax(0, 1fr))" if is_professional
                                else "repeat(2, minmax(0, 1fr))"),
         gap="1rem",
