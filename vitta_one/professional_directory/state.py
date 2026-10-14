@@ -12,6 +12,8 @@ from vitta_one.professional_directory.application import (
     admin_list_available_medical_accounts,
     admin_list_professionals,
     admin_list_specialties,
+    admin_list_recent_professionals,
+    admin_list_recent_specialties,
     admin_rename_specialty,
     admin_set_professional_active,
     admin_set_specialty_active,
@@ -92,6 +94,16 @@ class AdminDirectoryState(rx.State):
 
     specialties: list[SpecialtyRow] = []
     professionals: list[ProfessionalRow] = []
+    recent_specialties: list[SpecialtyRow] = []
+    recent_professionals: list[ProfessionalRow] = []
+
+    specialty_search: str = ""
+    specialty_status: str = "all"
+    specialty_page: int = 1
+    professional_search: str = ""
+    professional_status: str = "all"
+    professional_page: int = 1
+    directory_page_size: int = 10
     medical_accounts: list[MedicalAccountRow] = []
     specialty_options: list[SpecialtyOption] = []
 
@@ -121,6 +133,51 @@ class AdminDirectoryState(rx.State):
         return bool(self.professionals)
 
     @rx.var
+    def filtered_specialties(self) -> list[SpecialtyRow]:
+        term = self.specialty_search.strip().casefold()
+        return [
+            item for item in self.specialties
+            if (not term or term in item["name"].casefold())
+            and (
+                self.specialty_status == "all"
+                or item["is_active"] == (self.specialty_status == "active")
+            )
+        ]
+
+    @rx.var
+    def filtered_professionals(self) -> list[ProfessionalRow]:
+        term = self.professional_search.strip().casefold()
+        return [
+            item for item in self.professionals
+            if (not term or term in item["name"].casefold()
+                or term in item["user_email"].casefold())
+            and (
+                self.professional_status == "all"
+                or item["is_active"] == (self.professional_status == "active")
+            )
+        ]
+
+    @rx.var
+    def specialty_page_count(self) -> int:
+        return max(1, (len(self.filtered_specialties) + self.directory_page_size - 1)
+                   // self.directory_page_size)
+
+    @rx.var
+    def professional_page_count(self) -> int:
+        return max(1, (len(self.filtered_professionals) + self.directory_page_size - 1)
+                   // self.directory_page_size)
+
+    @rx.var
+    def paged_specialties(self) -> list[SpecialtyRow]:
+        start = (self.specialty_page - 1) * self.directory_page_size
+        return self.filtered_specialties[start:start + self.directory_page_size]
+
+    @rx.var
+    def paged_professionals(self) -> list[ProfessionalRow]:
+        start = (self.professional_page - 1) * self.directory_page_size
+        return self.filtered_professionals[start:start + self.directory_page_size]
+
+    @rx.var
     def is_editing_professional(self) -> bool:
         return self.editing_professional_id > 0
 
@@ -143,6 +200,8 @@ class AdminDirectoryState(rx.State):
     def _clear_sensitive_data(self) -> None:
         self.specialties = []
         self.professionals = []
+        self.recent_specialties = []
+        self.recent_professionals = []
         self.medical_accounts = []
         self.specialty_options = []
         self.specialty_dialog_open = False
@@ -182,10 +241,14 @@ class AdminDirectoryState(rx.State):
         with rx.session() as db:
             specialty_items = admin_list_specialties(db, token=token)
             professional_items = admin_list_professionals(db, token=token)
+            recent_specialty_items = admin_list_recent_specialties(db, token=token)
+            recent_professional_items = admin_list_recent_professionals(db, token=token)
             account_items = admin_list_available_medical_accounts(db, token=token)
 
         self.specialties = [_specialty_row(item) for item in specialty_items]
         self.professionals = [_professional_row(item) for item in professional_items]
+        self.recent_specialties = [_specialty_row(item) for item in recent_specialty_items]
+        self.recent_professionals = [_professional_row(item) for item in recent_professional_items]
         self._set_medical_accounts(account_items)
         if not self.editing_professional_id:
             self._reset_professional_form()
@@ -223,6 +286,40 @@ class AdminDirectoryState(rx.State):
         finally:
             self.is_loading = False
             yield
+
+    @rx.event
+    def update_specialty_search(self, value: str) -> None:
+        self.specialty_search = value
+        self.specialty_page = 1
+
+    @rx.event
+    def update_specialty_status(self, value: str) -> None:
+        if value in {"all", "active", "inactive"}:
+            self.specialty_status = value
+            self.specialty_page = 1
+
+    @rx.event
+    def move_specialty_page(self, delta: int) -> None:
+        self.specialty_page = max(1, min(
+            self.specialty_page + delta, self.specialty_page_count
+        ))
+
+    @rx.event
+    def update_professional_search(self, value: str) -> None:
+        self.professional_search = value
+        self.professional_page = 1
+
+    @rx.event
+    def update_professional_status(self, value: str) -> None:
+        if value in {"all", "active", "inactive"}:
+            self.professional_status = value
+            self.professional_page = 1
+
+    @rx.event
+    def move_professional_page(self, delta: int) -> None:
+        self.professional_page = max(1, min(
+            self.professional_page + delta, self.professional_page_count
+        ))
 
     @rx.event
     def set_specialty_dialog_open(self, is_open: bool) -> None:
