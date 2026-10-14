@@ -195,7 +195,7 @@ def test_admin_dashboard_is_compact_and_routes_to_complete_directory(page: Page)
     login_as_admin(page)
     expect(page.get_by_role("link", name="Ver todas as especialidades")).to_be_visible()
     expect(page.get_by_role("link", name="Ver todos os profissionais")).to_be_visible()
-    expect(page.get_by_text("Especialidade QA Extra 4", exact=True)).to_be_visible(timeout=15000)
+    expect(page.get_by_text("Especialidade QA Extra 12", exact=True)).to_be_visible(timeout=15000)
     # Verify the dashboard card itself rather than other areas referencing the specialty.
     specialty_panel = page.get_by_role("heading", name="Especialidades", exact=True).locator("xpath=../../../..")
     assert specialty_panel.locator('[role="listitem"]').count() == 3
@@ -204,6 +204,7 @@ def test_admin_dashboard_is_compact_and_routes_to_complete_directory(page: Page)
     link.focus()
     link.press("Enter")
     expect(page).to_have_url(re.compile(r"/admin/especialidades/?$"), timeout=30000)
+    page.get_by_role("button", name="Próxima").click()
     expect(page.locator('[role="listitem"]').get_by_text("Medicina QA Navegador", exact=True).first).to_be_visible(timeout=15000)
     expect(page.get_by_role("heading", name="Todas as especialidades")).to_be_visible()
 
@@ -298,3 +299,58 @@ def test_admin_registers_medical_professional_without_resend_and_prevents_duplic
     dialog.get_by_role("button", name="Cadastrar profissional").click()
     expect(dialog).to_be_visible(timeout=15000)
     expect(dialog.get_by_text("Este e-mail já está vinculado a um profissional.")).to_be_visible(timeout=15000)
+
+
+def test_admin_specialty_pagination_has_real_second_page(page: Page) -> None:
+    """Exercise pagination with >10 specialties on disposable PostgreSQL."""
+    login_as_admin(page)
+    page.goto(BASE + "/admin/especialidades", wait_until="domcontentloaded")
+    expect(page.get_by_role("heading", name="Todas as especialidades")).to_be_visible(timeout=30000)
+    expect(page.get_by_text("Página 1 de 2", exact=True)).to_be_visible(timeout=20000)
+    first_page = page.locator('[role="listitem"]')
+    expect(first_page).to_have_count(10, timeout=15000)
+    expect(page.get_by_role("button", name="Anterior")).to_be_disabled()
+    page.get_by_role("button", name="Próxima").click()
+    expect(page.get_by_text("Página 2 de 2", exact=True)).to_be_visible(timeout=15000)
+    expect(page.get_by_role("button", name="Próxima")).to_be_disabled()
+    page.get_by_role("button", name="Anterior").click()
+    expect(page.get_by_text("Página 1 de 2", exact=True)).to_be_visible(timeout=15000)
+
+
+def test_admin_availability_controls_are_understandable_and_responsive(page: Page) -> None:
+    """Verify the operational calendar surface at three viewport sizes."""
+    login_as_admin(page)
+    for width, height in ((320, 640), (375, 667), (768, 1024)):
+        page.set_viewport_size({"width": width, "height": height})
+        page.emulate_media(reduced_motion="reduce")
+        expect(page.get_by_role("heading", name="Horários de atendimento")).to_be_visible(timeout=30000)
+        date = page.locator("#admin-slot-date")
+        hour = page.locator("#admin-slot-time")
+        expect(date).to_be_visible()
+        expect(hour).to_be_visible()
+        date.focus()
+        expect(date).to_be_focused()
+        date.press("Tab")
+        expect(hour).to_be_focused()
+        assert page.evaluate(
+            "document.documentElement.scrollWidth <= window.innerWidth + 2"
+        ), overflowing_elements(page)
+        page.screenshot(path=f"qa-artifacts/agenda-admin-{width}px.png", full_page=True)
+
+
+def test_medical_registration_modal_mobile_form(page: Page) -> None:
+    """Doctor onboarding fields remain understandable and operable on narrow screens."""
+    login_as_admin(page)
+    for width, height in ((320, 640), (375, 667), (768, 1024)):
+        page.set_viewport_size({"width": width, "height": height})
+        page.get_by_role("button", name="Novo profissional").click()
+        dlg = page.get_by_role("dialog")
+        expect(dlg).to_be_visible(timeout=15000)
+        expect(dlg.locator("#professional-name")).to_be_visible()
+        expect(dlg.locator("#professional-email")).to_be_visible()
+        assert page.evaluate(
+            "document.documentElement.scrollWidth <= window.innerWidth + 2"
+        ), overflowing_elements(page)
+        page.screenshot(path=f"qa-artifacts/cadastro-medico-{width}px.png", full_page=True)
+        dlg.locator("#professional-email").press("Escape")
+        expect(dlg).to_have_count(0, timeout=15000)

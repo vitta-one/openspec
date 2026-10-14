@@ -245,3 +245,91 @@ def test_manual_reissue_invalidates_previous_temporary_password(db):
     assert db.get(Professional, result.professional_id).onboarding_email_status == "PENDING"
     with pytest.raises(DirectoryConflictError):
         reissue_medical_temporary_password(db, professional_id=result.professional_id)
+
+
+def test_integrity_error_rolls_back_both_identity_and_professional(db, monkeypatch):
+    """Simulated database failure after flush MUST NOT leave an orphan doctor account."""
+    from sqlalchemy.exc import IntegrityError
+    specialty = _specialty(db)
+    original_commit = db.commit
+
+    def conflict_after_flush():
+        monkeypatch.setattr(db, "commit", original_commit)
+        raise IntegrityError("duplicate association", {}, RuntimeError("simulated"))
+
+    monkeypatch.setattr(db, "commit", conflict_after_flush)
+    with pytest.raises(DirectoryConflictError):
+        register_medical_professional(
+            db, name="Dra. Rollback", email="rollback@example.invalid",
+            specialty_ids=[specialty.id],
+        )
+    assert db.exec(select(User).where(User.email == "rollback@example.invalid")).first() is None
+    assert db.exec(select(Professional).where(Professional.name == "Dra. Rollback")).first() is None
+
+
+def test_simultaneous_doctor_registration_cannot_duplicate_email_in_disposable_postgres():
+    """Real PostgreSQL concurrency, run exclusively in disposable CI database."""
+    import os
+    import secrets
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+    from sqlalchemy.engine import make_url
+
+    url = os.environ.get("DATABASE_URL", "")
+    if os.environ.get("VITTA_ONE_QA_DISPOSABLE_DATABASE") != "yes" or not url.startswith("postgresql+psycopg://"):
+        pytest.skip("Real concurrency test needs disposable PostgreSQL CI environment")
+    parsed = make_url(url)
+    if parsed.host not in {"localhost", "127.0.0.1"} or parsed.database != "vitta_one":
+        pytest.skip("Refusing to write concurrency fixtures outside disposable CI database")
+
+    from sqlmodel import create_engine
+    suffix = secrets.token_hex(6)
+    email = f"concurrency-{suffix}@example.invalid"
+    specialty_name = f"Concorrência QA {suffix}"
+    engine = create_engine(url, pool_size=3, max_overflow=1)
+    with Session(engine) as session:
+        specialty = create_specialty(session, name=specialty_name)
+        sid = specialty.id
+    barrier = Barrier(2)
+
+    def create_once(idx):
+        with Session(engine) as session:
+            barrier.wait(timeout=12)
+            try:
+                register_medical_professional(
+                    session, name=f"Dr. Concorrente {idx}", email=email,
+                    specialty_ids=[sid],
+                )
+                return "created"
+            except DirectoryConflictError:
+                return "conflict"
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            result = list(pool.map(create_once, range(2)))
+        assert sorted(result) == ["conflict", "created"]
+        with Session(engine) as session:
+            assert len(session.exec(select(User).where(User.email == email)).all()) == 1
+            person = session.exec(select(Professional).where(Professional.user_id.in_(
+                select(User.id).where(User.email == email)
+            ))).all()
+            assert len(person) == 1
+    finally:
+        with Session(engine) as session:
+            users = session.exec(select(User).where(User.email == email)).all()
+            for identity in users:
+                people = session.exec(select(Professional).where(Professional.user_id == identity.id)).all()
+                for person in people:
+                    pairs = session.exec(select(ProfessionalSpecialty).where(
+                        ProfessionalSpecialty.professional_id == person.id
+                    )).all()
+                    for pair in pairs:
+                        session.delete(pair)
+                    session.delete(person)
+                session.delete(identity)
+            from vitta_one.models.professional import Specialty
+            specialty = session.exec(select(Specialty).where(Specialty.name == specialty_name)).first()
+            if specialty is not None:
+                session.delete(specialty)
+            session.commit()
+        engine.dispose()

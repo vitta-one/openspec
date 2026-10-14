@@ -36,6 +36,7 @@ jobs:
       VITTA_ONE_SESSION_TTL_SECONDS: "3600"
       VITTA_ONE_COOKIE_SECURE: "false"
       VITTA_ONE_CLINIC_TIMEZONE: "America/Sao_Paulo"
+      VITTA_ONE_QA_DISPOSABLE_DATABASE: "yes"
       REFLEX_TELEMETRY_ENABLED: "false"
 
     steps:
