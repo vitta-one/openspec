@@ -59,7 +59,7 @@ def main() -> None:
         db.add(admin)
         db.commit()
         specialty = create_specialty(db, name="Medicina QA Navegador")
-        for number in range(1, 5):
+        for number in range(1, 13):
             create_specialty(db, name=f"Especialidade QA Extra {number}")
         for number in range(1, 5):
             create_professional(

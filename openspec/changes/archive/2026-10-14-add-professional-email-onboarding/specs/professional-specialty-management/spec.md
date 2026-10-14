@@ -31,6 +31,9 @@ O sistema MUST permitir cadastrar profissional com nome, e-mail único e ao meno
 - **WHEN** associação ou constraint falha após iniciar o cadastro
 - **THEN** nenhuma identidade órfã ou profissional parcial é persistido
 
+## ADDED Requirements
+
+
 ### Requirement: E-mail de onboarding reflete status real
 O sistema MUST registrar se um e-mail de boas-vindas foi aceito pelo serviço externo, não enviado, falhou ou está indeterminado. MUST impedir que ausência de credenciais Resend seja apresentada como envio concluído.
 
