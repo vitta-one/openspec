@@ -28,6 +28,8 @@ from vitta_one.ui.pages import (
     admin_clinical_preview_page,
     admin_finance_preview_page,
     admin_page,
+    admin_specialties_page,
+    admin_professionals_page,
     admin_patients_preview_page,
     admin_reception_preview_page,
     doctor_page,
@@ -83,6 +85,18 @@ app.add_page(
     route=Role.ADMINISTRADOR.dashboard_path,
     title="Painel administrativo | Vitta-One",
     on_load=[AuthState.load_protected, AdminDirectoryState.load, AdminAvailabilityState.load],
+)
+app.add_page(
+    admin_specialties_page,
+    route="/admin/especialidades",
+    title="Especialidades | Vitta-One",
+    on_load=[AuthState.load_protected, AdminDirectoryState.load],
+)
+app.add_page(
+    admin_professionals_page,
+    route="/admin/profissionais",
+    title="Profissionais | Vitta-One",
+    on_load=[AuthState.load_protected, AdminDirectoryState.load],
 )
 app.add_page(
     admin_reception_preview_page,
