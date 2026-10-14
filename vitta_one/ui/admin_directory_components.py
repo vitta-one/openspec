@@ -155,7 +155,7 @@ def specialty_option(option) -> rx.Component:
             rx.cond(
                 option["locked"],
                 rx.text(
-                    "Vínculo histórico com especialidade inativa; será preservado.",
+                    "Especialidade desativada, mantida no histórico.",
                     size="1",
                     color="var(--vitta-text-muted)",
                     margin_top="0.25rem",
@@ -382,22 +382,27 @@ def _professional_form_fields() -> rx.Component:
             width="100%",
         ),
         rx.box(
-            field_label("Identificador profissional", "professional-registration"),
+            field_label("E-mail profissional", "professional-email"),
             rx.el.input(
-                id="professional-registration",
-                name="registration_identifier",
-                type="text",
-                value=AdminDirectoryState.registration_identifier,
-                on_change=AdminDirectoryState.update_registration_identifier,
+                id="professional-email",
+                name="email",
+                type="email",
+                value=AdminDirectoryState.professional_email,
+                on_change=AdminDirectoryState.update_professional_email,
                 required=True,
-                max_length=80,
+                max_length=320,
+                auto_complete="email",
+                read_only=AdminDirectoryState.is_editing_professional,
                 class_name="vitta-input",
-                aria_describedby="professional-registration-help",
                 margin_top="0.4rem",
+                placeholder="medico@clinica.com",
             ),
             rx.text(
-                "Ex.: registro interno ou identificação profissional. O sistema não presume CRM, conselho ou UF nesta etapa.",
-                id="professional-registration-help",
+                rx.cond(
+                    AdminDirectoryState.is_editing_professional,
+                    "O e-mail de acesso não pode ser alterado nesta edição.",
+                    "O envio das instruções de acesso depende da configuração de e-mail da clínica.",
+                ),
                 size="1",
                 color="var(--vitta-text-muted)",
                 margin_top="0.35rem",
@@ -416,7 +421,7 @@ def _professional_form_fields() -> rx.Component:
             rx.vstack(
                 rx.foreach(AdminDirectoryState.specialty_options, specialty_option),
                 rx.text(
-                    "Selecione ao menos uma especialidade ativa. Vínculos históricos inativos permanecem bloqueados e preservados.",
+                    "Selecione uma ou mais áreas em que o profissional atende.",
                     size="1",
                     color="var(--vitta-text-muted)",
                     line_height="1.45",
@@ -430,20 +435,7 @@ def _professional_form_fields() -> rx.Component:
             padding="0",
             margin="0",
         ),
-        rx.box(
-            field_label("Conta Médica opcional", "professional-medical-account"),
-            rx.box(medical_account_select(), margin_top="0.4rem"),
-            rx.text(
-                "Somente contas locais com role Médico e ainda disponíveis podem ser vinculadas.",
-                id="medical-account-help",
-                size="1",
-                color="var(--vitta-text-muted)",
-                margin_top="0.35rem",
-                line_height="1.45",
-            ),
-            width="100%",
-        ),
-        spacing="4",
+         spacing="4",
         width="100%",
         align="stretch",
     )
@@ -454,7 +446,7 @@ def professional_dialog() -> rx.Component:
         rx.dialog.content(
             rx.dialog.title(AdminDirectoryState.professional_form_title),
             rx.dialog.description(
-                "Mantenha identificação, especialidades e vínculo opcional de acesso Médico. Agenda e disponibilidade continuam em capability própria.",
+                "Informe nome, e-mail e especialidades. O sistema prepara o acesso do médico.",
                 margin_top="0.35rem",
                 margin_bottom="1rem",
             ),
@@ -516,12 +508,6 @@ def professional_row(row) -> rx.Component:
             rx.flex(
                 rx.box(
                     rx.text(row["name"], font_weight="760", size="3"),
-                    rx.text(
-                        row["registration_identifier"],
-                        size="1",
-                        color="var(--vitta-text-muted)",
-                        margin_top="0.15rem",
-                    ),
                 ),
                 status_badge(row["is_active"], "Ativo", "Inativo"),
                 justify="between",
@@ -555,14 +541,38 @@ def professional_row(row) -> rx.Component:
                 rx.fragment(),
             ),
             rx.box(
-                rx.text(
-                    "Conta de acesso",
-                    size="1",
-                    font_weight="700",
-                    color="var(--vitta-text-muted)",
-                ),
+                rx.text("E-mail de acesso", size="1", font_weight="700",
+                        color="var(--vitta-text-muted)"),
                 rx.text(row["user_email"], size="2", margin_top="0.2rem"),
+                rx.cond(
+                    row["onboarding_email_status"] == "NOT_CONFIGURED",
+                    rx.text("E-mail de acesso ainda não enviado.", size="1",
+                            color="var(--vitta-warning)", margin_top="0.25rem"),
+                    rx.cond(
+                        row["onboarding_email_status"] == "ACCEPTED",
+                        rx.text("E-mail aceito pelo provedor.", size="1",
+                                color="var(--vitta-success)", margin_top="0.25rem"),
+                        rx.cond(
+                            (row["onboarding_email_status"] == "FAILED") |
+                            (row["onboarding_email_status"] == "UNKNOWN"),
+                            rx.text("Envio não confirmado. Verifique antes de reenviar.",
+                                    size="1", color="var(--vitta-warning)"),
+                            rx.fragment(),
+                        ),
+                    ),
+                ),
                 width="100%",
+            ),
+            rx.cond(
+                (row["onboarding_email_status"] == "FAILED") |
+                (row["onboarding_email_status"] == "UNKNOWN") |
+                (row["onboarding_email_status"] == "NOT_CONFIGURED"),
+                rx.button(
+                    "Reenviar acesso", type="button", variant="outline",
+                    on_click=AdminDirectoryState.begin_medical_reissue(row["id"]),
+                    disabled=AdminDirectoryState.is_submitting,
+                ),
+                rx.fragment(),
             ),
             rx.flex(
                 rx.button(
@@ -576,6 +586,7 @@ def professional_row(row) -> rx.Component:
                         row["registration_identifier"],
                         row["user_id"],
                         row["specialty_ids"],
+                        row["user_email"],
                     ),
                     disabled=AdminDirectoryState.is_submitting,
                 ),
@@ -767,9 +778,47 @@ def admin_directory_workspace() -> rx.Component:
         ),
         specialty_dialog(),
         professional_dialog(),
+        medical_reissue_dialog(),
         spacing="5",
         width="100%",
         align="stretch",
+    )
+
+
+def medical_reissue_dialog() -> rx.Component:
+    """Explicitly confirm rotation before reissuing a failed/unknown credential."""
+    return rx.dialog.root(
+        rx.dialog.content(
+            rx.dialog.title("Reenviar acesso médico"),
+            rx.dialog.description(
+                "Uma nova senha temporária substituirá a anterior, inclusive se outro e-mail "
+                "tiver sido entregue. Confirme somente depois de verificar a situação do envio.",
+                margin_top="0.5rem",
+            ),
+            rx.cond(
+                AdminDirectoryState.error_message != "",
+                error_banner(AdminDirectoryState.error_message, "reissue-error"),
+                rx.fragment(),
+            ),
+            rx.flex(
+                rx.button(
+                    "Cancelar", type="button", variant="ghost",
+                    on_click=AdminDirectoryState.cancel_medical_reissue,
+                    disabled=AdminDirectoryState.is_submitting,
+                ),
+                rx.button(
+                    "Confirmar reenvio", type="button", color_scheme="teal",
+                    loading=AdminDirectoryState.is_submitting,
+                    disabled=AdminDirectoryState.is_submitting,
+                    on_click=AdminDirectoryState.confirm_medical_reissue,
+                ),
+                justify="end", gap="0.75rem", flex_wrap="wrap",
+                margin_top="1.25rem",
+            ),
+            class_name="vitta-dialog-content",
+        ),
+        open=AdminDirectoryState.reissue_dialog_open,
+        on_open_change=AdminDirectoryState.set_medical_reissue_dialog_open,
     )
 
 
@@ -923,6 +972,7 @@ def specialties_management_workspace() -> rx.Component:
         ),
         specialty_dialog(),
         professional_dialog(),
+        medical_reissue_dialog(),
         spacing="4", align="stretch", width="100%",
     )
 
@@ -963,5 +1013,6 @@ def professionals_management_workspace() -> rx.Component:
         ),
         professional_dialog(),
         specialty_dialog(),
+        medical_reissue_dialog(),
         spacing="4", align="stretch", width="100%",
     )

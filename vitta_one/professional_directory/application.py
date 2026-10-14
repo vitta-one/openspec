@@ -11,6 +11,10 @@ from vitta_one.professional_directory.service import (
     SpecialtyItem,
     create_professional,
     create_specialty,
+    register_medical_professional,
+    update_professional_onboarding_status,
+    MedicalRegistrationResult,
+    reissue_medical_temporary_password,
     list_available_medical_accounts,
     list_professionals,
     list_specialties,
@@ -125,3 +129,32 @@ def admin_list_available_medical_accounts(
 ) -> list[MedicalAccountOption]:
     require_role(db, token, Role.ADMINISTRADOR)
     return list_available_medical_accounts(db, professional_id=professional_id)
+
+
+def admin_register_medical_professional(
+    db: Session, *, token: str, name: str, email: str,
+    specialty_ids: list[int] | tuple[int, ...],
+) -> MedicalRegistrationResult:
+    require_role(db, token, Role.ADMINISTRADOR)
+    return register_medical_professional(
+        db, name=name, email=email, specialty_ids=specialty_ids
+    )
+
+
+def admin_set_onboarding_email_status(
+    db: Session, *, token: str, professional_id: int,
+    status: str, message_id: str | None = None,
+) -> None:
+    require_role(db, token, Role.ADMINISTRADOR)
+    update_professional_onboarding_status(
+        db, professional_id=professional_id, status=status, message_id=message_id
+    )
+
+
+def admin_reissue_medical_access(
+    db: Session, *, token: str, professional_id: int
+) -> MedicalRegistrationResult:
+    require_role(db, token, Role.ADMINISTRADOR)
+    return reissue_medical_temporary_password(
+        db, professional_id=professional_id
+    )

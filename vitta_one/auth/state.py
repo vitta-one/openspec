@@ -7,11 +7,16 @@ import reflex as rx
 from vitta_one.auth.authorization import (
     AuthenticationRequiredError,
     RoleForbiddenError,
+    PasswordChangeRequiredError,
     require_authenticated,
     require_role,
 )
 from vitta_one.auth.roles import Role
-from vitta_one.auth.service import authenticate_user, create_session, revoke_session
+from vitta_one.auth.service import (
+    authenticate_user, create_session, revoke_session,
+    temporary_password_is_expired, complete_temporary_password_change,
+    TemporaryPasswordError,
+)
 from vitta_one.auth.settings import (
     SESSION_COOKIE_NAME,
     local_admin_preview_enabled,
@@ -68,6 +73,7 @@ class AuthState(rx.State):
     is_submitting: bool = False
     show_password: bool = False
     login_error: str = ""
+    first_access_error: str = ""
     shell_error: str = ""
     local_admin_preview: bool = local_admin_preview_enabled()
 
@@ -134,7 +140,10 @@ class AuthState(rx.State):
 
         self._set_identity(email=identity.email, role=identity.role)
         self.auth_checked = True
-        yield rx.redirect(identity.role.dashboard_path)
+        yield rx.redirect(
+            "/primeiro-acesso" if identity.must_change_password
+            else identity.role.dashboard_path
+        )
 
     @rx.event
     def login(self, form_data: LoginFormData):
@@ -163,6 +172,14 @@ class AuthState(rx.State):
                     yield
                     return
 
+                if user.must_change_password and temporary_password_is_expired(user):
+                    self.login_error = (
+                        "Sua senha inicial expirou. Solicite novo acesso à administração."
+                    )
+                    self.is_submitting = False
+                    yield
+                    return
+                requires_initial_change = user.must_change_password
                 role = Role(user.role)
                 authenticated_email = user.email
                 authenticated_user_id = user.id
@@ -182,7 +199,10 @@ class AuthState(rx.State):
         self.auth_checked = True
         self.is_submitting = False
         yield
-        yield rx.redirect(role.dashboard_path)
+        yield rx.redirect(
+            "/primeiro-acesso" if requires_initial_change
+            else role.dashboard_path
+        )
 
     @rx.event
     def route_from_root(self):
@@ -215,7 +235,10 @@ class AuthState(rx.State):
 
         self._set_identity(email=identity.email, role=identity.role)
         self.auth_checked = True
-        yield rx.redirect(identity.role.dashboard_path)
+        yield rx.redirect(
+            "/primeiro-acesso" if identity.must_change_password
+            else identity.role.dashboard_path
+        )
 
     @rx.event
     def load_protected(self):
@@ -245,6 +268,11 @@ class AuthState(rx.State):
             self._set_identity(email=exc.identity.email, role=exc.identity.role)
             self.auth_checked = True
             yield rx.redirect("/acesso-negado")
+            return
+        except PasswordChangeRequiredError:
+            self._clear_identity()
+            self.auth_checked = True
+            yield rx.redirect("/primeiro-acesso")
             return
         except Exception:
             self._clear_identity()
@@ -334,6 +362,80 @@ class AuthState(rx.State):
         yield
 
     @rx.event
+    def load_first_access(self):
+        """Allow only provisional Medical accounts to reach password rotation."""
+        self.auth_checked = False
+        self.first_access_error = ""
+        yield
+        try:
+            with rx.session() as db:
+                identity = require_authenticated(db, self.session_token)
+        except AuthenticationRequiredError:
+            self.session_token = ""
+            self._clear_identity()
+            self.auth_checked = True
+            yield rx.remove_cookie(SESSION_COOKIE_NAME)
+            yield rx.redirect("/login")
+            return
+        except Exception:
+            self._clear_identity()
+            self.auth_checked = True
+            yield rx.redirect("/login")
+            return
+        if identity.role is not Role.MEDICO or not identity.must_change_password:
+            self._clear_identity()
+            self.auth_checked = True
+            yield rx.redirect(identity.role.dashboard_path)
+            return
+        self._set_identity(
+            email=identity.email, role=identity.role,
+            verified_path="/primeiro-acesso",
+        )
+        self.auth_checked = True
+        yield
+
+    @rx.event
+    def save_first_access(self, form_data: dict):
+        """Never store current/new password in Reflex State; submit directly to service."""
+        self.is_submitting = True
+        self.first_access_error = ""
+        yield
+        old = str(form_data.get("current_password", ""))
+        new = str(form_data.get("new_password", ""))
+        confirm = str(form_data.get("confirm_password", ""))
+        if not old or not new or new != confirm:
+            self.first_access_error = "Preencha as senhas e confirme a nova senha corretamente."
+            self.is_submitting = False
+            yield
+            return
+        try:
+            with rx.session() as db:
+                complete_temporary_password_change(
+                    db, token=self.session_token,
+                    current_password=old, new_password=new,
+                )
+        except TemporaryPasswordError as exc:
+            self.first_access_error = str(exc)
+            self.is_submitting = False
+            yield
+            return
+        except AuthenticationRequiredError:
+            self.session_token = ""
+            self._clear_identity()
+            self.is_submitting = False
+            yield rx.remove_cookie(SESSION_COOKIE_NAME)
+            yield rx.redirect("/login")
+            return
+        except Exception:
+            self.first_access_error = "Não foi possível atualizar a senha agora."
+            self.is_submitting = False
+            yield
+            return
+        self.is_submitting = False
+        self.verified_path = ""
+        yield rx.redirect(Role.MEDICO.dashboard_path)
+
+    @rx.event
     def go_to_dashboard(self):
         """Revalidate the current session before returning to its authorized dashboard."""
         try:
@@ -351,7 +453,10 @@ class AuthState(rx.State):
             return
 
         self._set_identity(email=identity.email, role=identity.role)
-        yield rx.redirect(identity.role.dashboard_path)
+        yield rx.redirect(
+            "/primeiro-acesso" if identity.must_change_password
+            else identity.role.dashboard_path
+        )
 
     @rx.event
     async def logout(self):

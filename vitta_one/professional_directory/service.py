@@ -1,13 +1,18 @@
 """Business services for the professional and specialty directory."""
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+import secrets
+from uuid import uuid4
 
 from sqlalchemy import delete
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from vitta_one.auth.roles import Role
+from vitta_one.auth.security import (
+    hash_password, normalize_email, is_valid_email_identifier,
+)
 from vitta_one.models.auth import User
 from vitta_one.models.professional import (
     Professional,
@@ -50,6 +55,7 @@ class ProfessionalItem:
     user_id: int | None
     user_email: str | None
     specialties: tuple[SpecialtyItem, ...]
+    onboarding_email_status: str = "NOT_REQUIRED"
 
 
 def utc_now() -> datetime:
@@ -437,6 +443,7 @@ def list_professionals(
                 user_id=professional.user_id,
                 user_email=user_email,
                 specialties=tuple(specialties),
+                onboarding_email_status=professional.onboarding_email_status,
             )
         )
 
@@ -463,3 +470,147 @@ def list_available_medical_accounts(
         for user in users
         if user.id is not None and user.id not in used
     ]
+
+
+@dataclass(frozen=True, slots=True)
+class MedicalRegistrationResult:
+    """Temporary secret MUST stay in the server event stack, never Reflex State."""
+
+    professional_id: int
+    user_id: int
+    email: str
+    name: str
+    temporary_password: str | None
+
+
+def register_medical_professional(
+    db: Session,
+    *,
+    name: str,
+    email: str,
+    specialty_ids: list[int] | tuple[int, ...],
+) -> MedicalRegistrationResult:
+    """Atomically create a doctor identity and professional without changing legacy users."""
+    display_name = _validate_professional_name(name)
+    normalized_email = normalize_email(email)
+    if not is_valid_email_identifier(normalized_email):
+        raise DirectoryValidationError("Informe um e-mail profissional válido.")
+    valid_specialties = _validate_specialty_ids(db, specialty_ids)
+
+    user = db.exec(select(User).where(User.email == normalized_email)).first()
+    if user is not None:
+        if user.role != Role.MEDICO.value:
+            raise DirectoryConflictError("Este e-mail já pertence a outro tipo de conta.")
+        if db.exec(select(Professional).where(Professional.user_id == user.id)).first():
+            raise DirectoryConflictError("Este e-mail já está vinculado a um profissional.")
+    temporary_password: str | None = None
+    if user is None:
+        temporary_password = secrets.token_urlsafe(32)
+        user = User(
+            email=normalized_email,
+            role=Role.MEDICO.value,
+            password_hash=hash_password(temporary_password),
+            must_change_password=True,
+            temporary_password_expires_at=utc_now() + timedelta(hours=24),
+        )
+        db.add(user)
+
+    # A generated local key is not a professional council/CRM identifier.
+    registration_identifier = "INT-" + uuid4().hex.upper()
+    try:
+        db.flush()
+        if user.id is None:
+            raise RuntimeError("Identidade médica não recebeu identificador.")
+        professional = Professional(
+            name=display_name,
+            registration_identifier=registration_identifier,
+            user_id=user.id,
+            is_active=True,
+            onboarding_email_status="PENDING" if temporary_password else "NOT_REQUIRED",
+        )
+        db.add(professional)
+        db.flush()
+        if professional.id is None:
+            raise RuntimeError("Profissional não recebeu identificador.")
+        for specialty_id in valid_specialties:
+            db.add(
+                ProfessionalSpecialty(
+                    professional_id=professional.id,
+                    specialty_id=specialty_id,
+                )
+            )
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise DirectoryConflictError(
+            "Este e-mail ou profissional já foi cadastrado. Confira os dados."
+        ) from exc
+    db.refresh(professional)
+    return MedicalRegistrationResult(
+        professional_id=professional.id,
+        user_id=user.id,
+        email=normalized_email,
+        name=display_name,
+        temporary_password=temporary_password,
+    )
+
+
+def update_professional_onboarding_status(
+    db: Session, *, professional_id: int, status: str, message_id: str | None = None
+) -> None:
+    """Persist provider request status only, never any credential or message body."""
+    allowed = {"ACCEPTED", "FAILED", "UNKNOWN", "NOT_CONFIGURED"}
+    if status not in allowed:
+        raise DirectoryValidationError("Situação de e-mail inválida.")
+    professional = db.get(Professional, professional_id)
+    if professional is None:
+        raise DirectoryNotFoundError("Profissional não localizado.")
+    if professional.onboarding_email_status not in {
+        "PENDING", "FAILED", "UNKNOWN", "NOT_CONFIGURED"
+    }:
+        raise DirectoryConflictError("Nenhum onboarding pendente para este profissional.")
+    professional.onboarding_email_status = status
+    professional.onboarding_email_message_id = (
+        message_id[:128] if status == "ACCEPTED" and message_id else None
+    )
+    db.add(professional)
+    db.commit()
+
+
+def reissue_medical_temporary_password(
+    db: Session, *, professional_id: int
+) -> MedicalRegistrationResult:
+    """Explicitly rotate a failed/unknown provisional credential (never auto-retry)."""
+    professional = db.exec(
+        select(Professional).where(Professional.id == professional_id).with_for_update()
+    ).first()
+    if professional is None or professional.user_id is None:
+        raise DirectoryNotFoundError("Profissional sem conta médica vinculada.")
+    if professional.onboarding_email_status not in {
+        "FAILED", "UNKNOWN", "NOT_CONFIGURED"
+    }:
+        raise DirectoryConflictError(
+            "O acesso não está disponível para reemissão automática."
+        )
+    user = db.exec(
+        select(User).where(User.id == professional.user_id).with_for_update()
+    ).first()
+    if user is None or user.role != Role.MEDICO.value or not user.must_change_password:
+        raise DirectoryConflictError(
+            "A conta já foi ativada ou não requer senha temporária."
+        )
+    temporary_password = secrets.token_urlsafe(32)
+    user.password_hash = hash_password(temporary_password)
+    user.temporary_password_expires_at = utc_now() + timedelta(hours=24)
+    professional.onboarding_email_status = "PENDING"
+    professional.onboarding_email_message_id = None
+    db.add(user)
+    db.add(professional)
+    db.commit()
+    return MedicalRegistrationResult(
+        professional_id=professional.id,
+        user_id=user.id,
+        email=user.email,
+        name=professional.name,
+        temporary_password=temporary_password,
+    )

@@ -110,6 +110,13 @@ Regras:
 - Só botões e links acionáveis exibem cursor pointer, foco visível e feedback de hover; informação não interativa não simula clique.
 - O dashboard conserva os diálogos existentes, sem duplicar validações ou operações de domínio.
 
+### Cadastro e primeiro acesso de Médicos
+
+- “Novo profissional” solicita nome, e-mail e especialidades; o servidor gera o identificador interno e cria ou reutiliza a identidade Médica quando autorizado.
+- A senha inicial é aleatória, temporária e nunca aparece em interface, armazenamento client-side ou logs. O primeiro login leva à troca obrigatória em `/primeiro-acesso` e não libera operações clínicas até a rotação.
+- Credenciais expiram em 24 horas; o Resend é usado exclusivamente no servidor e pode estar desconfigurado. A tela distingue “e-mail aceito pelo provedor” de “não enviado”/“envio não confirmado”, sem inferir entrega na caixa postal.
+- Reemissão requer confirmação explícita do Administrador, invalida a senha provisória anterior e não ocorre automaticamente após timeout.
+
 ## 9. Pacientes, fila e módulos futuros
 
 - Admin local visualiza pacientes/fila somente leitura.
