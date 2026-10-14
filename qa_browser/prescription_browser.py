@@ -179,3 +179,61 @@ def test_completed_history_and_prescriptions_fit_narrow_viewports(page: Page) ->
         ), f"horizontal overflow detected at {width}px with history open: {overflowing_elements(page)}"
         page.screenshot(path=f"qa-artifacts/historico-{width}px.png", full_page=True)
         disclosure.locator("summary").click()
+
+
+def login_as_admin(page: Page) -> None:
+    """Use only the CI disposable database's synthetic Administrator."""
+    page.goto(BASE + "/login", wait_until="domcontentloaded")
+    page.locator("#login-email").fill(FIXTURE["admin_email"])
+    page.locator("#login-password").fill(os.environ["VITTA_ONE_QA_PASSWORD"])
+    page.get_by_role("button", name="Entrar").click()
+    expect(page).to_have_url(re.compile(r"/admin/?$"), timeout=30000)
+    expect(page.get_by_role("heading", name="Especialidades", exact=True)).to_be_visible(timeout=30000)
+
+
+def test_admin_dashboard_is_compact_and_routes_to_complete_directory(page: Page) -> None:
+    login_as_admin(page)
+    expect(page.get_by_role("link", name="Ver todas as especialidades")).to_be_visible()
+    expect(page.get_by_role("link", name="Ver todos os profissionais")).to_be_visible()
+    expect(page.get_by_text("Especialidade QA Extra 4", exact=True)).to_be_visible(timeout=15000)
+    # The oldest row exists in DB but is not rendered on the dashboard.
+    expect(page.get_by_text("Medicina QA Navegador", exact=True)).not_to_be_visible()
+    link = page.get_by_role("link", name="Ver todas as especialidades")
+    assert link.evaluate("(el) => getComputedStyle(el).cursor") == "pointer"
+    link.focus()
+    link.press("Enter")
+    expect(page).to_have_url(re.compile(r"/admin/especialidades/?$"), timeout=30000)
+    expect(page.get_by_text("Medicina QA Navegador", exact=True)).to_be_visible(timeout=15000)
+    expect(page.get_by_role("heading", name="Todas as especialidades")).to_be_visible()
+
+
+def test_admin_specialty_search_and_professional_routes_at_mobile_width(page: Page) -> None:
+    login_as_admin(page)
+    for width, height in ((320, 640), (375, 667), (768, 1024)):
+        page.set_viewport_size({"width": width, "height": height})
+        page.emulate_media(reduced_motion="reduce")
+        page.goto(BASE + "/admin/especialidades", wait_until="domcontentloaded")
+        expect(page.get_by_role("heading", name="Todas as especialidades")).to_be_visible(timeout=30000)
+        page.locator("#specialty-directory-search").fill("Extra 2")
+        expect(page.get_by_text("Especialidade QA Extra 2", exact=True)).to_be_visible(timeout=15000)
+        expect(page.get_by_text("Especialidade QA Extra 1", exact=True)).not_to_be_visible()
+        assert page.evaluate(
+            "document.documentElement.scrollWidth <= window.innerWidth + 2"
+        ), overflowing_elements(page)
+        page.locator("#specialty-directory-search").fill("")
+        page.get_by_role("link", name="Voltar ao painel").click()
+        expect(page).to_have_url(re.compile(r"/admin/?$"), timeout=30000)
+        page.get_by_role("link", name="Ver todos os profissionais").click()
+        expect(page).to_have_url(re.compile(r"/admin/profissionais/?$"), timeout=30000)
+        expect(page.get_by_role("heading", name="Todos os profissionais")).to_be_visible(timeout=30000)
+        assert page.evaluate(
+            "document.documentElement.scrollWidth <= window.innerWidth + 2"
+        ), overflowing_elements(page)
+        page.screenshot(path=f"qa-artifacts/admin-diretorio-{width}px.png", full_page=True)
+
+
+def test_non_admin_cannot_open_admin_directory_subroutes(page: Page) -> None:
+    login(page, FIXTURE["doctor_b_email"])
+    page.goto(BASE + "/admin/profissionais", wait_until="domcontentloaded")
+    expect(page).to_have_url(re.compile(r"/acesso-negado/?$"), timeout=30000)
+    expect(page.get_by_text("Dr. QA Extra 4")).to_have_count(0)
