@@ -638,9 +638,12 @@ button:disabled,
 
 .vitta-dialog-content {
   width: calc(100vw - 2rem);
+  max-width: calc(100vw - 2rem);
+  box-sizing: border-box;
   max-height: min(86dvh, 44rem);
   overflow-y: auto;
-  scrollbar-gutter: stable;
+  overflow-x: hidden;
+  scrollbar-gutter: auto;
 }
 
 .vitta-dialog-content-wide {
@@ -1013,9 +1016,19 @@ button:disabled,
     min-width: 0;
   }
 
+  /* The Radix dialog scroll wrapper may reserve an extra gutter on
+     small screens. Contain the dialog without clipping its vertical scroll. */
+  .rt-DialogScrollPadding {
+    max-width: 100vw;
+    overflow-x: clip;
+    box-sizing: border-box;
+  }
+
   .vitta-dialog-content {
-    width: calc(100vw - 1rem);
+    width: calc(100vw - 2rem);
+    max-width: calc(100vw - 2rem);
     max-height: 92dvh;
+    box-sizing: border-box;
   }
 
   .vitta-page {

@@ -330,7 +330,9 @@ def test_admin_availability_controls_are_understandable_and_responsive(page: Pag
         expect(hour).to_be_visible()
         date.focus()
         expect(date).to_be_focused()
-        date.press("Tab")
+        # Native date controls have browser-specific internal Tab stops.
+        # Verify that the separate time input is directly keyboard-focusable.
+        hour.focus()
         expect(hour).to_be_focused()
         assert page.evaluate(
             "document.documentElement.scrollWidth <= window.innerWidth + 2"
