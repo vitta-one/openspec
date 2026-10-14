@@ -374,7 +374,7 @@ def login_as_reception(page: Page) -> None:
 def test_reception_routes_are_operational_and_mobile_accessible(page: Page) -> None:
     login_as_reception(page)
     expect(page.get_by_text("Agendamentos de hoje")).to_be_visible()
-    expect(page.get_by_text("Próximas consultas")).to_be_visible()
+    expect(page.get_by_role("heading", name="Próximas consultas", exact=True)).to_be_visible()
     expect(page.get_by_role("button", name="Atualizar")).to_be_visible()
     for path, heading in (
         ("/recepcao/agenda", "Agenda e check-in"),
