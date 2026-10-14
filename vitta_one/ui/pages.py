@@ -183,6 +183,87 @@ def login_page() -> rx.Component:
     )
 
 
+def first_access_page() -> rx.Component:
+    """Provisional doctors must rotate an initial password before clinical access."""
+    content = rx.center(
+        rx.box(
+            rx.vstack(
+                brand_logo(width="9rem"),
+                rx.heading("Defina sua nova senha", size="7"),
+                rx.text(
+                    "Por segurança, escolha uma senha definitiva para continuar.",
+                    color="var(--vitta-text-muted)", line_height="1.5",
+                ),
+                rx.el.form(
+                    rx.vstack(
+                        rx.box(
+                            rx.el.label("Senha temporária", html_for="first-access-current"),
+                            rx.el.input(
+                                id="first-access-current", name="current_password",
+                                type="password", required=True,
+                                auto_complete="current-password", class_name="vitta-input",
+                            ), width="100%",
+                        ),
+                        rx.box(
+                            rx.el.label("Nova senha (mínimo 12 caracteres)",
+                                        html_for="first-access-new"),
+                            rx.el.input(
+                                id="first-access-new", name="new_password",
+                                type="password", required=True,
+                                auto_complete="new-password", min_length=12,
+                                class_name="vitta-input",
+                            ), width="100%",
+                        ),
+                        rx.box(
+                            rx.el.label("Confirme a nova senha",
+                                        html_for="first-access-confirm"),
+                            rx.el.input(
+                                id="first-access-confirm", name="confirm_password",
+                                type="password", required=True,
+                                auto_complete="new-password", class_name="vitta-input",
+                            ), width="100%",
+                        ),
+                        rx.cond(
+                            AuthState.first_access_error != "",
+                            rx.callout(
+                                AuthState.first_access_error, color_scheme="red",
+                                role="alert",
+                            ),
+                            rx.fragment(),
+                        ),
+                        rx.button(
+                            "Salvar nova senha", type="submit", width="100%",
+                            loading=AuthState.is_submitting,
+                            disabled=AuthState.is_submitting,
+                            color_scheme="teal", size="3",
+                        ),
+                        spacing="4", width="100%", align="stretch",
+                    ),
+                    on_submit=AuthState.save_first_access,
+                    no_validate=True, width="100%",
+                ),
+                rx.button("Sair", type="button", variant="ghost",
+                          on_click=AuthState.logout),
+                spacing="4", width="100%", align="stretch",
+            ),
+            padding=rx.breakpoints(initial="1.25rem", sm="2rem"),
+            width="100%", max_width="30rem",
+            border="1px solid var(--vitta-border)",
+            border_radius="var(--vitta-radius-panel)",
+            background="var(--vitta-surface)",
+        ),
+        min_height="100dvh", width="100%", padding="1rem",
+        background="var(--vitta-canvas)",
+    )
+    return rx.cond(
+        AuthState.auth_checked
+        & (AuthState.current_role == Role.MEDICO.value)
+        & (AuthState.verified_path == "/primeiro-acesso"),
+        content,
+        loading_surface(),
+    )
+
+
 def admin_page() -> rx.Component:
     return protected_workspace(
         Role.ADMINISTRADOR,
