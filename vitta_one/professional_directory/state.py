@@ -413,6 +413,12 @@ class AdminDirectoryState(rx.State):
         self.professional_dialog_open = False
 
     @rx.event
+    def set_medical_reissue_dialog_open(self, is_open: bool) -> None:
+        if not is_open and not self.is_submitting:
+            self.reissue_dialog_open = False
+            self.reissue_professional_id = 0
+
+    @rx.event
     def begin_medical_reissue(self, professional_id: int) -> None:
         if self.is_submitting:
             return
