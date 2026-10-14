@@ -98,7 +98,7 @@ def specialties_list_panel() -> rx.Component:
                 gap="0.75rem",
             ),
             rx.cond(
-                AdminDirectoryState.has_specialties,
+                AdminDirectoryState.has_recent_specialties,
                 rx.vstack(
                     rx.foreach(AdminDirectoryState.recent_specialties, specialty_row),
                     spacing="3",
@@ -674,7 +674,7 @@ def professionals_list_panel() -> rx.Component:
                 width="100%",
             ),
             rx.cond(
-                AdminDirectoryState.has_professionals,
+                AdminDirectoryState.has_recent_professionals,
                 rx.vstack(
                     rx.foreach(AdminDirectoryState.recent_professionals, professional_summary_row),
                     spacing="3",
