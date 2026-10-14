@@ -8,11 +8,11 @@ from sqlmodel import Session, select
 from vitta_one.auth.roles import Role
 from vitta_one.auth.security import (
     hash_password,
+    verify_password,
     hash_session_token,
     is_valid_email_identifier,
     new_session_token,
     normalize_email,
-    verify_password,
 )
 from vitta_one.models.auth import AuthSession, User
 
@@ -24,6 +24,7 @@ class AuthenticatedUser:
     id: int
     email: str
     role: Role
+    must_change_password: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -129,7 +130,10 @@ def resolve_session(
     if user.id is None:
         return None
 
-    return AuthenticatedUser(id=user.id, email=user.email, role=role)
+    return AuthenticatedUser(
+        id=user.id, email=user.email, role=role,
+        must_change_password=user.must_change_password,
+    )
 
 
 def revoke_session(
@@ -190,3 +194,57 @@ def bootstrap_first_admin(db: Session, *, email: str, password: str) -> Bootstra
     if user.id is None:
         raise RuntimeError("Não foi possível obter o identificador do administrador criado.")
     return BootstrapResult(created=True, user_id=user.id)
+
+
+class TemporaryPasswordError(ValueError):
+    """Safe functional error for expired, invalid or already-used initial passwords."""
+
+
+def temporary_password_is_expired(user: User) -> bool:
+    if not user.must_change_password:
+        return False
+    return (
+        user.temporary_password_expires_at is None
+        or _as_utc(user.temporary_password_expires_at) <= utc_now()
+    )
+
+
+def complete_temporary_password_change(
+    db: Session, *, token: str, current_password: str, new_password: str
+) -> None:
+    """Force initial password rotation before protected capabilities can be used."""
+    from vitta_one.auth.authorization import require_authenticated
+
+    identity = require_authenticated(db, token)
+    if identity.role is not Role.MEDICO or not identity.must_change_password:
+        raise TemporaryPasswordError("A troca de senha inicial não está disponível.")
+    if len(new_password) < 12 or len(new_password) > 128:
+        raise TemporaryPasswordError("A nova senha deve ter entre 12 e 128 caracteres.")
+    if new_password == current_password:
+        raise TemporaryPasswordError("Escolha uma senha diferente da temporária.")
+    user = db.exec(
+        select(User).where(User.id == identity.id).with_for_update()
+    ).one()
+    if temporary_password_is_expired(user):
+        raise TemporaryPasswordError(
+            "Sua senha temporária expirou. Solicite novo acesso à administração."
+        )
+    if not verify_password(user.password_hash, current_password):
+        raise TemporaryPasswordError("A senha temporária informada é inválida.")
+    user.password_hash = hash_password(new_password)
+    user.must_change_password = False
+    user.temporary_password_expires_at = None
+    db.add(user)
+    # Invalidate other sessions issued during temporary access.
+    current_hash = hash_session_token(token)
+    active_sessions = db.exec(
+        select(AuthSession).where(
+            AuthSession.user_id == identity.id,
+            AuthSession.token_hash != current_hash,
+            AuthSession.revoked_at.is_(None),
+        )
+    ).all()
+    for session in active_sessions:
+        session.revoked_at = utc_now()
+        db.add(session)
+    db.commit()
