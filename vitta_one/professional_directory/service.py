@@ -55,6 +55,7 @@ class ProfessionalItem:
     user_id: int | None
     user_email: str | None
     specialties: tuple[SpecialtyItem, ...]
+    onboarding_email_status: str = "NOT_REQUIRED"
 
 
 def utc_now() -> datetime:
@@ -442,6 +443,7 @@ def list_professionals(
                 user_id=professional.user_id,
                 user_email=user_email,
                 specialties=tuple(specialties),
+                onboarding_email_status=professional.onboarding_email_status,
             )
         )
 
