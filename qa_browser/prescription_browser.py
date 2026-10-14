@@ -359,3 +359,49 @@ def test_medical_registration_modal_mobile_form(page: Page) -> None:
         page.screenshot(path=f"qa-artifacts/cadastro-medico-{width}px.png", full_page=True)
         dlg.locator("#professional-email").press("Escape")
         expect(dlg).to_have_count(0, timeout=15000)
+
+
+def login_as_reception(page: Page) -> None:
+    """Authenticate a receptionist in disposable PostgreSQL browser QA."""
+    page.goto(BASE + "/login", wait_until="domcontentloaded")
+    page.locator("#login-email").fill(FIXTURE["reception_email"])
+    page.locator("#login-password").fill(os.environ["VITTA_ONE_QA_PASSWORD"])
+    page.get_by_role("button", name="Entrar").click()
+    expect(page).to_have_url(re.compile(r"/recepcao/?$"), timeout=30000)
+    expect(page.get_by_role("heading", name="Visão geral da Recepção")).to_be_visible(timeout=30000)
+
+
+def test_reception_routes_are_operational_and_mobile_accessible(page: Page) -> None:
+    login_as_reception(page)
+    expect(page.get_by_text("Agendamentos de hoje")).to_be_visible()
+    expect(page.get_by_text("Próximas consultas")).to_be_visible()
+    expect(page.get_by_role("button", name="Atualizar")).to_be_visible()
+    for path, heading in (
+        ("/recepcao/agenda", "Agenda e check-in"),
+        ("/recepcao/pacientes", "Cadastro e localização"),
+        ("/recepcao/fila", "Fila de espera"),
+    ):
+        page.goto(BASE + path, wait_until="domcontentloaded")
+        expect(page.get_by_role("heading", name=heading)).to_be_visible(timeout=30000)
+        for width in (320, 375, 768):
+            page.set_viewport_size({"width": width, "height": 760})
+            assert not overflowing_elements(page), overflowing_elements(page)
+    page.goto(BASE + "/recepcao", wait_until="domcontentloaded")
+    expect(page.get_by_role("heading", name="Visão geral da Recepção")).to_be_visible(timeout=30000)
+
+
+def test_doctor_cannot_access_reception_dashboard_or_modules(page: Page) -> None:
+    login(page, FIXTURE["doctor_b_email"])
+    for path in ("/recepcao", "/recepcao/agenda", "/recepcao/pacientes", "/recepcao/fila"):
+        page.goto(BASE + path, wait_until="domcontentloaded")
+        expect(page).to_have_url(re.compile(r"/acesso-negado/?$"), timeout=30000)
+        expect(page.get_by_text("Visão geral da Recepção")).to_have_count(0)
+
+
+def test_reception_dashboard_is_read_only_and_stable(page: Page) -> None:
+    login_as_reception(page)
+    expect(page.get_by_text("A prioridade é informada pela operação")).to_be_visible(timeout=30000)
+    assert not page.get_by_role("button", name="Chamar próximo").count()
+    assert not page.get_by_role("button", name="Finalizar atendimento").count()
+    page.get_by_role("button", name="Atualizar").click()
+    expect(page.get_by_text("Atualizado em", exact=False)).to_be_visible(timeout=30000)
