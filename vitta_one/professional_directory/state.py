@@ -12,6 +12,7 @@ from vitta_one.professional_directory.application import (
     admin_create_specialty,
     admin_register_medical_professional,
     admin_set_onboarding_email_status,
+    admin_reissue_medical_access,
     admin_list_available_medical_accounts,
     admin_list_professionals,
     admin_list_specialties,
@@ -22,7 +23,9 @@ from vitta_one.professional_directory.application import (
     admin_set_specialty_active,
     admin_update_professional,
 )
-from vitta_one.professional_directory.email_sender import send_medical_welcome
+from vitta_one.professional_directory.email_sender import (
+    send_medical_welcome, is_resend_configured,
+)
 from vitta_one.professional_directory.service import (
     DirectoryConflictError,
     DirectoryNotFoundError,
@@ -126,6 +129,8 @@ class AdminDirectoryState(rx.State):
 
     specialty_dialog_open: bool = False
     professional_dialog_open: bool = False
+    reissue_dialog_open: bool = False
+    reissue_professional_id: int = 0
 
     new_specialty_name: str = ""
     editing_specialty_id: int = 0
@@ -241,6 +246,8 @@ class AdminDirectoryState(rx.State):
         self.specialty_options = []
         self.specialty_dialog_open = False
         self.professional_dialog_open = False
+        self.reissue_dialog_open = False
+        self.reissue_professional_id = 0
         self.new_specialty_name = ""
         self._reset_specialty_edit()
         self._reset_professional_form()
@@ -404,6 +411,70 @@ class AdminDirectoryState(rx.State):
         self._clear_feedback()
         self._reset_professional_form()
         self.professional_dialog_open = False
+
+    @rx.event
+    def begin_medical_reissue(self, professional_id: int) -> None:
+        if self.is_submitting:
+            return
+        self._clear_feedback()
+        self.reissue_professional_id = professional_id
+        self.reissue_dialog_open = True
+
+    @rx.event
+    def cancel_medical_reissue(self) -> None:
+        if self.is_submitting:
+            return
+        self.reissue_dialog_open = False
+        self.reissue_professional_id = 0
+
+    @rx.event
+    async def confirm_medical_reissue(self):
+        if self.is_submitting or not self.reissue_professional_id:
+            return
+        self.is_submitting = True
+        self._clear_feedback()
+        yield
+        try:
+            if not is_resend_configured():
+                raise DirectoryValidationError(
+                    "Configure RESEND_API_KEY e RESEND_FROM_EMAIL no servidor antes de reenviar."
+                )
+            token = await self._token()
+            with rx.session() as db:
+                result = admin_reissue_medical_access(
+                    db, token=token, professional_id=self.reissue_professional_id
+                )
+            delivery = await asyncio.to_thread(
+                send_medical_welcome,
+                name=result.name, email=result.email,
+                temporary_password=result.temporary_password,
+                professional_id=result.professional_id,
+            )
+            with rx.session() as db:
+                admin_set_onboarding_email_status(
+                    db, token=token, professional_id=result.professional_id,
+                    status=delivery.status, message_id=delivery.message_id,
+                )
+            self.reissue_dialog_open = False
+            self.reissue_professional_id = 0
+            self._load_with_token(token)
+            self.success_message = (
+                "Nova senha temporária criada. E-mail aceito pelo provedor."
+                if delivery.status == "ACCEPTED"
+                else "Senha temporária substituída. Envio não confirmado; verifique o status."
+            )
+        except (DirectoryValidationError, DirectoryConflictError, DirectoryNotFoundError) as exc:
+            self.error_message = str(exc)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.error_message = (
+                "Não foi possível concluir o reenvio. Consulte o status e tente novamente."
+            )
+        finally:
+            self.is_submitting = False
+            yield
 
     @rx.event
     def update_new_specialty_name(self, value: str) -> None:
