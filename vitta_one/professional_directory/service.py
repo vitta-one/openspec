@@ -575,3 +575,42 @@ def update_professional_onboarding_status(
     )
     db.add(professional)
     db.commit()
+
+
+def reissue_medical_temporary_password(
+    db: Session, *, professional_id: int
+) -> MedicalRegistrationResult:
+    """Explicitly rotate a failed/unknown provisional credential (never auto-retry)."""
+    professional = db.exec(
+        select(Professional).where(Professional.id == professional_id).with_for_update()
+    ).first()
+    if professional is None or professional.user_id is None:
+        raise DirectoryNotFoundError("Profissional sem conta médica vinculada.")
+    if professional.onboarding_email_status not in {
+        "FAILED", "UNKNOWN", "NOT_CONFIGURED"
+    }:
+        raise DirectoryConflictError(
+            "O acesso não está disponível para reemissão automática."
+        )
+    user = db.exec(
+        select(User).where(User.id == professional.user_id).with_for_update()
+    ).first()
+    if user is None or user.role != Role.MEDICO.value or not user.must_change_password:
+        raise DirectoryConflictError(
+            "A conta já foi ativada ou não requer senha temporária."
+        )
+    temporary_password = secrets.token_urlsafe(32)
+    user.password_hash = hash_password(temporary_password)
+    user.temporary_password_expires_at = utc_now() + timedelta(hours=24)
+    professional.onboarding_email_status = "PENDING"
+    professional.onboarding_email_message_id = None
+    db.add(user)
+    db.add(professional)
+    db.commit()
+    return MedicalRegistrationResult(
+        professional_id=professional.id,
+        user_id=user.id,
+        email=user.email,
+        name=professional.name,
+        temporary_password=temporary_password,
+    )
