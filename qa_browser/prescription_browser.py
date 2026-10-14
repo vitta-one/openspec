@@ -238,3 +238,30 @@ def test_non_admin_cannot_open_admin_directory_subroutes(page: Page) -> None:
     page.goto(BASE + "/admin/profissionais", wait_until="domcontentloaded")
     expect(page).to_have_url(re.compile(r"/acesso-negado/?$"), timeout=30000)
     expect(page.get_by_text("Dr. QA Extra 4")).to_have_count(0)
+
+
+def test_admin_specialty_create_and_rename_keep_history(page: Page) -> None:
+    """Exercise the actual create/edit modal handlers against disposable PostgreSQL."""
+    login_as_admin(page)
+    page.goto(BASE + "/admin/especialidades", wait_until="domcontentloaded")
+    expect(page.get_by_role("heading", name="Todas as especialidades")).to_be_visible(timeout=30000)
+    page.get_by_role("button", name="Nova especialidade").click()
+    dialog = page.get_by_role("dialog")
+    expect(dialog).to_be_visible(timeout=15000)
+    dialog.locator("#specialty-create-name").fill("Área Clínica QA Nova")
+    dialog.get_by_role("button", name="Cadastrar especialidade").click()
+    expect(dialog).to_have_count(0, timeout=20000)
+    row = page.locator('[role="listitem"]').filter(has_text="Área Clínica QA Nova")
+    expect(row).to_be_visible(timeout=20000)
+    row.get_by_role("button", name="Editar").click()
+    dialog = page.get_by_role("dialog")
+    expect(dialog).to_be_visible(timeout=15000)
+    dialog.locator("#specialty-edit-name").fill("Área Clínica QA Renomeada")
+    dialog.get_by_role("button", name="Salvar alterações").click()
+    expect(dialog).to_have_count(0, timeout=20000)
+    expect(page.locator('[role="listitem"]').filter(
+        has_text="Área Clínica QA Renomeada"
+    )).to_be_visible(timeout=20000)
+    expect(page.locator('[role="listitem"]').filter(
+        has_text="Área Clínica QA Nova"
+    )).to_have_count(0)
