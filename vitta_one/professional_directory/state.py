@@ -605,11 +605,12 @@ class AdminDirectoryState(rx.State):
         self.selected_medical_user = value
 
     @rx.event
-    def toggle_professional_specialty(self, specialty_id: int) -> None:
+    def set_professional_specialty(self, specialty_id: int, selected: bool) -> None:
+        """Apply the checkbox's explicit value, avoiding async toggle races."""
         updated: list[SpecialtyOption] = []
         for item in self.specialty_options:
             if item["id"] == specialty_id and item["is_active"] and not item["locked"]:
-                updated.append({**item, "selected": not item["selected"]})
+                updated.append({**item, "selected": bool(selected)})
             else:
                 updated.append(item)
         self.specialty_options = updated
