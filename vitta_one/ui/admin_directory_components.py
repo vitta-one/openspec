@@ -78,7 +78,7 @@ def specialties_list_panel() -> rx.Component:
                 rx.box(
                     rx.heading("Especialidades", size="5"),
                     rx.text(
-                        "Áreas usadas no diretório. Desativar é reversível e preserva vínculos históricos.",
+                        "Consulte as áreas da clínica. Uma especialidade desativada pode ser reativada.",
                         size="2",
                         color="var(--vitta-text-muted)",
                         margin_top="0.3rem",
@@ -155,7 +155,7 @@ def specialty_option(option) -> rx.Component:
             rx.cond(
                 option["locked"],
                 rx.text(
-                    "Vínculo histórico com especialidade inativa; será preservado.",
+                    "Especialidade desativada, mantida no histórico.",
                     size="1",
                     color="var(--vitta-text-muted)",
                     margin_top="0.25rem",
@@ -401,7 +401,7 @@ def _professional_form_fields() -> rx.Component:
                 rx.cond(
                     AdminDirectoryState.is_editing_professional,
                     "O e-mail de acesso não pode ser alterado nesta edição.",
-                    "Uma conta médica será vinculada automaticamente. O envio do acesso depende do Resend.",
+                    "O envio das instruções de acesso depende da configuração de e-mail da clínica.",
                 ),
                 size="1",
                 color="var(--vitta-text-muted)",
@@ -421,7 +421,7 @@ def _professional_form_fields() -> rx.Component:
             rx.vstack(
                 rx.foreach(AdminDirectoryState.specialty_options, specialty_option),
                 rx.text(
-                    "Selecione ao menos uma especialidade ativa. Vínculos históricos inativos permanecem bloqueados e preservados.",
+                    "Selecione uma ou mais áreas em que o profissional atende.",
                     size="1",
                     color="var(--vitta-text-muted)",
                     line_height="1.45",
@@ -508,12 +508,6 @@ def professional_row(row) -> rx.Component:
             rx.flex(
                 rx.box(
                     rx.text(row["name"], font_weight="760", size="3"),
-                    rx.text(
-                        row["registration_identifier"],
-                        size="1",
-                        color="var(--vitta-text-muted)",
-                        margin_top="0.15rem",
-                    ),
                 ),
                 status_badge(row["is_active"], "Ativo", "Inativo"),
                 justify="between",
@@ -719,7 +713,7 @@ def admin_directory_workspace() -> rx.Component:
         page_header(
             "Administração",
             "Profissionais e especialidades",
-            "Mantenha o diretório que servirá de base para agenda e consultas. Horários e agendamentos entram pela capability específica.",
+            "Organize a equipe e as áreas de atendimento da clínica.",
             rx.button(
                 rx.hstack(
                     rx.icon("plus", size=17),
