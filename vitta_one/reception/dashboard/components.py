@@ -276,8 +276,8 @@ def reception_dashboard() -> rx.Component:
                             aria_label="Localizar paciente nas consultas de hoje por nome, telefone ou CPF",
                         ),
                         position="relative",
-                        flex="1 1 20rem",
                         min_width="0",
+                        class_name="vitta-reception-day-search-control",
                     ),
                     rx.button(
                         "Buscar",
