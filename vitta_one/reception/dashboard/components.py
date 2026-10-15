@@ -69,7 +69,7 @@ def _appointment_row(row) -> rx.Component:
         ),
         rx.el.td(
             rx.link(
-                rx.icon("ellipsis", size=18),
+                rx.icon("ellipsis_vertical", size=18),
                 href="/recepcao/agenda",
                 aria_label="Abrir Agenda para " + row["patient_name"] + " às " + row["time"],
                 title="Abrir Agenda",
@@ -116,7 +116,7 @@ def _appointments_table() -> rx.Component:
                                     min_height="10rem",
                                     padding="1.25rem",
                                 ),
-                                col_span="6",
+                                col_span=6,
                             )
                         ),
                     )
