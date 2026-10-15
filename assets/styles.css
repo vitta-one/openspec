@@ -1142,187 +1142,427 @@ button:disabled,
 }
 
 
-/* Reception dashboard: schedule first, with compact weekly navigation. */
-.vitta-metric-card.vitta-reception-kpi {
-  display: flex;
-  min-height: 8rem;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 1.25rem;
+/* Reception day operations table. Uses existing Vitta typography and color tokens. */
+.vitta-reception-day-workspace {
+  gap: 1.25rem;
 }
 
-.vitta-reception-kpi-value {
-  font-variant-numeric: tabular-nums;
-}
-
-.vitta-data-row.vitta-reception-list-row {
-  padding: 0.75rem 1rem;
-  border: 0;
-  border-bottom: 1px solid var(--vitta-border);
-  border-radius: 0;
-  background: transparent;
-  transition: none;
-}
-
-.vitta-data-row.vitta-reception-list-row:hover {
-  border-color: var(--vitta-border);
-  background: transparent;
-}
-
-.vitta-reception-metadata {
-  gap: 0.75rem 1rem;
-}
-
-.vitta-reception-updated {
-  line-height: 1.5;
-  font-variant-numeric: tabular-nums;
-}
-
-.vitta-reception-calendar-scroll-hint {
-  display: none;
-}
-
-.vitta-reception-calendar-days {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.5rem;
+.vitta-reception-day-header {
   min-width: 0;
-  margin-top: 0.25rem;
 }
 
-.vitta-reception-calendar-day {
+.vitta-reception-day-title {
+  max-width: 35ch;
+}
+
+.vitta-reception-day-date {
+  color: var(--vitta-text);
+  line-height: 1.4;
+}
+
+.vitta-reception-day-updated {
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+
+.vitta-reception-day-toolbar {
   min-width: 0;
-  min-height: 6.5rem;
-  justify-content: flex-start;
-  align-items: stretch;
-  padding: 0.75rem;
+  gap: 0.75rem;
+}
+
+.vitta-reception-day-search-form {
+  min-width: 0;
+}
+
+.vitta-reception-day-search-control {
+  flex: 1 1 20rem;
+  min-width: 0;
+}
+
+.vitta-reception-day-search-input {
+  width: 100%;
+  min-height: 2.75rem;
+  box-sizing: border-box;
+  padding: 0.65rem 0.8rem 0.65rem 2.5rem;
   border: 1px solid var(--vitta-border);
-  border-radius: 0.85rem;
+  border-radius: var(--vitta-radius-control);
+  color: var(--vitta-text);
   background: var(--vitta-surface);
-  color: var(--vitta-text);
-  text-align: left;
-  white-space: normal;
-  transition: background-color 140ms ease, border-color 140ms ease;
+  font: inherit;
 }
 
-.vitta-reception-calendar-day:hover {
-  border-color: var(--vitta-border-hover);
-  background: var(--vitta-surface-subtle);
+.vitta-reception-day-search-input::placeholder {
+  color: var(--vitta-text-subtle);
 }
 
-.vitta-reception-calendar-day.is-today {
-  border-color: var(--vitta-primary);
-}
-
-.vitta-reception-calendar-day.is-selected,
-.vitta-reception-calendar-day.is-selected:hover {
-  border-color: var(--vitta-primary);
-  background: var(--vitta-primary-soft);
-  box-shadow: inset 0 0 0 1px var(--vitta-primary);
-}
-
-.vitta-reception-calendar-day:focus-visible {
+.vitta-reception-day-search-input:focus-visible,
+.vitta-reception-day-table-scroll:focus-visible {
   outline: 3px solid var(--vitta-focus);
-  outline-offset: 3px;
+  outline-offset: 2px;
 }
 
-.vitta-reception-calendar-day-number {
-  color: var(--vitta-text);
+.vitta-reception-day-search-button {
+  flex: 0 0 auto;
 }
 
-.vitta-reception-calendar-selected-day {
-  margin-top: 0.25rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--vitta-border);
+.vitta-reception-day-professional-filter {
+  min-width: 12rem;
 }
 
-.vitta-reception-calendar-event {
-  display: grid;
-  grid-template-columns: 4.25rem minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.75rem 1rem;
+.vitta-reception-day-actions {
+  flex: 0 0 auto;
   min-width: 0;
-  padding: 1rem 0.75rem;
-  border: 0;
-  border-bottom: 1px solid var(--vitta-border);
-  border-radius: 0;
-  background: transparent;
 }
 
-.vitta-reception-calendar-event:last-child {
+.vitta-reception-day-secondary-action,
+.vitta-reception-day-primary-action {
+  min-height: 2.75rem;
+  box-sizing: border-box;
+}
+
+.vitta-reception-day-secondary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--vitta-border-strong);
+  border-radius: var(--vitta-radius-control);
+  color: var(--vitta-text);
+  background: var(--vitta-surface);
+  font-size: inherit;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.vitta-reception-day-secondary-action:hover {
+  background: var(--vitta-surface-subtle);
+  border-color: var(--vitta-border-hover);
+}
+
+.vitta-reception-day-secondary-action:focus-visible,
+.vitta-reception-day-action:focus-visible {
+  outline: 3px solid var(--vitta-focus);
+  outline-offset: 2px;
+}
+
+.vitta-reception-day-refresh {
+  min-width: 2.5rem;
+}
+
+.vitta-reception-day-panel {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.vitta-reception-day-table-area {
+  width: 100%;
+  min-width: 0;
+}
+
+.vitta-reception-day-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-gutter: stable;
+  border-radius: var(--vitta-radius-panel);
+}
+
+.vitta-reception-day-table {
+  width: 100%;
+  min-width: 56rem;
+  border-collapse: collapse;
+  table-layout: fixed;
+  color: var(--vitta-text);
+  background: var(--vitta-surface);
+}
+
+.vitta-reception-day-table th {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--vitta-border);
+  color: var(--vitta-text-muted);
+  background: var(--vitta-surface-subtle);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.vitta-reception-day-table th:first-child,
+.vitta-reception-day-table td:first-child {
+  width: 10%;
+}
+
+.vitta-reception-day-time-cell {
+  white-space: nowrap;
+}
+
+.vitta-reception-day-table th:nth-child(2),
+.vitta-reception-day-table td:nth-child(2) {
+  width: 27%;
+}
+
+.vitta-reception-day-table th:nth-child(3),
+.vitta-reception-day-table td:nth-child(3) {
+  width: 22%;
+}
+
+.vitta-reception-day-table th:nth-child(4),
+.vitta-reception-day-table td:nth-child(4) {
+  width: 18%;
+}
+
+.vitta-reception-day-table th:nth-child(5),
+.vitta-reception-day-table td:nth-child(5) {
+  width: 15%;
+}
+
+.vitta-reception-day-table th:last-child,
+.vitta-reception-day-table td:last-child {
+  width: 9%;
+  text-align: center;
+}
+
+.vitta-reception-day-table td {
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--vitta-border);
+  vertical-align: middle;
+  line-height: 1.4;
+}
+
+.vitta-reception-day-row:last-child td {
   border-bottom: 0;
 }
 
-.vitta-reception-calendar-time {
-  color: var(--vitta-text);
+.vitta-reception-day-row:hover td {
+  background: var(--vitta-surface-subtle);
+}
+
+.vitta-reception-day-time {
   font-size: 1rem;
-  line-height: 1.25;
   font-variant-numeric: tabular-nums;
 }
 
-.vitta-reception-calendar-details {
-  overflow-wrap: anywhere;
-}
-
-.vitta-reception-calendar-status {
-  max-width: 13rem;
-  justify-content: center;
+.vitta-reception-day-status {
+  max-width: 100%;
   white-space: normal;
   text-align: center;
-  line-height: 1.35;
+  line-height: 1.3;
   overflow-wrap: anywhere;
 }
 
-@media (min-width: 43rem) {
-  .vitta-reception-calendar-days {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+.vitta-reception-day-action {
+  width: 2.25rem;
+  height: 2.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--vitta-radius-control);
+  color: var(--vitta-text-muted);
+}
+
+.vitta-reception-day-action:hover {
+  color: var(--vitta-primary);
+  background: var(--vitta-primary-soft);
+}
+
+.vitta-reception-day-pagination {
+  padding: 1rem 1.15rem;
+  border-top: 1px solid var(--vitta-border);
+}
+
+.vitta-reception-day-loading {
+  min-height: 8rem;
+  padding: 1.25rem;
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-panel);
+  background: var(--vitta-surface);
+}
+
+@media (min-width: 80rem) {
+  .vitta-reception-day-toolbar {
+    display: grid;
+    grid-template-columns: minmax(20rem, 1.1fr) minmax(13rem, 0.8fr) auto;
+    gap: 0.5rem;
+  }
+
+  .vitta-reception-day-refresh-label {
+    display: none;
+  }
+
+  .vitta-reception-day-refresh {
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
   }
 }
 
-@media (min-width: 64rem) {
-  .vitta-reception-calendar-days {
-    grid-template-columns: repeat(7, minmax(0, 1fr));
+@media (max-width: 74.99rem) {
+  .vitta-reception-day-actions {
+    display: flex;
+    flex-wrap: wrap;
   }
 }
 
 @media (max-width: 42rem) {
-  .vitta-reception-calendar-scroll-hint {
-    display: block;
+  .vitta-reception-day-toolbar,
+  .vitta-reception-day-search-form,
+  .vitta-reception-day-professional-filter {
+    width: 100%;
   }
 
-  .vitta-reception-calendar-days {
-    display: flex;
-    overflow-x: auto;
-    overscroll-behavior-inline: contain;
-    scroll-snap-type: x proximity;
-    padding: 0.5rem;
+  .vitta-reception-day-search-control {
+    flex: 0 0 auto;
   }
 
-  .vitta-reception-calendar-days > * {
-    flex: 0 0 5.5rem;
-    scroll-snap-align: start;
+  .vitta-reception-day-professional-filter {
+    min-width: 0;
   }
 
-  .vitta-reception-calendar-day {
-    min-height: 6rem;
-    padding: 0.75rem 0.5rem;
+  .vitta-reception-day-actions {
+    width: 100%;
   }
 
-  .vitta-reception-calendar-event {
-    grid-template-columns: 3.5rem minmax(0, 1fr);
-    gap: 0.75rem;
-    padding: 0.75rem 0.5rem;
+  .vitta-reception-day-secondary-action,
+  .vitta-reception-day-primary-action {
+    flex: none;
+    width: 100%;
   }
 
-  .vitta-reception-calendar-status {
-    grid-column: 2;
-    justify-self: start;
-    max-width: 100%;
+  .vitta-reception-day-refresh {
+    flex: 0 0 auto;
+  }
+
+  .vitta-reception-day-table {
+    min-width: 56rem;
+  }
+
+  .vitta-reception-day-pagination {
+    padding: 0.9rem;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .vitta-reception-calendar-day {
+  .vitta-reception-day-action,
+  .vitta-reception-day-secondary-action {
     transition: none;
+  }
+}
+
+
+.vitta-topbar-search-form {
+  position: relative;
+  z-index: 25;
+  flex: 1 1 20rem;
+  min-width: 13rem;
+  max-width: 27rem;
+}
+
+.vitta-topbar-search-control {
+  position: relative;
+  width: 100%;
+  min-height: 2.65rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0 0.35rem 0 2.35rem;
+  box-sizing: border-box;
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-control);
+  background: var(--vitta-surface-subtle);
+}
+
+.vitta-topbar-search-control:focus-within {
+  border-color: var(--vitta-primary);
+  box-shadow: 0 0 0 3px var(--vitta-focus);
+}
+
+.vitta-topbar-search-icon {
+  position: absolute;
+  left: 0.75rem;
+  color: var(--vitta-text-subtle);
+  pointer-events: none;
+}
+
+.vitta-topbar-search-input {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.4rem;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: var(--vitta-text);
+  background: transparent;
+  font: inherit;
+}
+
+.vitta-topbar-search-input::placeholder {
+  color: var(--vitta-text-subtle);
+}
+
+.vitta-topbar-search-input:focus-visible {
+  outline: 0;
+}
+
+.vitta-topbar-search-submit {
+  width: 2rem;
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0;
+  color: var(--vitta-text-muted);
+}
+
+.vitta-topbar-search-results {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  right: 0;
+  max-height: min(24rem, 60dvh);
+  overflow-y: auto;
+  padding: 0.4rem;
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-control);
+  background: var(--vitta-surface);
+  box-shadow: var(--vitta-shadow-md);
+}
+
+.vitta-topbar-search-result {
+  width: 100%;
+  min-height: 3.4rem;
+  justify-content: flex-start;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--vitta-radius-control);
+  text-align: left;
+  white-space: normal;
+}
+
+.vitta-topbar-search-result:hover {
+  background: var(--vitta-surface-subtle);
+}
+
+.vitta-topbar-search-feedback {
+  color: var(--vitta-text-muted);
+  line-height: 1.45;
+}
+
+@media (max-width: 1050px) {
+  .vitta-topbar {
+    flex-wrap: wrap;
+  }
+
+  .vitta-topbar-search-form {
+    order: 3;
+    flex: 1 1 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .vitta-topbar-system-status {
+    order: 1;
+  }
+
+  .vitta-topbar-account {
+    order: 2;
   }
 }

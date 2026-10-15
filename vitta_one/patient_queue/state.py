@@ -40,6 +40,8 @@ from vitta_one.patient_queue.application import (
     doctor_finish,
     doctor_waiting_count,
     reception_create_patient,
+    reception_get_patient_identity,
+    reception_search_patients,
     reception_enqueue,
     reception_find_patient,
     reception_list_queue,
@@ -60,10 +62,17 @@ from vitta_one.patient_queue.service import (
 class PatientFormData(TypedDict):
     name: str
     cpf: str
+    phone: str
 
 
 class PatientSearchFormData(TypedDict):
     cpf: str
+
+
+class PatientSearchResultRow(TypedDict):
+    id: int
+    name: str
+    phone: str
 
 
 class QueueFormData(TypedDict):
@@ -122,6 +131,15 @@ class ClinicalHistoryRow(TypedDict):
     conduct_notes: str
     prescriptions: list[PrescriptionRow]
     prescription_count: int
+
+
+def _format_patient_contact(value: str | None) -> str:
+    digits = "".join(character for character in str(value or "") if character.isdigit())
+    if len(digits) == 11:
+        return f"({digits[:2]}) {digits[2:7]}-{digits[7:]}"
+    if len(digits) == 10:
+        return f"({digits[:2]}) {digits[2:6]}-{digits[6:]}"
+    return "Telefone não informado"
 
 
 def _serialize_prescription_item(item) -> PrescriptionItemRow:
@@ -192,6 +210,10 @@ class ReceptionQueueState(rx.State):
     is_submitting: bool = False
     error_message: str = ""
     success_message: str = ""
+    quick_search_query: str = ""
+    quick_search_results: list[PatientSearchResultRow] = []
+    quick_search_error: str = ""
+    is_quick_searching: bool = False
 
     reassess_entry_id: int = 0
     reassess_patient_name: str = ""
@@ -229,6 +251,10 @@ class ReceptionQueueState(rx.State):
         self.queue_rows = []
         self.selected_patient_id = 0
         self.selected_patient_name = ""
+        self.quick_search_query = ""
+        self.quick_search_results = []
+        self.quick_search_error = ""
+        self.is_quick_searching = False
         self._reset_reassess()
         self._reset_withdraw()
 
@@ -266,6 +292,86 @@ class ReceptionQueueState(rx.State):
             yield
 
     @rx.event
+    def update_quick_search_query(self, value: str) -> None:
+        self.quick_search_query = str(value or "")[:100]
+        self.quick_search_results = []
+        self.quick_search_error = ""
+
+    @rx.event
+    async def quick_search_patients(self, form_data: dict[str, str]):
+        self.quick_search_query = str(
+            form_data.get("query", self.quick_search_query) or ""
+        )[:100]
+        self.quick_search_results = []
+        self.quick_search_error = ""
+        query = self.quick_search_query.strip()
+        if len(query) < 2:
+            self.quick_search_error = "Digite ao menos 2 caracteres para buscar."
+            return
+
+        self.is_quick_searching = True
+        yield
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                results = reception_search_patients(
+                    db, token=token, query=query, limit=8
+                )
+            self.quick_search_results = [
+                {
+                    "id": item.id,
+                    "name": item.name,
+                    "phone": _format_patient_contact(item.phone),
+                }
+                for item in results
+            ]
+            if not self.quick_search_results:
+                self.quick_search_error = "Nenhum paciente localizado."
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            self._clear_sensitive_view()
+            if isinstance(exc, AuthenticationRequiredError):
+                yield rx.redirect("/login")
+            else:
+                yield rx.redirect("/acesso-negado")
+        except Exception:
+            self.quick_search_error = (
+                "Não foi possível buscar pacientes agora. Tente novamente."
+            )
+            self.quick_search_results = []
+        finally:
+            self.is_quick_searching = False
+            yield
+
+    @rx.event
+    async def select_quick_search_patient(self, patient_id: int):
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                patient = reception_get_patient_identity(
+                    db, token=token, patient_id=patient_id
+                )
+            if patient is None:
+                self.quick_search_error = "Este cadastro não está disponível."
+                self.quick_search_results = []
+                return
+            self.selected_patient_id = patient.id
+            self.selected_patient_name = patient.name
+            self.quick_search_query = ""
+            self.quick_search_results = []
+            self.quick_search_error = ""
+            return rx.redirect("/recepcao/pacientes")
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            self._clear_sensitive_view()
+            if isinstance(exc, AuthenticationRequiredError):
+                return rx.redirect("/login")
+            return rx.redirect("/acesso-negado")
+        except Exception:
+            self.quick_search_error = (
+                "Não foi possível abrir o cadastro agora. Tente novamente."
+            )
+            return
+
+    @rx.event
     async def create_patient(self, form_data: PatientFormData):
         """Create and select a patient for the next queue-entry operation."""
         self.is_submitting = True
@@ -279,6 +385,7 @@ class ReceptionQueueState(rx.State):
                     token=token,
                     name=str(form_data.get("name", "")),
                     cpf=str(form_data.get("cpf", "")),
+                    phone=str(form_data.get("phone", "")),
                 )
             if patient.id is None:
                 raise RuntimeError("Paciente criado sem identificador.")

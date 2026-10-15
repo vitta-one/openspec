@@ -2,87 +2,96 @@
 
 ## Purpose
 
-Definir as projeções e a agenda visual do dashboard da Recepção a partir de registros persistidos, com autorização server-side e sem inferir estado clínico.
+Definir a operação diária da Recepção por consultas persistidas, com autorização server-side, busca controlada e sem inferir estado clínico.
 
 ## Requirements
 
-### Requirement: Indicadores operacionais usam somente registros persistidos
-O sistema MUST computar consultas agendadas hoje não canceladas, entradas aguardando, em atendimento, concluídas hoje, chegadas confirmadas hoje e pendências de chegada, observando o dia no fuso da clínica e sem duplicar eventos.
+### Requirement: A tabela do dia usa consultas reais no fuso da clínica
+O sistema MUST listar as consultas persistidas cujo horário cai no dia atual do fuso configurado da clínica, ordenadas por horário e identificador. MUST incluir todos os estados persistidos, inclusive canceladas, sem inventar horários, disponibilidade ou dados de paciente.
 
 #### Scenario: Banco vazio
-- **WHEN** não existem Consultations nem QueueEntries e a leitura termina com sucesso
-- **THEN** os indicadores exibem zero e o dia selecionado do calendário mostra seu estado vazio
+- **WHEN** não há consultas no intervalo local do dia
+- **THEN** a tabela informa que não há consultas para os filtros selecionados
 
-#### Scenario: Dia local diferente do UTC
-- **WHEN** consultas existem nos limites do dia local
-- **THEN** os totais e a data dos compromissos usam o intervalo convertido corretamente para UTC
+#### Scenario: Limites de um dia local
+- **WHEN** consultas existem antes, dentro e depois do intervalo local convertido para UTC
+- **THEN** somente as consultas dentro do intervalo local são exibidas
 
-### Requirement: Próximas consultas e prioridades não inferem dados
-O sistema MUST apresentar os próximos sete dias do fuso da clínica e permitir selecionar qualquer um deles para consultar as Consultations persistidas por hora, paciente, profissional e situação. MUST NOT presumir duração, disponibilidade, recorrência ou intervalo entre horários. Consultas canceladas permanecem identificadas como canceladas e não entram na contagem das consultas não canceladas.
+#### Scenario: Situações persistidas
+- **WHEN** há consultas agendadas, confirmadas, em andamento, concluídas e canceladas
+- **THEN** cada linha exibe a situação persistida e as canceladas continuam visíveis
 
-#### Scenario: Selecionar uma data
-- **WHEN** a Recepcionista seleciona um dos sete dias do calendário
-- **THEN** a lista mostra somente as consultas daquela data, em ordem de horário, e a seleção fica identificada para tecnologias assistivas
+### Requirement: Dados da tabela ficam limitados à operação de recepção
+Cada linha MUST conter apenas horário, nome e telefone do paciente, profissional, especialidades ativas associadas ao profissional e situação da Consulta. A projeção MUST NOT ler ou expor relatos, prontuário, diagnóstico, prescrição, prioridade ou notas clínicas. A busca MUST operar sobre nome, telefone e CPF dos pacientes das consultas daquele dia. CPF é usado somente para busca e não aparece na tabela.
 
-#### Scenario: Consulta com diferentes situações
-- **WHEN** a data contém consultas agendadas, confirmadas, em andamento, concluídas ou canceladas
-- **THEN** cada item mostra sua situação textual e canceladas não entram na contagem das consultas não canceladas
+#### Scenario: Telefone não informado
+- **WHEN** uma Consulta pertence a paciente sem telefone cadastrado
+- **THEN** a linha informa que o telefone não foi cadastrado, sem esconder o restante do compromisso
 
-#### Scenario: Chegada não confirmada após o horário
-- **WHEN** uma consulta de hoje está AGENDADA e seu horário passou no momento da leitura
-- **THEN** o calendário pode identificá-la como “Chegada pendente” e oferece revisão manual pela Agenda, sem classificá-la como falta, urgência ou cancelamento
+#### Scenario: Profissional sem especialidade ativa
+- **WHEN** o profissional não tem especialidade ativa associada
+- **THEN** a linha informa que a especialidade não está cadastrada
 
-#### Scenario: Período sem consultas
-- **WHEN** não há consultas registradas para a data selecionada
-- **THEN** o calendário mantém a seleção e mostra um estado vazio honesto, sem horários ou disponibilidade fictícios
+#### Scenario: Mais de uma especialidade
+- **WHEN** o profissional possui múltiplas especialidades ativas
+- **THEN** a linha exibe as especialidades registradas, sem afirmar que uma delas foi selecionada para aquela Consulta
 
-### Requirement: Pendências de chegada direcionam para revisão sem inferir falta
-O dashboard MUST apresentar o total de consultas do dia clínico em status AGENDADA cujo horário passou sem confirmação e MUST listar até cinco itens mais antigos com horário, paciente e profissional, permitindo abrir a Agenda para revisão. MUST NOT confirmar chegada, cancelar, marcar falta ou indicar urgência automaticamente.
+#### Scenario: Busca por identidade operacional
+- **WHEN** a Recepcionista busca por parte do nome, dígitos do telefone ou dígitos do CPF
+- **THEN** somente consultas do dia associadas a pacientes correspondentes são retornadas
 
-#### Scenario: Existem pendências de chegada
-- **WHEN** há consultas AGENDADA de hoje com horário anterior à leitura
-- **THEN** o dashboard apresenta a contagem total, no máximo cinco itens mais antigos e um link de revisão para a Agenda
+### Requirement: Filtro e paginação são aplicados no servidor
+A interface MUST oferecer filtro por profissional e páginas de sete consultas; filtros e paginação MUST ser aplicados no banco antes da projeção exibida, com contagem real e ordenação estável. Trocar o filtro ou aplicar nova busca MUST voltar à primeira página.
 
-#### Scenario: Mais de cinco pendências
-- **WHEN** a contagem total supera os itens listados
-- **THEN** o dashboard informa que a lista é limitada e preserva a contagem total real
+#### Scenario: Profissional específico
+- **WHEN** um profissional ativo é selecionado
+- **THEN** são exibidas somente as Consultations do dia atribuídas a esse profissional
 
-#### Scenario: Sem pendências
-- **WHEN** nenhuma consulta elegível aguarda confirmação de chegada
-- **THEN** a seção mostra um estado vazio discreto
+#### Scenario: Mais registros que uma página
+- **WHEN** existem mais de sete consultas após os filtros
+- **THEN** cada página mostra no máximo sete linhas e os controles refletem o total real
 
-### Requirement: Prioridades da fila mantêm classificação operacional
-O sistema MUST apresentar a contagem de prioridades somente para entradas AGUARDANDO, sem alterar sua classificação.
+#### Scenario: Última página reduzida
+- **WHEN** a última página tem menos de sete consultas
+- **THEN** somente os registros restantes são exibidos e “Próxima” fica indisponível
 
-#### Scenario: Consulta cancelada e fila mista
-- **WHEN** há consultas canceladas, pacientes em atendimento e prioridades já informadas pela operação
-- **THEN** só os itens elegíveis entram nas projeções correspondentes e nenhuma prioridade é recalculada
+#### Scenario: Atualização reduz resultados
+- **WHEN** registros são removidos ou filtros reduzem o total enquanto uma página posterior está aberta
+- **THEN** a consulta ajusta a página para a última página disponível sem exibir uma página inválida
 
-### Requirement: Ações rápidas reutilizam as rotas da Recepção
-O dashboard MUST oferecer acesso para agendar consultas, localizar/cadastrar pacientes, abrir a Agenda e abrir a Fila usando as rotas existentes, sem criar fluxos ou permissões paralelos.
+### Requirement: Telefone do paciente é opcional e validado
+O cadastro da Recepção MUST aceitar telefone brasileiro opcional com DDD, normalizar para dígitos e rejeitar valores preenchidos que não tenham 10 ou 11 dígitos. A migration MUST manter registros existentes válidos sem telefone.
 
-#### Scenario: Acesso ao fluxo existente
-- **WHEN** a Recepcionista escolhe uma ação rápida ou um link do calendário
-- **THEN** é direcionada à Agenda, aos Pacientes ou à Fila já protegidos pela role
+#### Scenario: Novo paciente com telefone
+- **WHEN** a Recepcionista cadastra paciente com telefone válido
+- **THEN** o banco armazena somente os dígitos, e a tabela formata o telefone para leitura
 
-### Requirement: Atualização manual e falhas honestas
-O sistema MUST disponibilizar atualização manual e horário da última leitura bem-sucedida, indicar carregamento, limpar dados protegidos em falha e permitir nova tentativa; MUST NOT apresentar zeros antes de uma leitura concluída como se fossem métricas atuais.
+#### Scenario: Cadastro sem telefone
+- **WHEN** a Recepcionista não informa telefone
+- **THEN** o cadastro é concluído e a tabela identifica que não há telefone
 
-#### Scenario: Erro de leitura
-- **WHEN** o banco está indisponível
-- **THEN** nenhum número antigo é apresentado como atual e há um aviso
+#### Scenario: Telefone inválido
+- **WHEN** a Recepcionista informa telefone preenchido com comprimento inválido
+- **THEN** o cadastro retorna validação segura e não persiste o paciente
 
-#### Scenario: Atualização da recepcionista
-- **WHEN** a Recepcionista aciona Atualizar
-- **THEN** o servidor revalida a sessão e recalcula as projeções e o calendário
+### Requirement: Ações e permissões reutilizam os módulos existentes
+O dashboard MUST permanecer protegido para a role Recepcionista; leituras da tabela MUST revalidar a sessão no servidor. A Agenda existente permanece responsável por localizar paciente para novos agendamentos, reagendar, cancelar e confirmar chegadas.
 
-### Requirement: Dashboard preserva leitura em viewport estreita e teclado
-Os indicadores, a seleção de datas e as linhas de consulta MUST ser navegáveis por teclado, possuir foco visível e manter ações e informações acessíveis em viewports estreitas, sem overflow horizontal do documento.
+#### Scenario: Acesso à tabela
+- **WHEN** uma sessão sem autorização de Recepcionista solicita os dados
+- **THEN** o servidor nega a leitura antes de retornar nome, telefone ou compromissos
+
+#### Scenario: Ação da tabela
+- **WHEN** a Recepcionista escolhe abrir a Agenda a partir da tabela
+- **THEN** a navegação segue para o módulo protegido e existente
+
+### Requirement: A tabela se adapta a teclado e telas estreitas
+A tela MUST manter rótulos acessíveis e foco visível na busca, filtro, paginação e ações. Em viewports estreitas, a tabela pode rolar horizontalmente dentro de uma região identificada, sem causar overflow horizontal do documento.
 
 #### Scenario: Navegação por teclado
-- **WHEN** a Recepcionista percorre os cards, dias e links usando teclado
-- **THEN** cada destino tem foco visível e cada dia comunica seleção e conteúdo compreensíveis
+- **WHEN** a Recepcionista navega entre os filtros, ações e controles de página com teclado
+- **THEN** os controles têm nome acessível e foco visível
 
-#### Scenario: Viewport estreita
-- **WHEN** o dashboard é exibido em viewport estreita
-- **THEN** os cartões, dias e linhas se reorganizam sem ocultar métricas nem ações
+#### Scenario: Tela estreita
+- **WHEN** a tabela é exibida em viewport estreita
+- **THEN** as colunas permanecem disponíveis em uma área de rolagem nomeada e o restante da página não transborda

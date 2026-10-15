@@ -368,61 +368,57 @@ def login_as_reception(page: Page) -> None:
     page.locator("#login-password").fill(os.environ["VITTA_ONE_QA_PASSWORD"])
     page.get_by_role("button", name="Entrar").click()
     expect(page).to_have_url(re.compile(r"/recepcao/?$"), timeout=30000)
-    expect(page.get_by_role("heading", name="Central operacional")).to_be_visible(timeout=30000)
-
-
-def test_reception_routes_are_operational_and_mobile_accessible(page: Page) -> None:
-    login_as_reception(page)
-    expect(page.get_by_text("Consultas hoje")).to_be_visible()
     expect(
-        page.get_by_role("heading", name="Agenda dos próximos 7 dias", exact=True)
-    ).to_be_visible()
-    expect(page.get_by_role("button", name="Atualizar")).to_be_visible()
-    for path, heading in (
-        ("/recepcao/agenda", "Agenda e check-in"),
-        ("/recepcao/pacientes", "Cadastro e localização"),
-        ("/recepcao/fila", "Fila de espera"),
-    ):
-        page.goto(BASE + path, wait_until="domcontentloaded")
-        expect(page.get_by_role("heading", name=heading)).to_be_visible(timeout=30000)
-        for width in (320, 375, 768):
-            page.set_viewport_size({"width": width, "height": 760})
-            # The role navigation is an intentionally horizontally scrollable
-            # region; only a document-level overflow constitutes a regression.
-            assert page.evaluate(
-                "document.documentElement.scrollWidth <= window.innerWidth + 2"
-            ), overflowing_elements(page)
-    page.goto(BASE + "/recepcao", wait_until="domcontentloaded")
-    expect(page.get_by_role("heading", name="Central operacional")).to_be_visible(timeout=30000)
+        page.get_by_role("heading", name="Recepção — Operação do Dia", exact=True)
+    ).to_be_visible(timeout=30000)
+    expect(page.locator(".vitta-reception-day-table")).to_be_visible(timeout=30000)
 
 
-def test_doctor_cannot_access_reception_dashboard_or_modules(page: Page) -> None:
-    login(page, FIXTURE["doctor_b_email"])
-    for path in ("/recepcao", "/recepcao/agenda", "/recepcao/pacientes", "/recepcao/fila"):
-        page.goto(BASE + path, wait_until="domcontentloaded")
-        expect(page).to_have_url(re.compile(r"/acesso-negado/?$"), timeout=30000)
-        expect(page.get_by_text("Central operacional")).to_have_count(0)
-
-
-def test_reception_dashboard_kpis_are_accessible_and_responsive(page: Page) -> None:
+def test_reception_daily_operations_table_and_filters(page: Page) -> None:
+    """Reception works from real daily appointments, not an abstract KPI dashboard."""
     login_as_reception(page)
-    expect(page.get_by_role("heading", name="Precisa da sua atenção")).to_be_visible()
-    expect(page.get_by_text("Chegadas confirmadas", exact=True)).to_be_visible()
-    expect(page.get_by_text("Pendências de chegada", exact=True)).to_be_visible()
-    expect(page.get_by_text("Última leitura bem-sucedida", exact=False)).to_be_visible()
+    expect(page.get_by_text(FIXTURE["day_first_patient_name"], exact=True)).to_be_visible()
+    expect(page.locator(".vitta-reception-day-row")).to_have_count(7)
+    expect(page.get_by_label("Página atual")).to_have_text("1 de 4")
+    expect(page.get_by_role("status").filter(has_text="de 24 consultas de hoje")).to_be_visible()
 
-    kpis = page.locator(".vitta-reception-kpi-link")
-    expect(kpis).to_have_count(6)
-    kpis.nth(0).focus()
-    page.keyboard.press("Tab")
-    assert page.locator(":focus").evaluate(
-        "(element) => element.classList.contains('vitta-reception-kpi-link')"
-    )
-    assert page.locator(":focus").evaluate(
-        "(element) => getComputedStyle(element).outlineStyle === 'solid'"
-    )
+    page.screenshot(path="qa-artifacts/dashboard-recepcao-1280px.png", full_page=True)
 
-    for width in (320, 375, 768):
+    # Search is server submitted and can locate a patient's phone number.
+    search = page.locator("#reception-day-search")
+    search.fill(FIXTURE["day_first_patient_phone"])
+    search.press("Enter")
+    expect(page.locator(".vitta-reception-day-row")).to_have_count(1, timeout=30000)
+    expect(page.get_by_text(FIXTURE["day_first_patient_name"], exact=True)).to_be_visible()
+
+    # Restore the day, then filter by a professional from the persisted directory.
+    search.fill("")
+    search.press("Enter")
+    expect(page.locator(".vitta-reception-day-row")).to_have_count(7, timeout=30000)
+    page.locator("#reception-day-professional").click()
+    page.get_by_role("option", name=FIXTURE["day_first_professional_name"]).click()
+    expect(page.locator(".vitta-reception-day-row")).to_have_count(7, timeout=30000)
+    expect(page.get_by_role("status").filter(has_text="de 8 consultas de hoje")).to_be_visible()
+    expect(page.get_by_label("Página atual")).to_have_text("1 de 2")
+
+    # Paging stays keyboard operable and reflects the server-side page.
+    page.get_by_role("button", name="Próxima página").focus()
+    page.keyboard.press("Enter")
+    expect(page.get_by_label("Página atual")).to_have_text("2 de 2", timeout=30000)
+    expect(page.locator(".vitta-reception-day-row")).to_have_count(1, timeout=30000)
+
+    page.locator("#reception-day-professional").click()
+    page.get_by_role("option", name="Todos os profissionais").click()
+    expect(page.get_by_label("Página atual")).to_have_text("1 de 4", timeout=30000)
+
+
+def test_reception_routes_and_responsive_daily_table(page: Page) -> None:
+    login_as_reception(page)
+    expect(page.get_by_role("button", name="Atualizar consultas de hoje")).to_be_visible()
+    expect(page.get_by_role("link", name="Ir para Agenda")).to_be_visible()
+    expect(page.get_by_role("button", name="Nova consulta")).to_be_visible()
+
+    for width in (1280, 1264, 1200, 768, 375, 320):
         page.set_viewport_size({"width": width, "height": 760})
         assert page.evaluate(
             "document.documentElement.scrollWidth <= window.innerWidth + 2"
@@ -432,30 +428,63 @@ def test_reception_dashboard_kpis_are_accessible_and_responsive(page: Page) -> N
             full_page=True,
         )
 
+    for path, heading in (
+        ("/recepcao/agenda", "Agenda e check-in"),
+        ("/recepcao/pacientes", "Cadastro e localização"),
+        ("/recepcao/fila", "Fila de espera"),
+    ):
+        page.goto(BASE + path, wait_until="domcontentloaded")
+        expect(page.get_by_role("heading", name=heading)).to_be_visible(timeout=30000)
+        for width in (320, 375, 768):
+            page.set_viewport_size({"width": width, "height": 760})
+            assert page.evaluate(
+                "document.documentElement.scrollWidth <= window.innerWidth + 2"
+            ), overflowing_elements(page)
+
+    page.goto(BASE + "/recepcao", wait_until="domcontentloaded")
+    expect(
+        page.get_by_role("heading", name="Recepção — Operação do Dia", exact=True)
+    ).to_be_visible(timeout=30000)
 
 
-def test_reception_calendar_selects_a_day_accessibly(page: Page) -> None:
+def test_reception_global_patient_search_uses_identity_only(page: Page) -> None:
     login_as_reception(page)
-    days = page.get_by_role("group", name="Dias disponíveis na agenda").get_by_role(
-        "button"
+    search = page.locator("#topbar-patient-search")
+    search.fill(FIXTURE["day_first_patient_name"])
+    search.press("Enter")
+    result = page.get_by_role(
+        "button",
+        name=f"Selecionar paciente {FIXTURE['day_first_patient_name']}",
     )
-    expect(days).to_have_count(7)
-    expect(days.nth(0)).to_have_attribute("aria-pressed", "true")
-
-    days.nth(1).click()
-    expect(days.nth(1)).to_have_attribute("aria-pressed", "true")
-    expect(days.nth(0)).to_have_attribute("aria-pressed", "false")
-    expect(page.locator(".vitta-reception-calendar-day.is-selected")).to_have_count(1)
-
-    days.nth(0).focus()
-    page.keyboard.press("Enter")
-    expect(days.nth(0)).to_have_attribute("aria-pressed", "true")
+    expect(result).to_be_visible(timeout=30000)
+    result.click()
+    expect(page).to_have_url(re.compile(r"/recepcao/pacientes/?$"), timeout=30000)
+    expect(page.get_by_text(FIXTURE["day_first_patient_name"], exact=True)).to_be_visible(
+        timeout=30000
+    )
 
 
-def test_reception_dashboard_is_read_only_and_stable(page: Page) -> None:
+def test_doctor_cannot_access_reception_dashboard_or_modules(page: Page) -> None:
+    login(page, FIXTURE["doctor_b_email"])
+    for path in ("/recepcao", "/recepcao/agenda", "/recepcao/pacientes", "/recepcao/fila"):
+        page.goto(BASE + path, wait_until="domcontentloaded")
+        expect(page).to_have_url(re.compile(r"/acesso-negado/?$"), timeout=30000)
+        expect(
+            page.get_by_text("Recepção — Operação do Dia", exact=True)
+        ).to_have_count(0)
+
+
+def test_reception_dashboard_is_read_only_and_refreshes(page: Page) -> None:
     login_as_reception(page)
-    expect(page.get_by_text("A prioridade é informada pela operação")).to_be_visible(timeout=30000)
-    assert not page.get_by_role("button", name="Chamar próximo").count()
-    assert not page.get_by_role("button", name="Finalizar atendimento").count()
-    page.get_by_role("button", name="Atualizar").click()
-    expect(page.get_by_text("Última leitura bem-sucedida", exact=False)).to_be_visible(timeout=30000)
+    expect(page.locator(".vitta-reception-day-row")).to_have_count(7, timeout=30000)
+    expect(page.get_by_role("button", name="Atualizar consultas de hoje")).to_be_visible()
+    assert page.get_by_role("button", name=re.compile("Chamar próximo", re.I)).count() == 0
+    assert page.get_by_role("button", name=re.compile("Finalizar atendimento", re.I)).count() == 0
+    assert page.get_by_text("Sintoma histórico fictício QA", exact=False).count() == 0
+    assert page.get_by_text("Medicamento Fictício QA", exact=False).count() == 0
+
+    agenda_link = page.get_by_role("link", name=re.compile("Abrir Agenda para")).first
+    expect(agenda_link).to_have_attribute("href", "/recepcao/agenda")
+    page.get_by_role("button", name="Atualizar consultas de hoje").click()
+    expect(page.locator(".vitta-reception-day-row")).to_have_count(7, timeout=30000)
+    expect(page.locator(".vitta-reception-day-updated")).to_be_visible(timeout=30000)

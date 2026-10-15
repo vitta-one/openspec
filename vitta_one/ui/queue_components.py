@@ -206,6 +206,21 @@ def patient_identity_panel() -> rx.Component:
                             ),
                             width="100%",
                         ),
+                        rx.box(
+                            field_label("Telefone (opcional)", "patient-create-phone"),
+                            rx.el.input(
+                                id="patient-create-phone",
+                                name="phone",
+                                type="tel",
+                                input_mode="tel",
+                                auto_complete="tel-national",
+                                max_length=20,
+                                class_name="vitta-input",
+                                placeholder="(11) 98765-4321",
+                                margin_top="0.4rem",
+                            ),
+                            width="100%",
+                        ),
                         rx.button(
                             "Cadastrar paciente",
                             type="submit",

@@ -21,6 +21,7 @@ class Patient(rx.Model, table=True):
 
     name: str = Field(sa_column=Column(String(160), nullable=False))
     cpf: str = Field(sa_column=Column(String(11), nullable=False, unique=True, index=True))
+    phone: str | None = Field(default=None, sa_column=Column(String(11), nullable=True))
     created_at: datetime = Field(default_factory=utc_now, sa_column=Column(DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=utc_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 

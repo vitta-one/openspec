@@ -1,5 +1,7 @@
-"""Reflex state for a securely loaded reception dashboard."""
-from datetime import date, timedelta
+"""State for the receptionist's daily appointments workspace."""
+
+from datetime import date, datetime
+from typing import TypedDict
 
 import reflex as rx
 
@@ -12,12 +14,10 @@ from vitta_one.auth.authorization import (
     RoleForbiddenError,
 )
 from vitta_one.auth.state import AuthState
-from vitta_one.reception.dashboard.application import reception_overview
-from vitta_one.reception.dashboard.service import ReceptionOverview
+from vitta_one.reception.dashboard.application import reception_day_operations
 
 
-_WEEKDAY_SHORT = ("seg", "ter", "qua", "qui", "sex", "sáb", "dom")
-_WEEKDAY_LONG = (
+_WEEKDAYS = (
     "segunda-feira",
     "terça-feira",
     "quarta-feira",
@@ -26,218 +26,169 @@ _WEEKDAY_LONG = (
     "sábado",
     "domingo",
 )
+_MONTHS = (
+    "janeiro",
+    "fevereiro",
+    "março",
+    "abril",
+    "maio",
+    "junho",
+    "julho",
+    "agosto",
+    "setembro",
+    "outubro",
+    "novembro",
+    "dezembro",
+)
 
 
-def _calendar_projection(snapshot: ReceptionOverview) -> tuple[
-    list[dict[str, str]], list[dict[str, str]], str
-]:
-    zone = clinic_timezone()
-    events: list[dict[str, str]] = []
-    counts: dict[str, dict[str, int]] = {}
+class ProfessionalOptionRow(TypedDict):
+    value: str
+    label: str
 
-    for item in snapshot.calendar_consultations:
-        local_time = item.scheduled_at.astimezone(zone)
-        day_iso = local_time.date().isoformat()
-        day_counts = counts.setdefault(day_iso, {"active": 0, "cancelled": 0})
-        if item.status is ConsultationStatus.CANCELADA:
-            day_counts["cancelled"] += 1
-            status_label = item.status.label
-        else:
-            day_counts["active"] += 1
-            status_label = item.status.label
 
-        is_pending = (
-            item.status is ConsultationStatus.AGENDADA
-            and day_iso == snapshot.clinic_date
-            and item.scheduled_at < snapshot.as_of
-        )
-        if is_pending:
-            status_label = "Chegada pendente"
+class ReceptionAppointmentRow(TypedDict):
+    id: int
+    time: str
+    patient_name: str
+    patient_phone: str
+    professional_name: str
+    specialty_name: str
+    status_value: str
+    status_label: str
 
-        events.append(
-            {
-                "date": day_iso,
-                "time": local_time.strftime("%H:%M"),
-                "patient": item.patient_name,
-                "professional": item.professional_name,
-                "status": status_label,
-                "status_value": item.status.value,
-                "is_pending": "true" if is_pending else "false",
-            }
-        )
 
-    first_day = date.fromisoformat(snapshot.clinic_date)
-    days: list[dict[str, str]] = []
-    for offset in range(7):
-        day = first_day + timedelta(days=offset)
-        day_iso = day.isoformat()
-        weekday_index = day.weekday()
-        day_counts = counts.get(day_iso, {"active": 0, "cancelled": 0})
-        active_count = day_counts["active"]
-        cancelled_count = day_counts["cancelled"]
-        active_label = (
-            (
-                "0 consultas não canceladas"
-                if cancelled_count
-                else "Sem consultas"
-            )
-            if active_count == 0
-            else f"{active_count} consulta" + ("" if active_count == 1 else "s")
-        )
-        cancelled_label = (
-            f"{cancelled_count} cancelada"
-            + ("" if cancelled_count == 1 else "s")
-            if cancelled_count
-            else ""
-        )
-        details = [active_label]
-        if cancelled_label:
-            details.append(cancelled_label)
-        date_display = day.strftime("%d/%m")
-        is_today = day_iso == snapshot.clinic_date
-        days.append(
-            {
-                "date": day_iso,
-                "date_display": date_display,
-                "day_number": str(day.day),
-                "weekday": _WEEKDAY_SHORT[weekday_index],
-                "weekday_long": _WEEKDAY_LONG[weekday_index],
-                "weekday_label": (
-                    f"Hoje · {_WEEKDAY_SHORT[weekday_index]}"
-                    if is_today
-                    else _WEEKDAY_SHORT[weekday_index]
-                ),
-                "count_label": (
-                    f"{active_count} consulta"
-                    + ("" if active_count == 1 else "s")
-                ),
-                "cancelled_label": cancelled_label,
-                "summary": " · ".join(details),
-                "is_today": "true" if is_today else "false",
-                "aria_label": (
-                    f"Mostrar agenda de {_WEEKDAY_LONG[weekday_index]}, "
-                    f"{date_display}: {'; '.join(details)}"
-                ),
-            }
-        )
+def _format_phone(value: str | None) -> str:
+    digits = "".join(character for character in str(value or "") if character.isdigit())
+    if len(digits) == 11:
+        return f"({digits[:2]}) {digits[2:7]}-{digits[7:]}"
+    if len(digits) == 10:
+        return f"({digits[:2]}) {digits[2:6]}-{digits[6:]}"
+    return "Telefone não informado"
 
-    last_day = first_day + timedelta(days=6)
-    range_label = f"{first_day.strftime('%d/%m')} – {last_day.strftime('%d/%m')}"
-    return events, days, range_label
+
+def _clinic_time_label(value: datetime) -> str:
+    return value.astimezone(clinic_timezone()).strftime("%H:%M")
+
+
+def _clinic_day_label(value: str) -> str:
+    day = date.fromisoformat(value)
+    weekday = _WEEKDAYS[day.weekday()].capitalize()
+    return f"{weekday}, {day.day} de {_MONTHS[day.month - 1]}"
 
 
 class ReceptionDashboardState(rx.State):
-    scheduled_today: int = 0
-    waiting: int = 0
-    attending: int = 0
-    finished_today: int = 0
-    confirmed_today: int = 0
-    arrivals_pending: int = 0
-    waiting_red: int = 0
-    waiting_yellow: int = 0
-    waiting_green: int = 0
-    calendar_consultations: list[dict[str, str]] = []
-    calendar_days: list[dict[str, str]] = []
-    selected_calendar_date: str = ""
-    calendar_range: str = ""
-    pending_arrivals: list[dict[str, str]] = []
-    clinic_day: str = ""
+    """Daily operational state; all reads revalidate receptionist authorization."""
+
+    appointments: list[ReceptionAppointmentRow] = []
+    professional_options: list[ProfessionalOptionRow] = []
+    professional_filter: str = "__all__"
+    search_query: str = ""
+    current_page: int = 1
+    page_size: int = 7
+    total_pages: int = 1
+    total_count: int = 0
+    clinic_date_label: str = ""
     last_updated: str = ""
     has_loaded: bool = False
     is_loading: bool = False
     error_message: str = ""
 
     @rx.var
-    def selected_calendar_consultations(self) -> list[dict[str, str]]:
-        return [
-            item
-            for item in self.calendar_consultations
-            if item["date"] == self.selected_calendar_date
-        ]
+    def has_appointments(self) -> bool:
+        return bool(self.appointments)
 
     @rx.var
-    def selected_calendar_label(self) -> str:
-        for day in self.calendar_days:
-            if day["date"] == self.selected_calendar_date:
-                prefix = "Hoje, " if day["is_today"] == "true" else ""
-                return f"{prefix}{day['weekday_long']}, {day['date_display']}"
-        return ""
+    def showing_start(self) -> int:
+        if self.total_count == 0:
+            return 0
+        return (self.current_page - 1) * self.page_size + 1
 
     @rx.var
-    def selected_calendar_summary(self) -> str:
-        for day in self.calendar_days:
-            if day["date"] == self.selected_calendar_date:
-                return day["summary"]
-        return ""
+    def showing_end(self) -> int:
+        if self.total_count == 0:
+            return 0
+        return min(self.current_page * self.page_size, self.total_count)
+
+    @rx.var
+    def page_label(self) -> str:
+        return f"{self.current_page} de {self.total_pages}"
+
+    async def _token(self) -> str:
+        auth = await self.get_state(AuthState)
+        return auth.session_token
+
+    def _professional_filter_id(self) -> int | None:
+        if self.professional_filter == "__all__":
+            return None
+        if not any(
+            option["value"] == self.professional_filter
+            for option in self.professional_options
+        ):
+            return None
+        return int(self.professional_filter)
 
     def _clear_data(self) -> None:
-        self.scheduled_today = 0
-        self.waiting = 0
-        self.attending = 0
-        self.finished_today = 0
-        self.confirmed_today = 0
-        self.arrivals_pending = 0
-        self.waiting_red = 0
-        self.waiting_yellow = 0
-        self.waiting_green = 0
-        self.calendar_consultations = []
-        self.calendar_days = []
-        self.selected_calendar_date = ""
-        self.calendar_range = ""
-        self.pending_arrivals = []
-        self.clinic_day = ""
+        self.appointments = []
+        self.professional_options = []
+        self.total_count = 0
+        self.total_pages = 1
+        self.current_page = 1
+        self.clinic_date_label = ""
         self.last_updated = ""
         self.has_loaded = False
 
-    @rx.event
-    def select_calendar_day(self, date_value: str) -> None:
-        if any(day["date"] == date_value for day in self.calendar_days):
-            self.selected_calendar_date = date_value
+    def _apply_snapshot(self, snapshot) -> None:
+        self.appointments = [
+            {
+                "id": item.id,
+                "time": _clinic_time_label(item.scheduled_at),
+                "patient_name": item.patient_name,
+                "patient_phone": _format_phone(item.patient_phone),
+                "professional_name": item.professional_name,
+                "specialty_name": (
+                    " · ".join(item.specialty_names)
+                    if item.specialty_names
+                    else "Especialidade não cadastrada"
+                ),
+                "status_value": item.status.value,
+                "status_label": item.status.label,
+            }
+            for item in snapshot.appointments
+        ]
+        self.professional_options = [
+            {"value": str(item.id), "label": item.name}
+            for item in snapshot.professionals
+        ]
+        if self.professional_filter != "__all__" and not any(
+            option["value"] == self.professional_filter
+            for option in self.professional_options
+        ):
+            self.professional_filter = "__all__"
+        self.current_page = snapshot.page
+        self.page_size = snapshot.page_size
+        self.total_count = snapshot.total
+        self.total_pages = snapshot.total_pages
+        self.clinic_date_label = _clinic_day_label(snapshot.clinic_date)
+        self.last_updated = format_clinic_datetime(snapshot.as_of)
+        self.has_loaded = True
 
-    @rx.event
-    async def load(self):
-        """Every refresh revalidates the session and role before reading data."""
-        previous_date = self.selected_calendar_date
+    async def _reload(self):
         self.is_loading = True
         self.error_message = ""
         yield
         try:
-            auth = await self.get_state(AuthState)
+            token = await self._token()
             with rx.session() as db:
-                snapshot = reception_overview(db, token=auth.session_token)
-
-            self.scheduled_today = snapshot.scheduled_today
-            self.waiting = snapshot.waiting
-            self.attending = snapshot.attending
-            self.finished_today = snapshot.finished_today
-            self.confirmed_today = snapshot.confirmed_today
-            self.arrivals_pending = snapshot.arrivals_pending
-            self.waiting_red = snapshot.waiting_red
-            self.waiting_yellow = snapshot.waiting_yellow
-            self.waiting_green = snapshot.waiting_green
-            events, days, calendar_range = _calendar_projection(snapshot)
-            self.calendar_consultations = events
-            self.calendar_days = days
-            self.calendar_range = calendar_range
-            available_dates = {day["date"] for day in days}
-            self.selected_calendar_date = (
-                previous_date
-                if previous_date in available_dates
-                else snapshot.clinic_date
-            )
-            self.pending_arrivals = [
-                {
-                    "id": str(item.id),
-                    "patient": item.patient_name,
-                    "professional": item.professional_name,
-                    "when": format_clinic_datetime(item.scheduled_at),
-                }
-                for item in snapshot.pending_arrivals
-            ]
-            day = date.fromisoformat(snapshot.clinic_date)
-            self.clinic_day = day.strftime("%d/%m/%Y")
-            self.last_updated = format_clinic_datetime(snapshot.as_of)
-            self.has_loaded = True
+                snapshot = reception_day_operations(
+                    db,
+                    token=token,
+                    professional_id=self._professional_filter_id(),
+                    search=self.search_query,
+                    page=self.current_page,
+                    page_size=7,
+                )
+            self._apply_snapshot(snapshot)
         except (AuthenticationRequiredError, PasswordChangeRequiredError):
             self._clear_data()
             yield rx.redirect("/login")
@@ -247,8 +198,56 @@ class ReceptionDashboardState(rx.State):
         except Exception:
             self._clear_data()
             self.error_message = (
-                "Não foi possível atualizar o painel agora. Tente novamente."
+                "Não foi possível atualizar as consultas de hoje. Tente novamente."
             )
         finally:
             self.is_loading = False
             yield
+
+    @rx.event
+    async def load(self):
+        async for event in self._reload():
+            yield event
+
+    @rx.event
+    def update_search_query(self, value: str) -> None:
+        self.search_query = str(value or "")[:100]
+
+    @rx.event
+    async def apply_search(self, form_data: dict[str, str]):
+        self.search_query = str(form_data.get("query", self.search_query) or "")[:100]
+        self.current_page = 1
+        async for event in self._reload():
+            yield event
+
+    @rx.event
+    async def update_professional(self, value: str):
+        requested = str(value or "__all__")
+        if requested == "__all__" or any(
+            option["value"] == requested for option in self.professional_options
+        ):
+            self.professional_filter = requested
+        else:
+            self.professional_filter = "__all__"
+        self.current_page = 1
+        async for event in self._reload():
+            yield event
+
+    @rx.event
+    async def previous_page(self):
+        if self.current_page > 1:
+            self.current_page -= 1
+            async for event in self._reload():
+                yield event
+
+    @rx.event
+    async def next_page(self):
+        if self.current_page < self.total_pages:
+            self.current_page += 1
+            async for event in self._reload():
+                yield event
+
+    @rx.event
+    async def refresh(self):
+        async for event in self._reload():
+            yield event

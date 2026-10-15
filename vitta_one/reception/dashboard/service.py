@@ -1,11 +1,16 @@
 """Persisted operational metrics; no auth or UI and no clinical contents."""
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import re
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlmodel import Session, select
 
 from vitta_one.appointment_scheduling.domain import ConsultationStatus
+from vitta_one.appointment_scheduling.service import (
+    ProfessionalOption,
+    list_active_professionals,
+)
 from vitta_one.appointment_scheduling.temporal import (
     clinic_date_after_iso,
     clinic_date_range_to_utc,
@@ -14,7 +19,11 @@ from vitta_one.appointment_scheduling.temporal import (
 )
 from vitta_one.models.appointment import Consultation
 from vitta_one.models.patient_queue import Patient, QueueEntry
-from vitta_one.models.professional import Professional
+from vitta_one.models.professional import (
+    Professional,
+    ProfessionalSpecialty,
+    Specialty,
+)
 from vitta_one.patient_queue.domain import QueuePriority, QueueStatus
 
 
@@ -183,4 +192,164 @@ def get_reception_overview(
         waiting_green=waiting_green,
         calendar_consultations=calendar_consultations,
         pending_arrivals=pending,
+    )
+
+
+@dataclass(frozen=True)
+class ReceptionDayAppointment:
+    """A privacy-minimal row for the receptionist's daily consultation table."""
+
+    id: int
+    patient_name: str
+    patient_phone: str | None
+    professional_name: str
+    specialty_names: tuple[str, ...]
+    scheduled_at: datetime
+    status: ConsultationStatus
+
+
+@dataclass(frozen=True)
+class ReceptionDaySnapshot:
+    """Server-paginated daily operations and active professional filter options."""
+
+    as_of: datetime
+    clinic_date: str
+    appointments: tuple[ReceptionDayAppointment, ...]
+    professionals: tuple[ProfessionalOption, ...]
+    page: int
+    page_size: int
+    total: int
+    total_pages: int
+
+
+def _day_search_clause(value: str):
+    """Build a bounded literal search across appointment patient identity fields."""
+    query = " ".join(str(value or "").split())[:100]
+    if not query:
+        return None
+
+    escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    clauses = [Patient.name.ilike(f"%{escaped}%", escape="\\")]
+    digits = re.sub(r"\D", "", query)
+    if digits:
+        clauses.extend(
+            (
+                Patient.cpf.like(f"%{digits}%"),
+                func.coalesce(Patient.phone, "").like(f"%{digits}%"),
+            )
+        )
+    return or_(*clauses)
+
+
+def get_reception_day(
+    db: Session,
+    *,
+    now: datetime | None = None,
+    professional_id: int | None = None,
+    search: str = "",
+    page: int = 1,
+    page_size: int = 7,
+) -> ReceptionDaySnapshot:
+    """Return a real, clinic-local day view with SQL filters and bounded pages.
+
+    Cancelled consultations remain visible so the receptionist can understand
+    the day's full record. No clinical record, symptom, diagnosis, or priority
+    is read or returned by this projection.
+    """
+    if isinstance(page, bool) or page < 1:
+        page = 1
+    if isinstance(page_size, bool) or page_size < 1 or page_size > 50:
+        raise ValueError("O tamanho da página está fora do limite permitido.")
+    if professional_id is not None:
+        if isinstance(professional_id, bool) or professional_id < 1:
+            raise ValueError("Selecione um profissional válido.")
+        if db.get(Professional, professional_id) is None:
+            raise ValueError("Selecione um profissional válido.")
+
+    current = ensure_utc(now or datetime.now(timezone.utc))
+    clinic_date = clinic_today_iso(current)
+    start, end = clinic_date_range_to_utc(clinic_date, clinic_date)
+    assert start is not None and end is not None
+
+    conditions = [
+        Consultation.scheduled_at >= start,
+        Consultation.scheduled_at < end,
+    ]
+    if professional_id is not None:
+        conditions.append(Consultation.professional_id == professional_id)
+    search_clause = _day_search_clause(search)
+    if search_clause is not None:
+        conditions.append(search_clause)
+
+    total = int(
+        db.exec(
+            select(func.count(Consultation.id))
+            .select_from(Consultation)
+            .join(Patient, Patient.id == Consultation.patient_id)
+            .where(*conditions)
+        ).one()
+        or 0
+    )
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    current_page = min(page, total_pages)
+
+    rows = db.exec(
+        select(Consultation, Patient, Professional)
+        .join(Patient, Patient.id == Consultation.patient_id)
+        .join(Professional, Professional.id == Consultation.professional_id)
+        .where(*conditions)
+        .order_by(Consultation.scheduled_at, Consultation.id)
+        .offset((current_page - 1) * page_size)
+        .limit(page_size)
+    ).all()
+    professional_ids = {
+        professional.id
+        for _, _, professional in rows
+        if professional.id is not None
+    }
+    specialties_by_professional: dict[int, list[str]] = {}
+    if professional_ids:
+        specialty_rows = db.exec(
+            select(ProfessionalSpecialty.professional_id, Specialty.name)
+            .join(Specialty, Specialty.id == ProfessionalSpecialty.specialty_id)
+            .where(
+                ProfessionalSpecialty.professional_id.in_(professional_ids),
+                Specialty.is_active.is_(True),
+            )
+            .order_by(
+                ProfessionalSpecialty.professional_id,
+                Specialty.normalized_name,
+                Specialty.id,
+            )
+        ).all()
+        for professional_id_value, specialty_label in specialty_rows:
+            specialties_by_professional.setdefault(
+                professional_id_value, []
+            ).append(specialty_label)
+
+    appointments = tuple(
+        ReceptionDayAppointment(
+            id=consultation.id,
+            patient_name=patient.name,
+            patient_phone=patient.phone,
+            professional_name=professional.name,
+            specialty_names=tuple(
+                specialties_by_professional.get(professional.id, ())
+            ),
+            scheduled_at=ensure_utc(consultation.scheduled_at),
+            status=ConsultationStatus(consultation.status),
+        )
+        for consultation, patient, professional in rows
+        if consultation.id is not None and professional.id is not None
+    )
+
+    return ReceptionDaySnapshot(
+        as_of=current,
+        clinic_date=clinic_date,
+        appointments=appointments,
+        professionals=tuple(list_active_professionals(db)),
+        page=current_page,
+        page_size=page_size,
+        total=total,
+        total_pages=total_pages,
     )

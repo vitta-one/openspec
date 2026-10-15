@@ -6,6 +6,7 @@ from vitta_one.auth.authorization import require_role
 from vitta_one.auth.roles import Role
 from vitta_one.models.patient_queue import Patient, QueueEntry
 from vitta_one.patient_queue.service import (
+    PatientSearchResult,
     QueueItem,
     claim_next_patient,
     count_waiting_queue,
@@ -13,11 +14,29 @@ from vitta_one.patient_queue.service import (
     create_queue_entry,
     find_patient_by_cpf,
     finish_queue_entry,
+    get_patient_identity,
     get_doctor_active_entry,
     list_waiting_queue,
     reassess_queue_entry,
+    search_patient_identities,
     withdraw_queue_entry,
 )
+
+
+
+
+def reception_search_patients(
+    db: Session, *, token: str, query: str, limit: int = 8
+) -> list[PatientSearchResult]:
+    require_role(db, token, Role.RECEPCIONISTA)
+    return search_patient_identities(db, query=query, limit=limit)
+
+
+def reception_get_patient_identity(
+    db: Session, *, token: str, patient_id: int
+) -> PatientSearchResult | None:
+    require_role(db, token, Role.RECEPCIONISTA)
+    return get_patient_identity(db, patient_id=patient_id)
 
 
 def reception_find_patient(db: Session, *, token: str, cpf: str) -> Patient | None:
@@ -26,10 +45,15 @@ def reception_find_patient(db: Session, *, token: str, cpf: str) -> Patient | No
 
 
 def reception_create_patient(
-    db: Session, *, token: str, name: str, cpf: str
+    db: Session,
+    *,
+    token: str,
+    name: str,
+    cpf: str,
+    phone: str | None = None,
 ) -> Patient:
     require_role(db, token, Role.RECEPCIONISTA)
-    return create_patient(db, name=name, cpf=cpf)
+    return create_patient(db, name=name, cpf=cpf, phone=phone)
 
 
 def reception_list_queue(db: Session, *, token: str) -> list[QueueItem]:

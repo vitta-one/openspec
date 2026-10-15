@@ -43,6 +43,66 @@ class PatientAlreadyExistsError(RuntimeError):
         self.patient_id = patient_id
 
 
+
+
+@dataclass(frozen=True, slots=True)
+class PatientSearchResult:
+    """Minimal patient identity shown by the receptionist's quick search."""
+
+    id: int
+    name: str
+    phone: str | None
+
+
+def search_patient_identities(
+    db: Session, *, query: str, limit: int = 8
+) -> list[PatientSearchResult]:
+    """Search patient identities without returning CPF or clinical information."""
+    if isinstance(limit, bool) or limit < 1 or limit > 20:
+        raise PatientValidationError("Limite de busca inválido.")
+    value = " ".join(str(query or "").split())[:100]
+    if len(value) < 2:
+        return []
+
+    escaped = value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    clauses = [Patient.name.ilike(f"%{escaped}%", escape="\\")]
+    digits = re.sub(r"\D", "", value)
+    if digits:
+        clauses.extend(
+            (
+                Patient.cpf.like(f"%{digits}%"),
+                func.coalesce(Patient.phone, "").like(f"%{digits}%"),
+            )
+        )
+    rows = db.exec(
+        select(Patient)
+        .where(or_(*clauses))
+        .order_by(Patient.name, Patient.id)
+        .limit(limit)
+    ).all()
+    return [
+        PatientSearchResult(id=row.id, name=row.name, phone=row.phone)
+        for row in rows
+        if row.id is not None
+    ]
+
+
+def get_patient_identity(
+    db: Session, *, patient_id: int
+) -> PatientSearchResult | None:
+    """Return the identity fields needed to select a persisted patient."""
+    if isinstance(patient_id, bool) or patient_id < 1:
+        return None
+    patient = db.get(Patient, patient_id)
+    if patient is None or patient.id is None:
+        return None
+    return PatientSearchResult(
+        id=patient.id,
+        name=patient.name,
+        phone=patient.phone,
+    )
+
+
 class QueueValidationError(ValueError):
     """Raised when queue input is invalid."""
 
@@ -102,6 +162,18 @@ def normalize_cpf(value: str) -> str:
     return re.sub(r"\D", "", str(value or ""))
 
 
+def normalize_patient_phone(value: str | None) -> str | None:
+    """Normalize an optional Brazilian contact number to digits only."""
+    digits = re.sub(r"\D", "", str(value or ""))
+    if not digits:
+        return None
+    if len(digits) not in (10, 11):
+        raise PatientValidationError(
+            "Informe um telefone com DDD e 10 ou 11 dígitos."
+        )
+    return digits
+
+
 def is_valid_cpf(value: str) -> bool:
     """Validate Brazilian CPF length, repetition and verifier digits."""
     cpf = normalize_cpf(value)
@@ -150,10 +222,13 @@ def find_patient_by_cpf(db: Session, cpf: str) -> Patient | None:
     return db.exec(select(Patient).where(Patient.cpf == normalized)).first()
 
 
-def create_patient(db: Session, *, name: str, cpf: str) -> Patient:
-    """Create one patient after server-side identity validation."""
+def create_patient(
+    db: Session, *, name: str, cpf: str, phone: str | None = None
+) -> Patient:
+    """Create one patient after server-side identity and contact validation."""
     normalized_name = normalize_patient_name(name)
     normalized_cpf = normalize_cpf(cpf)
+    normalized_phone = normalize_patient_phone(phone)
 
     if not normalized_name:
         raise PatientValidationError("Informe o nome do paciente.")
@@ -166,7 +241,9 @@ def create_patient(db: Session, *, name: str, cpf: str) -> Patient:
     if existing is not None:
         raise PatientAlreadyExistsError(existing.id)
 
-    patient = Patient(name=normalized_name, cpf=normalized_cpf)
+    patient = Patient(
+        name=normalized_name, cpf=normalized_cpf, phone=normalized_phone
+    )
     db.add(patient)
     try:
         db.commit()
