@@ -418,7 +418,7 @@ def test_reception_routes_and_responsive_daily_table(page: Page) -> None:
     expect(page.get_by_role("link", name="Ir para Agenda")).to_be_visible()
     expect(page.get_by_role("button", name="Nova consulta")).to_be_visible()
 
-    for width in (768, 375, 320):
+    for width in (1280, 1264, 1200, 768, 375, 320):
         page.set_viewport_size({"width": width, "height": 760})
         assert page.evaluate(
             "document.documentElement.scrollWidth <= window.innerWidth + 2"
