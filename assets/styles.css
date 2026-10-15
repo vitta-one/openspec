@@ -1383,7 +1383,18 @@ button:disabled,
 @media (min-width: 75rem) {
   .vitta-reception-day-toolbar {
     display: grid;
-    grid-template-columns: minmax(16rem, 1.15fr) minmax(12rem, 0.8fr) auto;
+    grid-template-columns: minmax(20rem, 1.1fr) minmax(13rem, 0.8fr) auto;
+    gap: 0.5rem;
+  }
+
+  .vitta-reception-day-refresh-label {
+    display: none;
+  }
+
+  .vitta-reception-day-refresh {
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
   }
 }
 
