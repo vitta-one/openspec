@@ -1140,3 +1140,189 @@ button:disabled,
     box-shadow: none;
   }
 }
+
+
+/* Reception dashboard: schedule first, with compact weekly navigation. */
+.vitta-metric-card.vitta-reception-kpi {
+  display: flex;
+  min-height: 8rem;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.25rem;
+}
+
+.vitta-reception-kpi-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.vitta-data-row.vitta-reception-list-row {
+  padding: 0.75rem 1rem;
+  border: 0;
+  border-bottom: 1px solid var(--vitta-border);
+  border-radius: 0;
+  background: transparent;
+  transition: none;
+}
+
+.vitta-data-row.vitta-reception-list-row:hover {
+  border-color: var(--vitta-border);
+  background: transparent;
+}
+
+.vitta-reception-metadata {
+  gap: 0.75rem 1rem;
+}
+
+.vitta-reception-updated {
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.vitta-reception-calendar-scroll-hint {
+  display: none;
+}
+
+.vitta-reception-calendar-days {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  min-width: 0;
+  margin-top: 0.25rem;
+}
+
+.vitta-reception-calendar-day {
+  min-width: 0;
+  min-height: 6.5rem;
+  justify-content: flex-start;
+  align-items: stretch;
+  padding: 0.75rem;
+  border: 1px solid var(--vitta-border);
+  border-radius: 0.85rem;
+  background: var(--vitta-surface);
+  color: var(--vitta-text);
+  text-align: left;
+  white-space: normal;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.vitta-reception-calendar-day:hover {
+  border-color: var(--vitta-border-hover);
+  background: var(--vitta-surface-subtle);
+}
+
+.vitta-reception-calendar-day.is-today {
+  border-color: var(--vitta-primary);
+}
+
+.vitta-reception-calendar-day.is-selected,
+.vitta-reception-calendar-day.is-selected:hover {
+  border-color: var(--vitta-primary);
+  background: var(--vitta-primary-soft);
+  box-shadow: inset 0 0 0 1px var(--vitta-primary);
+}
+
+.vitta-reception-calendar-day:focus-visible {
+  outline: 3px solid var(--vitta-focus);
+  outline-offset: 3px;
+}
+
+.vitta-reception-calendar-day-number {
+  color: var(--vitta-text);
+}
+
+.vitta-reception-calendar-selected-day {
+  margin-top: 0.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--vitta-border);
+}
+
+.vitta-reception-calendar-event {
+  display: grid;
+  grid-template-columns: 4.25rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  min-width: 0;
+  padding: 1rem 0.75rem;
+  border: 0;
+  border-bottom: 1px solid var(--vitta-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.vitta-reception-calendar-event:last-child {
+  border-bottom: 0;
+}
+
+.vitta-reception-calendar-time {
+  color: var(--vitta-text);
+  font-size: 1rem;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+}
+
+.vitta-reception-calendar-details {
+  overflow-wrap: anywhere;
+}
+
+.vitta-reception-calendar-status {
+  max-width: 13rem;
+  justify-content: center;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 43rem) {
+  .vitta-reception-calendar-days {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 64rem) {
+  .vitta-reception-calendar-days {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 42rem) {
+  .vitta-reception-calendar-scroll-hint {
+    display: block;
+  }
+
+  .vitta-reception-calendar-days {
+    display: flex;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x proximity;
+    padding: 0.5rem;
+  }
+
+  .vitta-reception-calendar-days > * {
+    flex: 0 0 5.5rem;
+    scroll-snap-align: start;
+  }
+
+  .vitta-reception-calendar-day {
+    min-height: 6rem;
+    padding: 0.75rem 0.5rem;
+  }
+
+  .vitta-reception-calendar-event {
+    grid-template-columns: 3.5rem minmax(0, 1fr);
+    gap: 0.75rem;
+    padding: 0.75rem 0.5rem;
+  }
+
+  .vitta-reception-calendar-status {
+    grid-column: 2;
+    justify-self: start;
+    max-width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vitta-reception-calendar-day {
+    transition: none;
+  }
+}

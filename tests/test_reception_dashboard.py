@@ -81,16 +81,16 @@ def queue(db, patient, *, status, priority="VERDE", entered=None, finished=None)
     return item
 
 
-def test_empty_overview_reports_honest_zero_and_no_upcoming(db):
+def test_empty_overview_reports_honest_zero_and_empty_calendar(db):
     snap = get_reception_overview(db, now=datetime(2026, 10, 14, 15, tzinfo=timezone.utc))
     assert snap.clinic_date == "2026-10-14"
     assert snap.scheduled_today == 0
     assert snap.waiting == snap.attending == snap.finished_today == 0
     assert snap.confirmed_today == snap.arrivals_pending == 0
-    assert not snap.next_consultations
+    assert not snap.calendar_consultations
 
 
-def test_real_counts_are_disjoint_and_next_consultations_exclude_cancelled(db):
+def test_real_counts_are_disjoint_and_calendar_keeps_operational_statuses(db):
     now = datetime(2026, 10, 14, 15, tzinfo=timezone.utc)  # Noon at the clinic
     future, patient = consultation(db, datetime(2026, 10, 14, 17, tzinfo=timezone.utc))
     past, _ = consultation(db, datetime(2026, 10, 14, 13, tzinfo=timezone.utc))
@@ -107,20 +107,59 @@ def test_real_counts_are_disjoint_and_next_consultations_exclude_cancelled(db):
     assert snap.confirmed_today == 1
     assert snap.waiting == 2 and snap.attending == 1 and snap.finished_today == 1
     assert (snap.waiting_red, snap.waiting_yellow, snap.waiting_green) == (1, 1, 0)
-    assert [c.id for c in snap.next_consultations] == [future.id]
-    assert cancelled.id not in [c.id for c in snap.next_consultations]
-    assert past.id not in [c.id for c in snap.next_consultations]
+    assert [c.id for c in snap.calendar_consultations] == [
+        past.id,
+        future.id,
+        confirmed.id,
+        cancelled.id,
+    ]
+    assert snap.calendar_consultations[-1].status.value == "CANCELADA"
     assert "Sintoma" not in repr(snap)
 
 
-def test_day_is_clinic_local_not_utc_and_future_is_limited(db):
+def test_calendar_dates_are_clinic_local_not_utc(db):
     now = datetime(2026, 10, 15, 2, 0, tzinfo=timezone.utc)  # 14 Oct 23h in SP
-    consultation(db, datetime(2026, 10, 15, 1, 0, tzinfo=timezone.utc))
-    consultation(db, datetime(2026, 10, 15, 4, 0, tzinfo=timezone.utc))
+    local_late_evening, _ = consultation(
+        db, datetime(2026, 10, 15, 1, 0, tzinfo=timezone.utc)
+    )
+    local_next_day, _ = consultation(
+        db, datetime(2026, 10, 15, 4, 0, tzinfo=timezone.utc)
+    )
     snap = get_reception_overview(db, now=now)
     assert snap.clinic_date == "2026-10-14"
     assert snap.scheduled_today == 1
-    assert len(snap.next_consultations) == 1
+    assert {item.id for item in snap.calendar_consultations} == {
+        local_late_evening.id,
+        local_next_day.id,
+    }
+
+
+def test_calendar_covers_seven_clinic_local_dates_and_keeps_cancelled(db):
+    now = datetime(2026, 10, 14, 15, tzinfo=timezone.utc)
+    before, _ = consultation(
+        db, datetime(2026, 10, 14, 2, 59, 59, tzinfo=timezone.utc)
+    )
+    first, _ = consultation(
+        db, datetime(2026, 10, 14, 3, 0, tzinfo=timezone.utc)
+    )
+    last, _ = consultation(
+        db,
+        datetime(2026, 10, 21, 2, 59, 59, tzinfo=timezone.utc),
+        status="CANCELADA",
+    )
+    after, _ = consultation(
+        db, datetime(2026, 10, 21, 3, 0, tzinfo=timezone.utc)
+    )
+
+    snapshot = get_reception_overview(db, now=now)
+
+    assert [item.id for item in snapshot.calendar_consultations] == [
+        first.id,
+        last.id,
+    ]
+    assert snapshot.calendar_consultations[-1].status.value == "CANCELADA"
+    assert before.id not in {item.id for item in snapshot.calendar_consultations}
+    assert after.id not in {item.id for item in snapshot.calendar_consultations}
 
 
 def test_dashboard_application_requires_exact_reception_role(db):

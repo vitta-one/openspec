@@ -204,10 +204,14 @@ Regras:
 
 - A navegação da Recepção separa Visão geral, Agenda, Pacientes e Fila, mantendo os services atuais de domínio.
 - O dashboard mostra seis projeções persistidas: consultas não canceladas e chegadas confirmadas no dia clínico; aguardando e em atendimento como estoque atual; finalizados e pendências de chegada dentro do dia clínico.
-- O dia clínico usa o fuso IANA configurado. Pendência de chegada significa consulta `AGENDADA` cujo horário passou hoje sem confirmação; isso não significa falta, urgência médica ou cancelamento.
+- A área principal do dashboard é um calendário visual dos próximos sete dias do fuso da clínica. Em telas estreitas, os sete dias formam uma faixa rolável; a rolagem fica contida no calendário e não amplia a página. Selecionar uma data troca a lista para os horários registrados naquele dia; cada linha mostra hora exata, paciente, profissional e situação.
+- Os painéis de chegadas e fila aparecem logo após o calendário para aproximar as tarefas frequentes da agenda. A seção de fila detalha prioridades informadas; os totais de aguardando e em atendimento aparecem nos indicadores, sem duplicação.
+- O calendário exibe somente compromissos persistidos. Consultas canceladas têm rótulo próprio e não entram na contagem de consultas não canceladas. Como o modelo registra um instante, os eventos aparecem como horários em sequência e não como blocos com duração ou indicação de disponibilidade.
+- Consulta AGENDADA cujo horário passou hoje pode aparecer como Chegada pendente, segundo a mesma definição da métrica de pendências. Isso solicita revisão humana e não indica falta, urgência ou cancelamento.
+- O link Abrir agenda completa encaminha para /recepcao/agenda, onde a Recepção consulta outros períodos, agendas por profissional e executa agendamento, reagendamento, cancelamento ou check-in pelos fluxos existentes.
+- Os painéis de chegadas e fila aparecem logo após o calendário para aproximar as tarefas frequentes da agenda. A seção de fila detalha prioridades informadas; os totais de aguardando e em atendimento aparecem nos indicadores, sem duplicação.
 - A primeira leitura mostra carregamento até obter dados; valores zero aparecem somente após leitura bem-sucedida. Durante atualização, a última leitura permanece identificada; em falha, os dados são limpos e a UI permite tentar novamente.
 - A atualização é manual nesta fase e apresenta o horário da última leitura bem-sucedida; a UI não promete conexão verificada nem atualização em tempo real.
-- Próximas consultas exibem horário, paciente, profissional, situação operacional e link para a Agenda. Pendências de chegada exibem até cinco itens, com total e link para revisão na Agenda.
-- As telas não mostram conteúdo clínico. O dashboard não confirma chegada, não altera prioridades e não executa operações clínicas.
-- `/recepcao/agenda` mantém o fluxo existente de check-in; ainda não há central independente nem calendário de duração de consultas.
-- Não há indicador de tempo de espera até que sua definição operacional seja aprovada.
+- Pendências de chegada exibem até cinco itens, com total e link para revisão na Agenda. O dashboard não confirma chegada, não altera prioridades nem executa operações clínicas.
+- O cabeçalho oferece agendamento e localização/cadastro de pacientes pelas rotas existentes. Indicadores e calendário reorganizam-se para tela estreita, mantêm foco visível e permitem seleção de dia por teclado.
+- As telas não mostram conteúdo clínico e não apresentam indicador de tempo de espera até que sua definição operacional seja aprovada.

@@ -479,12 +479,16 @@ def page_header(
     )
 
 
-def section_panel(*children, **props) -> rx.Component:
+def section_panel(*children, padding=None, **props) -> rx.Component:
     """Render a durable operational section using the canonical product surface."""
     return rx.box(
         *children,
         width="100%",
-        padding=rx.breakpoints(initial="1rem", sm="1.25rem"),
+        padding=(
+            padding
+            if padding is not None
+            else rx.breakpoints(initial="1rem", sm="1.25rem")
+        ),
         background="var(--vitta-surface)",
         border="1px solid var(--vitta-border)",
         border_radius="var(--vitta-radius-panel)",
@@ -536,6 +540,8 @@ def empty_state(
     title: str,
     description: str,
     *actions: rx.Component,
+    min_height: str = "14rem",
+    padding: str = "1.5rem",
 ) -> rx.Component:
     """Honest empty state that never invents records or disabled pseudo-actions."""
     return rx.center(
@@ -561,8 +567,8 @@ def empty_state(
             spacing="3",
             align="center",
         ),
-        min_height="14rem",
-        padding="1.5rem",
+        min_height=min_height,
+        padding=padding,
         width="100%",
         class_name="vitta-empty-state",
     )

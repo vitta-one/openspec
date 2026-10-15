@@ -7,6 +7,7 @@ from sqlmodel import Session, select
 
 from vitta_one.appointment_scheduling.domain import ConsultationStatus
 from vitta_one.appointment_scheduling.temporal import (
+    clinic_date_after_iso,
     clinic_date_range_to_utc,
     clinic_today_iso,
     ensure_utc,
@@ -18,11 +19,12 @@ from vitta_one.patient_queue.domain import QueuePriority, QueueStatus
 
 
 @dataclass(frozen=True)
-class NextConsultation:
+class CalendarConsultation:
     id: int
     patient_name: str
     professional_name: str
     scheduled_at: datetime
+    status: ConsultationStatus
 
 
 @dataclass(frozen=True)
@@ -46,7 +48,7 @@ class ReceptionOverview:
     waiting_red: int
     waiting_yellow: int
     waiting_green: int
-    next_consultations: tuple[NextConsultation, ...]
+    calendar_consultations: tuple[CalendarConsultation, ...]
     pending_arrivals: tuple[PendingArrival, ...]
 
 
@@ -57,7 +59,8 @@ def get_reception_overview(
 
     Scheduled/confirmed are by local appointment date, finished by actual
     queue finish date. Waiting/attending are live stock, regardless of date.
-    'Arrivals pending' is not a medical judgment or an automatic no-show.
+    The calendar covers seven clinic-local dates from today. 'Arrivals pending'
+    is not a medical judgment or an automatic no-show.
     """
     current = ensure_utc(now or datetime.now(timezone.utc))
     clinic_date = clinic_today_iso(current)
@@ -116,25 +119,31 @@ def get_reception_overview(
         int(value or 0) for value in queue_counts
     )
 
-    upcoming_rows = db.exec(
+    calendar_end_date = clinic_date_after_iso(6, current)
+    calendar_start, calendar_end = clinic_date_range_to_utc(
+        clinic_date, calendar_end_date
+    )
+    assert calendar_start is not None and calendar_end is not None
+    calendar_rows = db.exec(
         select(Consultation, Patient, Professional)
         .join(Patient, Patient.id == Consultation.patient_id)
         .join(Professional, Professional.id == Consultation.professional_id)
         .where(
-            Consultation.status == ConsultationStatus.AGENDADA.value,
-            Consultation.scheduled_at >= current,
+            Consultation.scheduled_at >= calendar_start,
+            Consultation.scheduled_at < calendar_end,
         )
         .order_by(Consultation.scheduled_at, Consultation.id)
-        .limit(5)
     ).all()
-    upcoming = tuple(
-        NextConsultation(
+    calendar_consultations = tuple(
+        CalendarConsultation(
             id=consultation.id,
             patient_name=patient.name,
             professional_name=professional.name,
             scheduled_at=ensure_utc(consultation.scheduled_at),
+            status=ConsultationStatus(consultation.status),
         )
-        for consultation, patient, professional in upcoming_rows
+        for consultation, patient, professional in calendar_rows
+        if consultation.id is not None
     )
 
     pending_rows = db.exec(
@@ -157,6 +166,7 @@ def get_reception_overview(
             scheduled_at=ensure_utc(consultation.scheduled_at),
         )
         for consultation, patient, professional in pending_rows
+        if consultation.id is not None
     )
 
     return ReceptionOverview(
@@ -171,6 +181,6 @@ def get_reception_overview(
         waiting_red=waiting_red,
         waiting_yellow=waiting_yellow,
         waiting_green=waiting_green,
-        next_consultations=upcoming,
+        calendar_consultations=calendar_consultations,
         pending_arrivals=pending,
     )

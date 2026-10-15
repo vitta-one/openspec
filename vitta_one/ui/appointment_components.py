@@ -52,31 +52,74 @@ def _slot_status_badge(status, label) -> rx.Component:
     )
 
 
-def _consultation_status_badge(status, label) -> rx.Component:
+def consultation_status_badge(
+    status, label, *, class_name: str | None = None
+) -> rx.Component:
+    """Canonical badge for a persisted consultation status."""
     return rx.match(
         status,
         (
             ConsultationStatus.AGENDADA.value,
-            rx.badge(label, color_scheme="blue", variant="soft", high_contrast=True),
+            rx.badge(
+                label,
+                color_scheme="blue",
+                variant="soft",
+                high_contrast=True,
+                class_name=class_name,
+            ),
         ),
         (
             ConsultationStatus.CONFIRMADA.value,
-            rx.badge(label, color_scheme="teal", variant="soft", high_contrast=True),
+            rx.badge(
+                label,
+                color_scheme="teal",
+                variant="soft",
+                high_contrast=True,
+                class_name=class_name,
+            ),
         ),
         (
             ConsultationStatus.EM_ANDAMENTO.value,
-            rx.badge(label, color_scheme="amber", variant="soft", high_contrast=True),
+            rx.badge(
+                label,
+                color_scheme="amber",
+                variant="soft",
+                high_contrast=True,
+                class_name=class_name,
+            ),
         ),
         (
             ConsultationStatus.CONCLUIDA.value,
-            rx.badge(label, color_scheme="green", variant="soft", high_contrast=True),
+            rx.badge(
+                label,
+                color_scheme="green",
+                variant="soft",
+                high_contrast=True,
+                class_name=class_name,
+            ),
         ),
         (
             ConsultationStatus.CANCELADA.value,
-            rx.badge(label, color_scheme="red", variant="soft", high_contrast=True),
+            rx.badge(
+                label,
+                color_scheme="red",
+                variant="soft",
+                high_contrast=True,
+                class_name=class_name,
+            ),
         ),
-        rx.badge(label, color_scheme="gray", variant="soft"),
+        rx.badge(
+            label,
+            color_scheme="gray",
+            variant="soft",
+            class_name=class_name,
+        ),
     )
+
+
+def _consultation_status_badge(status, label) -> rx.Component:
+    """Backward-compatible private name for existing consumers."""
+    return consultation_status_badge(status, label)
 
 def _admin_slot_row(row) -> rx.Component:
     return rx.box(
@@ -425,7 +468,7 @@ def _consultation_row(row) -> rx.Component:
                         size="2",
                         class_name="vitta-tabular",
                     ),
-                    _consultation_status_badge(row["status"], row["status_label"]),
+                    consultation_status_badge(row["status"], row["status_label"]),
                     spacing="2",
                     align="center",
                     flex_wrap="wrap",
