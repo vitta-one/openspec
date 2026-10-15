@@ -2,9 +2,12 @@
 from datetime import datetime
 
 import reflex as rx
+
 from vitta_one.appointment_scheduling.temporal import format_clinic_datetime
 from vitta_one.auth.authorization import (
-    AuthenticationRequiredError, PasswordChangeRequiredError, RoleForbiddenError,
+    AuthenticationRequiredError,
+    PasswordChangeRequiredError,
+    RoleForbiddenError,
 )
 from vitta_one.auth.state import AuthState
 from vitta_one.reception.dashboard.application import reception_overview
@@ -21,8 +24,10 @@ class ReceptionDashboardState(rx.State):
     waiting_yellow: int = 0
     waiting_green: int = 0
     next_consultations: list[dict[str, str]] = []
+    pending_arrivals: list[dict[str, str]] = []
     clinic_day: str = ""
     last_updated: str = ""
+    has_loaded: bool = False
     is_loading: bool = False
     error_message: str = ""
 
@@ -37,8 +42,10 @@ class ReceptionDashboardState(rx.State):
         self.waiting_yellow = 0
         self.waiting_green = 0
         self.next_consultations = []
+        self.pending_arrivals = []
         self.clinic_day = ""
         self.last_updated = ""
+        self.has_loaded = False
 
     @rx.event
     async def load(self):
@@ -50,6 +57,7 @@ class ReceptionDashboardState(rx.State):
             auth = await self.get_state(AuthState)
             with rx.session() as db:
                 snapshot = reception_overview(db, token=auth.session_token)
+
             self.scheduled_today = snapshot.scheduled_today
             self.waiting = snapshot.waiting
             self.attending = snapshot.attending
@@ -65,12 +73,23 @@ class ReceptionDashboardState(rx.State):
                     "patient": item.patient_name,
                     "professional": item.professional_name,
                     "when": format_clinic_datetime(item.scheduled_at),
+                    "status": "Agendada",
                 }
                 for item in snapshot.next_consultations
+            ]
+            self.pending_arrivals = [
+                {
+                    "id": str(item.id),
+                    "patient": item.patient_name,
+                    "professional": item.professional_name,
+                    "when": format_clinic_datetime(item.scheduled_at),
+                }
+                for item in snapshot.pending_arrivals
             ]
             day = datetime.fromisoformat(snapshot.clinic_date)
             self.clinic_day = day.strftime("%d/%m/%Y")
             self.last_updated = format_clinic_datetime(snapshot.as_of)
+            self.has_loaded = True
         except (AuthenticationRequiredError, PasswordChangeRequiredError):
             self._clear_data()
             yield rx.redirect("/login")
@@ -79,7 +98,9 @@ class ReceptionDashboardState(rx.State):
             yield rx.redirect("/acesso-negado")
         except Exception:
             self._clear_data()
-            self.error_message = "Não foi possível atualizar o painel agora. Tente novamente."
+            self.error_message = (
+                "Não foi possível atualizar o painel agora. Tente novamente."
+            )
         finally:
             self.is_loading = False
             yield

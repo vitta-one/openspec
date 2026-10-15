@@ -7,7 +7,9 @@ from sqlmodel import Session, select
 
 from vitta_one.appointment_scheduling.domain import ConsultationStatus
 from vitta_one.appointment_scheduling.temporal import (
-    clinic_date_range_to_utc, clinic_today_iso, ensure_utc,
+    clinic_date_range_to_utc,
+    clinic_today_iso,
+    ensure_utc,
 )
 from vitta_one.models.appointment import Consultation
 from vitta_one.models.patient_queue import Patient, QueueEntry
@@ -17,6 +19,14 @@ from vitta_one.patient_queue.domain import QueuePriority, QueueStatus
 
 @dataclass(frozen=True)
 class NextConsultation:
+    id: int
+    patient_name: str
+    professional_name: str
+    scheduled_at: datetime
+
+
+@dataclass(frozen=True)
+class PendingArrival:
     id: int
     patient_name: str
     professional_name: str
@@ -37,16 +47,15 @@ class ReceptionOverview:
     waiting_yellow: int
     waiting_green: int
     next_consultations: tuple[NextConsultation, ...]
+    pending_arrivals: tuple[PendingArrival, ...]
 
 
-def _count(db: Session, query) -> int:
-    return int(db.exec(query).one())
-
-
-def get_reception_overview(db: Session, *, now: datetime | None = None) -> ReceptionOverview:
+def get_reception_overview(
+    db: Session, *, now: datetime | None = None
+) -> ReceptionOverview:
     """Read consistent, explicitly-defined projections from persisted data only.
 
-    Scheduled/confirmed are by local *appointment date*, finished by actual
+    Scheduled/confirmed are by local appointment date, finished by actual
     queue finish date. Waiting/attending are live stock, regardless of date.
     'Arrivals pending' is not a medical judgment or an automatic no-show.
     """
@@ -59,47 +68,55 @@ def get_reception_overview(db: Session, *, now: datetime | None = None) -> Recep
         Consultation.scheduled_at >= start,
         Consultation.scheduled_at < end,
     )
-    scheduled_today = _count(
-        db, select(func.count(Consultation.id)).where(
-            *day_consultations, Consultation.status != ConsultationStatus.CANCELADA.value
-        ),
-    )
-    confirmed_today = _count(
-        db, select(func.count(Consultation.id)).where(
-            *day_consultations, Consultation.status == ConsultationStatus.CONFIRMADA.value
-        ),
-    )
-    arrivals_pending = _count(
-        db, select(func.count(Consultation.id)).where(
-            *day_consultations,
-            Consultation.status == ConsultationStatus.AGENDADA.value,
-            Consultation.scheduled_at < current,
-        ),
-    )
-    waiting = _count(
-        db, select(func.count(QueueEntry.id)).where(
-            QueueEntry.status == QueueStatus.AGUARDANDO.value
-        ),
-    )
-    attending = _count(
-        db, select(func.count(QueueEntry.id)).where(
-            QueueEntry.status == QueueStatus.EM_ATENDIMENTO.value
-        ),
-    )
-    finished_today = _count(
-        db, select(func.count(QueueEntry.id)).where(
-            QueueEntry.status == QueueStatus.FINALIZADO.value,
-            QueueEntry.finished_at >= start, QueueEntry.finished_at < end,
-        ),
+
+    consultation_counts = db.exec(
+        select(
+            func.count(Consultation.id)
+            .filter(Consultation.status != ConsultationStatus.CANCELADA.value),
+            func.count(Consultation.id)
+            .filter(Consultation.status == ConsultationStatus.CONFIRMADA.value),
+            func.count(Consultation.id).filter(
+                Consultation.status == ConsultationStatus.AGENDADA.value,
+                Consultation.scheduled_at < current,
+            ),
+        ).where(*day_consultations)
+    ).one()
+    scheduled_today, confirmed_today, arrivals_pending = (
+        int(value or 0) for value in consultation_counts
     )
 
-    def waiting_in(priority: QueuePriority) -> int:
-        return _count(db, select(func.count(QueueEntry.id)).where(
-            QueueEntry.status == QueueStatus.AGUARDANDO.value,
-            QueueEntry.priority == priority.value,
-        ))
+    queue_counts = db.exec(
+        select(
+            func.count(QueueEntry.id).filter(
+                QueueEntry.status == QueueStatus.AGUARDANDO.value
+            ),
+            func.count(QueueEntry.id).filter(
+                QueueEntry.status == QueueStatus.EM_ATENDIMENTO.value
+            ),
+            func.count(QueueEntry.id).filter(
+                QueueEntry.status == QueueStatus.FINALIZADO.value,
+                QueueEntry.finished_at >= start,
+                QueueEntry.finished_at < end,
+            ),
+            func.count(QueueEntry.id).filter(
+                QueueEntry.status == QueueStatus.AGUARDANDO.value,
+                QueueEntry.priority == QueuePriority.VERMELHO.value,
+            ),
+            func.count(QueueEntry.id).filter(
+                QueueEntry.status == QueueStatus.AGUARDANDO.value,
+                QueueEntry.priority == QueuePriority.AMARELO.value,
+            ),
+            func.count(QueueEntry.id).filter(
+                QueueEntry.status == QueueStatus.AGUARDANDO.value,
+                QueueEntry.priority == QueuePriority.VERDE.value,
+            ),
+        )
+    ).one()
+    waiting, attending, finished_today, waiting_red, waiting_yellow, waiting_green = (
+        int(value or 0) for value in queue_counts
+    )
 
-    rows = db.exec(
+    upcoming_rows = db.exec(
         select(Consultation, Patient, Professional)
         .join(Patient, Patient.id == Consultation.patient_id)
         .join(Professional, Professional.id == Consultation.professional_id)
@@ -117,15 +134,43 @@ def get_reception_overview(db: Session, *, now: datetime | None = None) -> Recep
             professional_name=professional.name,
             scheduled_at=ensure_utc(consultation.scheduled_at),
         )
-        for consultation, patient, professional in rows
+        for consultation, patient, professional in upcoming_rows
     )
+
+    pending_rows = db.exec(
+        select(Consultation, Patient, Professional)
+        .join(Patient, Patient.id == Consultation.patient_id)
+        .join(Professional, Professional.id == Consultation.professional_id)
+        .where(
+            *day_consultations,
+            Consultation.status == ConsultationStatus.AGENDADA.value,
+            Consultation.scheduled_at < current,
+        )
+        .order_by(Consultation.scheduled_at, Consultation.id)
+        .limit(5)
+    ).all()
+    pending = tuple(
+        PendingArrival(
+            id=consultation.id,
+            patient_name=patient.name,
+            professional_name=professional.name,
+            scheduled_at=ensure_utc(consultation.scheduled_at),
+        )
+        for consultation, patient, professional in pending_rows
+    )
+
     return ReceptionOverview(
-        as_of=current, clinic_date=clinic_date,
-        scheduled_today=scheduled_today, waiting=waiting, attending=attending,
-        finished_today=finished_today, confirmed_today=confirmed_today,
+        as_of=current,
+        clinic_date=clinic_date,
+        scheduled_today=scheduled_today,
+        waiting=waiting,
+        attending=attending,
+        finished_today=finished_today,
+        confirmed_today=confirmed_today,
         arrivals_pending=arrivals_pending,
-        waiting_red=waiting_in(QueuePriority.VERMELHO),
-        waiting_yellow=waiting_in(QueuePriority.AMARELO),
-        waiting_green=waiting_in(QueuePriority.VERDE),
+        waiting_red=waiting_red,
+        waiting_yellow=waiting_yellow,
+        waiting_green=waiting_green,
         next_consultations=upcoming,
+        pending_arrivals=pending,
     )

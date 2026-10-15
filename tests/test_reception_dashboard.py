@@ -2,6 +2,7 @@
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from sqlalchemy import event
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
@@ -138,3 +139,62 @@ def test_dashboard_application_requires_exact_reception_role(db):
 def test_every_reception_route_is_guarded_by_server_role():
     for route in ("/recepcao", "/recepcao/agenda", "/recepcao/pacientes", "/recepcao/fila"):
         assert _ROLE_BY_ROUTE[route] is Role.RECEPCIONISTA
+
+
+def test_pending_arrivals_are_bounded_and_only_show_overdue_unconfirmed_today(db):
+    now = datetime(2026, 10, 14, 15, tzinfo=timezone.utc)
+    overdue = [
+        consultation(
+            db,
+            now - timedelta(minutes=minute),
+            label=f"Paciente pendente {minute}",
+        )[0]
+        for minute in range(7, 0, -1)
+    ]
+    consultation(
+        db,
+        now - timedelta(minutes=8),
+        status="CONFIRMADA",
+        label="Paciente já confirmado",
+    )
+    consultation(
+        db,
+        now - timedelta(minutes=9),
+        status="CANCELADA",
+        label="Paciente cancelado",
+    )
+
+    snapshot = get_reception_overview(db, now=now)
+
+    assert snapshot.arrivals_pending == 7
+    assert len(snapshot.pending_arrivals) == 5
+    assert [item.id for item in snapshot.pending_arrivals] == [
+        item.id for item in overdue[:5]
+    ]
+    assert [item.scheduled_at for item in snapshot.pending_arrivals] == sorted(
+        item.scheduled_at for item in snapshot.pending_arrivals
+    )
+    assert all(
+        item.patient_name not in {"Paciente já confirmado", "Paciente cancelado"}
+        for item in snapshot.pending_arrivals
+    )
+    assert "Sintoma" not in repr(snapshot.pending_arrivals)
+
+
+def test_overview_uses_four_projection_queries(db):
+    statements = []
+    engine = db.get_bind()
+
+    def record_query(_conn, _cursor, statement, _parameters, _context, _executemany):
+        if statement.lstrip().upper().startswith("SELECT"):
+            statements.append(statement)
+
+    event.listen(engine, "before_cursor_execute", record_query)
+    try:
+        get_reception_overview(
+            db, now=datetime(2026, 10, 14, 15, tzinfo=timezone.utc)
+        )
+    finally:
+        event.remove(engine, "before_cursor_execute", record_query)
+
+    assert len(statements) == 4

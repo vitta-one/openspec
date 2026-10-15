@@ -368,12 +368,12 @@ def login_as_reception(page: Page) -> None:
     page.locator("#login-password").fill(os.environ["VITTA_ONE_QA_PASSWORD"])
     page.get_by_role("button", name="Entrar").click()
     expect(page).to_have_url(re.compile(r"/recepcao/?$"), timeout=30000)
-    expect(page.get_by_role("heading", name="Visão geral da Recepção")).to_be_visible(timeout=30000)
+    expect(page.get_by_role("heading", name="Central operacional")).to_be_visible(timeout=30000)
 
 
 def test_reception_routes_are_operational_and_mobile_accessible(page: Page) -> None:
     login_as_reception(page)
-    expect(page.get_by_text("Agendamentos de hoje")).to_be_visible()
+    expect(page.get_by_text("Consultas hoje")).to_be_visible()
     expect(page.get_by_role("heading", name="Próximas consultas", exact=True)).to_be_visible()
     expect(page.get_by_role("button", name="Atualizar")).to_be_visible()
     for path, heading in (
@@ -391,7 +391,7 @@ def test_reception_routes_are_operational_and_mobile_accessible(page: Page) -> N
                 "document.documentElement.scrollWidth <= window.innerWidth + 2"
             ), overflowing_elements(page)
     page.goto(BASE + "/recepcao", wait_until="domcontentloaded")
-    expect(page.get_by_role("heading", name="Visão geral da Recepção")).to_be_visible(timeout=30000)
+    expect(page.get_by_role("heading", name="Central operacional")).to_be_visible(timeout=30000)
 
 
 def test_doctor_cannot_access_reception_dashboard_or_modules(page: Page) -> None:
@@ -399,7 +399,36 @@ def test_doctor_cannot_access_reception_dashboard_or_modules(page: Page) -> None
     for path in ("/recepcao", "/recepcao/agenda", "/recepcao/pacientes", "/recepcao/fila"):
         page.goto(BASE + path, wait_until="domcontentloaded")
         expect(page).to_have_url(re.compile(r"/acesso-negado/?$"), timeout=30000)
-        expect(page.get_by_text("Visão geral da Recepção")).to_have_count(0)
+        expect(page.get_by_text("Central operacional")).to_have_count(0)
+
+
+def test_reception_dashboard_kpis_are_accessible_and_responsive(page: Page) -> None:
+    login_as_reception(page)
+    expect(page.get_by_role("heading", name="Precisa da sua atenção")).to_be_visible()
+    expect(page.get_by_text("Chegadas confirmadas", exact=True)).to_be_visible()
+    expect(page.get_by_text("Pendências de chegada", exact=True)).to_be_visible()
+    expect(page.get_by_text("Última leitura bem-sucedida", exact=False)).to_be_visible()
+
+    kpis = page.locator(".vitta-reception-kpi-link")
+    expect(kpis).to_have_count(6)
+    kpis.nth(0).focus()
+    page.keyboard.press("Tab")
+    assert page.locator(":focus").evaluate(
+        "(element) => element.classList.contains('vitta-reception-kpi-link')"
+    )
+    assert page.locator(":focus").evaluate(
+        "(element) => getComputedStyle(element).outlineStyle === 'solid'"
+    )
+
+    for width in (320, 375, 768):
+        page.set_viewport_size({"width": width, "height": 760})
+        assert page.evaluate(
+            "document.documentElement.scrollWidth <= window.innerWidth + 2"
+        ), overflowing_elements(page)
+        page.screenshot(
+            path=f"qa-artifacts/dashboard-recepcao-{width}px.png",
+            full_page=True,
+        )
 
 
 def test_reception_dashboard_is_read_only_and_stable(page: Page) -> None:
@@ -408,4 +437,4 @@ def test_reception_dashboard_is_read_only_and_stable(page: Page) -> None:
     assert not page.get_by_role("button", name="Chamar próximo").count()
     assert not page.get_by_role("button", name="Finalizar atendimento").count()
     page.get_by_role("button", name="Atualizar").click()
-    expect(page.get_by_text("Atualizado em", exact=False)).to_be_visible(timeout=30000)
+    expect(page.get_by_text("Última leitura bem-sucedida", exact=False)).to_be_visible(timeout=30000)

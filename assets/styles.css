@@ -515,6 +515,24 @@ button:disabled,
   box-shadow: var(--vitta-shadow-xs);
 }
 
+.vitta-reception-kpi-link {
+  display: block;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--vitta-radius-panel);
+}
+
+.vitta-reception-kpi-link:focus-visible {
+  outline: 3px solid var(--vitta-primary);
+  outline-offset: 3px;
+}
+
+.vitta-reception-kpi-link:hover .vitta-metric-card,
+.vitta-reception-kpi-link:focus-visible .vitta-metric-card {
+  border-color: var(--vitta-border-hover);
+}
+
 .vitta-metric-mark {
   width: 0.5rem;
   height: 0.5rem;

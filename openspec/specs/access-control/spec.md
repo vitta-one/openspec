@@ -137,3 +137,19 @@ O sistema MUST exigir troca de senha inicial temporária no primeiro login; MUST
 #### Scenario: Conclusão da troca
 - **WHEN** Médico confirma a senha atual e escolhe nova senha válida
 - **THEN** o hash é atualizado, o requisito de troca é removido e o acesso normal pode prosseguir
+
+
+### Requirement: Rotas operacionais de Recepção exigem a role RECEPCIONISTA
+O sistema MUST validar a sessão e a role RECEPCIONISTA no servidor antes de disponibilizar dados ou ações do dashboard, Agenda, Pacientes e Fila nas rotas `/recepcao`, `/recepcao/agenda`, `/recepcao/pacientes` e `/recepcao/fila`.
+
+#### Scenario: Recepcionista abre uma rota operacional
+- **WHEN** uma sessão válida de Recepcionista solicita diretamente uma das rotas da Recepção
+- **THEN** o servidor valida a sessão e apresenta somente os dados e ações autorizados à role
+
+#### Scenario: Outra role solicita uma rota de Recepção
+- **WHEN** Médico, Administrador ou Financeiro solicita diretamente uma rota da Recepção
+- **THEN** o servidor nega a leitura protegida e direciona para acesso negado
+
+#### Scenario: Sessão expirada durante atualização
+- **WHEN** uma atualização do dashboard é solicitada sem sessão válida
+- **THEN** a aplicação limpa os dados protegidos e direciona para autenticação
