@@ -18,6 +18,6 @@
 
 ## 4. Verificação
 
-- [ ] 4.1 Executar testes Python, validação OpenSpec e reflex compile --dry.
-- [ ] 4.2 Inspecionar a tela renderizada em desktop e viewport estreita e registrar achados em design-qa.md.
-- [ ] 4.3 Abrir PR para develop após resolver falhas de validação.
+- [x] 4.1 Executar testes Python, validação OpenSpec e reflex compile --dry.
+- [x] 4.2 Inspecionar a tela renderizada em desktop, tablet e viewport estreita; registrar achados em design-qa.md.
+- [x] 4.3 Abrir PR para develop após resolver falhas de validação.
