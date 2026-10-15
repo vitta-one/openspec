@@ -269,7 +269,7 @@ def reception_dashboard() -> rx.Component:
                             type="search",
                             value=S.search_query,
                             on_change=S.update_search_query,
-                            placeholder="Nome, telefone ou CPF",
+                            placeholder="Nome, tel. ou CPF",
                             auto_complete="off",
                             max_length=100,
                             class_name="vitta-reception-day-search-input",

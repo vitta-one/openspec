@@ -1380,7 +1380,7 @@ button:disabled,
   background: var(--vitta-surface);
 }
 
-@media (min-width: 79rem) {
+@media (min-width: 80rem) {
   .vitta-reception-day-toolbar {
     display: grid;
     grid-template-columns: minmax(20rem, 1.1fr) minmax(13rem, 0.8fr) auto;
