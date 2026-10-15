@@ -202,9 +202,12 @@ Regras:
 
 ## 12. Área modular de Recepção
 
-- A navegação da Recepção separa Visão geral, Agenda e check-in, Pacientes e Fila, mantendo os services atuais de domínio.
-- O dashboard lê indicadores persistidos e apresenta fonte/período de cada métrica. Dia clínico no fuso IANA configurado; espera e atendimento são estoque atual.
-- Atualização é manual nesta fase, com horário real da leitura; a UI não se anuncia como tempo real por push.
-- A lista de próximas consultas mostra somente paciente, profissional e horário, sem detalhes clínicos.
-- `/recepcao/agenda` inclui check-in; ainda não há central independente nem calendário de duração de consultas.
-- O dashboard não executa chamadas nem finalização clínica e não altera prioridades.
+- A navegação da Recepção separa Visão geral, Agenda, Pacientes e Fila, mantendo os services atuais de domínio.
+- O dashboard mostra seis projeções persistidas: consultas não canceladas e chegadas confirmadas no dia clínico; aguardando e em atendimento como estoque atual; finalizados e pendências de chegada dentro do dia clínico.
+- O dia clínico usa o fuso IANA configurado. Pendência de chegada significa consulta `AGENDADA` cujo horário passou hoje sem confirmação; isso não significa falta, urgência médica ou cancelamento.
+- A primeira leitura mostra carregamento até obter dados; valores zero aparecem somente após leitura bem-sucedida. Durante atualização, a última leitura permanece identificada; em falha, os dados são limpos e a UI permite tentar novamente.
+- A atualização é manual nesta fase e apresenta o horário da última leitura bem-sucedida; a UI não promete conexão verificada nem atualização em tempo real.
+- Próximas consultas exibem horário, paciente, profissional, situação operacional e link para a Agenda. Pendências de chegada exibem até cinco itens, com total e link para revisão na Agenda.
+- As telas não mostram conteúdo clínico. O dashboard não confirma chegada, não altera prioridades e não executa operações clínicas.
+- `/recepcao/agenda` mantém o fluxo existente de check-in; ainda não há central independente nem calendário de duração de consultas.
+- Não há indicador de tempo de espera até que sua definição operacional seja aprovada.
