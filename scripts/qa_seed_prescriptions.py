@@ -11,10 +11,12 @@ from pathlib import Path
 from sqlmodel import Session, create_engine
 
 from vitta_one.appointment_scheduling.service import create_availability_slot, schedule_consultation
+from vitta_one.appointment_scheduling.temporal import clinic_date_range_to_utc, clinic_today_iso
 from vitta_one.auth.roles import Role
 from vitta_one.auth.security import hash_password
 from vitta_one.clinical_prescription.service import add_prescription_item, create_prescription
 from vitta_one.consultation_care.service import confirm_arrival
+from vitta_one.models.appointment import Consultation, ProfessionalAvailabilitySlot
 from vitta_one.models.auth import User
 from vitta_one.patient_queue.service import claim_next_patient, create_patient, finish_queue_entry
 from vitta_one.professional_directory.service import create_professional, create_specialty
@@ -67,17 +69,69 @@ def main() -> None:
         specialty = create_specialty(db, name="Medicina QA Navegador")
         for number in range(1, 13):
             create_specialty(db, name=f"Especialidade QA Extra {number}")
+        extra_professionals = []
         for number in range(1, 5):
-            create_professional(
-                db, name=f"Dr. QA Extra {number}",
-                registration_identifier=f"INT-QA-{number}",
-                specialty_ids=[specialty.id], user_id=None,
+            extra_professionals.append(
+                create_professional(
+                    db, name=f"Dr. QA Extra {number}",
+                    registration_identifier=f"INT-QA-{number}",
+                    specialty_ids=[specialty.id], user_id=None,
+                )
             )
         professional = create_professional(
             db, name="Dra. QA Navegador", registration_identifier="CRM-QA-2026",
             specialty_ids=[specialty.id], user_id=doctor.id,
         )
         patient = create_patient(db, name="Paciente Fictício QA Navegador", cpf=_cpf("123456789"))
+
+        # Synthetic daily rows exercise the receptionist's table and filters.
+        clinic_date = clinic_today_iso(now)
+        day_start, day_end = clinic_date_range_to_utc(clinic_date, clinic_date)
+        assert day_start is not None and day_end is not None
+        daily_start = day_start + timedelta(hours=8)
+        daily_professionals = [professional, *extra_professionals[:2]]
+        daily_statuses = (
+            "CONCLUIDA",
+            "CONCLUIDA",
+            "EM_ANDAMENTO",
+            "CONFIRMADA",
+            "CONFIRMADA",
+            "AGENDADA",
+            "CANCELADA",
+        )
+        day_first_patient_name = ""
+        day_first_patient_phone = ""
+        for number in range(1, 25):
+            daily_patient = create_patient(
+                db,
+                name=f"Paciente QA Operação {number:02d}",
+                cpf=_cpf(f"876{number:06d}"),
+                phone=f"119{number:08d}",
+            )
+            if number == 1:
+                day_first_patient_name = daily_patient.name
+                day_first_patient_phone = daily_patient.phone or ""
+            starts_at = daily_start + timedelta(minutes=30 * (number - 1))
+            if starts_at >= day_end:
+                raise RuntimeError("Synthetic daily QA appointments exceed the clinic day.")
+            daily_professional = daily_professionals[(number - 1) % len(daily_professionals)]
+            slot = ProfessionalAvailabilitySlot(
+                professional_id=daily_professional.id,
+                starts_at=starts_at,
+                status="BOOKED",
+            )
+            db.add(slot)
+            db.flush()
+            db.add(
+                Consultation(
+                    patient_id=daily_patient.id,
+                    professional_id=daily_professional.id,
+                    availability_slot_id=slot.id,
+                    scheduled_at=starts_at,
+                    status=daily_statuses[(number - 1) % len(daily_statuses)],
+                )
+            )
+            db.commit()
         # Preserve a completed historical encounter for responsive history QA.
         old_slot = create_availability_slot(
             db, professional_id=professional.id, starts_at=now + timedelta(days=4), now=now
@@ -138,11 +192,15 @@ def main() -> None:
             "doctor_b_email": doctors[1].email,
             "admin_email": admin.email,
             "reception_email": receptionist.email,
+            "day_first_patient_name": day_first_patient_name,
+            "day_first_patient_phone": day_first_patient_phone,
+            "day_first_professional_name": daily_professionals[0].name,
+            "day_total": 24,
         }
     path = Path("qa-artifacts/fixture.json")
     path.parent.mkdir(exist_ok=True)
     path.write_text(json.dumps(fixture, ensure_ascii=False), encoding="utf-8")
-    print("Fixture sintética criada: duas identidades médicas, consulta ativa e prescrição (sem dados pessoais reais).")
+    print("Fixture sintética criada: identidades QA, 24 consultas do dia e prescrição (sem dados pessoais reais).")
 
 
 if __name__ == "__main__":
