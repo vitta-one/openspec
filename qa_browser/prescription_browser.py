@@ -374,7 +374,9 @@ def login_as_reception(page: Page) -> None:
 def test_reception_routes_are_operational_and_mobile_accessible(page: Page) -> None:
     login_as_reception(page)
     expect(page.get_by_text("Consultas hoje")).to_be_visible()
-    expect(page.get_by_role("heading", name="Próximas consultas", exact=True)).to_be_visible()
+    expect(
+        page.get_by_role("heading", name="Agenda dos próximos 7 dias", exact=True)
+    ).to_be_visible()
     expect(page.get_by_role("button", name="Atualizar")).to_be_visible()
     for path, heading in (
         ("/recepcao/agenda", "Agenda e check-in"),
@@ -429,6 +431,25 @@ def test_reception_dashboard_kpis_are_accessible_and_responsive(page: Page) -> N
             path=f"qa-artifacts/dashboard-recepcao-{width}px.png",
             full_page=True,
         )
+
+
+
+def test_reception_calendar_selects_a_day_accessibly(page: Page) -> None:
+    login_as_reception(page)
+    days = page.get_by_role("group", name="Dias disponíveis na agenda").get_by_role(
+        "button"
+    )
+    expect(days).to_have_count(7)
+    expect(days.nth(0)).to_have_attribute("aria-pressed", "true")
+
+    days.nth(1).click()
+    expect(days.nth(1)).to_have_attribute("aria-pressed", "true")
+    expect(days.nth(0)).to_have_attribute("aria-pressed", "false")
+    expect(page.locator(".vitta-reception-calendar-day.is-selected")).to_have_count(1)
+
+    days.nth(0).focus()
+    page.keyboard.press("Enter")
+    expect(days.nth(0)).to_have_attribute("aria-pressed", "true")
 
 
 def test_reception_dashboard_is_read_only_and_stable(page: Page) -> None:
