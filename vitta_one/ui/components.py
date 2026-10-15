@@ -4,6 +4,7 @@ import reflex as rx
 
 from vitta_one.auth.roles import Role
 from vitta_one.auth.state import AuthState
+from vitta_one.patient_queue.state import ReceptionQueueState
 
 
 _NAV_BY_ROLE = {
@@ -392,9 +393,104 @@ def authenticated_sidebar(role: Role, active: str) -> rx.Component:
     )
 
 
+def _reception_topbar_search() -> rx.Component:
+    return rx.cond(
+        AuthState.current_role == Role.RECEPCIONISTA.value,
+        rx.el.form(
+            rx.box(
+                rx.icon(
+                    "search",
+                    size=16,
+                    aria_hidden="true",
+                    class_name="vitta-topbar-search-icon",
+                ),
+                rx.el.input(
+                    id="topbar-patient-search",
+                    name="query",
+                    type="search",
+                    value=ReceptionQueueState.quick_search_query,
+                    on_change=ReceptionQueueState.update_quick_search_query,
+                    placeholder="Buscar paciente, telefone ou CPF",
+                    auto_complete="off",
+                    max_length=100,
+                    disabled=ReceptionQueueState.is_quick_searching,
+                    aria_label="Buscar paciente por nome, telefone ou CPF",
+                    aria_controls="topbar-patient-results",
+                    aria_expanded=ReceptionQueueState.quick_search_results.length() > 0,
+                    aria_autocomplete="list",
+                    class_name="vitta-topbar-search-input",
+                ),
+                rx.button(
+                    rx.icon("arrow_right", size=16),
+                    type="submit",
+                    variant="ghost",
+                    size="2",
+                    disabled=ReceptionQueueState.is_quick_searching,
+                    aria_label="Buscar paciente",
+                    class_name="vitta-topbar-search-submit",
+                ),
+                class_name="vitta-topbar-search-control",
+            ),
+            rx.cond(
+                ReceptionQueueState.quick_search_results.length() > 0,
+                rx.vstack(
+                    rx.foreach(
+                        ReceptionQueueState.quick_search_results,
+                        lambda row: rx.button(
+                            rx.vstack(
+                                rx.text(row["name"], font_weight="700", size="2"),
+                                rx.text(
+                                    row["phone"],
+                                    size="1",
+                                    color="var(--vitta-text-muted)",
+                                ),
+                                align="start",
+                                spacing="1",
+                                width="100%",
+                            ),
+                            type="button",
+                            variant="ghost",
+                            on_click=ReceptionQueueState.select_quick_search_patient(
+                                row["id"]
+                            ),
+                            aria_label="Selecionar paciente " + row["name"],
+                            class_name="vitta-topbar-search-result",
+                        ),
+                    ),
+                    id="topbar-patient-results",
+                    role="region",
+                    aria_label="Resultados da busca de pacientes",
+                    align="stretch",
+                    spacing="1",
+                    class_name="vitta-topbar-search-results",
+                ),
+                rx.cond(
+                    ReceptionQueueState.quick_search_error != "",
+                    rx.box(
+                        rx.text(
+                            ReceptionQueueState.quick_search_error,
+                            size="2",
+                            role="status",
+                            aria_live="polite",
+                        ),
+                        id="topbar-patient-results",
+                        class_name="vitta-topbar-search-results vitta-topbar-search-feedback",
+                    ),
+                    rx.fragment(),
+                ),
+            ),
+            on_submit=ReceptionQueueState.quick_search_patients,
+            no_validate=True,
+            class_name="vitta-topbar-search-form",
+        ),
+        rx.fragment(),
+    )
+
+
 def authenticated_topbar() -> rx.Component:
-    """Render a compact operational status bar without fake controls."""
+    """Render real shell controls and a receptionist-only persisted patient search."""
     return rx.el.header(
+        _reception_topbar_search(),
         rx.hstack(
             rx.box(class_name="vitta-online-dot", aria_hidden="true"),
             rx.text(
@@ -405,6 +501,7 @@ def authenticated_topbar() -> rx.Component:
             ),
             spacing="2",
             align="center",
+            class_name="vitta-topbar-system-status",
         ),
         rx.hstack(
             rx.text(
@@ -421,6 +518,7 @@ def authenticated_topbar() -> rx.Component:
             ),
             spacing="3",
             align="center",
+            class_name="vitta-topbar-account",
         ),
         class_name="vitta-topbar",
     )

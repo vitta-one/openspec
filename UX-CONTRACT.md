@@ -200,17 +200,15 @@ Regras:
 - `prefers-reduced-motion` reduz transições;
 - loading e feedback não deslocam ações principais desnecessariamente.
 
-## 12. Área modular de Recepção
+## 14. Área modular de Recepção
 
-- A navegação da Recepção separa Visão geral, Agenda, Pacientes e Fila, mantendo os services atuais de domínio.
-- O dashboard mostra seis projeções persistidas: consultas não canceladas e chegadas confirmadas no dia clínico; aguardando e em atendimento como estoque atual; finalizados e pendências de chegada dentro do dia clínico.
-- A área principal do dashboard é um calendário visual dos próximos sete dias do fuso da clínica. Em telas estreitas, os sete dias formam uma faixa rolável; a rolagem fica contida no calendário e não amplia a página. Selecionar uma data troca a lista para os horários registrados naquele dia; cada linha mostra hora exata, paciente, profissional e situação.
-- Os painéis de chegadas e fila aparecem logo após o calendário para aproximar as tarefas frequentes da agenda. A seção de fila detalha prioridades informadas; os totais de aguardando e em atendimento aparecem nos indicadores, sem duplicação.
-- O calendário exibe somente compromissos persistidos. Consultas canceladas têm rótulo próprio e não entram na contagem de consultas não canceladas. Como o modelo registra um instante, os eventos aparecem como horários em sequência e não como blocos com duração ou indicação de disponibilidade.
-- Consulta AGENDADA cujo horário passou hoje pode aparecer como Chegada pendente, segundo a mesma definição da métrica de pendências. Isso solicita revisão humana e não indica falta, urgência ou cancelamento.
-- O link Abrir agenda completa encaminha para /recepcao/agenda, onde a Recepção consulta outros períodos, agendas por profissional e executa agendamento, reagendamento, cancelamento ou check-in pelos fluxos existentes.
-- A primeira leitura mostra carregamento até obter dados; valores zero aparecem somente após leitura bem-sucedida. Durante atualização, a última leitura permanece identificada; em falha, os dados são limpos e a UI permite tentar novamente.
-- A atualização é manual nesta fase e apresenta o horário da última leitura bem-sucedida; a UI não promete conexão verificada nem atualização em tempo real.
-- Pendências de chegada exibem até cinco itens, com total e link para revisão na Agenda. O dashboard não confirma chegada, não altera prioridades nem executa operações clínicas.
-- O cabeçalho oferece agendamento e localização/cadastro de pacientes pelas rotas existentes. Indicadores e calendário reorganizam-se para tela estreita, mantêm foco visível e permitem seleção de dia por teclado.
-- As telas não mostram conteúdo clínico e não apresentam indicador de tempo de espera até que sua definição operacional seja aprovada.
+- A navegação da Recepção mantém Visão geral, Agenda, Pacientes e Fila com as rotas e permissões existentes.
+- A página inicial de Recepção é a tabela **Recepção — Operação do Dia**, com o dia definido no fuso configurado da clínica e as consultas persistidas nesse intervalo local, em ordem de horário.
+- A tabela mostra horário, nome e telefone do paciente, profissional, especialidades ativas cadastradas para esse profissional, situação persistida e acesso à Agenda. A especialidade não é vinculada diretamente à Consulta nesta etapa; várias especialidades ativas aparecem juntas. Quando não existe especialidade ou telefone cadastrado, a interface informa a ausência sem criar um valor fictício.
+- O telefone é opcional no cadastro do paciente. Os registros existentes permanecem válidos sem telefone e mostram “Telefone não informado”.
+- A busca rápida global do topo localiza pacientes por nome, telefone ou CPF e retorna somente identidade mínima para a rota Pacientes. A busca da tabela e o filtro por profissional operam somente sobre consultas do dia. A tabela é paginada no servidor em grupos de sete; aplicar busca ou trocar profissional reinicia a paginação.
+- Consultas canceladas permanecem na tabela e exibem o status persistido. A recepção não deduz falta, urgência, chegada, duração ou disponibilidade pelo horário.
+- “Ir para Agenda”, “Nova consulta” e ações da tabela encaminham para os fluxos de Agenda já existentes. A página não cria operações paralelas de agendamento ou check-in.
+- A leitura inicial mostra carregamento; uma falha limpa dados protegidos e permite tentar novamente; a atualização é manual e exibe quando a última leitura terminou. Não há promessa de tempo real.
+- Os controles de busca, filtro, paginação e acesso à Agenda mantêm rótulos acessíveis, foco visível, operação por teclado e tabela horizontalmente contida em telas estreitas, sem ampliar o documento.
+- A tela não mostra conteúdo clínico, prontuário ou unidade não configurada.
