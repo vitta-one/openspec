@@ -1,11 +1,12 @@
 """State for the receptionist's daily appointments workspace."""
 
-from datetime import date
+from datetime import date, datetime
 from typing import TypedDict
 
 import reflex as rx
 
 from vitta_one.appointment_scheduling.domain import ConsultationStatus
+from vitta_one.appointment_scheduling.settings import clinic_timezone
 from vitta_one.appointment_scheduling.temporal import format_clinic_datetime
 from vitta_one.auth.authorization import (
     AuthenticationRequiredError,
@@ -64,6 +65,10 @@ def _format_phone(value: str | None) -> str:
     if len(digits) == 10:
         return f"({digits[:2]}) {digits[2:6]}-{digits[6:]}"
     return "Telefone não informado"
+
+
+def _clinic_time_label(value: datetime) -> str:
+    return value.astimezone(clinic_timezone()).strftime("%H:%M")
 
 
 def _clinic_day_label(value: str) -> str:
@@ -137,7 +142,7 @@ class ReceptionDashboardState(rx.State):
         self.appointments = [
             {
                 "id": item.id,
-                "time": item.scheduled_at.strftime("%H:%M"),
+                "time": _clinic_time_label(item.scheduled_at),
                 "patient_name": item.patient_name,
                 "patient_phone": _format_phone(item.patient_phone),
                 "professional_name": item.professional_name,

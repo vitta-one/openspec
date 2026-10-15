@@ -7,10 +7,17 @@ O sistema MUST permitir que um usuário com role Recepcionista cadastre um pacie
 - **WHEN** uma Recepcionista autenticada informa nome e CPF válidos ainda não cadastrados, com ou sem telefone válido
 - **THEN** o sistema cria exatamente um paciente e disponibiliza esse paciente para entrada na fila
 
+#### Scenario: CPF inválido
+- **WHEN** a Recepcionista informa um CPF que não possui formato e dígitos verificadores válidos
+- **THEN** o sistema rejeita o cadastro sem persistir o paciente e apresenta erro associado ao campo
+
+#### Scenario: CPF já cadastrado
+- **WHEN** a Recepcionista tenta cadastrar um CPF já existente
+- **THEN** o sistema não cria paciente duplicado e informa que o cadastro existente deve ser utilizado
+
 #### Scenario: Telefone ausente ou inválido
 - **WHEN** a Recepcionista deixa o telefone vazio ou informa um telefone preenchido com comprimento diferente de 10 ou 11 dígitos
 - **THEN** o telefone ausente é aceito e o telefone inválido é rejeitado sem persistir o paciente
-
 
 ## ADDED Requirements
 

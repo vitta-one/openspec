@@ -416,7 +416,8 @@ def _reception_topbar_search() -> rx.Component:
                     disabled=ReceptionQueueState.is_quick_searching,
                     aria_label="Buscar paciente por nome, telefone ou CPF",
                     aria_controls="topbar-patient-results",
-                    aria_expanded=ReceptionQueueState.quick_search_results.length() > 0,
+                    aria_expanded=(ReceptionQueueState.quick_search_results.length() > 0)
+                    | (ReceptionQueueState.quick_search_error != ""),
                     aria_autocomplete="list",
                     class_name="vitta-topbar-search-input",
                 ),
@@ -426,6 +427,7 @@ def _reception_topbar_search() -> rx.Component:
                     variant="ghost",
                     size="2",
                     disabled=ReceptionQueueState.is_quick_searching,
+                    loading=ReceptionQueueState.is_quick_searching,
                     aria_label="Buscar paciente",
                     class_name="vitta-topbar-search-submit",
                 ),

@@ -21,6 +21,7 @@ from vitta_one.patient_queue.service import (
 )
 from vitta_one.reception.dashboard.application import reception_day_operations
 from vitta_one.reception.dashboard.service import get_reception_day
+from vitta_one.reception.dashboard.state import _clinic_time_label
 
 
 @pytest.fixture(autouse=True)
@@ -166,6 +167,14 @@ def test_day_table_filters_by_professional_name_phone_and_cpf(db):
     assert [row.id for row in by_cpf.appointments] == [target.id]
     assert [row.id for row in by_professional.appointments] == [target.id]
     assert by_name.appointments[0].patient_phone == patient.phone
+
+
+
+
+def test_table_time_label_uses_clinic_timezone():
+    assert _clinic_time_label(
+        datetime(2026, 10, 14, 17, tzinfo=timezone.utc)
+    ) == "14:00"
 
 
 def test_day_table_uses_clinic_local_date_boundaries(db):
