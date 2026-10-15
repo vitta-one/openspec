@@ -3,6 +3,10 @@
 ### Requirement: Indicadores operacionais usam somente registros persistidos
 O sistema MUST computar consultas do dia não canceladas, chegadas confirmadas do dia, entradas aguardando, entradas em atendimento, entradas finalizadas no dia clínico e pendências de chegada usando os registros persistidos e as definições temporais existentes. MUST mostrar a origem/período de cada métrica e MUST NOT inferir espera, ausência, urgência ou conectividade.
 
+#### Scenario: Banco vazio
+- **WHEN** não existem Consultations nem QueueEntries e a primeira leitura termina com sucesso
+- **THEN** os indicadores exibem zero e as próximas consultas exibem estado vazio
+
 #### Scenario: Primeira leitura sem registros
 - **WHEN** o banco não contém Consultations nem QueueEntries e a primeira leitura termina com sucesso
 - **THEN** todos os indicadores exibem zero e as listas mostram seus estados vazios
@@ -26,6 +30,10 @@ O sistema MUST apresentar até cinco Consultations `AGENDADA` futuras por data/h
 - **WHEN** existem consultas futuras agendadas e canceladas
 - **THEN** as próximas consultas mostram somente as agendadas, informam a situação e oferecem acesso à Agenda, sem dados clínicos
 
+#### Scenario: Consulta cancelada e fila mista
+- **WHEN** há consultas canceladas, pacientes em atendimento e prioridades já informadas pela operação
+- **THEN** só os itens elegíveis entram nas projeções correspondentes e nenhuma prioridade é recalculada
+
 #### Scenario: Fila mista
 - **WHEN** há pacientes aguardando e em atendimento com prioridades já atribuídas
 - **THEN** somente entradas aguardando compõem a distribuição e nenhuma prioridade é recalculada
@@ -33,9 +41,17 @@ O sistema MUST apresentar até cinco Consultations `AGENDADA` futuras por data/h
 ### Requirement: Atualização manual e falhas honestas
 O sistema MUST disponibilizar atualização manual e horário da última leitura bem-sucedida, indicar carregamento, limpar dados protegidos em falha e permitir nova tentativa; MUST NOT apresentar zeros antes de uma leitura concluída como se fossem métricas atuais.
 
+#### Scenario: Erro de leitura
+- **WHEN** o banco está indisponível
+- **THEN** nenhum número antigo é apresentado como atual e há um aviso
+
 #### Scenario: Falha de atualização
 - **WHEN** o banco falha durante uma leitura
 - **THEN** o snapshot é limpo, a mensagem de erro oferece nova tentativa e nenhum número antigo é apresentado como atual
+
+#### Scenario: Atualização da recepcionista
+- **WHEN** Recepcionista aciona Atualizar
+- **THEN** o servidor revalida a sessão e recalcula agregados
 
 #### Scenario: Refresh durante leitura existente
 - **WHEN** Recepcionista solicita atualização após o dashboard carregar
