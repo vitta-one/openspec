@@ -4,6 +4,7 @@ import reflex as rx
 
 from vitta_one.admin_preview.state import AdminPreviewState
 from vitta_one.appointment_scheduling.state import AdminAvailabilityState, ReceptionAgendaState
+from vitta_one.doctor_workspace.state import DoctorWorkspaceState
 from vitta_one.auth.roles import Role
 from vitta_one.auth.state import AuthState
 from vitta_one.clinical_prescription.state import PrintPrescriptionState
@@ -11,7 +12,9 @@ from vitta_one.models import (
     AuthSession,
     ClinicalCareRecord,
     Consultation,
+    ConsultationScheduleChange,
     Patient,
+    PatientPortalInvitation,
     Prescription,
     PrescriptionItem,
     Professional,
@@ -21,6 +24,8 @@ from vitta_one.models import (
     Specialty,
     User,
 )
+from vitta_one.patient_portal.activation_api import activation_api
+from vitta_one.patient_portal.state import AdminClinicConfigurationState, PatientPortalState
 from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
 from vitta_one.professional_directory.state import AdminDirectoryState
 from vitta_one.reception.dashboard.state import ReceptionDashboardState
@@ -34,10 +39,14 @@ from vitta_one.ui.pages import (
     admin_patients_preview_page,
     admin_reception_preview_page,
     doctor_page,
+    doctor_agenda_page,
+    doctor_patients_page,
     finance_page,
     forbidden_page,
     login_page,
     first_access_page,
+    patient_activation_page,
+    patient_portal_page,
     prescription_print_page,
     reception_page,
     reception_agenda_page,
@@ -61,9 +70,12 @@ _PERSISTENT_MODELS = (
     ClinicalCareRecord,
     Prescription,
     PrescriptionItem,
+    ConsultationScheduleChange,
+    PatientPortalInvitation,
 )
 
 app = rx.App(
+    api_transformer=activation_api,
     theme=rx.theme(
         appearance="light",
         accent_color="teal",
@@ -92,10 +104,20 @@ app.add_page(
     on_load=AuthState.load_first_access,
 )
 app.add_page(
+    patient_activation_page,
+    route="/ativar-paciente",
+    title="Ative seu portal | Vitta-One",
+)
+app.add_page(
     admin_page,
     route=Role.ADMINISTRADOR.dashboard_path,
     title="Painel administrativo | Vitta-One",
-    on_load=[AuthState.load_protected, AdminDirectoryState.load, AdminAvailabilityState.load],
+    on_load=[
+        AuthState.load_protected,
+        AdminDirectoryState.load,
+        AdminAvailabilityState.load,
+        AdminClinicConfigurationState.load,
+    ],
 )
 app.add_page(
     admin_specialties_page,
@@ -169,6 +191,24 @@ app.add_page(
     route=Role.MEDICO.dashboard_path,
     title="Painel médico | Vitta-One",
     on_load=[AuthState.load_protected, DoctorQueueState.load],
+)
+app.add_page(
+    doctor_agenda_page,
+    route="/medico/agenda",
+    title="Agenda médica | Vitta-One",
+    on_load=[AuthState.load_protected, DoctorWorkspaceState.load],
+)
+app.add_page(
+    doctor_patients_page,
+    route="/medico/pacientes",
+    title="Pacientes vinculados | Vitta-One",
+    on_load=[AuthState.load_protected, DoctorWorkspaceState.load],
+)
+app.add_page(
+    patient_portal_page,
+    route=Role.PACIENTE.dashboard_path,
+    title="Minhas consultas | Vitta-One",
+    on_load=[AuthState.load_protected, PatientPortalState.load],
 )
 app.add_page(
     finance_page,

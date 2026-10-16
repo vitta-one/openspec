@@ -22,8 +22,71 @@ class Patient(rx.Model, table=True):
     name: str = Field(sa_column=Column(String(160), nullable=False))
     cpf: str = Field(sa_column=Column(String(11), nullable=False, unique=True, index=True))
     phone: str | None = Field(default=None, sa_column=Column(String(11), nullable=True))
+    user_id: int | None = Field(
+        default=None,
+        sa_column=Column(
+            Integer,
+            ForeignKey("auth_users.id", ondelete="SET NULL"),
+            nullable=True,
+            unique=True,
+            index=True,
+        ),
+    )
     created_at: datetime = Field(default_factory=utc_now, sa_column=Column(DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=utc_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+
+
+class PatientPortalInvitation(rx.Model, table=True):
+    """One-time consented activation code; only its SHA-256 hash is persisted."""
+
+    __tablename__ = "patient_portal_invitations"
+
+    patient_id: int = Field(
+        sa_column=Column(
+            Integer,
+            ForeignKey("patients.id", ondelete="RESTRICT"),
+            nullable=False,
+            index=True,
+        )
+    )
+    email: str = Field(sa_column=Column(String(320), nullable=False, index=True))
+    code_hash: str = Field(
+        sa_column=Column(String(64), nullable=False, unique=True, index=True)
+    )
+    created_by_user_id: int = Field(
+        sa_column=Column(
+            Integer,
+            ForeignKey("auth_users.id", ondelete="RESTRICT"),
+            nullable=False,
+            index=True,
+        )
+    )
+    consented_at: datetime = Field(
+        sa_column=Column(DateTime(timezone=True), nullable=False)
+    )
+    created_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=Column(DateTime(timezone=True), nullable=False, index=True),
+    )
+    expires_at: datetime = Field(
+        sa_column=Column(DateTime(timezone=True), nullable=False, index=True)
+    )
+    delivery_status: str = Field(
+        default="PENDING",
+        sa_column=Column(String(24), nullable=False, index=True),
+    )
+    provider_message_id: str | None = Field(
+        default=None, sa_column=Column(String(128), nullable=True)
+    )
+    sent_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
+    revoked_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
+    consumed_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
 
 
 class QueueEntry(rx.Model, table=True):

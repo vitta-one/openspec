@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from html import escape
 import os
 import secrets
+from urllib.parse import urlparse
 
 import httpx
 
@@ -64,6 +65,51 @@ def send_medical_welcome(
 
     if not 200 <= response.status_code < 300:
         # Rejected requests are not described as successful.
+        return EmailDelivery(status="FAILED")
+    try:
+        message_id = response.json().get("id")
+    except (ValueError, AttributeError):
+        return EmailDelivery(status="UNKNOWN")
+    if not isinstance(message_id, str) or not message_id:
+        return EmailDelivery(status="UNKNOWN")
+    return EmailDelivery(status="ACCEPTED", message_id=message_id)
+
+
+def send_patient_portal_invitation(
+    *, name: str, email: str, code: str, activation_url: str, invitation_id: int
+) -> EmailDelivery:
+    """Send a consented one-time patient activation code without persisting it."""
+    key = os.environ.get("RESEND_API_KEY", "").strip()
+    sender = os.environ.get("RESEND_FROM_EMAIL", "").strip()
+    parsed = urlparse(str(activation_url or ""))
+    local_http = parsed.scheme == "http" and parsed.hostname in {"localhost", "127.0.0.1", "::1"}
+    secure_url = parsed.scheme == "https" or local_http
+    if not key or not sender or not secure_url or not parsed.netloc:
+        return EmailDelivery(status="NOT_CONFIGURED")
+    body = (
+        f"<p>Olá, {escape(name)}.</p>"
+        "<p>A Recepção da clínica solicitou a ativação do seu acesso ao portal Vitta-One.</p>"
+        f"<p>Abra <a href=\"{escape(activation_url, quote=True)}\">a página de ativação</a> e informe este código: "
+        f"<strong><code>{escape(code)}</code></strong></p>"
+        "<p>O código é de uso único e expira em 24 horas. Se você não solicitou este acesso, ignore esta mensagem.</p>"
+    )
+    headers = {
+        "Authorization": f"Bearer {key}",
+        "Content-Type": "application/json",
+        "Idempotency-Key": f"vitta-patient-invite/{invitation_id}/{secrets.token_hex(12)}",
+    }
+    payload = {
+        "from": sender,
+        "to": [email],
+        "subject": "Ative seu acesso ao Vitta-One",
+        "html": body,
+    }
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            response = client.post("https://api.resend.com/emails", headers=headers, json=payload)
+    except httpx.HTTPError:
+        return EmailDelivery(status="UNKNOWN")
+    if not 200 <= response.status_code < 300:
         return EmailDelivery(status="FAILED")
     try:
         message_id = response.json().get("id")

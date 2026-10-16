@@ -107,7 +107,9 @@ def test_logout_clears_doctor_and_print_payloads_and_removes_session_cookie(
     from vitta_one.admin_preview.state import AdminPreviewState
     from vitta_one.auth import state as auth_state
     from vitta_one.auth.state import AuthState
-    from vitta_one.patient_queue.state import DoctorQueueState
+    from vitta_one.doctor_workspace.state import DoctorWorkspaceState
+    from vitta_one.patient_portal.state import PatientPortalState
+    from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
 
     cleared = []
 
@@ -121,8 +123,14 @@ def test_logout_clears_doctor_and_print_payloads_and_removes_session_cookie(
         def _clear(self):
             cleared.append(self.name)
 
+        def _clear_sensitive_view(self):
+            cleared.append(self.name)
+
     siblings = {
+        ReceptionQueueState: _Sibling("reception"),
         DoctorQueueState: _Sibling("doctor"),
+        DoctorWorkspaceState: _Sibling("doctor-workspace"),
+        PatientPortalState: _Sibling("patient"),
         PrintPrescriptionState: _Sibling("print"),
         AdminPreviewState: _Sibling("admin"),
     }
@@ -134,6 +142,21 @@ def test_logout_clears_doctor_and_print_payloads_and_removes_session_cookie(
 
         async def get_state(self, target):
             return siblings[target]
+
+        async def _clear_sensitive_states(self):
+            queue = await self.get_state(ReceptionQueueState)
+            queue._clear_sensitive_view()
+            doctor = await self.get_state(DoctorQueueState)
+            doctor._clear_active()
+            workspace = await self.get_state(DoctorWorkspaceState)
+            workspace._clear()
+            patient = await self.get_state(PatientPortalState)
+            patient._clear()
+            patient.error_message = ""
+            print_state = await self.get_state(PrintPrescriptionState)
+            print_state._clear()
+            admin = await self.get_state(AdminPreviewState)
+            admin._clear()
 
         def _clear_identity(self):
             cleared.append("identity")
@@ -148,7 +171,9 @@ def test_logout_clears_doctor_and_print_payloads_and_removes_session_cookie(
     events = asyncio.run(_collect(AuthState.logout.fn(fake)))
 
     assert revoked == ["valid-test-session"]
-    assert cleared == ["doctor", "print", "admin", "identity"]
+    assert cleared == [
+        "reception", "doctor", "doctor-workspace", "patient", "print", "admin", "identity"
+    ]
     assert fake.session_token == ""
     assert fake.auth_checked is True
     assert ("redirect", "/login") in events

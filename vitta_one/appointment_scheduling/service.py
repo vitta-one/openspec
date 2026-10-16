@@ -1,6 +1,6 @@
 """Business services for availability slots and scheduled consultations."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 
 from sqlalchemy.exc import IntegrityError
@@ -8,9 +8,13 @@ from sqlmodel import Session, select
 
 from vitta_one.appointment_scheduling.domain import AvailabilitySlotStatus, ConsultationStatus
 from vitta_one.appointment_scheduling.temporal import ensure_utc
-from vitta_one.models.appointment import Consultation, ProfessionalAvailabilitySlot
+from vitta_one.models.appointment import (
+    Consultation,
+    ConsultationScheduleChange,
+    ProfessionalAvailabilitySlot,
+)
 from vitta_one.models.patient_queue import Patient
-from vitta_one.models.professional import Professional
+from vitta_one.models.professional import Professional, ProfessionalSpecialty, Specialty
 
 
 class SchedulingValidationError(ValueError):
@@ -59,6 +63,8 @@ class ConsultationItem:
     started_at: datetime | None
     completed_at: datetime | None
     cancelled_at: datetime | None
+    specialty_names: tuple[str, ...] = ()
+    schedule_changes: tuple[tuple[datetime, datetime], ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -227,6 +233,7 @@ def list_consultations(
     db: Session,
     *,
     professional_id: int | None = None,
+    patient_id: int | None = None,
     start_at: datetime | None = None,
     end_at: datetime | None = None,
 ) -> list[ConsultationItem]:
@@ -237,6 +244,8 @@ def list_consultations(
     )
     if professional_id is not None:
         statement = statement.where(Consultation.professional_id == professional_id)
+    if patient_id is not None:
+        statement = statement.where(Consultation.patient_id == patient_id)
     if start_at is not None:
         statement = statement.where(Consultation.scheduled_at >= ensure_utc(start_at))
     if end_at is not None:
@@ -244,7 +253,7 @@ def list_consultations(
     rows = db.exec(
         statement.order_by(Consultation.scheduled_at, Consultation.id)
     ).all()
-    return [
+    items = [
         ConsultationItem(
             id=consultation.id,
             patient_id=patient.id,
@@ -274,9 +283,46 @@ def list_consultations(
                 if consultation.cancelled_at is not None
                 else None
             ),
+            specialty_names=(),
+            schedule_changes=(),
         )
         for consultation, patient, professional in rows
         if consultation.id is not None and patient.id is not None and professional.id is not None
+    ]
+    professional_ids = {item.professional_id for item in items}
+    specialty_names: dict[int, list[str]] = {value: [] for value in professional_ids}
+    if professional_ids:
+        specialty_rows = db.exec(
+            select(ProfessionalSpecialty.professional_id, Specialty.name)
+            .join(Specialty, Specialty.id == ProfessionalSpecialty.specialty_id)
+            .where(ProfessionalSpecialty.professional_id.in_(professional_ids))
+            .order_by(Specialty.name)
+        ).all()
+        for professional_id, specialty_name in specialty_rows:
+            specialty_names.setdefault(professional_id, []).append(specialty_name)
+
+    consultation_ids = {item.id for item in items}
+    schedule_changes: dict[int, list[tuple[datetime, datetime]]] = {
+        value: [] for value in consultation_ids
+    }
+    if consultation_ids:
+        change_rows = db.exec(
+            select(ConsultationScheduleChange)
+            .where(ConsultationScheduleChange.consultation_id.in_(consultation_ids))
+            .order_by(ConsultationScheduleChange.changed_at, ConsultationScheduleChange.id)
+        ).all()
+        for change in change_rows:
+            schedule_changes.setdefault(change.consultation_id, []).append(
+                (ensure_utc(change.previous_scheduled_at), ensure_utc(change.new_scheduled_at))
+            )
+
+    return [
+        replace(
+            item,
+            specialty_names=tuple(specialty_names.get(item.professional_id, [])),
+            schedule_changes=tuple(schedule_changes.get(item.id, [])),
+        )
+        for item in items
     ]
 
 
@@ -406,6 +452,7 @@ def reschedule_consultation(
     *,
     consultation_id: int,
     new_slot_id: int,
+    changed_by_user_id: int | None = None,
     now: datetime | None = None,
 ) -> Consultation:
     timestamp = _timestamp(now)
@@ -432,6 +479,8 @@ def reschedule_consultation(
     new_slot = slots[new_slot_id]
     professional = _validate_bookable_slot(db, new_slot, now=timestamp)
 
+    previous_scheduled_at = ensure_utc(consultation.scheduled_at)
+    next_scheduled_at = ensure_utc(new_slot.starts_at)
     release_reserved_slot(db, old_slot, now=timestamp)
     new_slot.status = AvailabilitySlotStatus.BOOKED.value
     new_slot.updated_at = timestamp
@@ -439,6 +488,15 @@ def reschedule_consultation(
     consultation.availability_slot_id = new_slot.id
     consultation.scheduled_at = ensure_utc(new_slot.starts_at)
     consultation.updated_at = timestamp
+    db.add(
+        ConsultationScheduleChange(
+            consultation_id=consultation.id,
+            previous_scheduled_at=previous_scheduled_at,
+            new_scheduled_at=next_scheduled_at,
+            changed_by_user_id=changed_by_user_id,
+            changed_at=timestamp,
+        )
+    )
     db.add(new_slot)
     db.add(consultation)
     try:

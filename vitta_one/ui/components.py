@@ -16,6 +16,11 @@ _NAV_BY_ROLE = {
     ),
     Role.MEDICO: (
         ("Atendimento clínico", "/medico", "stethoscope", "atendimento"),
+        ("Agenda", "/medico/agenda", "calendar_days", "agenda-medica"),
+        ("Pacientes", "/medico/pacientes", "users", "pacientes-medico"),
+    ),
+    Role.PACIENTE: (
+        ("Minhas consultas", "/paciente", "calendar_days", "consultas-paciente"),
     ),
     Role.FINANCEIRO: (
         ("Financeiro", "/financeiro", "wallet", "financeiro"),
@@ -706,6 +711,7 @@ def dashboard_shell(role: Role, title: str, description: str) -> rx.Component:
         Role.RECEPCIONISTA: "recepcao",
         Role.MEDICO: "atendimento",
         Role.FINANCEIRO: "financeiro",
+        Role.PACIENTE: "consultas-paciente",
     }[role]
     return protected_workspace(
         role,
@@ -738,6 +744,7 @@ def protected_workspace(
         Role.RECEPCIONISTA: "recepcao",
         Role.MEDICO: "atendimento",
         Role.FINANCEIRO: "financeiro",
+        Role.PACIENTE: "consultas-paciente",
     }[role]
 
     protected_content = _product_shell(role, active_key, *children)

@@ -358,6 +358,9 @@ No Windows, execute comandos Python com `.\.venv\Scripts\python.exe` e comandos 
 | `VITTA_ONE_SESSION_TTL_SECONDS` | **Obrigatória**, inteiro positivo em segundos (ex.: `3600`) |
 | `VITTA_ONE_COOKIE_SECURE` | `false` só em `localhost` HTTP; `true` em HTTPS |
 | `VITTA_ONE_CLINIC_TIMEZONE` | `America/Sao_Paulo` |
+| `VITTA_ONE_CLINIC_NAME` | Opcional; nome público real da clínica no portal |
+| `VITTA_ONE_CLINIC_ADDRESS` | Opcional; endereço público real da clínica no portal |
+| `VITTA_ONE_PUBLIC_URL` | URL pública sem segredo, usada no e-mail de ativação do paciente |
 | `VITTA_ONE_LOCAL_ADMIN_PREVIEW` | `true` só para previews locais de leitura do Admin |
 | `REFLEX_TELEMETRY_ENABLED` | `false` para desativar telemetria Reflex |
 | `RESEND_API_KEY` | Opcional; integração real com Resend |
@@ -401,7 +404,7 @@ python -m pip check
 reflex compile --dry
 ~~~
 
-A migration `f2a4c9d8e721` acrescenta campos de credencial temporária e status de e-mail do profissional. Ela é **aditiva**, mas migrações exigem backup, confirmação de destino e revisão antes de qualquer ambiente não descartável. **Não faça downgrades automáticos.**
+A migration `f2a4c9d8e721` acrescenta campos de credencial temporária e status de e-mail do profissional. A migration `8c1d5e2f7a90` adiciona a role `PACIENTE`, o vínculo opcional e único do paciente, convites e histórico de reagendamento. Ambas são aditivas; migrações exigem backup, confirmação de destino e revisão antes de qualquer ambiente não descartável. O downgrade da nova capability é bloqueado quando existem contas, convites ou histórico que seriam perdidos. **Não faça downgrades automáticos.**
 
 ### 8. Criar o primeiro Administrador e fazer login
 
@@ -547,6 +550,8 @@ No servidor, defina `RESEND_API_KEY` e `RESEND_FROM_EMAIL` (remetente verificado
 
 A senha temporária é gerada criptograficamente, salva somente em hash e expira em **24 horas**; o Médico precisa escolher uma nova senha em `/primeiro-acesso` antes de acessar funcionalidades clínicas. A transmissão de senha por e-mail é menos segura que um convite com token único e deve ser revisada antes de produção real.
 
+O convite do portal do paciente usa as mesmas credenciais do Resend e exige também `VITTA_ONE_PUBLIC_URL`. A Recepção precisa confirmar consentimento em uma ação separada; o cadastro não cria uma conta. O código é enviado por e-mail, persistido somente como hash, expira em 24 horas e é consumido uma vez. Se o envio não for aceito, nenhum acesso é ativado; a equipe pode emitir outro convite após confirmar consentimento novamente. `VITTA_ONE_CLINIC_NAME` e `VITTA_ONE_CLINIC_ADDRESS` devem conter os dados reais da unidade; quando qualquer um estiver ausente, o portal informa que o endereço ainda precisa ser configurado.
+
 Cloudinary (exames), ZapSign (assinatura de prescrições) e Asaas (pagamentos) **não precisam de configuração para testar o MVP atual**. Sua integração continua planejada em `docs/roadmap/next-capabilities-2026-10-14.md`.
 
 ### 12. Atualizar depois de novos merges — sem reinstalar tudo
@@ -618,6 +623,9 @@ Os valores acima são placeholders, **não credenciais funcionais**. O remetente
 - `/admin`: painel com três especialidades e três profissionais recentes e horários de atendimento agrupados por dia;
 - `/admin/especialidades` e `/admin/profissionais`: diretórios completos com busca, filtros e paginação, exclusivos do Administrador;
 - `/primeiro-acesso`: troca obrigatória de senha temporária Médica;
+- `/medico/agenda` e `/medico/pacientes`: agenda e lista derivadas do profissional associado à sessão;
+- `/paciente`: consultas do cadastro vinculado à conta do paciente;
+- `/ativar-paciente`: ativação por e-mail, código de uso único e senha escolhida pelo paciente;
 - `/recepcao`: agenda de Consultas, confirmação de chegada, cadastro/localização de pacientes, entrada avulsa, reavaliação, retirada e acompanhamento da fila ativa;
 - `/medico`: fila elegível, registro clínico, múltiplas Prescrições com itens e histórico concluído do paciente;
 - `/medico/prescricao/[prescription_id]`: visualização protegida e pronta para impressão da Prescrição do Médico autor, sem assinatura digital nesta etapa;

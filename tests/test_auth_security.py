@@ -54,4 +54,5 @@ def test_role_set_is_exactly_the_domain_roles() -> None:
         "RECEPCIONISTA",
         "MEDICO",
         "FINANCEIRO",
+        "PACIENTE",
     }
