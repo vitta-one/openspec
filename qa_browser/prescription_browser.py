@@ -391,6 +391,13 @@ def test_reception_daily_operations_table_and_filters(page: Page) -> None:
     expect(page.locator(".vitta-reception-day-row")).to_have_count(1, timeout=30000)
     expect(page.get_by_text(FIXTURE["day_first_patient_name"], exact=True)).to_be_visible()
 
+    # An empty search result offers an explicit way to restore the complete day.
+    search.fill("Paciente que não existe")
+    search.press("Enter")
+    expect(page.locator(".vitta-reception-day-row")).to_have_count(0, timeout=30000)
+    page.get_by_role("button", name="Limpar filtros").click()
+    expect(page.locator(".vitta-reception-day-row")).to_have_count(7, timeout=30000)
+
     # Restore the day, then filter by a professional from the persisted directory.
     search.fill("")
     search.press("Enter")
@@ -516,6 +523,30 @@ def test_reception_contextual_actions_use_authorized_agenda_flows(page: Page) ->
     expect(page.get_by_role("dialog")).to_be_visible(timeout=30000)
     expect(page.get_by_role("heading", name="Confirmar chegada")).to_be_visible()
     page.keyboard.press("Escape")
+
+    # Reuse the existing reschedule and destructive-confirmation dialogs.
+    page.goto(BASE + "/recepcao", wait_until="domcontentloaded")
+    scheduled_row = page.locator(".vitta-reception-day-row").filter(has_text="Agendada").first
+    scheduled_row.get_by_role("button", name=re.compile("Ações para")).click()
+    page.get_by_role("menuitem", name="Reagendar").click()
+    expect(page.get_by_role("dialog")).to_be_visible(timeout=30000)
+    expect(page.get_by_role("heading", name="Reagendar consulta")).to_be_visible()
+    page.keyboard.press("Escape")
+
+    scheduled_row = page.locator(".vitta-reception-day-row").filter(has_text="Agendada").first
+    scheduled_row.get_by_role("button", name=re.compile("Ações para")).click()
+    page.get_by_role("menuitem", name="Cancelar consulta").click()
+    expect(page.get_by_role("dialog")).to_be_visible(timeout=30000)
+    expect(page.get_by_role("heading", name="Cancelar consulta")).to_be_visible()
+    page.keyboard.press("Escape")
+
+    # A confirmed consultation can open the queue, but cannot be confirmed again.
+    confirmed_row = page.locator(".vitta-reception-day-row").filter(has_text="Confirmada").first
+    confirmed_row.get_by_role("button", name=re.compile("Ações para")).click()
+    expect(page.get_by_role("menuitem", name="Abrir fila de espera")).to_be_visible()
+    expect(page.get_by_role("menuitem", name="Confirmar chegada")).to_have_count(0)
+    page.get_by_role("menuitem", name="Abrir fila de espera").click()
+    expect(page).to_have_url(re.compile(r"/recepcao/fila/?$"), timeout=30000)
 
     # A cancelled consultation remains inspectable but has no transition actions.
     page.goto(BASE + "/recepcao", wait_until="domcontentloaded")
