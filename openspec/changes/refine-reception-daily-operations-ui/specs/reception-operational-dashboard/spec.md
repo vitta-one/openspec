@@ -25,6 +25,14 @@ O dashboard MUST oferecer um menu contextual por consulta com detalhes operacion
 - **WHEN** a Recepcionista escolhe cancelar uma consulta elegível
 - **THEN** o diálogo pede confirmação e o application service valida o estado atual antes de preservar o histórico e cancelar
 
+#### Scenario: Acesso à tabela
+- **WHEN** uma sessão sem autorização de Recepcionista solicita os dados
+- **THEN** o servidor nega a leitura antes de retornar nome, telefone ou compromissos
+
+#### Scenario: Ação da tabela
+- **WHEN** a Recepcionista escolhe abrir a Agenda a partir da tabela
+- **THEN** a navegação segue para o módulo protegido e existente
+
 ### Requirement: A tabela se adapta a teclado e telas estreitas
 A interface MUST manter rótulos acessíveis e foco visível na busca, filtro, paginação e ações. O menu contextual MUST suportar teclado e seus diálogos MUST ser renderizados fora do menu. Em viewports de até 672 px, a lista MUST apresentar cartões com as mesmas informações operacionais e ações da tabela. Nenhuma largura MUST causar overflow horizontal do documento.
 
@@ -43,3 +51,7 @@ A interface MUST manter rótulos acessíveis e foco visível na busca, filtro, p
 #### Scenario: Desktop
 - **WHEN** a tela é renderizada a 1280 px ou 1440 px
 - **THEN** título, data, filtros e ações compõem um cabeçalho compacto acima da tabela, que mostra suas colunas sem rolagem horizontal
+
+#### Scenario: Tela estreita
+- **WHEN** a tabela é exibida em viewport estreita
+- **THEN** as colunas permanecem disponíveis em uma área de rolagem nomeada e o restante da página não transborda
