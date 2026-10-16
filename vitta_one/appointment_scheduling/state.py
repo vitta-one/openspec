@@ -527,6 +527,15 @@ class ReceptionAgendaState(rx.State):
         self.cancel_scheduled_at = row["scheduled_at"]
         self.cancel_dialog_open = True
 
+    async def _refresh_daily_dashboard_if_loaded(self):
+        """Keep the daily workspace current after an action opened from its menu."""
+        from vitta_one.reception.dashboard.state import ReceptionDashboardState
+
+        dashboard = await self.get_state(ReceptionDashboardState)
+        if dashboard.has_loaded:
+            async for event in dashboard.refresh():
+                yield event
+
     def _current_consultation(self, consultation_id: int) -> ConsultationRow:
         row = next(
             (item for item in self.consultations if item["id"] == consultation_id),
@@ -705,16 +714,13 @@ class ReceptionAgendaState(rx.State):
                 )
             self._begin_arrival_from_row(row)
             yield
-            yield rx.redirect("/recepcao/agenda")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
         except (SchedulingNotFoundError, SchedulingTransitionError) as exc:
             self.error_message = str(exc)
-            yield rx.redirect("/recepcao/agenda")
         except Exception:
             self.error_message = "Não foi possível abrir a confirmação de chegada."
-            yield rx.redirect("/recepcao/agenda")
         finally:
             self.is_loading = False
             yield
@@ -757,6 +763,8 @@ class ReceptionAgendaState(rx.State):
             queue_state = await self.get_state(ReceptionQueueState)
             queue_state._load_queue_with_token(token)
             self.success_message = "Chegada confirmada e paciente incluído na fila."
+            async for event in self._refresh_daily_dashboard_if_loaded():
+                yield event
         except (
             CareLifecycleValidationError,
             CareLifecycleTransitionError,
@@ -804,16 +812,13 @@ class ReceptionAgendaState(rx.State):
                 )
             self._begin_reschedule_from_row(row)
             yield
-            yield rx.redirect("/recepcao/agenda")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
         except (SchedulingNotFoundError, SchedulingTransitionError) as exc:
             self.error_message = str(exc)
-            yield rx.redirect("/recepcao/agenda")
         except Exception:
             self.error_message = "Não foi possível abrir o reagendamento agora."
-            yield rx.redirect("/recepcao/agenda")
         finally:
             self.is_loading = False
             yield
@@ -849,6 +854,8 @@ class ReceptionAgendaState(rx.State):
             self._reset_reschedule()
             self._load_with_token(token)
             self.success_message = "Consulta reagendada."
+            async for event in self._refresh_daily_dashboard_if_loaded():
+                yield event
         except (
             SchedulingValidationError,
             SchedulingConflictError,
@@ -902,16 +909,13 @@ class ReceptionAgendaState(rx.State):
                 )
             self._begin_cancel_from_row(row)
             yield
-            yield rx.redirect("/recepcao/agenda")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
         except (SchedulingNotFoundError, SchedulingTransitionError) as exc:
             self.error_message = str(exc)
-            yield rx.redirect("/recepcao/agenda")
         except Exception:
             self.error_message = "Não foi possível abrir o cancelamento agora."
-            yield rx.redirect("/recepcao/agenda")
         finally:
             self.is_loading = False
             yield
@@ -942,6 +946,8 @@ class ReceptionAgendaState(rx.State):
             self._reset_cancel()
             self._load_with_token(token)
             self.success_message = "Consulta cancelada; o histórico foi preservado."
+            async for event in self._refresh_daily_dashboard_if_loaded():
+                yield event
         except (
             SchedulingValidationError,
             SchedulingNotFoundError,

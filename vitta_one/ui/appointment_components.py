@@ -713,6 +713,11 @@ def _cancel_dialog() -> rx.Component:
     )
 
 
+def reception_agenda_dialogs() -> rx.Component:
+    """Shared appointment dialogs, mounted outside contextual menus."""
+    return rx.fragment(_arrival_dialog(), _reschedule_dialog(), _cancel_dialog())
+
+
 def reception_agenda_panel() -> rx.Component:
     """Reception agenda kept intentionally simple: filters, patient, slots and history."""
     return section_panel(
@@ -912,9 +917,7 @@ def reception_agenda_panel() -> rx.Component:
                     align_items="start",
                 ),
             ),
-            _arrival_dialog(),
-            _reschedule_dialog(),
-            _cancel_dialog(),
+            reception_agenda_dialogs(),
             spacing="4",
             align="stretch",
             width="100%",

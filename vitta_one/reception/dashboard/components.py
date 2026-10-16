@@ -4,8 +4,11 @@ import reflex as rx
 
 from vitta_one.appointment_scheduling.state import ReceptionAgendaState
 from vitta_one.reception.dashboard.state import ReceptionDashboardState as S
-from vitta_one.ui.appointment_components import consultation_status_badge
-from vitta_one.ui.components import empty_state, field_label, section_panel
+from vitta_one.ui.appointment_components import (
+    consultation_status_badge,
+    reception_agenda_dialogs,
+)
+from vitta_one.ui.components import empty_state, feedback_region, field_label, section_panel
 
 
 def _appointment_action_menu(row) -> rx.Component:
@@ -492,6 +495,11 @@ def reception_dashboard() -> rx.Component:
             ),
             rx.fragment(),
         ),
+        feedback_region(
+            ReceptionAgendaState.error_message,
+            ReceptionAgendaState.success_message,
+            "daily-appointment-action-feedback",
+        ),
         rx.cond(
             S.is_loading & S.has_loaded,
             rx.callout(
@@ -517,6 +525,7 @@ def reception_dashboard() -> rx.Component:
                 rx.fragment(),
             ),
         ),
+        reception_agenda_dialogs(),
         _appointment_details_dialog(),
         align="stretch", width="100%", spacing="4",
         class_name="vitta-reception-day-workspace",

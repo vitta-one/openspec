@@ -527,13 +527,12 @@ def test_reception_contextual_actions_use_authorized_agenda_flows(page: Page) ->
     )
     trigger.click()
     page.get_by_role("menuitem", name="Confirmar chegada").click()
-    expect(page).to_have_url(re.compile(r"/recepcao/agenda/?$"), timeout=30000)
+    expect(page).to_have_url(re.compile(r"/recepcao/?$"), timeout=30000)
     expect(page.get_by_role("dialog")).to_be_visible(timeout=30000)
     expect(page.get_by_role("heading", name="Confirmar chegada")).to_be_visible()
     page.keyboard.press("Escape")
 
     # Reuse the existing reschedule and destructive-confirmation dialogs.
-    page.goto(BASE + "/recepcao", wait_until="domcontentloaded")
     scheduled_row = page.locator(".vitta-reception-day-row").filter(has_text="Agendada").first
     scheduled_row.get_by_role("button", name=re.compile("Ações para")).click()
     page.get_by_role("menuitem", name="Reagendar").click()
