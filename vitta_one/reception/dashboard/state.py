@@ -93,10 +93,22 @@ class ReceptionDashboardState(rx.State):
     has_loaded: bool = False
     is_loading: bool = False
     error_message: str = ""
+    details_dialog_open: bool = False
+    details_patient_name: str = ""
+    details_patient_phone: str = ""
+    details_professional_name: str = ""
+    details_specialty_name: str = ""
+    details_time: str = ""
+    details_status_value: str = ""
+    details_status_label: str = ""
 
     @rx.var
     def has_appointments(self) -> bool:
         return bool(self.appointments)
+
+    @rx.var
+    def has_active_filters(self) -> bool:
+        return bool(self.search_query.strip()) or self.professional_filter != "__all__"
 
     @rx.var
     def showing_start(self) -> int:
@@ -137,6 +149,17 @@ class ReceptionDashboardState(rx.State):
         self.clinic_date_label = ""
         self.last_updated = ""
         self.has_loaded = False
+        self._clear_details()
+
+    def _clear_details(self) -> None:
+        self.details_dialog_open = False
+        self.details_patient_name = ""
+        self.details_patient_phone = ""
+        self.details_professional_name = ""
+        self.details_specialty_name = ""
+        self.details_time = ""
+        self.details_status_value = ""
+        self.details_status_label = ""
 
     def _apply_snapshot(self, snapshot) -> None:
         self.appointments = [
@@ -251,3 +274,65 @@ class ReceptionDashboardState(rx.State):
     async def refresh(self):
         async for event in self._reload():
             yield event
+
+    @rx.event
+    async def clear_filters(self):
+        self.search_query = ""
+        self.professional_filter = "__all__"
+        self.current_page = 1
+        async for event in self._reload():
+            yield event
+
+    @rx.event
+    async def show_appointment_details(self, consultation_id: int):
+        """Open a read-only operational summary from a fresh authorized snapshot."""
+        self.is_loading = True
+        self.error_message = ""
+        yield
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                snapshot = reception_day_operations(
+                    db,
+                    token=token,
+                    professional_id=self._professional_filter_id(),
+                    search=self.search_query,
+                    page=self.current_page,
+                    page_size=7,
+                )
+            self._apply_snapshot(snapshot)
+            row = next(
+                (item for item in self.appointments if item["id"] == consultation_id),
+                None,
+            )
+            if row is None:
+                self.error_message = (
+                    "Esta consulta saiu da lista atualizada. Atualize e tente novamente."
+                )
+                self._clear_details()
+                return
+            self.details_patient_name = row["patient_name"]
+            self.details_patient_phone = row["patient_phone"]
+            self.details_professional_name = row["professional_name"]
+            self.details_specialty_name = row["specialty_name"]
+            self.details_time = row["time"]
+            self.details_status_value = row["status_value"]
+            self.details_status_label = row["status_label"]
+            self.details_dialog_open = True
+        except (AuthenticationRequiredError, PasswordChangeRequiredError):
+            self._clear_data()
+            yield rx.redirect("/login")
+        except RoleForbiddenError:
+            self._clear_data()
+            yield rx.redirect("/acesso-negado")
+        except Exception:
+            self.error_message = "Não foi possível abrir os detalhes operacionais agora."
+        finally:
+            self.is_loading = False
+            yield
+
+    @rx.event
+    def set_details_dialog_open(self, is_open: bool) -> None:
+        self.details_dialog_open = is_open
+        if not is_open:
+            self._clear_details()
