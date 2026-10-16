@@ -9,8 +9,8 @@ from vitta_one.patient_queue.state import ReceptionQueueState
 
 _NAV_BY_ROLE = {
     Role.RECEPCIONISTA: (
-        ("Visão geral", "/recepcao", "layout_dashboard", "recepcao"),
-        ("Agenda e check-in", "/recepcao/agenda", "calendar_days", "agenda"),
+        ("Recepção", "/recepcao", "layout_dashboard", "recepcao"),
+        ("Agenda", "/recepcao/agenda", "calendar_days", "agenda"),
         ("Pacientes", "/recepcao/pacientes", "users", "pacientes"),
         ("Fila de espera", "/recepcao/fila", "list_ordered", "fila"),
     ),
@@ -494,12 +494,17 @@ def authenticated_topbar() -> rx.Component:
     return rx.el.header(
         _reception_topbar_search(),
         rx.hstack(
-            rx.box(class_name="vitta-online-dot", aria_hidden="true"),
+            rx.icon("layout_dashboard", size=16, color="var(--vitta-primary)"),
             rx.text(
-                "Sistema operacional",
+                rx.cond(
+                    AuthState.current_role == Role.RECEPCIONISTA.value,
+                    "Vitta-One · Recepção",
+                    "Sessão ativa",
+                ),
                 font_size="0.78rem",
                 font_weight="700",
                 color="var(--vitta-text-muted)",
+                white_space="nowrap",
             ),
             spacing="2",
             align="center",

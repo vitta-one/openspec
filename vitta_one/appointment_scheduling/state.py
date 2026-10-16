@@ -497,6 +497,56 @@ class ReceptionAgendaState(rx.State):
         self.cancel_patient_name = ""
         self.cancel_scheduled_at = ""
 
+    def _begin_arrival_from_row(self, row: ConsultationRow) -> None:
+        self._clear_feedback()
+        self._reset_reschedule()
+        self._reset_cancel()
+        self.arrival_consultation_id = row["id"]
+        self.arrival_patient_name = row["patient_name"]
+        self.arrival_professional_name = row["professional_name"]
+        self.arrival_scheduled_at = row["scheduled_at"]
+        self.arrival_symptoms = ""
+        self.arrival_priority = "VERDE"
+        self.arrival_dialog_open = True
+
+    def _begin_reschedule_from_row(self, row: ConsultationRow) -> None:
+        self._clear_feedback()
+        self._reset_arrival()
+        self._reset_cancel()
+        self.reschedule_consultation_id = row["id"]
+        self.reschedule_patient_name = row["patient_name"]
+        self.selected_new_slot = "__none__"
+        self.reschedule_dialog_open = True
+
+    def _begin_cancel_from_row(self, row: ConsultationRow) -> None:
+        self._clear_feedback()
+        self._reset_arrival()
+        self._reset_reschedule()
+        self.cancel_consultation_id = row["id"]
+        self.cancel_patient_name = row["patient_name"]
+        self.cancel_scheduled_at = row["scheduled_at"]
+        self.cancel_dialog_open = True
+
+    async def _refresh_daily_dashboard_if_loaded(self):
+        """Keep the daily workspace current after an action opened from its menu."""
+        from vitta_one.reception.dashboard.state import ReceptionDashboardState
+
+        dashboard = await self.get_state(ReceptionDashboardState)
+        if dashboard.has_loaded:
+            async for event in dashboard.refresh():
+                yield event
+
+    def _current_consultation(self, consultation_id: int) -> ConsultationRow:
+        row = next(
+            (item for item in self.consultations if item["id"] == consultation_id),
+            None,
+        )
+        if row is None:
+            raise SchedulingNotFoundError(
+                "A consulta não está mais na agenda atualizada."
+            )
+        return row
+
     async def _authorization_redirect(self, exc: Exception):
         self._clear_sensitive()
         if isinstance(exc, AuthenticationRequiredError):
@@ -634,16 +684,46 @@ class ReceptionAgendaState(rx.State):
         professional_name: str,
         scheduled_at: str,
     ) -> None:
+        self._begin_arrival_from_row(
+            {
+                "id": consultation_id,
+                "patient_id": 0,
+                "patient_name": patient_name,
+                "professional_id": 0,
+                "professional_name": professional_name,
+                "slot_id": 0,
+                "scheduled_at": scheduled_at,
+                "status": ConsultationStatus.AGENDADA.value,
+                "status_label": ConsultationStatus.AGENDADA.label,
+            }
+        )
+
+    @rx.event
+    async def open_arrival_from_daily_operations(self, consultation_id: int):
+        """Revalidate a daily row before opening the existing arrival flow."""
+        self.is_loading = True
         self._clear_feedback()
-        self._reset_reschedule()
-        self._reset_cancel()
-        self.arrival_consultation_id = consultation_id
-        self.arrival_patient_name = patient_name
-        self.arrival_professional_name = professional_name
-        self.arrival_scheduled_at = scheduled_at
-        self.arrival_symptoms = ""
-        self.arrival_priority = "VERDE"
-        self.arrival_dialog_open = True
+        yield
+        try:
+            token = await self._token()
+            self._load_with_token(token)
+            row = self._current_consultation(consultation_id)
+            if row["status"] != ConsultationStatus.AGENDADA.value:
+                raise SchedulingTransitionError(
+                    "A chegada só pode ser confirmada para uma consulta agendada."
+                )
+            self._begin_arrival_from_row(row)
+            yield
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except (SchedulingNotFoundError, SchedulingTransitionError) as exc:
+            self.error_message = str(exc)
+        except Exception:
+            self.error_message = "Não foi possível abrir a confirmação de chegada."
+        finally:
+            self.is_loading = False
+            yield
 
     @rx.event
     def set_arrival_dialog_open(self, is_open: bool) -> None:
@@ -683,6 +763,8 @@ class ReceptionAgendaState(rx.State):
             queue_state = await self.get_state(ReceptionQueueState)
             queue_state._load_queue_with_token(token)
             self.success_message = "Chegada confirmada e paciente incluído na fila."
+            async for event in self._refresh_daily_dashboard_if_loaded():
+                yield event
         except (
             CareLifecycleValidationError,
             CareLifecycleTransitionError,
@@ -700,11 +782,46 @@ class ReceptionAgendaState(rx.State):
 
     @rx.event
     def begin_reschedule(self, consultation_id: int, patient_name: str) -> None:
+        self._begin_reschedule_from_row(
+            {
+                "id": consultation_id,
+                "patient_id": 0,
+                "patient_name": patient_name,
+                "professional_id": 0,
+                "professional_name": "",
+                "slot_id": 0,
+                "scheduled_at": "",
+                "status": ConsultationStatus.AGENDADA.value,
+                "status_label": ConsultationStatus.AGENDADA.label,
+            }
+        )
+
+    @rx.event
+    async def open_reschedule_from_daily_operations(self, consultation_id: int):
+        """Load authorized availability and verify the consultation before opening."""
+        self.is_loading = True
         self._clear_feedback()
-        self.reschedule_consultation_id = consultation_id
-        self.reschedule_patient_name = patient_name
-        self.selected_new_slot = "__none__"
-        self.reschedule_dialog_open = True
+        yield
+        try:
+            token = await self._token()
+            self._load_with_token(token)
+            row = self._current_consultation(consultation_id)
+            if row["status"] != ConsultationStatus.AGENDADA.value:
+                raise SchedulingTransitionError(
+                    "Somente consultas agendadas podem ser reagendadas."
+                )
+            self._begin_reschedule_from_row(row)
+            yield
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except (SchedulingNotFoundError, SchedulingTransitionError) as exc:
+            self.error_message = str(exc)
+        except Exception:
+            self.error_message = "Não foi possível abrir o reagendamento agora."
+        finally:
+            self.is_loading = False
+            yield
 
     @rx.event
     def set_reschedule_dialog_open(self, is_open: bool) -> None:
@@ -737,6 +854,8 @@ class ReceptionAgendaState(rx.State):
             self._reset_reschedule()
             self._load_with_token(token)
             self.success_message = "Consulta reagendada."
+            async for event in self._refresh_daily_dashboard_if_loaded():
+                yield event
         except (
             SchedulingValidationError,
             SchedulingConflictError,
@@ -760,11 +879,46 @@ class ReceptionAgendaState(rx.State):
         patient_name: str,
         scheduled_at: str,
     ) -> None:
+        self._begin_cancel_from_row(
+            {
+                "id": consultation_id,
+                "patient_id": 0,
+                "patient_name": patient_name,
+                "professional_id": 0,
+                "professional_name": "",
+                "slot_id": 0,
+                "scheduled_at": scheduled_at,
+                "status": ConsultationStatus.AGENDADA.value,
+                "status_label": ConsultationStatus.AGENDADA.label,
+            }
+        )
+
+    @rx.event
+    async def open_cancel_from_daily_operations(self, consultation_id: int):
+        """Revalidate a daily row before opening the existing cancellation flow."""
+        self.is_loading = True
         self._clear_feedback()
-        self.cancel_consultation_id = consultation_id
-        self.cancel_patient_name = patient_name
-        self.cancel_scheduled_at = scheduled_at
-        self.cancel_dialog_open = True
+        yield
+        try:
+            token = await self._token()
+            self._load_with_token(token)
+            row = self._current_consultation(consultation_id)
+            if row["status"] != ConsultationStatus.AGENDADA.value:
+                raise SchedulingTransitionError(
+                    "Somente consultas agendadas podem ser canceladas."
+                )
+            self._begin_cancel_from_row(row)
+            yield
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except (SchedulingNotFoundError, SchedulingTransitionError) as exc:
+            self.error_message = str(exc)
+        except Exception:
+            self.error_message = "Não foi possível abrir o cancelamento agora."
+        finally:
+            self.is_loading = False
+            yield
 
     @rx.event
     def set_cancel_dialog_open(self, is_open: bool) -> None:
@@ -792,6 +946,8 @@ class ReceptionAgendaState(rx.State):
             self._reset_cancel()
             self._load_with_token(token)
             self.success_message = "Consulta cancelada; o histórico foi preservado."
+            async for event in self._refresh_daily_dashboard_if_loaded():
+                yield event
         except (
             SchedulingValidationError,
             SchedulingNotFoundError,

@@ -377,7 +377,11 @@ def login_as_reception(page: Page) -> None:
 def test_reception_daily_operations_table_and_filters(page: Page) -> None:
     """Reception works from real daily appointments, not an abstract KPI dashboard."""
     login_as_reception(page)
-    expect(page.get_by_text(FIXTURE["day_first_patient_name"], exact=True)).to_be_visible()
+    expect(
+        page.locator(".vitta-reception-day-table-scroll").get_by_text(
+            FIXTURE["day_first_patient_name"], exact=True
+        )
+    ).to_be_visible()
     expect(page.locator(".vitta-reception-day-row")).to_have_count(7)
     expect(page.get_by_label("Página atual")).to_have_text("1 de 4")
     expect(page.get_by_role("status").filter(has_text="de 24 consultas de hoje")).to_be_visible()
@@ -389,7 +393,18 @@ def test_reception_daily_operations_table_and_filters(page: Page) -> None:
     search.fill(FIXTURE["day_first_patient_phone"])
     search.press("Enter")
     expect(page.locator(".vitta-reception-day-row")).to_have_count(1, timeout=30000)
-    expect(page.get_by_text(FIXTURE["day_first_patient_name"], exact=True)).to_be_visible()
+    expect(
+        page.locator(".vitta-reception-day-table-scroll").get_by_text(
+            FIXTURE["day_first_patient_name"], exact=True
+        )
+    ).to_be_visible()
+
+    # An empty search result offers an explicit way to restore the complete day.
+    search.fill("Paciente que não existe")
+    search.press("Enter")
+    expect(page.locator(".vitta-reception-day-row")).to_have_count(0, timeout=30000)
+    page.get_by_role("button", name="Limpar filtros").click()
+    expect(page.locator(".vitta-reception-day-row")).to_have_count(7, timeout=30000)
 
     # Restore the day, then filter by a professional from the persisted directory.
     search.fill("")
@@ -418,11 +433,18 @@ def test_reception_routes_and_responsive_daily_table(page: Page) -> None:
     expect(page.get_by_role("link", name="Ir para Agenda")).to_be_visible()
     expect(page.get_by_role("button", name="Nova consulta")).to_be_visible()
 
-    for width in (1280, 1264, 1200, 768, 375, 320):
+    for width in (1440, 1280, 1024, 768, 375, 320):
         page.set_viewport_size({"width": width, "height": 760})
         assert page.evaluate(
             "document.documentElement.scrollWidth <= window.innerWidth + 2"
         ), overflowing_elements(page)
+        if width <= 672:
+            expect(page.locator(".vitta-reception-day-cards")).to_be_visible()
+            expect(page.locator(".vitta-reception-day-card")).to_have_count(7)
+            expect(page.locator(".vitta-reception-day-table-scroll")).to_be_hidden()
+        else:
+            expect(page.locator(".vitta-reception-day-table-scroll")).to_be_visible()
+            expect(page.locator(".vitta-reception-day-cards")).to_be_hidden()
         page.screenshot(
             path=f"qa-artifacts/dashboard-recepcao-{width}px.png",
             full_page=True,
@@ -474,6 +496,75 @@ def test_doctor_cannot_access_reception_dashboard_or_modules(page: Page) -> None
         ).to_have_count(0)
 
 
+
+def test_reception_contextual_actions_use_authorized_agenda_flows(page: Page) -> None:
+    login_as_reception(page)
+    scheduled_row = page.locator(".vitta-reception-day-row").filter(has_text="Agendada").first
+    trigger = scheduled_row.get_by_role("button", name=re.compile("Ações para"))
+
+    # Radix menu opens and closes from the keyboard and exposes only named actions.
+    trigger.focus()
+    page.keyboard.press("Enter")
+    expect(page.get_by_role("menuitem", name="Ver detalhes operacionais")).to_be_visible()
+    expect(page.get_by_role("menuitem", name="Confirmar chegada")).to_be_visible()
+    expect(page.get_by_role("menuitem", name="Reagendar")).to_be_visible()
+    expect(page.get_by_role("menuitem", name="Cancelar consulta")).to_be_visible()
+    page.keyboard.press("Escape")
+
+    trigger.click()
+    page.get_by_role("menuitem", name="Ver detalhes operacionais").click()
+    details = page.get_by_role("dialog")
+    expect(details).to_be_visible(timeout=30000)
+    expect(details.get_by_text("Paciente QA Operação 06", exact=True)).to_be_visible()
+    expect(details.get_by_text("Status", exact=True)).to_be_visible()
+    expect(page.get_by_text("Sintoma fictício QA", exact=False)).to_have_count(0)
+    page.keyboard.press("Escape")
+    expect(details).to_be_hidden(timeout=15000)
+
+    # The action revalidates the persisted row and opens the existing protected dialog.
+    trigger = page.locator(".vitta-reception-day-row").filter(has_text="Agendada").first.get_by_role(
+        "button", name=re.compile("Ações para")
+    )
+    trigger.click()
+    page.get_by_role("menuitem", name="Confirmar chegada").click()
+    expect(page).to_have_url(re.compile(r"/recepcao/?$"), timeout=30000)
+    expect(page.get_by_role("dialog")).to_be_visible(timeout=30000)
+    expect(page.get_by_role("heading", name="Confirmar chegada")).to_be_visible()
+    page.keyboard.press("Escape")
+
+    # Reuse the existing reschedule and destructive-confirmation dialogs.
+    scheduled_row = page.locator(".vitta-reception-day-row").filter(has_text="Agendada").first
+    scheduled_row.get_by_role("button", name=re.compile("Ações para")).click()
+    page.get_by_role("menuitem", name="Reagendar").click()
+    expect(page.get_by_role("dialog")).to_be_visible(timeout=30000)
+    expect(page.get_by_role("heading", name="Reagendar consulta")).to_be_visible()
+    page.keyboard.press("Escape")
+
+    scheduled_row = page.locator(".vitta-reception-day-row").filter(has_text="Agendada").first
+    scheduled_row.get_by_role("button", name=re.compile("Ações para")).click()
+    page.get_by_role("menuitem", name="Cancelar consulta").click()
+    expect(page.get_by_role("dialog")).to_be_visible(timeout=30000)
+    expect(page.get_by_role("heading", name="Cancelar consulta")).to_be_visible()
+    page.keyboard.press("Escape")
+
+    # A confirmed consultation can open the queue, but cannot be confirmed again.
+    confirmed_row = page.locator(".vitta-reception-day-row").filter(has_text="Confirmada").first
+    confirmed_row.get_by_role("button", name=re.compile("Ações para")).click()
+    expect(page.get_by_role("menuitem", name="Abrir fila de espera")).to_be_visible()
+    expect(page.get_by_role("menuitem", name="Confirmar chegada")).to_have_count(0)
+    page.get_by_role("menuitem", name="Abrir fila de espera").click()
+    expect(page).to_have_url(re.compile(r"/recepcao/fila/?$"), timeout=30000)
+
+    # A cancelled consultation remains inspectable but has no transition actions.
+    page.goto(BASE + "/recepcao", wait_until="domcontentloaded")
+    cancelled_row = page.locator(".vitta-reception-day-row").filter(has_text="Cancelada").first
+    cancelled_row.get_by_role("button", name=re.compile("Ações para")).click()
+    expect(page.get_by_role("menuitem", name="Ver detalhes operacionais")).to_be_visible()
+    expect(page.get_by_role("menuitem", name="Abrir Agenda")).to_be_visible()
+    expect(page.get_by_role("menuitem", name="Confirmar chegada")).to_have_count(0)
+    expect(page.get_by_role("menuitem", name="Reagendar")).to_have_count(0)
+    expect(page.get_by_role("menuitem", name="Cancelar consulta")).to_have_count(0)
+
 def test_reception_dashboard_is_read_only_and_refreshes(page: Page) -> None:
     login_as_reception(page)
     expect(page.locator(".vitta-reception-day-row")).to_have_count(7, timeout=30000)
@@ -483,8 +574,12 @@ def test_reception_dashboard_is_read_only_and_refreshes(page: Page) -> None:
     assert page.get_by_text("Sintoma histórico fictício QA", exact=False).count() == 0
     assert page.get_by_text("Medicamento Fictício QA", exact=False).count() == 0
 
-    agenda_link = page.get_by_role("link", name=re.compile("Abrir Agenda para")).first
-    expect(agenda_link).to_have_attribute("href", "/recepcao/agenda")
+    page.locator(".vitta-reception-day-row").first.get_by_role(
+        "button", name=re.compile("Ações para")
+    ).click()
+    expect(page.get_by_role("menuitem", name="Ver detalhes operacionais")).to_be_visible()
+    expect(page.get_by_role("menuitem", name="Abrir Agenda")).to_be_visible()
+    page.keyboard.press("Escape")
     page.get_by_role("button", name="Atualizar consultas de hoje").click()
     expect(page.locator(".vitta-reception-day-row")).to_have_count(7, timeout=30000)
     expect(page.locator(".vitta-reception-day-updated")).to_be_visible(timeout=30000)

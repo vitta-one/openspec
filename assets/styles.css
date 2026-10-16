@@ -1144,7 +1144,15 @@ button:disabled,
 
 /* Reception day operations table. Uses existing Vitta typography and color tokens. */
 .vitta-reception-day-workspace {
-  gap: 1.25rem;
+  gap: 1rem;
+}
+
+.vitta-reception-day-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: end;
+  gap: 1.15rem;
+  min-width: 0;
 }
 
 .vitta-reception-day-header {
@@ -1152,7 +1160,11 @@ button:disabled,
 }
 
 .vitta-reception-day-title {
-  max-width: 35ch;
+  max-width: 16ch;
+}
+
+.vitta-reception-day-date-group {
+  margin-top: 0.8rem;
 }
 
 .vitta-reception-day-date {
@@ -1166,16 +1178,20 @@ button:disabled,
 }
 
 .vitta-reception-day-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: end;
+  gap: 0.65rem;
   min-width: 0;
-  gap: 0.75rem;
 }
 
-.vitta-reception-day-search-form {
+.vitta-reception-day-search-form,
+.vitta-reception-day-professional-filter {
   min-width: 0;
 }
 
 .vitta-reception-day-search-control {
-  flex: 1 1 20rem;
+  flex: 1 1 14rem;
   min-width: 0;
 }
 
@@ -1205,12 +1221,11 @@ button:disabled,
   flex: 0 0 auto;
 }
 
-.vitta-reception-day-professional-filter {
-  min-width: 12rem;
-}
-
 .vitta-reception-day-actions {
+  grid-column: 1 / -1;
+  display: flex;
   flex: 0 0 auto;
+  justify-content: flex-end;
   min-width: 0;
 }
 
@@ -1241,7 +1256,8 @@ button:disabled,
 }
 
 .vitta-reception-day-secondary-action:focus-visible,
-.vitta-reception-day-action:focus-visible {
+.vitta-reception-day-action:focus-visible,
+.vitta-reception-day-menu-item:focus-visible {
   outline: 3px solid var(--vitta-focus);
   outline-offset: 2px;
 }
@@ -1279,7 +1295,7 @@ button:disabled,
 }
 
 .vitta-reception-day-table th {
-  padding: 0.8rem 1rem;
+  padding: 0.65rem 0.9rem;
   border-bottom: 1px solid var(--vitta-border);
   color: var(--vitta-text-muted);
   background: var(--vitta-surface-subtle);
@@ -1325,10 +1341,10 @@ button:disabled,
 }
 
 .vitta-reception-day-table td {
-  padding: 0.9rem 1rem;
+  padding: 0.58rem 0.9rem;
   border-bottom: 1px solid var(--vitta-border);
   vertical-align: middle;
-  line-height: 1.4;
+  line-height: 1.35;
 }
 
 .vitta-reception-day-row:last-child td {
@@ -1340,7 +1356,7 @@ button:disabled,
 }
 
 .vitta-reception-day-time {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1367,8 +1383,22 @@ button:disabled,
   background: var(--vitta-primary-soft);
 }
 
+.vitta-reception-day-menu-item[data-highlighted] {
+  color: var(--vitta-text);
+  background: var(--vitta-surface-subtle);
+}
+
+.vitta-reception-day-menu-danger {
+  color: var(--vitta-danger);
+}
+
+.vitta-reception-day-menu-danger[data-highlighted] {
+  color: var(--vitta-danger);
+  background: var(--vitta-danger-soft);
+}
+
 .vitta-reception-day-pagination {
-  padding: 1rem 1.15rem;
+  padding: 0.75rem 1rem;
   border-top: 1px solid var(--vitta-border);
 }
 
@@ -1380,11 +1410,44 @@ button:disabled,
   background: var(--vitta-surface);
 }
 
+.vitta-reception-day-cards {
+  display: none !important;
+}
+
+.vitta-reception-day-card {
+  min-width: 0;
+  padding: 0.9rem;
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-panel);
+  background: var(--vitta-surface);
+  box-shadow: var(--vitta-shadow-xs);
+}
+
+.vitta-reception-day-card-time {
+  margin-bottom: 0.25rem;
+  color: var(--vitta-primary);
+  font-size: 1.05rem;
+}
+
+.vitta-reception-day-detail-row {
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--vitta-border);
+}
+
+.vitta-reception-day-detail-row:last-of-type {
+  border-bottom: 0;
+}
+
 @media (min-width: 80rem) {
+  .vitta-reception-day-top {
+    grid-template-columns: minmax(18rem, 0.82fr) minmax(29rem, 1.18fr);
+    gap: 1.35rem;
+  }
+
   .vitta-reception-day-toolbar {
-    display: grid;
-    grid-template-columns: minmax(20rem, 1.1fr) minmax(13rem, 0.8fr) auto;
-    gap: 0.5rem;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
   }
 
   .vitta-reception-day-refresh-label {
@@ -1400,8 +1463,7 @@ button:disabled,
 
 @media (max-width: 74.99rem) {
   .vitta-reception-day-actions {
-    display: flex;
-    flex-wrap: wrap;
+    justify-content: flex-start;
   }
 }
 
@@ -1413,11 +1475,7 @@ button:disabled,
   }
 
   .vitta-reception-day-search-control {
-    flex: 0 0 auto;
-  }
-
-  .vitta-reception-day-professional-filter {
-    min-width: 0;
+    flex: 1 1 auto;
   }
 
   .vitta-reception-day-actions {
@@ -1426,20 +1484,25 @@ button:disabled,
 
   .vitta-reception-day-secondary-action,
   .vitta-reception-day-primary-action {
-    flex: none;
-    width: 100%;
+    flex: 1 1 0;
+    width: auto;
   }
 
   .vitta-reception-day-refresh {
     flex: 0 0 auto;
   }
 
-  .vitta-reception-day-table {
-    min-width: 56rem;
+  .vitta-reception-day-table-scroll {
+    display: none;
+  }
+
+  .vitta-reception-day-cards {
+    display: flex !important;
+    padding: 0.75rem;
   }
 
   .vitta-reception-day-pagination {
-    padding: 0.9rem;
+    padding: 0.85rem;
   }
 }
 
@@ -1449,7 +1512,6 @@ button:disabled,
     transition: none;
   }
 }
-
 
 .vitta-topbar-search-form {
   position: relative;
