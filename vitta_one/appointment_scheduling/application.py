@@ -1,16 +1,18 @@
 """Authorized application operations for appointment scheduling."""
 
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from vitta_one.appointment_scheduling.service import (
     AgendaSnapshot,
     AvailabilitySlotItem,
     ProfessionalOption,
+    SchedulingValidationError,
     cancel_consultation,
     create_availability_slot,
     get_agenda,
     list_active_professionals,
     list_availability_slots,
+    list_consultations,
     reschedule_consultation,
     schedule_consultation,
     set_availability_slot_active,
@@ -22,6 +24,8 @@ from vitta_one.appointment_scheduling.temporal import (
 from vitta_one.auth.authorization import require_role
 from vitta_one.auth.roles import Role
 from vitta_one.models.appointment import Consultation, ProfessionalAvailabilitySlot
+from vitta_one.models.patient_queue import Patient
+from vitta_one.models.professional import Professional
 
 
 def admin_list_active_professionals(db: Session, *, token: str) -> list[ProfessionalOption]:
@@ -114,12 +118,73 @@ def reception_reschedule_consultation(
     consultation_id: int,
     new_slot_id: int,
 ) -> Consultation:
-    require_role(db, token, Role.RECEPCIONISTA)
+    identity = require_role(db, token, Role.RECEPCIONISTA)
     return reschedule_consultation(
         db,
         consultation_id=consultation_id,
         new_slot_id=new_slot_id,
+        changed_by_user_id=identity.id,
     )
+
+
+def doctor_get_my_agenda(
+    db: Session,
+    *,
+    token: str,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> tuple[Professional, tuple]:
+    """Return an authenticated doctor's own schedule, never a client-selected one."""
+    identity = require_role(db, token, Role.MEDICO)
+    professional = db.exec(
+        select(Professional).where(Professional.user_id == identity.id)
+    ).first()
+    if professional is None or not professional.is_active or professional.id is None:
+        raise SchedulingValidationError(
+            "Sua conta ainda não está associada a um profissional ativo."
+        )
+    start_at, end_at = clinic_date_range_to_utc(start_date, end_date)
+    return professional, tuple(
+        list_consultations(
+            db,
+            professional_id=professional.id,
+            start_at=start_at,
+            end_at=end_at,
+        )
+    )
+
+
+def patient_get_my_agenda(
+    db: Session,
+    *,
+    token: str,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> tuple[Patient, tuple]:
+    """Return a patient's own schedule by resolving its link from the session."""
+    identity = require_role(db, token, Role.PACIENTE)
+    patient = db.exec(select(Patient).where(Patient.user_id == identity.id)).first()
+    if patient is None or patient.id is None:
+        raise SchedulingValidationError(
+            "O cadastro do paciente não está disponível para esta conta."
+        )
+    start_at, end_at = clinic_date_range_to_utc(start_date, end_date)
+    rows = list_consultations(
+        db, patient_id=patient.id, start_at=start_at, end_at=end_at
+    )
+    return patient, tuple(rows)
+
+
+def doctor_list_my_patients(db: Session, *, token: str) -> tuple[Professional, tuple]:
+    """List patients derived only from the authenticated doctor's consultations."""
+    professional, consultations = doctor_get_my_agenda(db, token=token)
+    seen: set[int] = set()
+    result = []
+    for item in consultations:
+        if item.patient_id not in seen:
+            seen.add(item.patient_id)
+            result.append((item.patient_id, item.patient_name, item.scheduled_at))
+    return professional, tuple(result)
 
 
 def reception_cancel_consultation(

@@ -10,6 +10,7 @@ class Role(str, Enum):
     RECEPCIONISTA = "RECEPCIONISTA"
     MEDICO = "MEDICO"
     FINANCEIRO = "FINANCEIRO"
+    PACIENTE = "PACIENTE"
 
     @property
     def label(self) -> str:
@@ -19,6 +20,7 @@ class Role(str, Enum):
             Role.RECEPCIONISTA: "Recepcionista",
             Role.MEDICO: "Médico",
             Role.FINANCEIRO: "Financeiro",
+            Role.PACIENTE: "Paciente",
         }[self]
 
     @property
@@ -29,4 +31,5 @@ class Role(str, Enum):
             Role.RECEPCIONISTA: "/recepcao",
             Role.MEDICO: "/medico",
             Role.FINANCEIRO: "/financeiro",
+            Role.PACIENTE: "/paciente",
         }[self]

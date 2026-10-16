@@ -38,6 +38,8 @@ _ROLE_BY_ROUTE = {
     "/recepcao/agenda": Role.RECEPCIONISTA,
     "/recepcao/pacientes": Role.RECEPCIONISTA,
     "/recepcao/fila": Role.RECEPCIONISTA,
+    "/medico/agenda": Role.MEDICO,
+    "/medico/pacientes": Role.MEDICO,
 }
 _ADMIN_PREVIEW_ROUTES = frozenset(
     {
@@ -90,6 +92,28 @@ class AuthState(rx.State):
         self.current_role = ""
         self.verified_path = ""
 
+    async def _clear_sensitive_states(self) -> None:
+        """Remove role-scoped patient and clinical projections from browser state."""
+        from vitta_one.admin_preview.state import AdminPreviewState
+        from vitta_one.clinical_prescription.state import PrintPrescriptionState
+        from vitta_one.doctor_workspace.state import DoctorWorkspaceState
+        from vitta_one.patient_portal.state import PatientPortalState
+        from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
+
+        queue = await self.get_state(ReceptionQueueState)
+        queue._clear_sensitive_view()
+        doctor = await self.get_state(DoctorQueueState)
+        doctor._clear_active()
+        workspace = await self.get_state(DoctorWorkspaceState)
+        workspace._clear()
+        portal = await self.get_state(PatientPortalState)
+        portal._clear()
+        portal.error_message = ""
+        prescriptions = await self.get_state(PrintPrescriptionState)
+        prescriptions._clear()
+        preview = await self.get_state(AdminPreviewState)
+        preview._clear()
+
     @rx.var
     def role_label(self) -> str:
         """Return the localized current role label without trusting client input."""
@@ -112,7 +136,7 @@ class AuthState(rx.State):
         self.show_password = not self.show_password
 
     @rx.event
-    def prepare_login(self):
+    async def prepare_login(self):
         """Restore a valid session on the login page or expose the login form."""
         self.auth_checked = False
         self.login_error = ""
@@ -120,6 +144,7 @@ class AuthState(rx.State):
         yield
 
         if not self.session_token:
+            await self._clear_sensitive_states()
             self._clear_identity()
             self.auth_checked = True
             yield
@@ -129,12 +154,14 @@ class AuthState(rx.State):
             with rx.session() as db:
                 identity = require_authenticated(db, self.session_token)
         except AuthenticationRequiredError:
+            await self._clear_sensitive_states()
             self.session_token = ""
             self._clear_identity()
             self.auth_checked = True
             yield rx.remove_cookie(SESSION_COOKIE_NAME)
             return
         except Exception:
+            await self._clear_sensitive_states()
             self._clear_identity()
             self.auth_checked = True
             self.login_error = _SYSTEM_LOGIN_ERROR
@@ -149,7 +176,7 @@ class AuthState(rx.State):
         )
 
     @rx.event
-    def login(self, form_data: LoginFormData):
+    async def login(self, form_data: LoginFormData):
         """Authenticate credentials, create the opaque server session, and route by role."""
         self.login_error = ""
         self.shell_error = ""
@@ -197,6 +224,7 @@ class AuthState(rx.State):
             yield
             return
 
+        await self._clear_sensitive_states()
         self.session_token = token
         self._set_identity(email=authenticated_email, role=role)
         self.auth_checked = True
@@ -208,13 +236,14 @@ class AuthState(rx.State):
         )
 
     @rx.event
-    def route_from_root(self):
+    async def route_from_root(self):
         """Route the app root to login or the authenticated role dashboard."""
         self.auth_checked = False
         self.shell_error = ""
         yield
 
         if not self.session_token:
+            await self._clear_sensitive_states()
             self._clear_identity()
             self.auth_checked = True
             yield rx.redirect("/login")
@@ -224,6 +253,7 @@ class AuthState(rx.State):
             with rx.session() as db:
                 identity = require_authenticated(db, self.session_token)
         except AuthenticationRequiredError:
+            await self._clear_sensitive_states()
             self.session_token = ""
             self._clear_identity()
             self.auth_checked = True
@@ -231,6 +261,7 @@ class AuthState(rx.State):
             yield rx.redirect("/login")
             return
         except Exception:
+            await self._clear_sensitive_states()
             self._clear_identity()
             self.auth_checked = True
             yield rx.redirect("/login")
@@ -244,7 +275,7 @@ class AuthState(rx.State):
         )
 
     @rx.event
-    def load_protected(self):
+    async def load_protected(self):
         """Revalidate session and derive the required role from the server-observed route."""
         self.auth_checked = False
         self.shell_error = ""
@@ -261,6 +292,7 @@ class AuthState(rx.State):
             with rx.session() as db:
                 identity = require_role(db, self.session_token, required_role)
         except AuthenticationRequiredError:
+            await self._clear_sensitive_states()
             self.session_token = ""
             self._clear_identity()
             self.auth_checked = True
@@ -268,16 +300,19 @@ class AuthState(rx.State):
             yield rx.redirect("/login")
             return
         except RoleForbiddenError as exc:
+            await self._clear_sensitive_states()
             self._set_identity(email=exc.identity.email, role=exc.identity.role)
             self.auth_checked = True
             yield rx.redirect("/acesso-negado")
             return
         except PasswordChangeRequiredError:
+            await self._clear_sensitive_states()
             self._clear_identity()
             self.auth_checked = True
             yield rx.redirect("/primeiro-acesso")
             return
         except Exception:
+            await self._clear_sensitive_states()
             self._clear_identity()
             self.auth_checked = True
             yield rx.redirect("/login")
@@ -338,7 +373,7 @@ class AuthState(rx.State):
         yield
 
     @rx.event
-    def prepare_forbidden(self):
+    async def prepare_forbidden(self):
         """Keep the forbidden page available only to an authenticated identity."""
         self.auth_checked = False
         self.shell_error = ""
@@ -348,6 +383,7 @@ class AuthState(rx.State):
             with rx.session() as db:
                 identity = require_authenticated(db, self.session_token)
         except AuthenticationRequiredError:
+            await self._clear_sensitive_states()
             self.session_token = ""
             self._clear_identity()
             self.auth_checked = True
@@ -355,6 +391,7 @@ class AuthState(rx.State):
             yield rx.redirect("/login")
             return
         except Exception:
+            await self._clear_sensitive_states()
             self._clear_identity()
             self.auth_checked = True
             yield rx.redirect("/login")
@@ -365,7 +402,7 @@ class AuthState(rx.State):
         yield
 
     @rx.event
-    def load_first_access(self):
+    async def load_first_access(self):
         """Allow only provisional Medical accounts to reach password rotation."""
         self.auth_checked = False
         self.first_access_error = ""
@@ -374,6 +411,7 @@ class AuthState(rx.State):
             with rx.session() as db:
                 identity = require_authenticated(db, self.session_token)
         except AuthenticationRequiredError:
+            await self._clear_sensitive_states()
             self.session_token = ""
             self._clear_identity()
             self.auth_checked = True
@@ -381,6 +419,7 @@ class AuthState(rx.State):
             yield rx.redirect("/login")
             return
         except Exception:
+            await self._clear_sensitive_states()
             self._clear_identity()
             self.auth_checked = True
             yield rx.redirect("/login")
@@ -478,16 +517,7 @@ class AuthState(rx.State):
 
         # Clear clinical/read-only QA projections held by sibling states before
         # removing the authenticated browser context.
-        from vitta_one.admin_preview.state import AdminPreviewState
-        from vitta_one.clinical_prescription.state import PrintPrescriptionState
-        from vitta_one.patient_queue.state import DoctorQueueState
-
-        doctor_state = await self.get_state(DoctorQueueState)
-        doctor_state._clear_active()
-        print_state = await self.get_state(PrintPrescriptionState)
-        print_state._clear()
-        admin_preview_state = await self.get_state(AdminPreviewState)
-        admin_preview_state._clear()
+        await self._clear_sensitive_states()
 
         self.session_token = ""
         self._clear_identity()

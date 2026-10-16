@@ -130,3 +130,37 @@ class Consultation(rx.Model, table=True):
         default_factory=utc_now,
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
+
+
+class ConsultationScheduleChange(rx.Model, table=True):
+    """Auditable old and new scheduled instants for a rescheduled consultation."""
+
+    __tablename__ = "consultation_schedule_changes"
+
+    consultation_id: int = Field(
+        sa_column=Column(
+            Integer,
+            ForeignKey("consultations.id", ondelete="RESTRICT"),
+            nullable=False,
+            index=True,
+        )
+    )
+    previous_scheduled_at: datetime = Field(
+        sa_column=Column(DateTime(timezone=True), nullable=False)
+    )
+    new_scheduled_at: datetime = Field(
+        sa_column=Column(DateTime(timezone=True), nullable=False)
+    )
+    changed_by_user_id: int | None = Field(
+        default=None,
+        sa_column=Column(
+            Integer,
+            ForeignKey("auth_users.id", ondelete="SET NULL"),
+            nullable=True,
+            index=True,
+        ),
+    )
+    changed_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=Column(DateTime(timezone=True), nullable=False, index=True),
+    )

@@ -110,6 +110,145 @@ def patient_selection_summary() -> rx.Component:
     )
 
 
+def selected_patient_operations() -> rx.Component:
+    return rx.cond(
+        ReceptionQueueState.selected_patient_id > 0,
+        rx.vstack(
+            section_panel(
+                rx.vstack(
+                    rx.heading("Cadastro operacional", size="4"),
+                    rx.text(
+                        "Atualize somente nome e telefone. O CPF e o vínculo do portal não podem ser alterados aqui.",
+                        size="2",
+                        color="var(--vitta-text-muted)",
+                        line_height="1.5",
+                    ),
+                    rx.el.form(
+                        rx.flex(
+                            rx.box(
+                                field_label("Nome completo", "patient-edit-name"),
+                                rx.el.input(
+                                    id="patient-edit-name",
+                                    name="name",
+                                    value=ReceptionQueueState.selected_patient_name,
+                                    on_change=ReceptionQueueState.update_selected_patient_name,
+                                    required=True,
+                                    max_length=160,
+                                    class_name="vitta-input",
+                                    margin_top="0.4rem",
+                                ),
+                                width="100%",
+                            ),
+                            rx.box(
+                                field_label("Telefone", "patient-edit-phone"),
+                                rx.el.input(
+                                    id="patient-edit-phone",
+                                    name="phone",
+                                    type="tel",
+                                    value=ReceptionQueueState.selected_patient_phone,
+                                    on_change=ReceptionQueueState.update_selected_patient_phone,
+                                    max_length=20,
+                                    class_name="vitta-input",
+                                    margin_top="0.4rem",
+                                ),
+                                width="100%",
+                            ),
+                            direction=rx.breakpoints(initial="column", md="row"),
+                            gap="3",
+                            width="100%",
+                        ),
+                        rx.button(
+                            "Salvar cadastro",
+                            type="submit",
+                            variant="outline",
+                            color_scheme="teal",
+                            disabled=ReceptionQueueState.is_submitting,
+                            loading=ReceptionQueueState.is_submitting,
+                        ),
+                        no_validate=True,
+                        on_submit=ReceptionQueueState.update_selected_patient,
+                        width="100%",
+                    ),
+                    spacing="3",
+                    width="100%",
+                    align="stretch",
+                )
+            ),
+            section_panel(
+                rx.vstack(
+                    rx.heading("Acesso ao portal", size="4"),
+                    rx.text(
+                        ReceptionQueueState.selected_patient_portal_status,
+                        role="status",
+                        aria_live="polite",
+                        color="var(--vitta-primary)",
+                        font_weight="700",
+                    ),
+                    rx.text(
+                        "O cadastro não cria uma conta. Envie um convite somente após confirmar consentimento com o paciente.",
+                        size="2",
+                        color="var(--vitta-text-muted)",
+                        line_height="1.5",
+                    ),
+                    rx.el.form(
+                        rx.box(
+                            field_label("E-mail para login", "patient-portal-email"),
+                            rx.el.input(
+                                id="patient-portal-email",
+                                name="email",
+                                type="email",
+                                auto_complete="email",
+                                required=True,
+                                max_length=320,
+                                class_name="vitta-input",
+                                margin_top="0.4rem",
+                            ),
+                            width="100%",
+                        ),
+                        rx.flex(
+                            rx.el.input(
+                                id="patient-portal-consent",
+                                name="consent_confirmed",
+                                type="checkbox",
+                                value="true",
+                                required=True,
+                                aria_label="Consentimento confirmado",
+                            ),
+                            rx.text(
+                                "Confirmo que o paciente consentiu em receber o convite de ativação.",
+                                size="2",
+                                line_height="1.5",
+                            ),
+                            gap="2",
+                            align="start",
+                        ),
+                        rx.button(
+                            "Enviar convite de ativação",
+                            type="submit",
+                            min_height="2.75rem",
+                            color_scheme="teal",
+                            high_contrast=True,
+                            disabled=ReceptionQueueState.is_submitting
+                            | (ReceptionQueueState.selected_patient_portal_status == "Acesso ao portal ativo"),
+                            loading=ReceptionQueueState.is_submitting,
+                        ),
+                        no_validate=True,
+                        on_submit=ReceptionQueueState.issue_patient_portal_invitation,
+                        width="100%",
+                    ),
+                    spacing="3",
+                    width="100%",
+                    align="stretch",
+                )
+            ),
+            spacing="4",
+            width="100%",
+            align="stretch",
+        ),
+        rx.fragment(),
+    )
+
+
 def patient_identity_panel() -> rx.Component:
     return section_panel(
         rx.vstack(
@@ -244,6 +383,7 @@ def patient_identity_panel() -> rx.Component:
                 width="100%",
             ),
             patient_selection_summary(),
+            selected_patient_operations(),
             spacing="5",
             width="100%",
             align="stretch",

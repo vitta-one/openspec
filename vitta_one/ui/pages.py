@@ -5,7 +5,9 @@ import reflex as rx
 from vitta_one.appointment_scheduling.state import AdminAvailabilityState, ReceptionAgendaState
 from vitta_one.auth.roles import Role
 from vitta_one.auth.state import AuthState
+from vitta_one.doctor_workspace.state import DoctorWorkspaceState
 from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
+from vitta_one.patient_portal.state import PatientPortalState
 from vitta_one.professional_directory.state import AdminDirectoryState
 from vitta_one.reception.dashboard.components import reception_dashboard
 from vitta_one.ui.admin_directory_components import (
@@ -30,6 +32,8 @@ from vitta_one.ui.components import (
     login_form,
     page_header,
     protected_workspace,
+    field_label,
+    section_panel,
 )
 from vitta_one.ui.prescription_components import prescription_print_page
 from vitta_one.ui.queue_components import (
@@ -40,6 +44,15 @@ from vitta_one.ui.queue_components import (
     patient_identity_panel,
     reassess_panel,
     withdraw_panel,
+)
+from vitta_one.ui.workspace_components import (
+    admin_clinic_configuration,
+    doctor_calendar,
+    doctor_consultation_list,
+    doctor_patient_list,
+    patient_calendar,
+    patient_clinic_location,
+    patient_consultation_list,
 )
 
 
@@ -176,13 +189,93 @@ def login_page() -> rx.Component:
         ),
         class_name="vitta-login-shell",
     )
-
     return rx.cond(
         AuthState.auth_checked & (AuthState.current_role == ""),
         content,
         loading_surface(),
     )
 
+
+def patient_activation_page() -> rx.Component:
+    """Public activation form posts directly to a native ASGI endpoint."""
+    return rx.box(
+        rx.vstack(
+            brand_logo(width="9rem"),
+            page_header(
+                "Ativação de acesso",
+                "Ative seu portal",
+                "Use o código enviado pela Recepção e escolha uma senha para consultar suas próprias consultas.",
+            ),
+            section_panel(
+                rx.el.form(
+                    rx.vstack(
+                        rx.box(
+                            field_label("E-mail do convite", "patient-activation-email"),
+                            rx.el.input(
+                                id="patient-activation-email",
+                                name="email",
+                                type="email",
+                                auto_complete="email",
+                                required=True,
+                                max_length=320,
+                                class_name="vitta-input",
+                                margin_top="0.4rem",
+                            ),
+                            width="100%",
+                        ),
+                        rx.box(
+                            field_label("Código de ativação", "patient-activation-code"),
+                            rx.el.input(
+                                id="patient-activation-code",
+                                name="code",
+                                type="text",
+                                auto_complete="one-time-code",
+                                required=True,
+                                max_length=128,
+                                class_name="vitta-input",
+                                margin_top="0.4rem",
+                            ),
+                            width="100%",
+                        ),
+                        rx.box(
+                            field_label("Nova senha", "patient-activation-password"),
+                            rx.el.input(
+                                id="patient-activation-password",
+                                name="password",
+                                type="password",
+                                auto_complete="new-password",
+                                required=True,
+                                min_length=12,
+                                max_length=128,
+                                class_name="vitta-input",
+                                margin_top="0.4rem",
+                            ),
+                            width="100%",
+                        ),
+                        rx.text("Use pelo menos 12 caracteres. A senha não é enviada ao estado Reflex.", size="1", color="var(--vitta-text-muted)"),
+                        rx.button("Ativar acesso", type="submit", width="100%", min_height="2.8rem", color_scheme="teal", high_contrast=True),
+                        spacing="4",
+                        width="100%",
+                        align="stretch",
+                    ),
+                    action="/api/paciente/ativar",
+                    method="post",
+                    enc_type="application/x-www-form-urlencoded",
+                    no_validate=True,
+                    width="100%",
+                )
+            ),
+            rx.link("Voltar ao login", href="/login", class_name="vitta-context-link"),
+            spacing="5",
+            width="100%",
+            max_width="42rem",
+            align="stretch",
+            margin="0 auto",
+        ),
+        class_name="vitta-page",
+        min_height="100vh",
+        padding="2rem 1rem",
+    )
 
 def first_access_page() -> rx.Component:
     """Provisional doctors must rotate an initial password before clinical access."""
@@ -268,6 +361,7 @@ def first_access_page() -> rx.Component:
 def admin_page() -> rx.Component:
     return protected_workspace(
         Role.ADMINISTRADOR,
+        admin_clinic_configuration(),
         admin_directory_workspace(),
         admin_availability_panel(),
         active="administracao",
@@ -405,6 +499,55 @@ def doctor_page() -> rx.Component:
             doctor_active_panel(),
         ),
         active="atendimento",
+    )
+
+
+def doctor_agenda_page() -> rx.Component:
+    return protected_workspace(
+        Role.MEDICO,
+        page_header(
+            "Agenda médica",
+            "Minha agenda",
+            "Consultas relacionadas ao profissional associado à sua conta, com datas no fuso da clínica.",
+        ),
+        feedback_region(DoctorWorkspaceState.error_message, "", "doctor-agenda-feedback"),
+        rx.link("Abrir fila e atendimento clínico", href="/medico", class_name="vitta-context-link"),
+        doctor_calendar(),
+        doctor_consultation_list(),
+        active="agenda-medica",
+        verified_path="/medico/agenda",
+    )
+
+
+def doctor_patients_page() -> rx.Component:
+    return protected_workspace(
+        Role.MEDICO,
+        page_header(
+            "Pacientes",
+            "Pacientes vinculados",
+            "Pessoas derivadas exclusivamente de consultas do seu cadastro profissional.",
+        ),
+        feedback_region(DoctorWorkspaceState.error_message, "", "doctor-patients-feedback"),
+        doctor_patient_list(),
+        active="pacientes-medico",
+        verified_path="/medico/pacientes",
+    )
+
+
+def patient_portal_page() -> rx.Component:
+    return protected_workspace(
+        Role.PACIENTE,
+        page_header(
+            "Minhas consultas",
+            "Agenda do paciente",
+            "Consulte compromissos futuros e passados vinculados à sua conta.",
+        ),
+        feedback_region(PatientPortalState.error_message, "", "patient-portal-feedback"),
+        patient_clinic_location(),
+        patient_calendar(),
+        patient_consultation_list(),
+        active="consultas-paciente",
+        verified_path="/paciente",
     )
 
 

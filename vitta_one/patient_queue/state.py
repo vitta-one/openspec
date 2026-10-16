@@ -44,10 +44,16 @@ from vitta_one.patient_queue.application import (
     reception_search_patients,
     reception_enqueue,
     reception_find_patient,
+    reception_update_patient,
     reception_list_queue,
     reception_reassess,
     reception_withdraw,
 )
+from vitta_one.patient_portal.application import (
+    reception_get_patient_portal_status,
+    reception_issue_patient_invitation,
+)
+from vitta_one.patient_portal.service import PatientPortalError
 from vitta_one.patient_queue.service import (
     DoctorAlreadyAttendingError,
     PatientAlreadyExistsError,
@@ -63,6 +69,16 @@ class PatientFormData(TypedDict):
     name: str
     cpf: str
     phone: str
+
+
+class PatientUpdateFormData(TypedDict):
+    name: str
+    phone: str
+
+
+class PatientPortalInviteFormData(TypedDict):
+    email: str
+    consent_confirmed: str
 
 
 class PatientSearchFormData(TypedDict):
@@ -206,6 +222,8 @@ class ReceptionQueueState(rx.State):
     queue_rows: list[QueueRow] = []
     selected_patient_id: int = 0
     selected_patient_name: str = ""
+    selected_patient_phone: str = ""
+    selected_patient_portal_status: str = ""
     is_loading_queue: bool = False
     is_submitting: bool = False
     error_message: str = ""
@@ -251,6 +269,8 @@ class ReceptionQueueState(rx.State):
         self.queue_rows = []
         self.selected_patient_id = 0
         self.selected_patient_name = ""
+        self.selected_patient_phone = ""
+        self.selected_patient_portal_status = ""
         self.quick_search_query = ""
         self.quick_search_results = []
         self.quick_search_error = ""
@@ -356,6 +376,12 @@ class ReceptionQueueState(rx.State):
                 return
             self.selected_patient_id = patient.id
             self.selected_patient_name = patient.name
+            self.selected_patient_phone = patient.phone or ""
+            with rx.session() as db:
+                portal_status = reception_get_patient_portal_status(
+                    db, token=token, patient_id=patient.id
+                )
+            self.selected_patient_portal_status = portal_status.label
             self.quick_search_query = ""
             self.quick_search_results = []
             self.quick_search_error = ""
@@ -391,6 +417,8 @@ class ReceptionQueueState(rx.State):
                 raise RuntimeError("Paciente criado sem identificador.")
             self.selected_patient_id = patient.id
             self.selected_patient_name = patient.name
+            self.selected_patient_phone = patient.phone or ""
+            self.selected_patient_portal_status = "Sem acesso ao portal"
             self.success_message = "Paciente cadastrado e selecionado para a fila."
         except PatientAlreadyExistsError:
             self.error_message = (
@@ -430,6 +458,12 @@ class ReceptionQueueState(rx.State):
             else:
                 self.selected_patient_id = patient.id
                 self.selected_patient_name = patient.name
+                self.selected_patient_phone = patient.phone or ""
+                with rx.session() as db:
+                    portal_status = reception_get_patient_portal_status(
+                        db, token=token, patient_id=patient.id
+                    )
+                self.selected_patient_portal_status = portal_status.label
                 self.success_message = "Paciente localizado e selecionado."
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
@@ -446,7 +480,86 @@ class ReceptionQueueState(rx.State):
     def clear_patient_selection(self) -> None:
         self.selected_patient_id = 0
         self.selected_patient_name = ""
+        self.selected_patient_phone = ""
+        self.selected_patient_portal_status = ""
         self._clear_feedback()
+
+    @rx.event
+    def update_selected_patient_name(self, value: str) -> None:
+        self.selected_patient_name = str(value or "")[:160]
+
+    @rx.event
+    def update_selected_patient_phone(self, value: str) -> None:
+        self.selected_patient_phone = str(value or "")[:20]
+
+    @rx.event
+    async def update_selected_patient(self, form_data: PatientUpdateFormData):
+        if not self.selected_patient_id:
+            self.error_message = "Localize um paciente antes de atualizar o cadastro."
+            return
+        self.is_submitting = True
+        self._clear_feedback()
+        yield
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                patient = reception_update_patient(
+                    db,
+                    token=token,
+                    patient_id=self.selected_patient_id,
+                    name=str(form_data.get("name", "")),
+                    phone=str(form_data.get("phone", "")),
+                )
+            self.selected_patient_name = patient.name
+            self.selected_patient_phone = patient.phone or ""
+            self.success_message = "Cadastro operacional atualizado."
+        except (PatientValidationError, PatientPortalError) as exc:
+            self.error_message = str(exc)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.error_message = "Não foi possível atualizar o cadastro agora. Tente novamente."
+        finally:
+            self.is_submitting = False
+            yield
+
+    @rx.event
+    async def issue_patient_portal_invitation(self, form_data: PatientPortalInviteFormData):
+        if not self.selected_patient_id:
+            self.error_message = "Localize um paciente antes de enviar o convite."
+            return
+        consent = str(form_data.get("consent_confirmed", "")).casefold() in {
+            "on", "true", "1", "yes"
+        }
+        self.is_submitting = True
+        self._clear_feedback()
+        yield
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                status, _delivery = reception_issue_patient_invitation(
+                    db,
+                    token=token,
+                    patient_id=self.selected_patient_id,
+                    email=str(form_data.get("email", "")),
+                    consent_confirmed=consent,
+                )
+            self.selected_patient_portal_status = status.label
+            if status.state == "ACCEPTED":
+                self.success_message = status.label
+            else:
+                self.error_message = status.label
+        except PatientPortalError as exc:
+            self.error_message = str(exc)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.error_message = "Não foi possível preparar o convite agora. Tente novamente."
+        finally:
+            self.is_submitting = False
+            yield
 
     @rx.event
     async def enqueue(self, form_data: QueueFormData):

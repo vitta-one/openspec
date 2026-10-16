@@ -20,6 +20,7 @@ from vitta_one.patient_queue.service import (
     reassess_queue_entry,
     search_patient_identities,
     withdraw_queue_entry,
+    update_patient,
 )
 
 
@@ -54,6 +55,18 @@ def reception_create_patient(
 ) -> Patient:
     require_role(db, token, Role.RECEPCIONISTA)
     return create_patient(db, name=name, cpf=cpf, phone=phone)
+
+
+def reception_update_patient(
+    db: Session,
+    *,
+    token: str,
+    patient_id: int,
+    name: str,
+    phone: str | None = None,
+) -> Patient:
+    require_role(db, token, Role.RECEPCIONISTA)
+    return update_patient(db, patient_id=patient_id, name=name, phone=phone)
 
 
 def reception_list_queue(db: Session, *, token: str) -> list[QueueItem]:

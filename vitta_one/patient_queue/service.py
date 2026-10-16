@@ -255,6 +255,30 @@ def create_patient(
     return patient
 
 
+def update_patient(
+    db: Session, *, patient_id: int, name: str, phone: str | None = None
+) -> Patient:
+    """Update only the operational name and phone; CPF and portal link stay fixed."""
+    normalized_name = normalize_patient_name(name)
+    normalized_phone = normalize_patient_phone(phone)
+    if not normalized_name:
+        raise PatientValidationError("Informe o nome do paciente.")
+    if len(normalized_name) > 160:
+        raise PatientValidationError("O nome do paciente excede o limite permitido.")
+    patient = db.exec(
+        select(Patient).where(Patient.id == patient_id).with_for_update()
+    ).first()
+    if patient is None:
+        raise PatientValidationError("O cadastro do paciente não está disponível.")
+    patient.name = normalized_name
+    patient.phone = normalized_phone
+    patient.updated_at = utc_now()
+    db.add(patient)
+    db.commit()
+    db.refresh(patient)
+    return patient
+
+
 def create_queue_entry(
     db: Session,
     *,

@@ -20,7 +20,7 @@ class User(rx.Model, table=True):
     __tablename__ = "auth_users"
     __table_args__ = (
         CheckConstraint(
-            "role IN ('ADMINISTRADOR', 'RECEPCIONISTA', 'MEDICO', 'FINANCEIRO')",
+            "role IN ('ADMINISTRADOR', 'RECEPCIONISTA', 'MEDICO', 'FINANCEIRO', 'PACIENTE')",
             name="ck_auth_users_role",
         ),
     )
