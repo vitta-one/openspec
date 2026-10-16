@@ -704,6 +704,7 @@ class ReceptionAgendaState(rx.State):
                     "A chegada só pode ser confirmada para uma consulta agendada."
                 )
             self._begin_arrival_from_row(row)
+            yield
             yield rx.redirect("/recepcao/agenda")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
@@ -802,6 +803,7 @@ class ReceptionAgendaState(rx.State):
                     "Somente consultas agendadas podem ser reagendadas."
                 )
             self._begin_reschedule_from_row(row)
+            yield
             yield rx.redirect("/recepcao/agenda")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
@@ -899,6 +901,7 @@ class ReceptionAgendaState(rx.State):
                     "Somente consultas agendadas podem ser canceladas."
                 )
             self._begin_cancel_from_row(row)
+            yield
             yield rx.redirect("/recepcao/agenda")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):

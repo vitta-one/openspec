@@ -22,6 +22,7 @@ def _database_url() -> str:
 config = rx.Config(
     app_name="vitta_one",
     db_url=_database_url(),
+    show_built_with_reflex=False,
     plugins=[
         rx.plugins.SitemapPlugin(),
         rx.plugins.TailwindV4Plugin(),

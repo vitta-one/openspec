@@ -19,7 +19,8 @@ def _appointment_action_menu(row) -> rx.Component:
                 aria_label="Ações para " + row["patient_name"] + " às " + row["time"],
                 title="Ações da consulta",
                 class_name="vitta-reception-day-action",
-            )
+            ),
+            as_child=True,
         ),
         rx.menu.content(
             rx.menu.item(

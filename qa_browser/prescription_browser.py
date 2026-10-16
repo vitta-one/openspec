@@ -377,7 +377,11 @@ def login_as_reception(page: Page) -> None:
 def test_reception_daily_operations_table_and_filters(page: Page) -> None:
     """Reception works from real daily appointments, not an abstract KPI dashboard."""
     login_as_reception(page)
-    expect(page.get_by_text(FIXTURE["day_first_patient_name"], exact=True)).to_be_visible()
+    expect(
+        page.locator(".vitta-reception-day-table-scroll").get_by_text(
+            FIXTURE["day_first_patient_name"], exact=True
+        )
+    ).to_be_visible()
     expect(page.locator(".vitta-reception-day-row")).to_have_count(7)
     expect(page.get_by_label("Página atual")).to_have_text("1 de 4")
     expect(page.get_by_role("status").filter(has_text="de 24 consultas de hoje")).to_be_visible()
@@ -389,7 +393,11 @@ def test_reception_daily_operations_table_and_filters(page: Page) -> None:
     search.fill(FIXTURE["day_first_patient_phone"])
     search.press("Enter")
     expect(page.locator(".vitta-reception-day-row")).to_have_count(1, timeout=30000)
-    expect(page.get_by_text(FIXTURE["day_first_patient_name"], exact=True)).to_be_visible()
+    expect(
+        page.locator(".vitta-reception-day-table-scroll").get_by_text(
+            FIXTURE["day_first_patient_name"], exact=True
+        )
+    ).to_be_visible()
 
     # An empty search result offers an explicit way to restore the complete day.
     search.fill("Paciente que não existe")
