@@ -5,9 +5,10 @@ from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
 
 import pytest
-from sqlmodel import Session, create_engine
+from sqlmodel import Session, create_engine, select
 
 from vitta_one.models.auth import User
+from vitta_one.models.clinical_care import ClinicalCareRecord
 from vitta_one.models.patient_queue import Patient, QueueEntry
 from vitta_one.patient_queue.service import (
     DoctorAlreadyAttendingError,
@@ -86,6 +87,14 @@ def test_two_doctors_cannot_claim_the_same_waiting_entry() -> None:
     finally:
         with Session(engine) as db:
             if entry_id:
+                record = db.exec(
+                    select(ClinicalCareRecord).where(
+                        ClinicalCareRecord.queue_entry_id == entry_id
+                    )
+                ).first()
+                if record is not None:
+                    db.delete(record)
+                    db.flush()
                 row = db.get(QueueEntry, entry_id)
                 if row is not None:
                     db.delete(row)
@@ -169,6 +178,15 @@ def test_same_doctor_cannot_claim_two_patients_concurrently() -> None:
             ) == 1
     finally:
         with Session(engine) as db:
+            for entry_id in entry_ids:
+                record = db.exec(
+                    select(ClinicalCareRecord).where(
+                        ClinicalCareRecord.queue_entry_id == entry_id
+                    )
+                ).first()
+                if record is not None:
+                    db.delete(record)
+            db.flush()
             for entry_id in entry_ids:
                 row = db.get(QueueEntry, entry_id)
                 if row is not None:
