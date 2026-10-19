@@ -1982,6 +1982,94 @@ def clinical_care_form() -> rx.Component:
     )
 
 
+def _finish_review_dialog() -> rx.Component:
+    """Review the real episode before committing the irreversible finalization."""
+    return rx.dialog.root(
+        rx.dialog.content(
+            rx.dialog.title("Revisar finalização do atendimento"),
+            rx.dialog.description(
+                "Confira o paciente e o registro salvo. A finalização encerra "
+                "a edição clínica deste episódio, preservando o histórico.",
+                margin_top="0.35rem",
+                margin_bottom="1rem",
+            ),
+            rx.vstack(
+                rx.text(
+                    DoctorQueueState.active_patient_name,
+                    font_weight="800",
+                    size="3",
+                ),
+                rx.hstack(
+                    rx.text("Classificação:", font_weight="650", size="2"),
+                    priority_badge(
+                        DoctorQueueState.active_priority,
+                        DoctorQueueState.active_priority_label,
+                    ),
+                    spacing="2",
+                    align="center",
+                ),
+                rx.text(
+                    "Queixa principal",
+                    font_weight="700",
+                    size="2",
+                    color="var(--vitta-text-muted)",
+                ),
+                rx.text(
+                    DoctorQueueState.clinical_chief_complaint,
+                    size="2",
+                    white_space="pre-wrap",
+                    overflow_wrap="anywhere",
+                ),
+                rx.text(
+                    DoctorQueueState.prescriptions.length(),
+                    " prescrição(ões) neste atendimento",
+                    size="2",
+                    color="var(--vitta-text-muted)",
+                ),
+                spacing="2",
+                align="stretch",
+                width="100%",
+                padding="1rem",
+                background="var(--vitta-surface-muted)",
+                border_radius="var(--vitta-radius-control)",
+            ),
+            rx.flex(
+                rx.dialog.close(
+                    rx.button(
+                        "Voltar ao atendimento",
+                        type="button",
+                        variant="outline",
+                        color_scheme="gray",
+                        disabled=DoctorQueueState.is_submitting,
+                        auto_focus=True,
+                    )
+                ),
+                rx.button(
+                    "Confirmar finalização",
+                    type="button",
+                    color_scheme="teal",
+                    high_contrast=True,
+                    on_click=DoctorQueueState.begin_finish_review,
+                    disabled=DoctorQueueState.is_submitting
+                    | DoctorQueueState.is_saving_clinical
+                    | DoctorQueueState.is_prescription_submitting
+                    | DoctorQueueState.clinical_is_dirty,
+                    loading=DoctorQueueState.is_submitting,
+                ),
+                direction=rx.breakpoints(initial="column-reverse", sm="row"),
+                justify="end",
+                gap="0.65rem",
+                width="100%",
+                margin_top="1.25rem",
+            ),
+            class_name="vitta-dialog-content",
+            max_width="38rem",
+        ),
+        open=DoctorQueueState.finish_dialog_open,
+        on_open_change=DoctorQueueState.set_finish_dialog_open,
+    )
+
+
 def doctor_active_panel() -> rx.Component:
     return rx.cond(
         DoctorQueueState.has_active,
@@ -2062,7 +2150,7 @@ def doctor_active_panel() -> rx.Component:
                 ),
                 clinical_care_form(),
                 rx.button(
-                    "Finalizar atendimento",
+                    "Revisar e finalizar",
                     type="button",
                     color_scheme="teal",
                     high_contrast=True,
@@ -2075,6 +2163,7 @@ def doctor_active_panel() -> rx.Component:
                     | DoctorQueueState.clinical_is_dirty,
                     loading=DoctorQueueState.is_submitting,
                 ),
+                _finish_review_dialog(),
                 rx.cond(
                     DoctorQueueState.clinical_is_dirty,
                     rx.text(
