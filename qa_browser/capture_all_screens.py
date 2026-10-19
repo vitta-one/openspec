@@ -1,4 +1,4 @@
-"""Capture queue-first Vitta-One screens in real Chromium.
+"""Capture all currently implemented Vitta-One screens in real Chromium.
 
 Run only after real browser QA against the disposable PostgreSQL fixture.
 Every protected route is visited through the appropriate authenticated role.
@@ -19,11 +19,7 @@ FIXTURE = json.loads(Path("qa-artifacts/fixture.json").read_text(encoding="utf-8
 PASSWORD = os.environ["VITTA_ONE_QA_PASSWORD"]
 VIEWPORTS = {"desktop": (1440, 900), "tablet": (768, 1024), "mobile": (375, 812)}
 
-# (slug, route, visible heading) — queue-first public navigation.
-# Appointment calendars were intentionally removed from screenshot coverage as
-# they do not belong to the Vitta-One emergency-care product scope.
-# The legacy CI seed still contains booked Consultations for old tests until
-# the QueueEntry-based clinical migration (PR #316) is completed.
+# (slug, route, visible heading) — aligns with vitta_one/vitta_one.py routes.
 SCREENS = {
     "public": [
         ("login", "/login", "Bem-vindo de volta."),
@@ -34,21 +30,25 @@ SCREENS = {
         ("especialidades", "/admin/especialidades", "Todas as especialidades"),
         ("profissionais", "/admin/profissionais", "Todos os profissionais"),
         ("admin-previa-recepcao", "/admin/recepcao", "Recepção"),
+        ("admin-previa-agenda", "/admin/agenda", "Agenda clínica"),
         ("admin-previa-atendimento", "/admin/atendimento", "Atendimento clínico"),
         ("admin-previa-pacientes", "/admin/pacientes", "Pacientes"),
         ("admin-previa-financeiro", "/admin/financeiro", "Financeiro"),
     ],
     "recepcionista": [
         ("painel-recepcao", "/recepcao", "Recepção — Operação do Dia"),
+        ("agenda-recepcao", "/recepcao/agenda", "Agenda e check-in"),
         ("cadastro-pacientes", "/recepcao/pacientes", "Cadastro e localização"),
         ("fila-espera", "/recepcao/fila", "Fila de espera"),
     ],
     "medico": [
         ("painel-medico", "/medico", "Fila médica"),
+        ("agenda-medico", "/medico/agenda", "Minha agenda"),
         ("pacientes-medico", "/medico/pacientes", "Pacientes vinculados"),
         ("impressao-prescricao", f"/medico/prescricao/{FIXTURE['prescription_id']}", None),
         ("acesso-negado", "/acesso-negado", "Esta área pertence a outra função."),
     ],
+    "paciente": [("portal-paciente", "/paciente", "Agenda do paciente")],
     "financeiro": [("painel-financeiro", "/financeiro", "Financeiro")],
     "primeiro-acesso": [("primeiro-acesso", "/primeiro-acesso", "Defina sua nova senha")],
 }
