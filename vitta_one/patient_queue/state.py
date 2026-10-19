@@ -772,6 +772,7 @@ class DoctorQueueState(rx.State):
     is_loading: bool = False
     is_submitting: bool = False
     is_saving_clinical: bool = False
+    finish_dialog_open: bool = False
     error_message: str = ""
     success_message: str = ""
 
@@ -861,6 +862,7 @@ class DoctorQueueState(rx.State):
         self._clear_prescriptions()
 
     def _clear_active(self) -> None:
+        self.finish_dialog_open = False
         self.has_active = False
         self.active_entry_id = 0
         self.active_consultation_id = 0
@@ -1524,6 +1526,27 @@ class DoctorQueueState(rx.State):
         finally:
             self.is_loading = False
             yield
+
+    @rx.event
+    def set_finish_dialog_open(self, is_open: bool) -> None:
+        if not self.is_submitting:
+            self.finish_dialog_open = is_open
+
+    @rx.event
+    def begin_finish_review(self) -> None:
+        self._clear_feedback()
+        if not self.has_active or not self.active_entry_id:
+            self.error_message = "Chame um paciente antes de finalizar."
+            return
+        if self.clinical_is_dirty:
+            self.error_message = (
+                "Salve ou descarte as alterações clínicas antes de revisar."
+            )
+            return
+        if self.is_saving_clinical or self.is_prescription_submitting:
+            self.error_message = "Aguarde o salvamento terminar antes de revisar."
+            return
+        self.finish_dialog_open = True
 
     @rx.event
     async def finish_active(self):
