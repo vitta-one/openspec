@@ -11,6 +11,7 @@ from vitta_one.appointment_scheduling.application import (
     admin_set_availability_slot_active,
     reception_cancel_consultation,
     reception_get_agenda,
+    reception_get_consultation_by_id,
     reception_list_active_professionals,
     reception_reschedule_consultation,
     reception_schedule_consultation,
@@ -706,8 +707,11 @@ class ReceptionAgendaState(rx.State):
         yield
         try:
             token = await self._token()
-            self._load_with_token(token)
-            row = self._current_consultation(consultation_id)
+            with rx.session() as db:
+                consultation = reception_get_consultation_by_id(
+                    db, token=token, consultation_id=consultation_id
+                )
+            row = _consultation_rows([consultation])[0]
             if row["status"] != ConsultationStatus.AGENDADA.value:
                 raise SchedulingTransitionError(
                     "A chegada só pode ser confirmada para uma consulta agendada."
@@ -805,7 +809,11 @@ class ReceptionAgendaState(rx.State):
         try:
             token = await self._token()
             self._load_with_token(token)
-            row = self._current_consultation(consultation_id)
+            with rx.session() as db:
+                consultation = reception_get_consultation_by_id(
+                    db, token=token, consultation_id=consultation_id
+                )
+            row = _consultation_rows([consultation])[0]
             if row["status"] != ConsultationStatus.AGENDADA.value:
                 raise SchedulingTransitionError(
                     "Somente consultas agendadas podem ser reagendadas."
@@ -901,8 +909,11 @@ class ReceptionAgendaState(rx.State):
         yield
         try:
             token = await self._token()
-            self._load_with_token(token)
-            row = self._current_consultation(consultation_id)
+            with rx.session() as db:
+                consultation = reception_get_consultation_by_id(
+                    db, token=token, consultation_id=consultation_id
+                )
+            row = _consultation_rows([consultation])[0]
             if row["status"] != ConsultationStatus.AGENDADA.value:
                 raise SchedulingTransitionError(
                     "Somente consultas agendadas podem ser canceladas."
