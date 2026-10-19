@@ -536,7 +536,16 @@ def test_reception_contextual_actions_use_authorized_agenda_flows(page: Page) ->
     scheduled_row = page.locator(".vitta-reception-day-row").filter(has_text="Agendada").first
     scheduled_row.get_by_role("button", name=re.compile("Ações para")).click()
     page.get_by_role("menuitem", name="Reagendar").click()
-    expect(page.get_by_role("dialog")).to_be_visible(timeout=30000)
+    try:
+        expect(page.get_by_role("dialog")).to_be_visible(timeout=5000)
+    except AssertionError:
+        print("DEBUG_REAGENDAR feedback:", page.locator(
+            ".vitta-reception-day-workspace [role='alert']"
+        ).all_inner_texts())
+        print("DEBUG_REAGENDAR status:", page.locator(
+            "#daily-appointment-action-feedback"
+        ).all_inner_texts())
+        raise
     expect(page.get_by_role("heading", name="Reagendar consulta")).to_be_visible()
     page.keyboard.press("Escape")
 
