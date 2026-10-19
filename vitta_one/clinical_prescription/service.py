@@ -206,6 +206,10 @@ def _record_context(
     professional = db.exec(
         select(Professional).where(Professional.user_id == doctor_user_id)
     ).first()
+    if professional is None:
+        raise PrescriptionAuthorizationError(
+            "O Médico precisa ter cadastro profissional vinculado para prescrever."
+        )
     return record, None, professional
 
 def _prescription_context(
