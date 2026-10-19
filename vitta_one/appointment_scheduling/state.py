@@ -808,11 +808,19 @@ class ReceptionAgendaState(rx.State):
         yield
         try:
             token = await self._token()
-            self._load_with_token(token)
             with rx.session() as db:
                 consultation = reception_get_consultation_by_id(
                     db, token=token, consultation_id=consultation_id
                 )
+                # Daily actions must never inherit unrelated Agenda filters.
+                snapshot = reception_get_agenda(
+                    db,
+                    token=token,
+                    professional_id=consultation.professional_id,
+                    start_date=clinic_today_iso(),
+                    end_date=clinic_date_after_iso(14),
+                )
+            self.slots = _slot_rows(snapshot.slots)
             row = _consultation_rows([consultation])[0]
             if row["status"] != ConsultationStatus.AGENDADA.value:
                 raise SchedulingTransitionError(
