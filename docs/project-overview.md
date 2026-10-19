@@ -1,5 +1,7 @@
 # Project Overview — Vitta-One
 
+> **Decisão de produto posterior a este documento:** o Vitta-One é um **pronto-socorro sem agendamento**. A recepção registra a chegada e a prioridade informada; o médico chama pacientes da fila, documenta e finaliza atendimentos. Qualquer conteúdo abaixo sobre criação de horários, calendário de consultas, reserva ou reagendamento descreve uma implementação anterior **fora do escopo final** e está sendo migrado. A change `operate-emergency-care-from-queue` é a referência para essa correção, sem exclusão automática de dados históricos.
+
 ## 1. Visão geral
 
 O **Vitta-One** é um sistema de gerenciamento de clínica médica destinado a centralizar as principais operações de uma clínica em um único ambiente. A aplicação organiza informações e processos relacionados a pacientes, profissionais, agenda, consultas, atendimentos, prontuários, exames, prescrições, pagamentos e informações gerenciais.
