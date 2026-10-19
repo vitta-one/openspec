@@ -2,7 +2,7 @@
 
 ### Requirement: Registro clínico para atendimento de fila sem agendamento
 
-A aplicação DEVE oferecer prontuário e prescrição ao Médico responsável também para paciente de pronto atendimento não agendado, sem criar Consulta ou slot fictício, preservando o agendamento funcional existente.
+A aplicação MUST oferecer prontuário e prescrição ao Médico responsável também para paciente de pronto atendimento não agendado, sem criar Consulta ou slot fictício, preservando o agendamento funcional existente.
 
 #### Scenario: Paciente chega sem agendar
 - **WHEN** a Recepção cadastra/identifica um paciente e o coloca na fila com relato e prioridade informada
