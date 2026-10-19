@@ -835,7 +835,7 @@ def doctor_waiting_summary() -> rx.Component:
             rx.box(
                 rx.heading("Fila de atendimento", size="5"),
                 rx.text(
-                    "A chamada respeita prioridade e ordem de entrada. Consultas agendadas aparecem somente para o Médico marcado; atendimentos avulsos seguem a fila compartilhada.",
+                    "A chamada respeita prioridade e ordem de chegada. Consultas agendadas são encaminhadas ao médico marcado; atendimentos de pronto-socorro seguem a fila compartilhada.",
                     color="var(--vitta-text-muted)",
                     size="2",
                     line_height="1.55",
@@ -2060,24 +2060,7 @@ def doctor_active_panel() -> rx.Component:
                     background="var(--vitta-surface-muted)",
                     border_radius="var(--vitta-radius-control)",
                 ),
-                rx.cond(
-                    DoctorQueueState.active_is_scheduled,
-                    clinical_care_form(),
-                    rx.box(
-                        rx.hstack(
-                            rx.icon("info", size=17),
-                            rx.text(
-                                "Atendimento avulso: registro clínico e Prescrição vinculados a Consulta ainda não se aplicam a este fluxo.",
-                                size="2",
-                                color="var(--vitta-text-muted)",
-                            ),
-                            spacing="2",
-                            align="start",
-                        ),
-                        class_name="vitta-info-strip",
-                        width="100%",
-                    ),
-                ),
+                clinical_care_form(),
                 rx.button(
                     "Finalizar atendimento",
                     type="button",
@@ -2089,15 +2072,11 @@ def doctor_active_panel() -> rx.Component:
                     disabled=DoctorQueueState.is_submitting
                     | DoctorQueueState.is_saving_clinical
                     | DoctorQueueState.is_prescription_submitting
-                    | (
-                        DoctorQueueState.active_is_scheduled
-                        & DoctorQueueState.clinical_is_dirty
-                    ),
+                    | DoctorQueueState.clinical_is_dirty,
                     loading=DoctorQueueState.is_submitting,
                 ),
                 rx.cond(
-                    DoctorQueueState.active_is_scheduled
-                    & DoctorQueueState.clinical_is_dirty,
+                    DoctorQueueState.clinical_is_dirty,
                     rx.text(
                         "Salve ou descarte as alterações clínicas antes de finalizar.",
                         size="1",
