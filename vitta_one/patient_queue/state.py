@@ -128,7 +128,7 @@ class PrescriptionItemRow(TypedDict):
 class PrescriptionRow(TypedDict):
     id: int
     clinical_care_record_id: int
-    consultation_id: int
+    consultation_id: int | None
     general_notes: str
     created_at: str
     items: list[PrescriptionItemRow]
@@ -137,7 +137,7 @@ class PrescriptionRow(TypedDict):
 
 class ClinicalHistoryRow(TypedDict):
     record_id: int
-    consultation_id: int
+    consultation_id: int | None
     professional_name: str
     scheduled_at: str
     completed_at: str
