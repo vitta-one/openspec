@@ -27,6 +27,7 @@ from vitta_one.ui.components import (
     admin_preview_workspace,
     brand_logo,
     dashboard_shell,
+    empty_state,
     feedback_region,
     loading_surface,
     login_form,
@@ -204,7 +205,7 @@ def patient_activation_page() -> rx.Component:
             page_header(
                 "Ativação de acesso",
                 "Ative seu portal",
-                "Use o código enviado pela Recepção e escolha uma senha para consultar suas próprias consultas.",
+                "Use o código enviado pela Recepção e escolha uma senha para acessar seu portal de pronto atendimento.",
             ),
             section_panel(
                 rx.el.form(
@@ -363,7 +364,6 @@ def admin_page() -> rx.Component:
         Role.ADMINISTRADOR,
         admin_clinic_configuration(),
         admin_directory_workspace(),
-        admin_availability_panel(),
         active="administracao",
     )
 
@@ -389,13 +389,35 @@ def admin_professionals_page() -> rx.Component:
 
 
 def reception_page() -> rx.Component:
-    """Reception's operational home; no patient clinical data is exposed here."""
+    """Entrada operacional do pronto-socorro: somente pacientes e fila real."""
     return protected_workspace(
         Role.RECEPCIONISTA,
-        reception_dashboard(),
+        page_header(
+            "Pronto-socorro",
+            "Fila de atendimento",
+            "Acompanhe pacientes aguardando e organize a chegada de novos pacientes.",
+        ),
+        feedback_region(
+            ReceptionQueueState.error_message,
+            ReceptionQueueState.success_message,
+        ),
+        rx.flex(
+            rx.link(
+                "Cadastrar ou localizar paciente",
+                href="/recepcao/pacientes",
+                class_name="vitta-context-link",
+            ),
+            rx.link(
+                "Gerenciar fila e reavaliações",
+                href="/recepcao/fila",
+                class_name="vitta-context-link",
+            ),
+            gap="3",
+            flex_wrap="wrap",
+        ),
+        active_queue_panel(),
         active="recepcao",
     )
-
 
 def reception_agenda_page() -> rx.Component:
     """Scheduling, rescheduling, cancellation and check-in; preserved services."""
@@ -426,13 +448,9 @@ def reception_patients_page() -> rx.Component:
             ReceptionQueueState.success_message,
         ),
         patient_identity_panel(),
-        rx.hstack(
-            rx.link("Ir para fila de espera", href="/recepcao/fila",
-                    class_name="vitta-context-link"),
-            rx.link("Abrir agenda", href="/recepcao/agenda",
-                    class_name="vitta-context-link"),
-            flex_wrap="wrap", gap="2",
-        ),
+        enqueue_panel(),
+        rx.link("Acompanhar fila de espera", href="/recepcao/fila",
+                class_name="vitta-context-link"),
         active="pacientes",
         verified_path="/recepcao/pacientes",
     )
@@ -470,8 +488,8 @@ def doctor_page() -> rx.Component:
         Role.MEDICO,
         page_header(
             "Atendimento",
-            "Fila médica",
-            "Chame o próximo paciente elegível e finalize somente o atendimento associado à sua sessão.",
+            "Pronto atendimento",
+            "Chame pacientes por prioridade e ordem de chegada, registre a evolução e finalize seu próprio atendimento.",
         ),
         feedback_region(
             DoctorQueueState.error_message,
@@ -535,21 +553,23 @@ def doctor_patients_page() -> rx.Component:
 
 
 def patient_portal_page() -> rx.Component:
+    """Honest queue-only portal until authorized attendance history is implemented."""
     return protected_workspace(
         Role.PACIENTE,
         page_header(
-            "Minhas consultas",
-            "Agenda do paciente",
-            "Consulte compromissos futuros e passados vinculados à sua conta.",
+            "Pronto atendimento",
+            "Meus atendimentos",
+            "O pronto-socorro funciona por ordem de chegada e prioridade informada; não há agendamentos.",
         ),
-        feedback_region(PatientPortalState.error_message, "", "patient-portal-feedback"),
-        patient_clinic_location(),
-        patient_calendar(),
-        patient_consultation_list(),
+        section_panel(
+            empty_state(
+                "clipboard_list",
+                "Histórico ainda não disponível",
+                "A consulta aos atendimentos realizados será disponibilizada após vinculação segura do histórico da fila à conta do paciente.",
+            )
+        ),
         active="consultas-paciente",
-        verified_path="/paciente",
     )
-
 
 def finance_page() -> rx.Component:
     return dashboard_shell(
