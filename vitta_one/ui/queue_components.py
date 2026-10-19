@@ -476,13 +476,13 @@ def reception_queue_row(row) -> rx.Component:
                         rx.cond(
                             row["is_scheduled"],
                             rx.badge(
-                                "Consulta agendada",
+                                "Entrada vinculada a consulta anterior",
                                 color_scheme="teal",
                                 variant="soft",
                                 high_contrast=True,
                             ),
                             rx.badge(
-                                "Atendimento avulso",
+                                "Pronto atendimento",
                                 color_scheme="gray",
                                 variant="soft",
                             ),
@@ -835,7 +835,7 @@ def doctor_waiting_summary() -> rx.Component:
             rx.box(
                 rx.heading("Fila de atendimento", size="5"),
                 rx.text(
-                    "A chamada respeita prioridade e ordem de entrada. Consultas agendadas aparecem somente para o Médico marcado; atendimentos avulsos seguem a fila compartilhada.",
+                    "A chamada respeita a prioridade informada e, dentro de cada prioridade, a ordem de chegada. A fila é compartilhada entre médicos habilitados.",
                     color="var(--vitta-text-muted)",
                     size="2",
                     line_height="1.55",
@@ -2067,7 +2067,7 @@ def doctor_active_panel() -> rx.Component:
                         rx.hstack(
                             rx.icon("info", size=17),
                             rx.text(
-                                "Atendimento avulso: registro clínico e Prescrição vinculados a Consulta ainda não se aplicam a este fluxo.",
+                                "O registro clínico e a prescrição para atendimentos iniciados diretamente na fila dependem da migração clínica em andamento.",
                                 size="2",
                                 color="var(--vitta-text-muted)",
                             ),
