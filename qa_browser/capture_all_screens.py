@@ -91,7 +91,10 @@ def capture(page, role: str, item, viewport: str, failures: list, manifest: list
     record = {"role": role, "screen": slug, "route": route, "viewport": viewport,
               "file": str(screenshot_path), "status": "PASS"}
     page_errors = []
-    page.on("pageerror", page_errors.append)
+    def collect_page_error(error):
+        page_errors.append(error)
+
+    page.on("pageerror", collect_page_error)
     try:
         page.goto(BASE + route, wait_until="domcontentloaded", timeout=30000)
         expect(page).to_have_url(re.compile(re.escape(BASE + route) + r"/?$"), timeout=30000)
@@ -117,7 +120,7 @@ def capture(page, role: str, item, viewport: str, failures: list, manifest: list
             record["errors"] = errors
             failures.append(f"{viewport}/{role}/{slug}: {'; '.join(errors)}")
         manifest.append(record)
-        page.remove_listener("pageerror", page_errors.append)
+        page.remove_listener("pageerror", collect_page_error)
 
 
 def main() -> None:
