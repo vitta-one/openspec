@@ -2050,7 +2050,7 @@ def _finish_review_dialog() -> rx.Component:
                     type="button",
                     color_scheme="teal",
                     high_contrast=True,
-                    on_click=DoctorQueueState.begin_finish_review,
+                    on_click=DoctorQueueState.finish_active,
                     disabled=DoctorQueueState.is_submitting
                     | DoctorQueueState.is_saving_clinical
                     | DoctorQueueState.is_prescription_submitting
