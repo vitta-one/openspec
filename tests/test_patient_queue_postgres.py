@@ -19,6 +19,14 @@ from vitta_one.patient_queue.service import (
     create_queue_entry,
 )
 
+def _random_cpf() -> str:
+    digits = [int(x) for x in f"{uuid4().int % 1_000_000_000:09d}"]
+    for weights in (range(10, 1, -1), range(11, 1, -1)):
+        digit = (sum(n * w for n, w in zip(digits, weights)) * 10) % 11
+        digits.append(0 if digit == 10 else digit)
+    return "".join(str(x) for x in digits)
+
+
 _DATABASE_URL = os.getenv("DATABASE_URL", "")
 
 
@@ -50,7 +58,7 @@ def test_two_doctors_cannot_claim_the_same_waiting_entry() -> None:
             patient = create_patient(
                 db,
                 name="Paciente Concorrência",
-                cpf="52998224725",
+                cpf=_random_cpf(),
             )
             assert patient.id is not None
             patient_id = patient.id
@@ -136,8 +144,8 @@ def test_same_doctor_cannot_claim_two_patients_concurrently() -> None:
             doctor_id = doctor.id
 
             for name, cpf in (
-                ("Paciente Um", "52998224725"),
-                ("Paciente Dois", "16899535009"),
+                ("Paciente Um", _random_cpf()),
+                ("Paciente Dois", _random_cpf()),
             ):
                 patient = create_patient(db, name=name, cpf=cpf)
                 assert patient.id is not None
