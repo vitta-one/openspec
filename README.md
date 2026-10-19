@@ -1,5 +1,7 @@
 # Vitta-One
 
+> **Correção de escopo (pronto-socorro):** a operação definida para o produto é exclusivamente por **fila de chegada, prioridade informada, chamada médica, atendimento e finalização**. **Não existe agendamento**. Esta branch inicia a retirada da Agenda da interface; o back-end histórico ainda contém estruturas de Consulta agendada e a migração de prontuário/prescrição para entradas avulsas está pendente. Consulte `openspec/changes/operate-emergency-care-from-queue/` antes de considerar a migração concluída.
+
 Sistema acadêmico de gerenciamento de clínica médica desenvolvido com **Python + Reflex + PostgreSQL**, seguindo desenvolvimento incremental orientado por especificações com **OpenSpec**.
 
 ## Estado atual
