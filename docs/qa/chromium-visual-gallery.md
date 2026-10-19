@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Toda PR para `develop` que alterar a aplicação, os testes de Chromium ou o workflow de QA executa a suíte existente de navegador e, em seguida, captura **as telas implementadas** do Vitta-One em Chromium real.
+Toda PR para `develop` que alterar a aplicação, os testes de Chromium ou o workflow de QA executa a suíte existente de navegador e, em seguida, captura **as telas pertinentes ao fluxo do pronto-socorro** do Vitta-One em Chromium real.
 
 Os screenshots são feitos a partir de uma aplicação Reflex em execução com PostgreSQL 16 **descartável** e contas `@example.invalid`. Nenhuma tela de produção, conta de pessoa real ou prescrição verdadeira deve ser utilizada.
 
@@ -12,14 +12,15 @@ Os screenshots são feitos a partir de uma aplicação Reflex em execução com 
 | --- | --- |
 | Público | `/login`, `/ativar-paciente` |
 | Administrador | `/admin`, `/admin/especialidades`, `/admin/profissionais` |
-| Prévias de Admin (apenas QA isolado) | `/admin/recepcao`, `/admin/agenda`, `/admin/atendimento`, `/admin/pacientes`, `/admin/financeiro` |
-| Recepcionista | `/recepcao`, `/recepcao/agenda`, `/recepcao/pacientes`, `/recepcao/fila` |
-| Médico | `/medico`, `/medico/agenda`, `/medico/pacientes`, `/medico/prescricao/[prescription_id]` |
-| Paciente | `/paciente` |
+| Prévias de Admin (apenas QA isolado) | `/admin/recepcao`, `/admin/atendimento`, `/admin/pacientes`, `/admin/financeiro` |
+| Recepcionista | `/recepcao`, `/recepcao/pacientes`, `/recepcao/fila` |
+| Médico | `/medico`, `/medico/pacientes`, `/medico/prescricao/[prescription_id]` |
 | Financeiro | `/financeiro` |
 | Estados de autorização | `/primeiro-acesso`, `/acesso-negado` |
 
-**Total:** 22 telas distintas em três viewports: desktop (1440 × 900), tablet (768 × 1024) e celular (375 × 812), resultando em **66 capturas PNG**, desde que todos os fluxos sejam acessíveis.
+**Total:** 18 telas distintas em três viewports: desktop (1440 × 900), tablet (768 × 1024) e celular (375 × 812), resultando em **54 capturas PNG**, desde que todos os fluxos sejam acessíveis.
+
+**Atenção:** a galeria não é aceite do pronto-socorro completo. Os testes legados ainda usam consultas programadas para dados de Prescrição e a migração clínica para `QueueEntry` está documentada na [PR #316](https://github.com/vitta-one/openspec/pull/316). O portal do paciente e as rotas de Agenda não são incluídos na galeria enquanto forem dependentes de agendamento.
 
 A raiz `/` é uma rota de redirecionamento, não uma tela estável; o teste cobre a página de login de entrada em seu lugar. A rota de impressão usa a Prescrição sintética do fixture.
 
