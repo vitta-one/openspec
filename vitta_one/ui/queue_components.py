@@ -2021,7 +2021,7 @@ def _finish_review_dialog() -> rx.Component:
                     overflow_wrap="anywhere",
                 ),
                 rx.text(
-                    DoctorQueueState.prescriptions.length(),
+                    DoctorQueueState.prescription_count,
                     " prescrição(ões) neste atendimento",
                     size="2",
                     color="var(--vitta-text-muted)",
