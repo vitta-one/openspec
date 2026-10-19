@@ -777,7 +777,7 @@ class DoctorQueueState(rx.State):
 
     @rx.var
     def has_clinical_record(self) -> bool:
-        return self.active_is_scheduled and self.clinical_record_id > 0
+        return self.has_active and self.clinical_record_id > 0
 
     @rx.var
     def clinical_is_dirty(self) -> bool:
@@ -928,7 +928,7 @@ class DoctorQueueState(rx.State):
         self._set_prescriptions(items)
 
     def _load_clinical_with_token(self, token: str, *, page: int = 1) -> None:
-        if not self.active_is_scheduled or not self.active_entry_id:
+        if not self.has_active or not self.active_entry_id:
             self._clear_clinical()
             return
         with rx.session() as db:
@@ -953,7 +953,7 @@ class DoctorQueueState(rx.State):
         self._set_prescriptions(prescriptions)
 
     def _load_history_with_token(self, token: str, *, page: int) -> None:
-        if not self.active_is_scheduled or not self.active_entry_id:
+        if not self.has_active or not self.active_entry_id:
             self.clinical_history = []
             self.clinical_history_page = 1
             self.clinical_history_total_pages = 1
@@ -974,7 +974,7 @@ class DoctorQueueState(rx.State):
             count = doctor_waiting_count(db, token=token)
         self._set_active(active)
         self.waiting_count = count
-        if self.active_is_scheduled:
+        if self.has_active:
             self._load_clinical_with_token(token, page=1)
 
     async def _authorization_redirect(self, exc: Exception):
@@ -1031,7 +1031,7 @@ class DoctorQueueState(rx.State):
                 count = doctor_waiting_count(db, token=token)
             self._set_active(item)
             self.waiting_count = count
-            if self.active_is_scheduled:
+            if self.has_active:
                 self._load_clinical_with_token(token, page=1)
             self.success_message = "Próximo paciente chamado para atendimento."
         except QueueEmptyError:
@@ -1528,7 +1528,7 @@ class DoctorQueueState(rx.State):
     @rx.event
     async def finish_active(self):
         self._clear_feedback()
-        if self.active_is_scheduled and self.clinical_is_dirty:
+        if self.clinical_is_dirty:
             self.error_message = (
                 "Salve ou descarte as alterações clínicas antes de finalizar o atendimento."
             )
