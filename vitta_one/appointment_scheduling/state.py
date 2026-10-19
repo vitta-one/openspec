@@ -58,9 +58,7 @@ class SlotRow(TypedDict):
     time_label: str
     status: str
     status_label: str
-    confirmed_at: str
-    started_at: str
-    completed_at: str
+
 
 
 class SlotDayGroup(TypedDict):
@@ -103,15 +101,6 @@ def _slot_rows(items) -> list[SlotRow]:
             "time_label": format_clinic_datetime(item.starts_at).split(" às ")[1],
             "status": item.status.value,
             "status_label": item.status.label,
-            "confirmed_at": (
-                format_clinic_datetime(item.confirmed_at) if item.confirmed_at else ""
-            ),
-            "started_at": (
-                format_clinic_datetime(item.started_at) if item.started_at else ""
-            ),
-            "completed_at": (
-                format_clinic_datetime(item.completed_at) if item.completed_at else ""
-            ),
         }
         for item in items
     ]
