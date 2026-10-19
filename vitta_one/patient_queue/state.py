@@ -893,7 +893,8 @@ class DoctorQueueState(rx.State):
         self.active_priority = item.priority.value
         self.active_priority_label = item.priority.label
         self.active_called_at = (
-            item.called_at.strftime("%H:%M UTC") if item.called_at else ""
+            format_clinic_datetime(item.called_at).rsplit(" às ", 1)[-1]
+            if item.called_at else ""
         )
         self.active_is_scheduled = item.consultation_id is not None
         self.active_scheduled_at = (
