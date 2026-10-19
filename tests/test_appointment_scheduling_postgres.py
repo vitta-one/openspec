@@ -15,7 +15,7 @@ from vitta_one.appointment_scheduling.service import (
     reschedule_consultation,
     schedule_consultation,
 )
-from vitta_one.models.appointment import Consultation, ProfessionalAvailabilitySlot
+from vitta_one.models.appointment import Consultation, ConsultationScheduleChange, ProfessionalAvailabilitySlot
 from vitta_one.models.patient_queue import Patient
 from vitta_one.models.professional import Professional, ProfessionalSpecialty, Specialty
 from vitta_one.patient_queue.service import create_patient
@@ -276,6 +276,16 @@ def test_concurrent_reschedule_preserves_original_when_destination_is_lost() -> 
                         )
                     )
                 ).all()
+                consultation_ids = [row.id for row in rows if row.id is not None]
+                if consultation_ids:
+                    schedule_changes = db.exec(
+                        select(ConsultationScheduleChange).where(
+                            ConsultationScheduleChange.consultation_id.in_(consultation_ids)
+                        )
+                    ).all()
+                    for change in schedule_changes:
+                        db.delete(change)
+                    db.flush()
                 for row in rows:
                     db.delete(row)
                 db.commit()
