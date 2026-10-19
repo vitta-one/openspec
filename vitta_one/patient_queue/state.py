@@ -777,6 +777,10 @@ class DoctorQueueState(rx.State):
     success_message: str = ""
 
     @rx.var
+    def prescription_count(self) -> int:
+        return len(self.prescriptions)
+
+    @rx.var
     def has_clinical_record(self) -> bool:
         return self.has_active and self.clinical_record_id > 0
 
