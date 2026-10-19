@@ -35,16 +35,12 @@ _ROLE_BY_ROUTE = {
     **{role.dashboard_path: role for role in Role},
     "/admin/especialidades": Role.ADMINISTRADOR,
     "/admin/profissionais": Role.ADMINISTRADOR,
-    "/recepcao/agenda": Role.RECEPCIONISTA,
     "/recepcao/pacientes": Role.RECEPCIONISTA,
     "/recepcao/fila": Role.RECEPCIONISTA,
-    "/medico/agenda": Role.MEDICO,
-    "/medico/pacientes": Role.MEDICO,
 }
 _ADMIN_PREVIEW_ROUTES = frozenset(
     {
         "/admin/recepcao",
-        "/admin/agenda",
         "/admin/atendimento",
         "/admin/pacientes",
         "/admin/financeiro",
