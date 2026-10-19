@@ -1537,6 +1537,12 @@ class DoctorQueueState(rx.State):
             self.finish_dialog_open = is_open
 
     @rx.event
+    def cancel_finish_review(self) -> None:
+        """Close the controlled review without modifying or finishing the episode."""
+        if not self.is_submitting:
+            self.finish_dialog_open = False
+
+    @rx.event
     def begin_finish_review(self) -> None:
         self._clear_feedback()
         if not self.has_active or not self.active_entry_id:
