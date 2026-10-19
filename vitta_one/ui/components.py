@@ -10,17 +10,14 @@ from vitta_one.patient_queue.state import ReceptionQueueState
 _NAV_BY_ROLE = {
     Role.RECEPCIONISTA: (
         ("Recepção", "/recepcao", "layout_dashboard", "recepcao"),
-        ("Agenda", "/recepcao/agenda", "calendar_days", "agenda"),
         ("Pacientes", "/recepcao/pacientes", "users", "pacientes"),
         ("Fila de espera", "/recepcao/fila", "list_ordered", "fila"),
     ),
     Role.MEDICO: (
         ("Atendimento clínico", "/medico", "stethoscope", "atendimento"),
-        ("Agenda", "/medico/agenda", "calendar_days", "agenda-medica"),
-        ("Pacientes", "/medico/pacientes", "users", "pacientes-medico"),
     ),
     Role.PACIENTE: (
-        ("Minhas consultas", "/paciente", "calendar_days", "consultas-paciente"),
+        ("Meus atendimentos", "/paciente", "clipboard_list", "consultas-paciente"),
     ),
     Role.FINANCEIRO: (
         ("Financeiro", "/financeiro", "wallet", "financeiro"),
@@ -29,7 +26,6 @@ _NAV_BY_ROLE = {
 
 _ADMIN_PREVIEW_NAV = (
     ("Recepção", "/admin/recepcao", "users", "recepcao"),
-    ("Agenda", "/admin/agenda", "calendar", "agenda"),
     ("Atendimento clínico", "/admin/atendimento", "stethoscope", "atendimento"),
     ("Pacientes", "/admin/pacientes", "user", "pacientes"),
     ("Financeiro", "/admin/financeiro", "wallet", "financeiro"),
