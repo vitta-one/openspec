@@ -193,7 +193,7 @@ def test_print_document_render_contract_includes_required_labels_and_unsigned_no
     for label in (
         "PRESCRIÇÃO",
         "Paciente",
-        "Consulta",
+        "Atendimento",
         "Profissional",
         "Itens prescritos",
         "Observações gerais",
