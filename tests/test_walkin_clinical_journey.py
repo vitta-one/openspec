@@ -188,3 +188,21 @@ def test_walkin_history_never_shows_active_or_other_patient_records(
     finish_queue_entry(db, entry_id=claimed.id, doctor_user_id=doctor.id)
     assert list_completed_history_for_patient(db, patient_id=second.id).total_count == 1
     assert list_completed_history_for_patient(db, patient_id=first.id).total_count == 0
+
+
+def test_walkin_prescription_requires_registered_professional(db: Session) -> None:
+    doctor = _doctor(db, "sem-registro")
+    patient = create_patient(db, name="Paciente sem registro", cpf="52998224725")
+    entry = create_queue_entry(
+        db, patient_id=patient.id, symptoms="Relato de teste", priority="VERDE"
+    )
+    claim_next_patient(db, doctor_user_id=doctor.id)
+    record = get_active_record(db, entry_id=entry.id, doctor_user_id=doctor.id)
+    with pytest.raises(PrescriptionAuthorizationError):
+        create_prescription(
+            db,
+            clinical_care_record_id=record.id,
+            doctor_user_id=doctor.id,
+            medication_or_item="Medicamento de teste",
+            instructions="Uso fictício",
+        )
