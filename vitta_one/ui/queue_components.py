@@ -2041,6 +2041,7 @@ def _finish_review_dialog() -> rx.Component:
                         variant="outline",
                         color_scheme="gray",
                         disabled=DoctorQueueState.is_submitting,
+                        on_click=DoctorQueueState.cancel_finish_review,
                         auto_focus=True,
                     )
                 ),
