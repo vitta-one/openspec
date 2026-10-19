@@ -19,6 +19,10 @@ from vitta_one.consultation_care.service import (
     complete_linked_consultation,
     start_linked_consultation,
 )
+from vitta_one.clinical_care.service import (
+    ClinicalCareConflictError,
+    create_record_for_queue_start,
+)
 from vitta_one.models.appointment import Consultation
 from vitta_one.models.auth import User
 from vitta_one.models.patient_queue import Patient, QueueEntry
@@ -526,7 +530,16 @@ def claim_next_patient(
     entry.updated_at = timestamp
     db.add(entry)
     try:
+        if entry.consultation_id is None:
+            create_record_for_queue_start(
+                db, entry=entry, doctor_user_id=doctor_user_id, now=timestamp
+            )
         db.commit()
+    except ClinicalCareConflictError as exc:
+        db.rollback()
+        raise QueueTransitionError(
+            "O atendimento já possui registro clínico. Atualize a fila."
+        ) from exc
     except IntegrityError as exc:
         db.rollback()
         raise QueueTransitionError(
