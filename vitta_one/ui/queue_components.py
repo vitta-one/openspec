@@ -2156,7 +2156,7 @@ def doctor_active_panel() -> rx.Component:
                     high_contrast=True,
                     min_height="3rem",
                     width=rx.breakpoints(initial="100%", sm="auto"),
-                    on_click=DoctorQueueState.finish_active,
+                    on_click=DoctorQueueState.begin_finish_review,
                     disabled=DoctorQueueState.is_submitting
                     | DoctorQueueState.is_saving_clinical
                     | DoctorQueueState.is_prescription_submitting
