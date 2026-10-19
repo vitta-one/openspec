@@ -236,12 +236,15 @@ def list_consultations(
     patient_id: int | None = None,
     start_at: datetime | None = None,
     end_at: datetime | None = None,
+    consultation_id: int | None = None,
 ) -> list[ConsultationItem]:
     statement = (
         select(Consultation, Patient, Professional)
         .join(Patient, Patient.id == Consultation.patient_id)
         .join(Professional, Professional.id == Consultation.professional_id)
     )
+    if consultation_id is not None:
+        statement = statement.where(Consultation.id == consultation_id)
     if professional_id is not None:
         statement = statement.where(Consultation.professional_id == professional_id)
     if patient_id is not None:
