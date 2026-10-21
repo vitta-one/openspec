@@ -1794,8 +1794,8 @@ button:disabled,
   color: var(--vitta-text) !important;
   opacity: 1 !important;
 }
-.vitta-shell .rt-Text:not(.rt-Badge):not(.rt-Button .rt-Text),
-.vitta-login-form-pane .rt-Text:not(.rt-Badge):not(.rt-Button .rt-Text),
+.vitta-shell .rt-Text:not(.rt-Badge),
+.vitta-login-form-pane .rt-Text:not(.rt-Badge),
 .vitta-shell :is(label, legend),
 .vitta-login-form-pane :is(label, legend) {
   color: var(--vitta-text);
@@ -1893,7 +1893,7 @@ button:disabled,
 }
 :is(.rt-DialogContent, .rt-AlertDialogContent, .rt-PopoverContent,
     .rt-SelectContent, .rt-DropdownMenuContent, .vitta-dialog-content)
-  .rt-Text:not(.rt-Button .rt-Text) {
+  .rt-Text {
   color: #334155 !important;
   opacity: 1 !important;
 }
@@ -1927,4 +1927,16 @@ button:disabled,
     color: #0f172a !important;
     background: #ffffff !important;
   }
+}
+
+/* Button labels retain their container contrast, despite shared text selectors. */
+.vitta-shell .rt-Button .rt-Text,
+.vitta-login-form-pane .rt-Button .rt-Text,
+.rt-DialogContent .rt-Button .rt-Text,
+.rt-AlertDialogContent .rt-Button .rt-Text {
+  color: inherit !important;
+}
+.vitta-shell [role="alert"] .rt-Text,
+.rt-DialogContent [role="alert"] .rt-Text {
+  color: #991b1b !important;
 }
