@@ -78,7 +78,7 @@ def seed(db):
         ProfessionalSpecialty(professional_id=active.id, specialty_id=unavailable_specialty.id),
         ProfessionalSpecialty(professional_id=inactive.id, specialty_id=specialty.id),
     ])
-    starts = datetime(2099, 8, 11, 13, tzinfo=timezone.utc)
+    starts = datetime.now(timezone.utc).replace(hour=13, minute=0, second=0, microsecond=0) + timedelta(days=2)
     slot = ProfessionalAvailabilitySlot(
         professional_id=active.id, starts_at=starts, status=AvailabilitySlotStatus.AVAILABLE.value
     )
@@ -109,9 +109,11 @@ def test_patient_can_choose_specialty_doctor_and_own_slot(db):
     assert [item.id for item in doctors] == [x["doctor"].id]
     slots = list_patient_slots(
         db, specialty_id=x["specialty"].id,
-        professional_id=x["doctor"].id, now=datetime(2099, 8, 10, tzinfo=timezone.utc),
+        professional_id=x["doctor"].id, now=x["starts"] - timedelta(days=1),
     )
     assert [item.id for item in slots] == [x["slot"].id, x["second"].id]
+    start_date = (x["starts"] - timedelta(days=1)).date().isoformat()
+    end_date = (x["starts"] + timedelta(days=2)).date().isoformat()
     created = patient_schedule_own_consultation(
         db, token=x["patient_token"], specialty_id=x["specialty"].id,
         professional_id=x["doctor"].id, slot_id=x["slot"].id
@@ -121,19 +123,19 @@ def test_patient_can_choose_specialty_doctor_and_own_slot(db):
     assert created.status == ConsultationStatus.AGENDADA.value
     assert db.get(ProfessionalAvailabilitySlot, x["slot"].id).status == "BOOKED"
     _, patient_appointments = patient_get_my_agenda(
-        db, token=x["patient_token"], start_date="2099-08-01", end_date="2099-08-31"
+        db, token=x["patient_token"], start_date=start_date, end_date=end_date
     )
     _, doctor_appointments = doctor_get_my_agenda(
-        db, token=x["doctor_token"], start_date="2099-08-01", end_date="2099-08-31"
+        db, token=x["doctor_token"], start_date=start_date, end_date=end_date
     )
     reception = reception_get_agenda(
-        db, token=x["reception_token"], start_date="2099-08-01", end_date="2099-08-31"
+        db, token=x["reception_token"], start_date=start_date, end_date=end_date
     )
     assert [item.id for item in patient_appointments] == [created.id]
     assert [item.id for item in doctor_appointments] == [created.id]
     assert [item.id for item in reception.consultations] == [created.id]
     assert patient_get_my_agenda(
-        db, token=x["other_token"], start_date="2099-08-01", end_date="2099-08-31"
+        db, token=x["other_token"], start_date=start_date, end_date=end_date
     )[1] == ()
 
 
@@ -238,3 +240,21 @@ def test_patient_catalog_hides_inactive_specialties_and_doctors(db):
     assert list_patient_slots(
         db, specialty_id=9999, professional_id=x["doctor"].id
     ) == ()
+
+
+def test_patient_cannot_forge_out_of_window_availability(db):
+    x = seed(db)
+    later = ProfessionalAvailabilitySlot(
+        professional_id=x["doctor"].id,
+        starts_at=datetime.now(timezone.utc) + timedelta(days=65),
+        status=AvailabilitySlotStatus.AVAILABLE.value,
+    )
+    db.add(later)
+    db.commit()
+    db.refresh(later)
+    with pytest.raises(SchedulingValidationError, match="fora do período"):
+        patient_schedule_own_consultation(
+            db, token=x["patient_token"], specialty_id=x["specialty"].id,
+            professional_id=x["doctor"].id, slot_id=later.id,
+        )
+    assert db.get(ProfessionalAvailabilitySlot, later.id).status == "AVAILABLE"
