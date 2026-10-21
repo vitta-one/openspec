@@ -7,6 +7,7 @@ from vitta_one.appointment_scheduling.state import AdminAvailabilityState, Recep
 from vitta_one.doctor_workspace.state import DoctorWorkspaceState
 from vitta_one.auth.roles import Role
 from vitta_one.auth.state import AuthState
+from vitta_one.auth.staff_state import AdminStaffState
 from vitta_one.clinical_prescription.state import PrintPrescriptionState
 from vitta_one.models import (
     AuthSession,
@@ -117,6 +118,7 @@ app.add_page(
     on_load=[
         AuthState.load_protected,
         AdminDirectoryState.load,
+        AdminStaffState.load,
         AdminAvailabilityState.load,
         AdminClinicConfigurationState.load,
     ],
