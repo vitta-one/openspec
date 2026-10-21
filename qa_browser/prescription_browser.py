@@ -649,3 +649,70 @@ def test_walkin_receipt_to_clinical_prescription_and_review(page: Page) -> None:
     expect(page.get_by_role("heading", name="Nenhum atendimento ativo")).to_be_visible(
         timeout=30000
     )
+
+
+
+def login_as_patient(page: Page) -> None:
+    """Use only the disposable PostgreSQL account linked to a synthetic patient."""
+    page.goto(BASE + "/login", wait_until="domcontentloaded")
+    page.locator("#login-email").fill(FIXTURE["booking_patient_email"])
+    page.locator("#login-password").fill(os.environ["VITTA_ONE_QA_PASSWORD"])
+    page.get_by_role("button", name="Entrar").click()
+    expect(page).to_have_url(re.compile(r"/paciente/?$"), timeout=30000)
+    expect(page.get_by_role("heading", name="Agenda do paciente")).to_be_visible(
+        timeout=30000
+    )
+
+
+def test_patient_books_own_appointment_and_both_staff_agendas_update(page: Page) -> None:
+    """Real browser booking: patient's own session → specialty → doctor → slot → shared agenda."""
+    login_as_patient(page)
+    page.get_by_role("link", name=re.compile("Agendar nova consulta")).click()
+    expect(page).to_have_url(re.compile(r"/paciente/agendar/?$"), timeout=30000)
+    expect(page.get_by_role("heading", name="Agendar consulta")).to_be_visible(timeout=30000)
+
+    page.locator("#patient-booking-specialty").click()
+    page.get_by_role("option", name=FIXTURE["booking_specialty_name"], exact=True).click()
+    page.locator("#patient-booking-doctor").click()
+    page.get_by_role("option", name=re.compile("Dr. QA Pronto Atendimento")).click()
+    expect(page.get_by_role("heading", name="3. Escolha o horário")).to_be_visible()
+    choose = page.get_by_role("button", name=re.compile("Selecionar horário de")).first
+    expect(choose).to_be_visible(timeout=30000)
+    for width in (1280, 375):
+        page.set_viewport_size({"width": width, "height": 850})
+        assert page.evaluate(
+            "document.documentElement.scrollWidth <= window.innerWidth + 2"
+        ), overflowing_elements(page)
+        page.screenshot(
+            path=f"qa-artifacts/paciente-autogendamento-{width}px.png", full_page=True
+        )
+    choose.click()
+    dialog = page.get_by_role("dialog")
+    expect(dialog).to_be_visible(timeout=15000)
+    expect(dialog.get_by_role("heading", name="Confirmar agendamento")).to_be_visible()
+    dialog.get_by_role("button", name="Confirmar consulta").click()
+    expect(page.get_by_role("heading", name="Consulta agendada!")).to_be_visible(
+        timeout=30000
+    )
+    page.screenshot(path="qa-artifacts/paciente-consulta-agendada.png", full_page=True)
+
+    page.get_by_role("link", name=re.compile("Ver minhas consultas")).click()
+    expect(page).to_have_url(re.compile(r"/paciente/?$"), timeout=30000)
+    expect(page.get_by_text(FIXTURE["booking_doctor_name"], exact=True).first).to_be_visible(
+        timeout=30000
+    )
+
+    # Refresh the staff contexts under their OWN authentication sessions.
+    login_as_reception(page)
+    page.goto(BASE + "/recepcao/agenda", wait_until="domcontentloaded")
+    expect(page.get_by_text(FIXTURE["booking_patient_name"], exact=True).first).to_be_visible(
+        timeout=30000
+    )
+    page.screenshot(path="qa-artifacts/recepcao-consulta-autogendada.png", full_page=True)
+
+    login(page, FIXTURE["doctor_b_email"])
+    page.goto(BASE + "/medico/agenda", wait_until="domcontentloaded")
+    expect(page.get_by_text(FIXTURE["booking_patient_name"], exact=True).first).to_be_visible(
+        timeout=30000
+    )
+    page.screenshot(path="qa-artifacts/medico-consulta-autogendada.png", full_page=True)
