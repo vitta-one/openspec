@@ -843,10 +843,10 @@ def test_reception_agenda_cpf_mask_does_not_discard_selected_patient(page: Page)
     expect(page.get_by_role("heading", name="Agenda e check-in")).to_be_visible(timeout=30000)
     page.wait_for_function("window.__vittaInputMasksInstalled === true", timeout=30000)
     search = page.locator("#agenda-patient-cpf")
-    search.fill("52998224725")
-    expect(search).to_have_value("529.982.247-25")
+    search.fill("53817624964")
+    expect(search).to_have_value("538.176.249-64")
     page.get_by_role("button", name="Localizar paciente").click()
-    expect(page.get_by_text("Paciente QA Cadastro Novo", exact=True).first).to_be_visible(
+    expect(page.get_by_text(FIXTURE["booking_patient_name"], exact=True).first).to_be_visible(
         timeout=30000
     )
     page.screenshot(path="qa-artifacts/agenda-cpf-validado.png", full_page=True)
