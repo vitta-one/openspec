@@ -730,3 +730,37 @@ def test_patient_books_own_appointment_and_both_staff_agendas_update(page: Page)
         timeout=30000
     )
     page.screenshot(path="qa-artifacts/medico-consulta-autogendada.png", full_page=True)
+
+
+
+def test_reception_registers_patient_then_opens_its_agenda(page: Page) -> None:
+    """The receptionist keeps the newly created patient selected across modules."""
+    login_as_reception(page)
+    page.goto(BASE + "/recepcao/pacientes", wait_until="domcontentloaded")
+    expect(page.get_by_role("heading", name="Cadastro e localização")).to_be_visible(
+        timeout=30000
+    )
+    page.locator("#patient-create-name").fill("Paciente QA Cadastro Novo")
+    page.locator("#patient-create-cpf").fill("52998224725")
+    page.locator("#patient-create-phone").fill("(11) 98888-1234")
+    page.get_by_role("button", name="Cadastrar paciente").click()
+    expect(page.get_by_text("Paciente cadastrado e selecionado para a fila.")).to_be_visible(
+        timeout=30000
+    )
+    expect(
+        page.get_by_role("button", name="Agendar consulta para este paciente")
+    ).to_be_visible(timeout=30000)
+    page.screenshot(path="qa-artifacts/recepcao-paciente-cadastrado.png", full_page=True)
+    page.get_by_role("button", name="Agendar consulta para este paciente").click()
+    expect(page).to_have_url(re.compile(r"/recepcao/agenda/?$"), timeout=30000)
+    expect(page.get_by_text("Paciente QA Cadastro Novo", exact=True).first).to_be_visible(
+        timeout=30000
+    )
+
+
+def test_staff_cannot_open_patient_self_booking(page: Page) -> None:
+    """The patient-only scheduling route is not a public data discovery endpoint."""
+    login(page, FIXTURE["doctor_b_email"])
+    page.goto(BASE + "/paciente/agendar", wait_until="domcontentloaded")
+    expect(page).to_have_url(re.compile(r"/acesso-negado/?$"), timeout=30000)
+    expect(page.get_by_role("heading", name="Agendar consulta")).to_have_count(0)
