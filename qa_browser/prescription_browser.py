@@ -882,11 +882,20 @@ def audit_role_routes(page: Page, prefix: str, routes: tuple[str, ...]) -> None:
         expect(page.locator(".vitta-shell")).to_be_visible(timeout=30000)
         expect(page.get_by_role("main")).to_be_visible(timeout=30000)
         expect(page.get_by_role("navigation", name="Navegação principal")).to_be_visible()
-        for width in (1280, 375):
+        for width in (1280, 375, 320):
             page.set_viewport_size({"width": width, "height": 780})
             assert page.evaluate(
                 "document.documentElement.scrollWidth <= window.innerWidth + 2"
             ), (route, width, overflowing_elements(page))
+            if width <= 375 and prefix in {"recepcao", "medico"}:
+                nav = page.get_by_role("navigation", name="Navegação principal")
+                for item in nav.get_by_role("link").all():
+                    expect(item).to_be_visible()
+                    rect = item.bounding_box()
+                    assert rect is not None
+                    assert rect["x"] >= -2 and rect["x"] + rect["width"] <= width + 2, (
+                        route, width, item.inner_text(), rect
+                    )
             page.screenshot(
                 path=f"qa-artifacts/audit-{prefix}-{slug}-{width}px.png",
                 full_page=True,
