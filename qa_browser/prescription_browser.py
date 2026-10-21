@@ -809,8 +809,29 @@ def test_patient_identity_input_masks_and_client_validation(page: Page) -> None:
     assert phone.evaluate("(el) => el.checkValidity()")
 
     search = page.locator("#patient-search-cpf")
-    search.fill("52998224725")
-    expect(search).to_have_value("529.982.247-25")
+    search.fill("53817624964")
+    expect(search).to_have_value("538.176.249-64")
+    page.get_by_role("button", name="Localizar paciente").click()
+    expect(page.get_by_text(FIXTURE["booking_patient_name"], exact=True).first).to_be_visible(
+        timeout=30000
+    )
+    edit_phone = page.locator("#patient-edit-phone")
+    edit_phone.fill("11988881234")
+    expect(edit_phone).to_have_value("(11) 98888-1234")
+    page.get_by_role("button", name="Salvar cadastro").click()
+    expect(page.get_by_text("Cadastro operacional atualizado.")).to_be_visible(
+        timeout=30000
+    )
+    # Reload from PostgreSQL, not just in-memory Reflex State.
+    page.reload(wait_until="domcontentloaded")
+    expect(page.get_by_role("heading", name="Cadastro e localização")).to_be_visible(
+        timeout=30000
+    )
+    page.locator("#patient-search-cpf").fill("53817624964")
+    page.get_by_role("button", name="Localizar paciente").click()
+    expect(page.locator("#patient-edit-phone")).to_have_value(
+        "(11) 98888-1234", timeout=30000
+    )
 
     page.set_viewport_size({"width": 375, "height": 800})
     assert page.evaluate(
