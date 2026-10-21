@@ -687,11 +687,20 @@ def test_patient_books_own_appointment_and_both_staff_agendas_update(page: Page)
     expect(page.get_by_role("heading", name="3. Escolha o horário")).to_be_visible()
     choose = page.get_by_role("button", name=re.compile("Selecionar horário de")).first
     expect(choose).to_be_visible(timeout=30000)
-    for width in (1280, 375):
+    for width in (1280, 375, 320):
         page.set_viewport_size({"width": width, "height": 850})
         assert page.evaluate(
             "document.documentElement.scrollWidth <= window.innerWidth + 2"
         ), overflowing_elements(page)
+        if width <= 375:
+            for label in ("Minhas consultas", "Agendar consulta"):
+                nav = page.get_by_role("navigation", name="Navegação principal")
+                item = nav.get_by_role("link", name=label)
+                expect(item).to_be_visible()
+                bounds = item.bounding_box()
+                assert bounds is not None
+                assert bounds["x"] >= -2 and bounds["x"] + bounds["width"] <= width + 2
+                assert item.evaluate("(el) => el.scrollWidth <= el.clientWidth + 2")
         page.screenshot(
             path=f"qa-artifacts/paciente-autogendamento-{width}px.png", full_page=True
         )
