@@ -727,25 +727,28 @@ def test_patient_books_own_appointment_and_both_staff_agendas_update(page: Page)
         timeout=30000
     )
 
-    # Explicitly end each role session before switching to another identity.
+    # Independent browser contexts avoid the previous role's Reflex websocket
+    # state or stale login navigation influencing cross-role verification.
     page.set_viewport_size({"width": 1280, "height": 850})
     page.get_by_role("button", name="Sair").click()
     expect(page).to_have_url(re.compile(r"/login/?$"), timeout=30000)
-    login_as_reception(page)
-    page.goto(BASE + "/recepcao/agenda", wait_until="domcontentloaded")
-    expect(page.get_by_text(FIXTURE["booking_patient_name"], exact=True).first).to_be_visible(
-        timeout=30000
-    )
-    page.screenshot(path="qa-artifacts/recepcao-consulta-autogendada.png", full_page=True)
-
-    page.get_by_role("button", name="Sair").click()
-    expect(page).to_have_url(re.compile(r"/login/?$"), timeout=30000)
-    login(page, FIXTURE["doctor_b_email"])
-    page.goto(BASE + "/medico/agenda", wait_until="domcontentloaded")
-    expect(page.get_by_text(FIXTURE["booking_patient_name"], exact=True).first).to_be_visible(
-        timeout=30000
-    )
-    page.screenshot(path="qa-artifacts/medico-consulta-autogendada.png", full_page=True)
+    browser = page.context.browser
+    assert browser is not None
+    for email, route, screenshot in (
+        (FIXTURE["reception_email"], "/recepcao/agenda", "recepcao-consulta-autogendada.png"),
+        (FIXTURE["doctor_b_email"], "/medico/agenda", "medico-consulta-autogendada.png"),
+    ):
+        context = browser.new_context(viewport={"width": 1280, "height": 850})
+        role_page = context.new_page()
+        try:
+            login(role_page, email)
+            role_page.goto(BASE + route, wait_until="domcontentloaded")
+            expect(role_page.get_by_text(FIXTURE["booking_patient_name"], exact=True).first).to_be_visible(
+                timeout=30000
+            )
+            role_page.screenshot(path="qa-artifacts/" + screenshot, full_page=True)
+        finally:
+            context.close()
 
 
 
