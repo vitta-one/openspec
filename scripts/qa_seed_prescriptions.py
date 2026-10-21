@@ -5,6 +5,7 @@ credentials: the script intentionally adds synthetic identities and clinical dat
 """
 import json
 import os
+import hashlib
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -20,6 +21,7 @@ from vitta_one.models.appointment import Consultation, ProfessionalAvailabilityS
 from vitta_one.models.professional import Professional
 from sqlmodel import select
 from vitta_one.models.auth import User
+from vitta_one.models.patient_queue import PatientPortalInvitation
 from vitta_one.patient_queue.service import claim_next_patient, create_patient, create_queue_entry, finish_queue_entry
 from vitta_one.professional_directory.service import create_professional, create_specialty
 
@@ -210,21 +212,26 @@ def main() -> None:
         )
         assert walkin_entry.consultation_id is None
 
-        # Synthetic authenticated patient, exercising the exact same booking
-        # service/agenda as Reception in real Chromium, without external email.
-        patient_login = User(
-            email="qa-booking-patient@example.invalid",
-            password_hash=hash_password(password),
-            role=Role.PACIENTE.value,
-        )
-        db.add(patient_login)
-        db.commit()
-        db.refresh(patient_login)
+        # CI-only invitation: real HTTP activation and login through the browser,
+        # while outbound email remains a separate provider integration gate.
+        booking_email = "qa-booking-patient@example.invalid"
+        booking_code = "synthetic-activation-code-qa-2026"
         booking_patient = create_patient(
             db, name="Paciente QA Autogendamento", cpf=_cpf("538176249"),
         )
-        booking_patient.user_id = patient_login.id
-        db.add(booking_patient)
+        db.add(
+            PatientPortalInvitation(
+                patient_id=booking_patient.id,
+                email=booking_email,
+                code_hash=hashlib.sha256(booking_code.encode("utf-8")).hexdigest(),
+                created_by_user_id=receptionist.id,
+                consented_at=now,
+                created_at=now,
+                expires_at=now + timedelta(hours=24),
+                delivery_status="ACCEPTED",
+                sent_at=now,
+            )
+        )
         db.commit()
         booking_slot = create_availability_slot(
             db, professional_id=db.exec(
@@ -240,7 +247,8 @@ def main() -> None:
             "doctor_b_email": doctors[1].email,
             "walkin_patient_name": walkin_patient.name,
             "walkin_entry_id": walkin_entry.id,
-            "booking_patient_email": patient_login.email,
+            "booking_patient_email": booking_email,
+            "booking_activation_code": booking_code,
             "booking_patient_name": booking_patient.name,
             "booking_doctor_name": "Dr. QA Pronto Atendimento",
             "booking_specialty_name": specialty.name,
