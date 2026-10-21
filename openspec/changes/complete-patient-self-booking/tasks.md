@@ -1,0 +1,11 @@
+# Implementação
+- [x] Incorporar PR #317, com testes verdes e sem alterar rotas de agendamento.
+- [x] Porta de agendamento por usuário PACIENTE no servidor.
+- [x] Descoberta de especialidade, médico e horários elegíveis.
+- [x] Seleção e confirmação em tela própria, na linguagem visual atual.
+- [x] Navegação no portal paciente e continuidade do cadastro na recepção.
+- [x] Conflitos por horário, sessão e concorrência.
+- [x] Testes de domínio entre recepção/paciente/médico, com dados sintéticos.
+- [ ] Validar CI Python/Reflex/PostgreSQL.
+- [ ] Adicionar e validar Chromium para autogendamento.
+- [ ] Revisar e-mail real com provedor conectado e dados de homologação autorizados.
