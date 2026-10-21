@@ -702,7 +702,10 @@ def test_patient_books_own_appointment_and_both_staff_agendas_update(page: Page)
         timeout=30000
     )
 
-    # Refresh the staff contexts under their OWN authentication sessions.
+    # Explicitly end each role session before switching to another identity.
+    page.set_viewport_size({"width": 1280, "height": 850})
+    page.get_by_role("button", name="Sair").click()
+    expect(page).to_have_url(re.compile(r"/login/?$"), timeout=30000)
     login_as_reception(page)
     page.goto(BASE + "/recepcao/agenda", wait_until="domcontentloaded")
     expect(page.get_by_text(FIXTURE["booking_patient_name"], exact=True).first).to_be_visible(
@@ -710,6 +713,8 @@ def test_patient_books_own_appointment_and_both_staff_agendas_update(page: Page)
     )
     page.screenshot(path="qa-artifacts/recepcao-consulta-autogendada.png", full_page=True)
 
+    page.get_by_role("button", name="Sair").click()
+    expect(page).to_have_url(re.compile(r"/login/?$"), timeout=30000)
     login(page, FIXTURE["doctor_b_email"])
     page.goto(BASE + "/medico/agenda", wait_until="domcontentloaded")
     expect(page.get_by_text(FIXTURE["booking_patient_name"], exact=True).first).to_be_visible(
