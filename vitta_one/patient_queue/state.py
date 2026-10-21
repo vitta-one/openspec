@@ -562,6 +562,25 @@ class ReceptionQueueState(rx.State):
             yield
 
     @rx.event
+    async def open_selected_patient_agenda(self):
+        """Keep the selected patient when Reception switches from registration to booking."""
+        if self.selected_patient_id <= 0:
+            self.error_message = "Localize um paciente antes de agendar."
+            return
+        try:
+            token = await self._token()
+            from vitta_one.appointment_scheduling.state import ReceptionAgendaState
+            agenda = await self.get_state(ReceptionAgendaState)
+            agenda.selected_patient_id = self.selected_patient_id
+            agenda.selected_patient_name = self.selected_patient_name
+            agenda.patient_cpf = ""
+            return rx.redirect("/recepcao/agenda")
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            if isinstance(exc, AuthenticationRequiredError):
+                return rx.redirect("/login")
+            return rx.redirect("/acesso-negado")
+
+    @rx.event
     async def enqueue(self, form_data: QueueFormData):
         """Create a waiting queue entry for the currently selected patient."""
         self.is_submitting = True
