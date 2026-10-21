@@ -491,7 +491,6 @@ def professional_dialog() -> rx.Component:
                     width="100%",
                 ),
                 on_submit=AdminDirectoryState.save_professional,
-                no_validate=True,
                 width="100%",
             ),
             class_name="vitta-dialog-content vitta-dialog-content-wide",

@@ -149,13 +149,18 @@ class ClinicalHistoryRow(TypedDict):
     prescription_count: int
 
 
-def _format_patient_contact(value: str | None) -> str:
+def format_patient_phone_input(value: str | None) -> str:
+    """Use a human-readable edit value; blank fields stay blank."""
     digits = "".join(character for character in str(value or "") if character.isdigit())
     if len(digits) == 11:
         return f"({digits[:2]}) {digits[2:7]}-{digits[7:]}"
     if len(digits) == 10:
         return f"({digits[:2]}) {digits[2:6]}-{digits[6:]}"
-    return "Telefone não informado"
+    return str(value or "")[:20]
+
+
+def _format_patient_contact(value: str | None) -> str:
+    return format_patient_phone_input(value) or "Telefone não informado"
 
 
 def _serialize_prescription_item(item) -> PrescriptionItemRow:
@@ -376,7 +381,7 @@ class ReceptionQueueState(rx.State):
                 return
             self.selected_patient_id = patient.id
             self.selected_patient_name = patient.name
-            self.selected_patient_phone = patient.phone or ""
+            self.selected_patient_phone = format_patient_phone_input(patient.phone)
             with rx.session() as db:
                 portal_status = reception_get_patient_portal_status(
                     db, token=token, patient_id=patient.id
@@ -417,7 +422,7 @@ class ReceptionQueueState(rx.State):
                 raise RuntimeError("Paciente criado sem identificador.")
             self.selected_patient_id = patient.id
             self.selected_patient_name = patient.name
-            self.selected_patient_phone = patient.phone or ""
+            self.selected_patient_phone = format_patient_phone_input(patient.phone)
             self.selected_patient_portal_status = "Sem acesso ao portal"
             self.success_message = "Paciente cadastrado e selecionado para a fila."
         except PatientAlreadyExistsError:
@@ -458,7 +463,7 @@ class ReceptionQueueState(rx.State):
             else:
                 self.selected_patient_id = patient.id
                 self.selected_patient_name = patient.name
-                self.selected_patient_phone = patient.phone or ""
+                self.selected_patient_phone = format_patient_phone_input(patient.phone)
                 with rx.session() as db:
                     portal_status = reception_get_patient_portal_status(
                         db, token=token, patient_id=patient.id
@@ -490,7 +495,7 @@ class ReceptionQueueState(rx.State):
 
     @rx.event
     def update_selected_patient_phone(self, value: str) -> None:
-        self.selected_patient_phone = str(value or "")[:20]
+        self.selected_patient_phone = format_patient_phone_input(value)
 
     @rx.event
     async def update_selected_patient(self, form_data: PatientUpdateFormData):
@@ -511,7 +516,7 @@ class ReceptionQueueState(rx.State):
                     phone=str(form_data.get("phone", "")),
                 )
             self.selected_patient_name = patient.name
-            self.selected_patient_phone = patient.phone or ""
+            self.selected_patient_phone = format_patient_phone_input(patient.phone)
             self.success_message = "Cadastro operacional atualizado."
         except (PatientValidationError, PatientPortalError) as exc:
             self.error_message = str(exc)

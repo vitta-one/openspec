@@ -152,3 +152,16 @@ def validate_patient_booking_selection(
         raise SchedulingValidationError(
             "A seleção de médico, especialidade ou horário não é mais válida."
         )
+    # Hiding dates in the UI is not authorization: a crafted request must
+    # not book a slot outside the published patient self-service window.
+    from vitta_one.appointment_scheduling.service import SchedulingConflictError
+    slot = db.get(ProfessionalAvailabilitySlot, slot_id)
+    if slot is None or slot.status != AvailabilitySlotStatus.AVAILABLE.value:
+        raise SchedulingConflictError("Este horário não está mais disponível.")
+    timestamp = _now()
+    if not timestamp < ensure_utc(slot.starts_at) <= timestamp + timedelta(
+        days=BOOKING_HORIZON_DAYS
+    ):
+        raise SchedulingValidationError(
+            "O horário escolhido está fora do período disponível para agendamento."
+        )

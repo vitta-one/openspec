@@ -395,7 +395,11 @@ def authenticated_sidebar(role: Role, active: str) -> rx.Component:
             ),
             class_name="vitta-sidebar-session",
         ),
-        class_name=("vitta-sidebar vitta-sidebar--patient" if role is Role.PACIENTE else "vitta-sidebar"),
+        class_name={
+            Role.RECEPCIONISTA: "vitta-sidebar vitta-sidebar--reception",
+            Role.MEDICO: "vitta-sidebar vitta-sidebar--doctor",
+            Role.PACIENTE: "vitta-sidebar vitta-sidebar--patient",
+        }.get(role, "vitta-sidebar"),
     )
 
 
@@ -687,6 +691,7 @@ def empty_state(
 
 def _product_shell(role: Role, active: str, *children: rx.Component) -> rx.Component:
     return rx.box(
+        rx.script(src="/input-masks.js"),
         authenticated_sidebar(role, active),
         rx.box(
             authenticated_topbar(),
