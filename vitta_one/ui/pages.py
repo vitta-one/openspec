@@ -4,6 +4,7 @@ import reflex as rx
 
 from vitta_one.appointment_scheduling.state import AdminAvailabilityState, ReceptionAgendaState
 from vitta_one.auth.roles import Role
+from vitta_one.ui.staff_components import admin_staff_panel
 from vitta_one.auth.state import AuthState
 from vitta_one.doctor_workspace.state import DoctorWorkspaceState
 from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
@@ -379,6 +380,7 @@ def admin_page() -> rx.Component:
         admin_clinic_configuration(),
         admin_directory_workspace(),
         admin_availability_panel(),
+        admin_staff_panel(),
         active="administracao",
     )
 
