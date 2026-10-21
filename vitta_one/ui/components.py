@@ -395,7 +395,7 @@ def authenticated_sidebar(role: Role, active: str) -> rx.Component:
             ),
             class_name="vitta-sidebar-session",
         ),
-        class_name="vitta-sidebar",
+        class_name=("vitta-sidebar vitta-sidebar--patient" if role is Role.PACIENTE else "vitta-sidebar"),
     )
 
 
