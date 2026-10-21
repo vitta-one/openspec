@@ -666,6 +666,15 @@ def login_as_patient(page: Page) -> None:
 
 def test_patient_books_own_appointment_and_both_staff_agendas_update(page: Page) -> None:
     """Real browser booking: patient's own session → specialty → doctor → slot → shared agenda."""
+    # Native activation form -> ASGI endpoint -> account creation -> real login.
+    page.goto(BASE + "/ativar-paciente", wait_until="domcontentloaded")
+    expect(page.get_by_role("heading", name="Ative seu portal")).to_be_visible(timeout=30000)
+    page.locator("#patient-activation-email").fill(FIXTURE["booking_patient_email"])
+    page.locator("#patient-activation-code").fill(FIXTURE["booking_activation_code"])
+    page.locator("#patient-activation-password").fill(os.environ["VITTA_ONE_QA_PASSWORD"])
+    page.get_by_role("button", name="Ativar acesso").click()
+    expect(page.get_by_role("heading", name="Acesso ativado")).to_be_visible(timeout=30000)
+    page.get_by_role("link", name="Ir para o login").click()
     login_as_patient(page)
     page.get_by_role("link", name=re.compile("Agendar nova consulta")).click()
     expect(page).to_have_url(re.compile(r"/paciente/agendar/?$"), timeout=30000)
