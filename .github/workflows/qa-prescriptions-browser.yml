@@ -7,6 +7,8 @@ on:
     paths:
       - "scripts/qa_seed_prescriptions.py"
       - "qa_browser/prescription_browser.py"
+      - "qa_browser/capture_all_screens.py"
+      - "scripts/qa_seed_visual_accounts.py"
       - ".github/workflows/qa-prescriptions-browser.yml"
       - "vitta_one/**"
       - "assets/styles.css"
@@ -40,6 +42,7 @@ jobs:
       VITTA_ONE_CLINIC_TIMEZONE: "America/Sao_Paulo"
       REFLEX_TELEMETRY_ENABLED: "false"
       VITTA_ONE_QA_DISPOSABLE_DATABASE: "yes"
+      VITTA_ONE_LOCAL_ADMIN_PREVIEW: "true"
       VITTA_ONE_QA_PASSWORD: "CI-ONLY-dummy-clinic-password-2026"
       QA_BASE_URL: http://127.0.0.1:3000
     steps:
@@ -63,6 +66,8 @@ jobs:
         run: reflex db migrate
       - name: Create strictly synthetic prescription data
         run: python -m scripts.qa_seed_prescriptions
+      - name: Create synthetic accounts for full visual coverage
+        run: python -m scripts.qa_seed_visual_accounts
       - name: Launch Reflex production server
         run: |
           set -euo pipefail
@@ -78,10 +83,13 @@ jobs:
           exit 1
       - name: Browser QA — security, keyboard and responsive
         run: python -m pytest qa_browser/prescription_browser.py -q
+      - name: Capture all protected and public screens in Chromium
+        if: always()
+        run: python -m qa_browser.capture_all_screens
       - name: Upload synthetic visual QA evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: prescription-qa-visual-evidence
+          name: vitta-one-chromium-all-screens
           path: qa-artifacts/
           retention-days: 90
