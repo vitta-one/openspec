@@ -193,3 +193,48 @@ def test_patient_without_linked_account_is_rejected(db):
         patient_schedule_own_consultation(
             db, token=token, specialty_id=1, professional_id=1, slot_id=1,
         )
+
+
+def test_same_patient_cannot_book_two_doctors_at_same_instant(db):
+    x = seed(db)
+    second_doctor = Professional(
+        name="Dr. Outro", registration_identifier="CRM-QA-SECOND", is_active=True
+    )
+    db.add(second_doctor)
+    db.commit()
+    db.refresh(second_doctor)
+    db.add(ProfessionalSpecialty(
+        professional_id=second_doctor.id, specialty_id=x["specialty"].id
+    ))
+    other_slot = ProfessionalAvailabilitySlot(
+        professional_id=second_doctor.id, starts_at=x["starts"],
+        status=AvailabilitySlotStatus.AVAILABLE.value,
+    )
+    db.add(other_slot)
+    db.commit()
+    db.refresh(other_slot)
+
+    first = patient_schedule_own_consultation(
+        db, token=x["patient_token"], specialty_id=x["specialty"].id,
+        professional_id=x["doctor"].id, slot_id=x["slot"].id,
+    )
+    with pytest.raises(SchedulingConflictError, match="já possui"):
+        patient_schedule_own_consultation(
+            db, token=x["patient_token"], specialty_id=x["specialty"].id,
+            professional_id=second_doctor.id, slot_id=other_slot.id,
+        )
+
+    assert db.get(ProfessionalAvailabilitySlot, other_slot.id).status == "AVAILABLE"
+    assert db.exec(select(Consultation)).one().id == first.id
+
+
+def test_patient_catalog_hides_inactive_specialties_and_doctors(db):
+    x = seed(db)
+    assert [s.name for s in list_patient_specialties(db)] == ["Clínica Geral"]
+    assert [d.name for d in list_patient_doctors(
+        db, specialty_id=x["specialty"].id
+    )] == ["Dra. Teste"]
+    assert list_patient_doctors(db, specialty_id=9999) == ()
+    assert list_patient_slots(
+        db, specialty_id=9999, professional_id=x["doctor"].id
+    ) == ()
