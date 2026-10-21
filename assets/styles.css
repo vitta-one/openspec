@@ -1628,3 +1628,34 @@ button:disabled,
     order: 2;
   }
 }
+
+
+/* Patient portal has two high-priority destinations; keep both fully visible
+   rather than clipping the booking action in the horizontal mobile nav. */
+@media (max-width: 520px) {
+  .vitta-sidebar--patient {
+    overflow: visible;
+  }
+  .vitta-sidebar--patient .vitta-sidebar-nav {
+    overflow: visible;
+  }
+  .vitta-sidebar--patient .vitta-sidebar-nav > div {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    gap: 0.35rem;
+  }
+  .vitta-sidebar--patient .vitta-nav-link {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+    justify-content: center;
+    padding: 0.55rem 0.3rem;
+    font-size: 0.79rem;
+    gap: 0.3rem;
+    text-align: center;
+  }
+  .vitta-sidebar--patient .vitta-nav-link svg {
+    display: none;
+  }
+}
