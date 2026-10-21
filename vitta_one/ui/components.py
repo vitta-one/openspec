@@ -21,6 +21,7 @@ _NAV_BY_ROLE = {
     ),
     Role.PACIENTE: (
         ("Minhas consultas", "/paciente", "calendar_days", "consultas-paciente"),
+        ("Agendar consulta", "/paciente/agendar", "calendar_plus", "agendar-paciente"),
     ),
     Role.FINANCEIRO: (
         ("Financeiro", "/financeiro", "wallet", "financeiro"),
