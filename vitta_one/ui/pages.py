@@ -8,6 +8,7 @@ from vitta_one.auth.state import AuthState
 from vitta_one.doctor_workspace.state import DoctorWorkspaceState
 from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
 from vitta_one.patient_portal.state import PatientPortalState
+from vitta_one.ui.patient_booking_components import patient_booking_workspace
 from vitta_one.professional_directory.state import AdminDirectoryState
 from vitta_one.reception.dashboard.components import reception_dashboard
 from vitta_one.ui.admin_directory_components import (
@@ -534,6 +535,23 @@ def doctor_patients_page() -> rx.Component:
     )
 
 
+def patient_booking_page() -> rx.Component:
+    """Self-service booking, always scoped to the patient session."""
+    return protected_workspace(
+        Role.PACIENTE,
+        page_header(
+            "Agenda",
+            "Agendar consulta",
+            "Encontre uma especialidade, escolha o médico e reserve seu horário.",
+            rx.link("Voltar às minhas consultas", href="/paciente",
+                    class_name="vitta-context-link"),
+        ),
+        patient_booking_workspace(),
+        active="agendar-paciente",
+        verified_path="/paciente/agendar",
+    )
+
+
 def patient_portal_page() -> rx.Component:
     return protected_workspace(
         Role.PACIENTE,
@@ -541,6 +559,15 @@ def patient_portal_page() -> rx.Component:
             "Minhas consultas",
             "Agenda do paciente",
             "Consulte compromissos futuros e passados vinculados à sua conta.",
+            rx.link(
+                rx.button(
+                    rx.icon("calendar_plus", size=17),
+                    "Agendar nova consulta",
+                    color_scheme="teal", high_contrast=True,
+                    min_height="2.75rem",
+                ),
+                href="/paciente/agendar",
+            ),
         ),
         feedback_region(PatientPortalState.error_message, "", "patient-portal-feedback"),
         patient_clinic_location(),
