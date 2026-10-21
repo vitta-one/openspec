@@ -624,7 +624,8 @@ Os valores acima são placeholders, **não credenciais funcionais**. O remetente
 - `/admin/especialidades` e `/admin/profissionais`: diretórios completos com busca, filtros e paginação, exclusivos do Administrador;
 - `/primeiro-acesso`: troca obrigatória de senha temporária Médica;
 - `/medico/agenda` e `/medico/pacientes`: agenda e lista derivadas do profissional associado à sessão;
-- `/paciente`: consultas do cadastro vinculado à conta do paciente;
+- `/paciente`: calendário, histórico e consultas vinculadas à conta do paciente;
+- `/paciente/agendar`: o paciente autenticado escolhe especialidade, médico e horário disponível, revisa e confirma a própria consulta;
 - `/ativar-paciente`: ativação por e-mail, código de uso único e senha escolhida pelo paciente;
 - `/recepcao`: agenda de Consultas, confirmação de chegada, cadastro/localização de pacientes, entrada avulsa, reavaliação, retirada e acompanhamento da fila ativa;
 - `/medico`: fila elegível, registro clínico, múltiplas Prescrições com itens e histórico concluído do paciente;
@@ -634,7 +635,7 @@ Os valores acima são placeholders, **não credenciais funcionais**. O remetente
 
 Financeiro ainda permanece shell. Administrador executa a gestão do diretório e Recepção/Médico executam a capability de fila; prioridade é sempre informada pela operação (`VERMELHO`, `AMARELO`, `VERDE`) e nunca é calculada ou elevada automaticamente pelo Vitta-One. A autorização é revalidada no backend e não depende apenas de componentes escondidos no frontend.
 
-Uma Consulta agendada continua fora da fila até a Recepção usar **Confirmar chegada**. Quando o Médico marcado chama o paciente, nasce um único `ClinicalCareRecord`. Durante `EM_ANDAMENTO`, o Médico pode salvar o registro clínico e criar uma ou mais Prescrições com itens. Ao finalizar, Consulta/fila passam para `CONCLUIDA`/`FINALIZADO`; Atendimento e Prescrições tornam-se somente leitura e passam a integrar o histórico. A Prescrição possui visualização HTML/CSS para impressão, mas **a assinatura ZapSign ainda não está implementada**. Walk-ins continuam sem Consulta, registro clínico ou Prescrição nesta etapa.
+Uma Consulta agendada continua fora da fila até a Recepção usar **Confirmar chegada**. Quando o Médico marcado chama o paciente, nasce um único `ClinicalCareRecord`. Durante `EM_ANDAMENTO`, o Médico pode salvar o registro clínico e criar uma ou mais Prescrições com itens. Ao finalizar, Consulta/fila passam para `CONCLUIDA`/`FINALIZADO`; Atendimento e Prescrições tornam-se somente leitura e passam a integrar o histórico. A Prescrição possui visualização HTML/CSS para impressão, mas **a assinatura ZapSign ainda não está implementada**. Atendimentos avulsos de pronto-socorro não criam uma Consulta agendada: o registro clínico e as prescrições são vinculados diretamente à passagem da fila, com histórico preservado após finalização. O fluxo de autogendamento não altera a classificação da fila.
 
 ## Fluxo de desenvolvimento
 
@@ -645,3 +646,12 @@ Contexto → Explore → Propose → Review → Apply → Archive
 ```
 
 Antes de alterar funcionalidades, leia `AGENTS.md`, `docs/project-overview.md`, `docs/domain-model.md` e `openspec/config.yaml`.
+
+
+### Jornada de autogendamento e homologação
+
+O cadastro operacional da recepção em `/recepcao/pacientes` permite enviar convite de acesso mediante consentimento. O paciente ativa a conta em `/ativar-paciente` usando e-mail, código temporário e senha de pelo menos 12 caracteres. O agendamento em `/paciente/agendar` usa **a identidade da sessão**, não um ID de paciente recebido do navegador. A seleção é feita por especialidade ativa, médico ativo e horários livres para os próximos 45 dias. A reserva usa o mesmo serviço transacional da recepção, impede sobreposição no mesmo horário e aparece nas agendas de paciente, médico e recepcionista.
+
+**Caminho sintético de demonstração:** recepcionista cadastra paciente, confirma consentimento e envia convite; paciente ativa e entra; escolhe especialidade, médico, data/hora e confirma; entra como médico para verificar a agenda; recepção confirma chegada para inserir o agendamento na fila; médico chama e finaliza. A confirmação real de entrega dos e-mails via Resend depende de credenciais e remetente verificado configurados na implantação, e não é verificada pelo CI. O Chromium usa ativação/usuários sintéticos no banco descartável. Não execute o seed de QA em produção.
+
+O ambiente de desenvolvimento não deve mostrar prescrições ou dados pessoais reais nas capturas. Para homologação de migração e e-mail no ambiente final: faça backup PostgreSQL, valide `alembic upgrade head` no destino controlado, confirme recebimento efetivo no endereço de testes, ativação única e login, e só então habilite a demonstração pública.
