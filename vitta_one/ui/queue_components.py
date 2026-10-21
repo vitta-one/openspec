@@ -205,7 +205,11 @@ def selected_patient_operations() -> rx.Component:
                         font_weight="700",
                     ),
                     rx.text(
-                        "O cadastro não cria uma conta. Envie um convite somente após confirmar consentimento com o paciente.",
+                        rx.cond(
+                            ReceptionQueueState.qa_local_enabled,
+                            "QA local: habilite o login abaixo com consentimento. O convite por e-mail continua disponível para testar o Resend.",
+                            "O cadastro não cria uma conta. Envie um convite somente após confirmar consentimento com o paciente.",
+                        ),
                         size="2",
                         color="var(--vitta-text-muted)",
                         line_height="1.5",

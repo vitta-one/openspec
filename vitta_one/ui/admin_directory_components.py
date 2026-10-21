@@ -799,6 +799,16 @@ def admin_directory_workspace() -> rx.Component:
                 on_click=AdminDirectoryState.start_new_specialty,
                 disabled=AdminDirectoryState.is_submitting,
             ),
+            rx.cond(
+                AdminDirectoryState.qa_local_enabled,
+                rx.link(
+                    rx.hstack(rx.icon("user_plus", size=17), "Nova recepcionista (QA)",
+                              spacing="2", align="center"),
+                    href="#qa-receptionist-setup",
+                    class_name="vitta-context-link",
+                ),
+                rx.fragment(),
+            ),
             rx.button(
                 rx.hstack(
                     rx.icon("user_plus", size=17),
@@ -848,7 +858,8 @@ def admin_directory_workspace() -> rx.Component:
                 align_items="start",
             ),
         ),
-        qa_receptionist_panel(),
+        rx.box(qa_receptionist_panel(), id="qa-receptionist-setup", width="100%",
+               scroll_margin_top="6rem"),
         specialty_dialog(),
         professional_dialog(),
         medical_reissue_dialog(),
