@@ -6,6 +6,6 @@
 - [x] Navegação no portal paciente e continuidade do cadastro na recepção.
 - [x] Conflitos por horário, sessão e concorrência.
 - [x] Testes de domínio entre recepção/paciente/médico, com dados sintéticos.
-- [ ] Validar CI Python/Reflex/PostgreSQL.
-- [ ] Adicionar e validar Chromium para autogendamento.
-- [ ] Revisar e-mail real com provedor conectado e dados de homologação autorizados.
+- [x] Validar CI Python/Reflex/PostgreSQL e OpenSpec.
+- [x] Adicionar e validar Chromium para ativação HTTP, autogendamento, recepção e agenda médica.
+- [ ] Homologar envio/recebimento real de convite no Resend com configuração e endereço de testes autorizados. O CI usa código sintético de ativação e não prova entrega de e-mail.
