@@ -162,15 +162,18 @@ def normalize_patient_name(value: str) -> str:
 
 
 def normalize_cpf(value: str) -> str:
-    """Return only CPF digits; formatting never participates in identity."""
+    """Normalize a CPF while preserving the exact input grammar for validation."""
     return re.sub(r"\D", "", str(value or ""))
 
 
 def normalize_patient_phone(value: str | None) -> str | None:
     """Normalize an optional Brazilian contact number to digits only."""
-    digits = re.sub(r"\D", "", str(value or ""))
-    if not digits:
+    original = str(value or "").strip()
+    if not original:
         return None
+    if re.fullmatch(r"[0-9()+.\s-]+", original) is None:
+        raise PatientValidationError("Informe um telefone com números, DDD e pontuação válida.")
+    digits = re.sub(r"\D", "", original)
     if len(digits) not in (10, 11):
         raise PatientValidationError(
             "Informe um telefone com DDD e 10 ou 11 dígitos."
@@ -180,7 +183,10 @@ def normalize_patient_phone(value: str | None) -> str | None:
 
 def is_valid_cpf(value: str) -> bool:
     """Validate Brazilian CPF length, repetition and verifier digits."""
-    cpf = normalize_cpf(value)
+    original = str(value or "").strip()
+    if re.fullmatch(r"[0-9.\s-]+", original) is None:
+        return False
+    cpf = normalize_cpf(original)
     if len(cpf) != 11 or cpf == cpf[0] * 11:
         return False
 
