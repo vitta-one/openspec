@@ -266,7 +266,7 @@ def patient_activation_page() -> rx.Component:
                             font_weight="750",
                             class_name="vitta-primary-action",
                             on_click=rx.call_script(
-                                "document.getElementById('patient-activation-form')?.submit()"
+                                "(() => { const form = document.getElementById('patient-activation-form'); if (form?.reportValidity()) form.submit(); })()"
                             ),
                         ),
                         spacing="4",
@@ -277,7 +277,6 @@ def patient_activation_page() -> rx.Component:
                     action="/api/paciente/ativar",
                     method="post",
                     enc_type="application/x-www-form-urlencoded",
-                    no_validate=True,
                     width="100%",
                 )
             ),
