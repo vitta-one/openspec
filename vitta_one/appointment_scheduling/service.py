@@ -484,6 +484,14 @@ def reschedule_consultation(
     if consultation.availability_slot_id == new_slot_id:
         raise SchedulingValidationError("Escolha um horário diferente para reagendar.")
 
+    # Serialize the patient's appointment ledger against independent bookings
+    # on other doctors/slots before validating the destination time.
+    locked_patient = db.exec(
+        select(Patient).where(Patient.id == consultation.patient_id).with_for_update()
+    ).first()
+    if locked_patient is None:
+        raise SchedulingValidationError("O paciente da consulta não está disponível.")
+
     ids = sorted({consultation.availability_slot_id, new_slot_id})
     locked = db.exec(
         select(ProfessionalAvailabilitySlot)
