@@ -1,0 +1,11 @@
+# Implementação
+- [x] Incorporar PR #317, com testes verdes e sem alterar rotas de agendamento.
+- [x] Porta de agendamento por usuário PACIENTE no servidor.
+- [x] Descoberta de especialidade, médico e horários elegíveis.
+- [x] Seleção e confirmação em tela própria, na linguagem visual atual.
+- [x] Navegação no portal paciente e continuidade do cadastro na recepção.
+- [x] Conflitos por horário, sessão e concorrência.
+- [x] Testes de domínio entre recepção/paciente/médico, com dados sintéticos.
+- [x] Validar CI Python/Reflex/PostgreSQL e OpenSpec.
+- [x] Adicionar e validar Chromium para ativação HTTP, autogendamento, recepção e agenda médica.
+- [ ] Homologar envio/recebimento real de convite no Resend com configuração e endereço de testes autorizados. O CI usa código sintético de ativação e não prova entrega de e-mail.

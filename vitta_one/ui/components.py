@@ -21,6 +21,7 @@ _NAV_BY_ROLE = {
     ),
     Role.PACIENTE: (
         ("Minhas consultas", "/paciente", "calendar_days", "consultas-paciente"),
+        ("Agendar consulta", "/paciente/agendar", "calendar_plus", "agendar-paciente"),
     ),
     Role.FINANCEIRO: (
         ("Financeiro", "/financeiro", "wallet", "financeiro"),
@@ -394,7 +395,11 @@ def authenticated_sidebar(role: Role, active: str) -> rx.Component:
             ),
             class_name="vitta-sidebar-session",
         ),
-        class_name="vitta-sidebar",
+        class_name={
+            Role.RECEPCIONISTA: "vitta-sidebar vitta-sidebar--reception",
+            Role.MEDICO: "vitta-sidebar vitta-sidebar--doctor",
+            Role.PACIENTE: "vitta-sidebar vitta-sidebar--patient",
+        }.get(role, "vitta-sidebar"),
     )
 
 
@@ -686,6 +691,7 @@ def empty_state(
 
 def _product_shell(role: Role, active: str, *children: rx.Component) -> rx.Component:
     return rx.box(
+        rx.script(src="/input-masks.js"),
         authenticated_sidebar(role, active),
         rx.box(
             authenticated_topbar(),

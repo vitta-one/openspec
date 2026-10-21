@@ -69,7 +69,7 @@ def _print_document() -> rx.Component:
                 rx.text(PrintPrescriptionState.patient_name, font_weight="800", margin_top="0.2rem"),
             ),
             rx.box(
-                rx.text("Consulta", class_name="vitta-print-label"),
+                rx.text("Atendimento", class_name="vitta-print-label"),
                 rx.text(
                     PrintPrescriptionState.scheduled_at,
                     class_name="vitta-tabular",

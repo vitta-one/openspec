@@ -11,7 +11,8 @@ from vitta_one.appointment_scheduling.temporal import ensure_utc
 from vitta_one.models.appointment import Consultation
 from vitta_one.models.clinical_care import ClinicalCareRecord
 from vitta_one.models.clinical_prescription import Prescription, PrescriptionItem
-from vitta_one.models.patient_queue import Patient
+from vitta_one.models.patient_queue import Patient, QueueEntry
+from vitta_one.patient_queue.domain import QueueStatus
 from vitta_one.models.professional import Professional
 
 MEDICATION_LIMIT = 300
@@ -55,7 +56,7 @@ class PrescriptionItemView:
 class PrescriptionView:
     id: int
     clinical_care_record_id: int
-    consultation_id: int
+    consultation_id: int | None
     doctor_user_id: int
     general_notes: str
     created_at: datetime
@@ -148,42 +149,68 @@ def _record_context(
     doctor_user_id: int,
     editable: bool,
     lock: bool,
-) -> tuple[ClinicalCareRecord, Consultation, Professional]:
-    record_stmt = select(ClinicalCareRecord).where(
+) -> tuple[ClinicalCareRecord, Consultation | None, Professional | None]:
+    stmt = select(ClinicalCareRecord).where(
         ClinicalCareRecord.id == clinical_care_record_id
     )
     if lock:
-        record_stmt = record_stmt.with_for_update()
-    record = db.exec(record_stmt).first()
+        stmt = stmt.with_for_update()
+    record = db.exec(stmt).first()
     if record is None:
         raise PrescriptionNotFoundError("O Atendimento clínico não está disponível.")
+    if record.doctor_user_id != doctor_user_id:
+        raise PrescriptionAuthorizationError("A Prescrição pertence a outro profissional.")
 
-    consultation_stmt = select(Consultation).where(
-        Consultation.id == record.consultation_id
-    )
+    if record.consultation_id is not None:
+        stmt = select(Consultation).where(Consultation.id == record.consultation_id)
+        if lock:
+            stmt = stmt.with_for_update()
+        consultation = db.exec(stmt).first()
+        if consultation is None or consultation.patient_id != record.patient_id:
+            raise PrescriptionNotFoundError("O contexto da Prescrição está inconsistente.")
+        professional = db.get(Professional, consultation.professional_id)
+        if professional is None or professional.user_id != doctor_user_id:
+            raise PrescriptionAuthorizationError(
+                "A Prescrição pertence a outro profissional."
+            )
+        status = ConsultationStatus(consultation.status)
+        if editable and status is not ConsultationStatus.EM_ANDAMENTO:
+            raise PrescriptionTransitionError(
+                "Prescrições só podem ser alteradas durante a consulta em andamento."
+            )
+        return record, consultation, professional
+
+    if record.queue_entry_id is None:
+        raise PrescriptionNotFoundError("O episódio clínico não foi identificado.")
+    stmt = select(QueueEntry).where(QueueEntry.id == record.queue_entry_id)
     if lock:
-        consultation_stmt = consultation_stmt.with_for_update()
-    consultation = db.exec(consultation_stmt).first()
-    if consultation is None or consultation.patient_id != record.patient_id:
-        raise PrescriptionNotFoundError("O contexto da Prescrição está inconsistente.")
-
-    professional = db.get(Professional, consultation.professional_id)
+        stmt = stmt.with_for_update()
+    entry = db.exec(stmt).first()
     if (
-        record.doctor_user_id != doctor_user_id
-        or professional is None
-        or professional.user_id != doctor_user_id
+        entry is None
+        or entry.patient_id != record.patient_id
+        or entry.doctor_user_id != doctor_user_id
     ):
         raise PrescriptionAuthorizationError(
-            "A Prescrição pertence a outro profissional."
+            "A passagem não pertence ao Médico autenticado."
         )
-
-    status = ConsultationStatus(consultation.status)
-    if editable and status is not ConsultationStatus.EM_ANDAMENTO:
+    status = QueueStatus(entry.status)
+    if status not in {QueueStatus.EM_ATENDIMENTO, QueueStatus.FINALIZADO}:
         raise PrescriptionTransitionError(
-            "Prescrições só podem ser alteradas durante a Consulta em andamento."
+            "A Prescrição não está disponível neste estado da fila."
         )
-    return record, consultation, professional
-
+    if editable and status is not QueueStatus.EM_ATENDIMENTO:
+        raise PrescriptionTransitionError(
+            "Prescrições só podem ser alteradas durante o atendimento ativo."
+        )
+    professional = db.exec(
+        select(Professional).where(Professional.user_id == doctor_user_id)
+    ).first()
+    if professional is None:
+        raise PrescriptionAuthorizationError(
+            "O Médico precisa ter cadastro profissional vinculado para prescrever."
+        )
+    return record, None, professional
 
 def _prescription_context(
     db: Session,
@@ -192,7 +219,7 @@ def _prescription_context(
     doctor_user_id: int,
     editable: bool,
     lock: bool,
-) -> tuple[Prescription, ClinicalCareRecord, Consultation, Professional]:
+) -> tuple[Prescription, ClinicalCareRecord, Consultation | None, Professional | None]:
     stmt = select(Prescription).where(Prescription.id == prescription_id)
     if lock:
         stmt = stmt.with_for_update()
@@ -208,7 +235,7 @@ def _prescription_context(
         lock=lock,
     )
     if (
-        prescription.consultation_id != consultation.id
+        prescription.consultation_id != (consultation.id if consultation else None)
         or prescription.clinical_care_record_id != record.id
         or prescription.doctor_user_id != doctor_user_id
     ):
@@ -349,13 +376,13 @@ def create_prescription(
         editable=True,
         lock=True,
     )
-    if record.id is None or consultation.id is None:
+    if record.id is None or (consultation is not None and consultation.id is None):
         raise PrescriptionNotFoundError("O contexto da Prescrição não está persistido.")
 
     timestamp = _as_utc(now or utc_now())
     prescription = Prescription(
         clinical_care_record_id=record.id,
-        consultation_id=consultation.id,
+        consultation_id=consultation.id if consultation else None,
         doctor_user_id=doctor_user_id,
         general_notes=clean_general_notes,
         created_at=timestamp,
@@ -600,11 +627,21 @@ def get_printable_prescription(
         editable=False,
         lock=False,
     )
-    status = ConsultationStatus(consultation.status)
-    if status not in {ConsultationStatus.EM_ANDAMENTO, ConsultationStatus.CONCLUIDA}:
-        raise PrescriptionTransitionError(
-            "A Prescrição não está disponível para impressão neste estado da Consulta."
-        )
+    if consultation is not None:
+        status = ConsultationStatus(consultation.status)
+        if status not in {ConsultationStatus.EM_ANDAMENTO, ConsultationStatus.CONCLUIDA}:
+            raise PrescriptionTransitionError(
+                "A Prescrição não pode ser impressa neste estado da consulta."
+            )
+        episode_time = consultation.scheduled_at
+    else:
+        entry = db.get(QueueEntry, record.queue_entry_id)
+        if entry is None or entry.doctor_user_id != doctor_user_id:
+            raise PrescriptionAuthorizationError(
+                "A passagem não pertence ao Médico autenticado."
+            )
+        episode_time = entry.called_at or entry.entered_at
+
     patient = db.get(Patient, record.patient_id)
     if patient is None:
         raise PrescriptionNotFoundError("O paciente da Prescrição não está disponível.")
@@ -612,7 +649,10 @@ def get_printable_prescription(
     return PrintablePrescriptionView(
         prescription=view,
         patient_name=patient.name,
-        professional_name=professional.name,
-        registration_identifier=professional.registration_identifier,
-        scheduled_at=_as_utc(consultation.scheduled_at),
+        professional_name=professional.name if professional else "Médico responsável",
+        registration_identifier=(
+            professional.registration_identifier if professional else "Registro não cadastrado"
+        ),
+        scheduled_at=_as_utc(episode_time),
     )
+

@@ -128,7 +128,7 @@ class PrescriptionItemRow(TypedDict):
 class PrescriptionRow(TypedDict):
     id: int
     clinical_care_record_id: int
-    consultation_id: int
+    consultation_id: int | None
     general_notes: str
     created_at: str
     items: list[PrescriptionItemRow]
@@ -137,7 +137,7 @@ class PrescriptionRow(TypedDict):
 
 class ClinicalHistoryRow(TypedDict):
     record_id: int
-    consultation_id: int
+    consultation_id: int | None
     professional_name: str
     scheduled_at: str
     completed_at: str
@@ -149,13 +149,18 @@ class ClinicalHistoryRow(TypedDict):
     prescription_count: int
 
 
-def _format_patient_contact(value: str | None) -> str:
+def format_patient_phone_input(value: str | None) -> str:
+    """Use a human-readable edit value; blank fields stay blank."""
     digits = "".join(character for character in str(value or "") if character.isdigit())
     if len(digits) == 11:
         return f"({digits[:2]}) {digits[2:7]}-{digits[7:]}"
     if len(digits) == 10:
         return f"({digits[:2]}) {digits[2:6]}-{digits[6:]}"
-    return "Telefone não informado"
+    return str(value or "")[:20]
+
+
+def _format_patient_contact(value: str | None) -> str:
+    return format_patient_phone_input(value) or "Telefone não informado"
 
 
 def _serialize_prescription_item(item) -> PrescriptionItemRow:
@@ -376,7 +381,7 @@ class ReceptionQueueState(rx.State):
                 return
             self.selected_patient_id = patient.id
             self.selected_patient_name = patient.name
-            self.selected_patient_phone = patient.phone or ""
+            self.selected_patient_phone = format_patient_phone_input(patient.phone)
             with rx.session() as db:
                 portal_status = reception_get_patient_portal_status(
                     db, token=token, patient_id=patient.id
@@ -417,7 +422,7 @@ class ReceptionQueueState(rx.State):
                 raise RuntimeError("Paciente criado sem identificador.")
             self.selected_patient_id = patient.id
             self.selected_patient_name = patient.name
-            self.selected_patient_phone = patient.phone or ""
+            self.selected_patient_phone = format_patient_phone_input(patient.phone)
             self.selected_patient_portal_status = "Sem acesso ao portal"
             self.success_message = "Paciente cadastrado e selecionado para a fila."
         except PatientAlreadyExistsError:
@@ -458,7 +463,7 @@ class ReceptionQueueState(rx.State):
             else:
                 self.selected_patient_id = patient.id
                 self.selected_patient_name = patient.name
-                self.selected_patient_phone = patient.phone or ""
+                self.selected_patient_phone = format_patient_phone_input(patient.phone)
                 with rx.session() as db:
                     portal_status = reception_get_patient_portal_status(
                         db, token=token, patient_id=patient.id
@@ -490,7 +495,7 @@ class ReceptionQueueState(rx.State):
 
     @rx.event
     def update_selected_patient_phone(self, value: str) -> None:
-        self.selected_patient_phone = str(value or "")[:20]
+        self.selected_patient_phone = format_patient_phone_input(value)
 
     @rx.event
     async def update_selected_patient(self, form_data: PatientUpdateFormData):
@@ -511,7 +516,7 @@ class ReceptionQueueState(rx.State):
                     phone=str(form_data.get("phone", "")),
                 )
             self.selected_patient_name = patient.name
-            self.selected_patient_phone = patient.phone or ""
+            self.selected_patient_phone = format_patient_phone_input(patient.phone)
             self.success_message = "Cadastro operacional atualizado."
         except (PatientValidationError, PatientPortalError) as exc:
             self.error_message = str(exc)
@@ -560,6 +565,32 @@ class ReceptionQueueState(rx.State):
         finally:
             self.is_submitting = False
             yield
+
+    @rx.event
+    async def open_selected_patient_agenda(self):
+        """Keep the selected patient when Reception switches from registration to booking."""
+        if self.selected_patient_id <= 0:
+            self.error_message = "Localize um paciente antes de agendar."
+            return
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                patient = reception_get_patient_identity(
+                    db, token=token, patient_id=self.selected_patient_id
+                )
+            if patient is None:
+                self.error_message = "O cadastro selecionado não está mais disponível."
+                return
+            from vitta_one.appointment_scheduling.state import ReceptionAgendaState
+            agenda = await self.get_state(ReceptionAgendaState)
+            agenda.selected_patient_id = self.selected_patient_id
+            agenda.selected_patient_name = patient.name
+            agenda.patient_cpf = ""
+            return rx.redirect("/recepcao/agenda")
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            if isinstance(exc, AuthenticationRequiredError):
+                return rx.redirect("/login")
+            return rx.redirect("/acesso-negado")
 
     @rx.event
     async def enqueue(self, form_data: QueueFormData):
@@ -772,12 +803,17 @@ class DoctorQueueState(rx.State):
     is_loading: bool = False
     is_submitting: bool = False
     is_saving_clinical: bool = False
+    finish_dialog_open: bool = False
     error_message: str = ""
     success_message: str = ""
 
     @rx.var
+    def prescription_count(self) -> int:
+        return len(self.prescriptions)
+
+    @rx.var
     def has_clinical_record(self) -> bool:
-        return self.active_is_scheduled and self.clinical_record_id > 0
+        return self.has_active and self.clinical_record_id > 0
 
     @rx.var
     def clinical_is_dirty(self) -> bool:
@@ -861,6 +897,7 @@ class DoctorQueueState(rx.State):
         self._clear_prescriptions()
 
     def _clear_active(self) -> None:
+        self.finish_dialog_open = False
         self.has_active = False
         self.active_entry_id = 0
         self.active_consultation_id = 0
@@ -887,7 +924,8 @@ class DoctorQueueState(rx.State):
         self.active_priority = item.priority.value
         self.active_priority_label = item.priority.label
         self.active_called_at = (
-            item.called_at.strftime("%H:%M UTC") if item.called_at else ""
+            format_clinic_datetime(item.called_at).rsplit(" às ", 1)[-1]
+            if item.called_at else ""
         )
         self.active_is_scheduled = item.consultation_id is not None
         self.active_scheduled_at = (
@@ -928,7 +966,7 @@ class DoctorQueueState(rx.State):
         self._set_prescriptions(items)
 
     def _load_clinical_with_token(self, token: str, *, page: int = 1) -> None:
-        if not self.active_is_scheduled or not self.active_entry_id:
+        if not self.has_active or not self.active_entry_id:
             self._clear_clinical()
             return
         with rx.session() as db:
@@ -953,7 +991,7 @@ class DoctorQueueState(rx.State):
         self._set_prescriptions(prescriptions)
 
     def _load_history_with_token(self, token: str, *, page: int) -> None:
-        if not self.active_is_scheduled or not self.active_entry_id:
+        if not self.has_active or not self.active_entry_id:
             self.clinical_history = []
             self.clinical_history_page = 1
             self.clinical_history_total_pages = 1
@@ -974,7 +1012,7 @@ class DoctorQueueState(rx.State):
             count = doctor_waiting_count(db, token=token)
         self._set_active(active)
         self.waiting_count = count
-        if self.active_is_scheduled:
+        if self.has_active:
             self._load_clinical_with_token(token, page=1)
 
     async def _authorization_redirect(self, exc: Exception):
@@ -1031,7 +1069,7 @@ class DoctorQueueState(rx.State):
                 count = doctor_waiting_count(db, token=token)
             self._set_active(item)
             self.waiting_count = count
-            if self.active_is_scheduled:
+            if self.has_active:
                 self._load_clinical_with_token(token, page=1)
             self.success_message = "Próximo paciente chamado para atendimento."
         except QueueEmptyError:
@@ -1526,9 +1564,36 @@ class DoctorQueueState(rx.State):
             yield
 
     @rx.event
+    def set_finish_dialog_open(self, is_open: bool) -> None:
+        if not self.is_submitting:
+            self.finish_dialog_open = is_open
+
+    @rx.event
+    def cancel_finish_review(self) -> None:
+        """Close the controlled review without modifying or finishing the episode."""
+        if not self.is_submitting:
+            self.finish_dialog_open = False
+
+    @rx.event
+    def begin_finish_review(self) -> None:
+        self._clear_feedback()
+        if not self.has_active or not self.active_entry_id:
+            self.error_message = "Chame um paciente antes de finalizar."
+            return
+        if self.clinical_is_dirty:
+            self.error_message = (
+                "Salve ou descarte as alterações clínicas antes de revisar."
+            )
+            return
+        if self.is_saving_clinical or self.is_prescription_submitting:
+            self.error_message = "Aguarde o salvamento terminar antes de revisar."
+            return
+        self.finish_dialog_open = True
+
+    @rx.event
     async def finish_active(self):
         self._clear_feedback()
-        if self.active_is_scheduled and self.clinical_is_dirty:
+        if self.clinical_is_dirty:
             self.error_message = (
                 "Salve ou descarte as alterações clínicas antes de finalizar o atendimento."
             )

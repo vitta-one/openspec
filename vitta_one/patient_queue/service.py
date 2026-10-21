@@ -19,6 +19,10 @@ from vitta_one.consultation_care.service import (
     complete_linked_consultation,
     start_linked_consultation,
 )
+from vitta_one.clinical_care.service import (
+    ClinicalCareConflictError,
+    create_record_for_queue_start,
+)
 from vitta_one.models.appointment import Consultation
 from vitta_one.models.auth import User
 from vitta_one.models.patient_queue import Patient, QueueEntry
@@ -158,15 +162,18 @@ def normalize_patient_name(value: str) -> str:
 
 
 def normalize_cpf(value: str) -> str:
-    """Return only CPF digits; formatting never participates in identity."""
+    """Normalize a CPF while preserving the exact input grammar for validation."""
     return re.sub(r"\D", "", str(value or ""))
 
 
 def normalize_patient_phone(value: str | None) -> str | None:
     """Normalize an optional Brazilian contact number to digits only."""
-    digits = re.sub(r"\D", "", str(value or ""))
-    if not digits:
+    original = str(value or "").strip()
+    if not original:
         return None
+    if re.fullmatch(r"[0-9()+.\s-]+", original) is None:
+        raise PatientValidationError("Informe um telefone com números, DDD e pontuação válida.")
+    digits = re.sub(r"\D", "", original)
     if len(digits) not in (10, 11):
         raise PatientValidationError(
             "Informe um telefone com DDD e 10 ou 11 dígitos."
@@ -176,7 +183,10 @@ def normalize_patient_phone(value: str | None) -> str | None:
 
 def is_valid_cpf(value: str) -> bool:
     """Validate Brazilian CPF length, repetition and verifier digits."""
-    cpf = normalize_cpf(value)
+    original = str(value or "").strip()
+    if re.fullmatch(r"[0-9.\s-]+", original) is None:
+        return False
+    cpf = normalize_cpf(original)
     if len(cpf) != 11 or cpf == cpf[0] * 11:
         return False
 
@@ -526,7 +536,16 @@ def claim_next_patient(
     entry.updated_at = timestamp
     db.add(entry)
     try:
+        if entry.consultation_id is None:
+            create_record_for_queue_start(
+                db, entry=entry, doctor_user_id=doctor_user_id, now=timestamp
+            )
         db.commit()
+    except ClinicalCareConflictError as exc:
+        db.rollback()
+        raise QueueTransitionError(
+            "O atendimento já possui registro clínico. Atualize a fila."
+        ) from exc
     except IntegrityError as exc:
         db.rollback()
         raise QueueTransitionError(

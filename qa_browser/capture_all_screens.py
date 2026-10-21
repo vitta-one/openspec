@@ -48,7 +48,10 @@ SCREENS = {
         ("impressao-prescricao", f"/medico/prescricao/{FIXTURE['prescription_id']}", None),
         ("acesso-negado", "/acesso-negado", "Esta área pertence a outra função."),
     ],
-    "paciente": [("portal-paciente", "/paciente", "Agenda do paciente")],
+    "paciente": [
+        ("portal-paciente", "/paciente", "Agenda do paciente"),
+        ("agendamento-paciente", "/paciente/agendar", "Agendar consulta"),
+    ],
     "financeiro": [("painel-financeiro", "/financeiro", "Financeiro")],
     "primeiro-acesso": [("primeiro-acesso", "/primeiro-acesso", "Defina sua nova senha")],
 }

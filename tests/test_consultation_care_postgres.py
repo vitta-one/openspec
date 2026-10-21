@@ -70,7 +70,7 @@ def _seed(engine, patient_prefix: str):
         patient = create_patient(
             db,
             name=f"Paciente {suffix}",
-            cpf=_cpf(patient_prefix),
+            cpf=_cpf(f"{uuid4().int % 1_000_000_000:09d}"),
         )
         slot = create_availability_slot(
             db,

@@ -7,6 +7,7 @@ from vitta_one.appointment_scheduling.service import (
     AvailabilitySlotItem,
     ProfessionalOption,
     SchedulingValidationError,
+    SchedulingNotFoundError,
     cancel_consultation,
     create_availability_slot,
     get_agenda,
@@ -100,6 +101,17 @@ def reception_get_agenda(
     )
 
 
+def reception_get_consultation_by_id(
+    db: Session, *, token: str, consultation_id: int
+):
+    """Revalidate one chosen consultation under Reception RBAC, independent of filters."""
+    require_role(db, token, Role.RECEPCIONISTA)
+    items = list_consultations(db, consultation_id=consultation_id)
+    if not items:
+        raise SchedulingNotFoundError("Esta consulta não está mais disponível.")
+    return items[0]
+
+
 def reception_schedule_consultation(
     db: Session,
     *,
@@ -152,6 +164,50 @@ def doctor_get_my_agenda(
             end_at=end_at,
         )
     )
+
+
+def patient_get_booking_options(
+    db: Session, *, token: str, specialty_id: int | None = None,
+    professional_id: int | None = None,
+):
+    """Expose only the public catalog and bookable slots to authenticated patients."""
+    from vitta_one.patient_portal.booking import (
+        list_patient_doctors, list_patient_slots, list_patient_specialties,
+    )
+
+    require_role(db, token, Role.PACIENTE)
+    specialties = list_patient_specialties(db)
+    doctors = (
+        list_patient_doctors(db, specialty_id=specialty_id)
+        if specialty_id is not None else ()
+    )
+    slots = (
+        list_patient_slots(db, specialty_id=specialty_id, professional_id=professional_id)
+        if specialty_id is not None and professional_id is not None else ()
+    )
+    return specialties, doctors, slots
+
+
+def patient_schedule_own_consultation(
+    db: Session, *, token: str, specialty_id: int,
+    professional_id: int, slot_id: int,
+) -> Consultation:
+    """Schedule for the patient bound to the session, not a client-supplied ID."""
+    from vitta_one.patient_portal.booking import validate_patient_booking_selection
+
+    identity = require_role(db, token, Role.PACIENTE)
+    patient = db.exec(
+        select(Patient).where(Patient.user_id == identity.id)
+    ).first()
+    if patient is None or patient.id is None:
+        raise SchedulingValidationError(
+            "Seu cadastro não está vinculado a esta conta. Contate a recepção."
+        )
+    validate_patient_booking_selection(
+        db, specialty_id=specialty_id,
+        professional_id=professional_id, slot_id=slot_id,
+    )
+    return schedule_consultation(db, patient_id=patient.id, slot_id=slot_id)
 
 
 def patient_get_my_agenda(
