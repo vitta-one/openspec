@@ -133,4 +133,7 @@ def save_weekly_schedule(db: Session, *, professional_id: int, weekday_start: in
         rule.updated_at = datetime.now(timezone.utc)
     db.add(rule)
     db.flush()
-    return ensure_weekly_slots(db, professional_id=professional_id)
+    published = ensure_weekly_slots(db, professional_id=professional_id)
+    # Always persist edited shift rules, even when every slot already existed.
+    db.commit()
+    return published
