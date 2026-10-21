@@ -17,6 +17,8 @@ from vitta_one.auth.security import hash_password
 from vitta_one.clinical_prescription.service import add_prescription_item, create_prescription
 from vitta_one.consultation_care.service import confirm_arrival
 from vitta_one.models.appointment import Consultation, ProfessionalAvailabilitySlot
+from vitta_one.models.professional import Professional
+from sqlmodel import select
 from vitta_one.models.auth import User
 from vitta_one.patient_queue.service import claim_next_patient, create_patient, create_queue_entry, finish_queue_entry
 from vitta_one.professional_directory.service import create_professional, create_specialty
@@ -208,6 +210,29 @@ def main() -> None:
         )
         assert walkin_entry.consultation_id is None
 
+        # Synthetic authenticated patient, exercising the exact same booking
+        # service/agenda as Reception in real Chromium, without external email.
+        patient_login = User(
+            email="qa-booking-patient@example.invalid",
+            password_hash=hash_password(password),
+            role=Role.PACIENTE.value,
+        )
+        db.add(patient_login)
+        db.commit()
+        db.refresh(patient_login)
+        booking_patient = create_patient(
+            db, name="Paciente QA Autogendamento", cpf=_cpf("538176249"),
+        )
+        booking_patient.user_id = patient_login.id
+        db.add(booking_patient)
+        db.commit()
+        booking_slot = create_availability_slot(
+            db, professional_id=db.exec(
+                select(Professional).where(Professional.user_id == doctors[1].id)
+            ).one().id,
+            starts_at=now + timedelta(days=2), now=now,
+        )
+
         fixture = {
             "prescription_id": prescription.id,
             "patient_name": patient.name,
@@ -215,6 +240,11 @@ def main() -> None:
             "doctor_b_email": doctors[1].email,
             "walkin_patient_name": walkin_patient.name,
             "walkin_entry_id": walkin_entry.id,
+            "booking_patient_email": patient_login.email,
+            "booking_patient_name": booking_patient.name,
+            "booking_doctor_name": "Dr. QA Pronto Atendimento",
+            "booking_specialty_name": specialty.name,
+            "booking_slot_id": booking_slot.id,
             "admin_email": admin.email,
             "reception_email": receptionist.email,
             "day_first_patient_name": day_first_patient_name,
