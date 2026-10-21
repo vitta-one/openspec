@@ -773,3 +773,80 @@ def test_staff_cannot_open_patient_self_booking(page: Page) -> None:
     page.goto(BASE + "/paciente/agendar", wait_until="domcontentloaded")
     expect(page).to_have_url(re.compile(r"/acesso-negado/?$"), timeout=30000)
     expect(page.get_by_role("heading", name="Agendar consulta")).to_have_count(0)
+
+
+
+def test_patient_identity_input_masks_and_client_validation(page: Page) -> None:
+    """Real DOM input: paste, CPF checksum, DDD mobile/landline and edit fields."""
+    login_as_reception(page)
+    page.goto(BASE + "/recepcao/pacientes", wait_until="domcontentloaded")
+    expect(page.get_by_role("heading", name="Cadastro e localização")).to_be_visible(
+        timeout=30000
+    )
+    page.wait_for_function("window.__vittaInputMasksInstalled === true", timeout=30000)
+
+    cpf = page.locator("#patient-create-cpf")
+    cpf.fill("52998224725")
+    expect(cpf).to_have_value("529.982.247-25")
+    assert cpf.evaluate("(el) => el.checkValidity()")
+    cpf.fill("11111111111")
+    expect(cpf).to_have_value("111.111.111-11")
+    assert not cpf.evaluate("(el) => el.checkValidity()")
+    assert "CPF inválido" in cpf.evaluate("(el) => el.validationMessage")
+    cpf.fill("529.982.247-25")
+    assert cpf.evaluate("(el) => el.checkValidity()")
+
+    phone = page.locator("#patient-create-phone")
+    phone.fill("11988881234")
+    expect(phone).to_have_value("(11) 98888-1234")
+    assert phone.evaluate("(el) => el.checkValidity()")
+    phone.fill("1133334444")
+    expect(phone).to_have_value("(11) 3333-4444")
+    assert phone.evaluate("(el) => el.checkValidity()")
+    phone.fill("119888")
+    assert not phone.evaluate("(el) => el.checkValidity()")
+    phone.fill("")
+    assert phone.evaluate("(el) => el.checkValidity()")
+
+    search = page.locator("#patient-search-cpf")
+    search.fill("52998224725")
+    expect(search).to_have_value("529.982.247-25")
+
+    page.set_viewport_size({"width": 375, "height": 800})
+    assert page.evaluate(
+        "document.documentElement.scrollWidth <= window.innerWidth + 2"
+    ), overflowing_elements(page)
+    page.screenshot(path="qa-artifacts/revisao-mascaras-cpf-telefone-375px.png", full_page=True)
+
+
+def test_patient_activation_rejects_incomplete_form_before_submitting(page: Page) -> None:
+    """Never send an incomplete first-access password or code to the API."""
+    page.goto(BASE + "/ativar-paciente", wait_until="domcontentloaded")
+    expect(page.get_by_role("heading", name="Ative seu portal")).to_be_visible(timeout=30000)
+    page.locator("#patient-activation-email").fill("incomplete@example.invalid")
+    page.locator("#patient-activation-code").fill("not-a-valid-code")
+    page.locator("#patient-activation-password").fill("short")
+    page.get_by_role("button", name="Ativar acesso").click()
+    expect(page).to_have_url(re.compile(r"/ativar-paciente/?$"))
+    assert not page.locator("#patient-activation-password").evaluate(
+        "(el) => el.checkValidity()"
+    )
+    assert page.locator("#patient-activation-form").evaluate(
+        "(form) => !form.checkValidity()"
+    )
+    page.screenshot(path="qa-artifacts/ativacao-senha-incompleta.png", full_page=True)
+
+
+def test_reception_agenda_cpf_mask_does_not_discard_selected_patient(page: Page) -> None:
+    login_as_reception(page)
+    page.goto(BASE + "/recepcao/agenda", wait_until="domcontentloaded")
+    expect(page.get_by_role("heading", name="Agenda e check-in")).to_be_visible(timeout=30000)
+    page.wait_for_function("window.__vittaInputMasksInstalled === true", timeout=30000)
+    search = page.locator("#agenda-patient-cpf")
+    search.fill("52998224725")
+    expect(search).to_have_value("529.982.247-25")
+    page.get_by_role("button", name="Localizar paciente").click()
+    expect(page.get_by_text("Paciente QA Cadastro Novo", exact=True).first).to_be_visible(
+        timeout=30000
+    )
+    page.screenshot(path="qa-artifacts/agenda-cpf-validado.png", full_page=True)
