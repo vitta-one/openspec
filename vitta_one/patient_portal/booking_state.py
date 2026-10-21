@@ -148,7 +148,7 @@ class PatientBookingState(rx.State):
                 )
             self.doctors = [
                 {"value": str(item.id),
-                 "label": f"{item.name} · {item.registration_identifier}"}
+                 "label": item.name}
                 for item in doctors
             ]
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
