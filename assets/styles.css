@@ -14,12 +14,12 @@
   --vitta-border-hover: #cbd5e1;
   --vitta-info: #0284c7;
   --vitta-info-soft: #f0f9ff;
-  --vitta-warning: #d97706;
+  --vitta-warning: #92400e;
   --vitta-warning-soft: #fffbeb;
-  --vitta-danger: #e11d48;
+  --vitta-danger: #be123c;
   --vitta-danger-soft: #fff1f2;
   --vitta-danger-border: #fecdd3;
-  --vitta-success: #059669;
+  --vitta-success: #065f46;
   --vitta-success-soft: #ecfdf5;
   --vitta-success-border: #a7f3d0;
   --vitta-focus: #0f766e;
@@ -1761,4 +1761,185 @@ button:disabled,
 }
 .vitta-dialog-content :focus-visible {
   outline-color: var(--vitta-focus);
+}
+
+/* Vitta-One accessible contrast baseline.
+   The product intentionally uses a LIGHT theme. Scope normal page copy to light
+   backgrounds and preserve white-on-green text in buttons/login illustration. */
+:root,
+.radix-themes {
+  color-scheme: light;
+  --gray-12: #0f172a;
+  --gray-11: #475569;
+  --gray-10: #64748b;
+  --gray-9: #64748b;
+}
+.vitta-shell,
+.vitta-main,
+.vitta-page {
+  color: var(--vitta-text);
+  background-color: var(--vitta-canvas);
+}
+.vitta-login-form-pane {
+  color: var(--vitta-text);
+  background-color: #ffffff;
+}
+.vitta-shell .vitta-main,
+.vitta-shell .vitta-topbar,
+.vitta-shell .vitta-sidebar,
+.vitta-login-form-pane {
+  color-scheme: light;
+}
+.vitta-shell :is(.rt-Heading, h1, h2, h3, h4, h5, h6),
+.vitta-login-form-pane :is(.rt-Heading, h1, h2, h3, h4, h5, h6),
+.vitta-page-header .rt-Heading,
+.vitta-shell .vitta-empty-state .rt-Heading {
+  color: var(--vitta-text) !important;
+  opacity: 1 !important;
+}
+.vitta-shell .rt-Text:not(.rt-Badge),
+.vitta-login-form-pane .rt-Text:not(.rt-Badge),
+.vitta-shell :is(label, legend),
+.vitta-login-form-pane :is(label, legend) {
+  color: var(--vitta-text);
+  opacity: 1 !important;
+}
+.vitta-shell .vitta-main :is(.vitta-text-link, a[href]):not(.rt-Button):not(.vitta-nav-link),
+.vitta-login-form-pane a[href] {
+  color: var(--vitta-primary);
+}
+.vitta-shell .vitta-main :is(.vitta-text-link, a[href]):not(.rt-Button):hover {
+  color: var(--vitta-primary-hover);
+}
+.vitta-shell :is(.vitta-input, .vitta-textarea, input:not([type="checkbox"]), textarea, select),
+.vitta-login-form-pane :is(.vitta-input, input) {
+  color: var(--vitta-text) !important;
+  background-color: #ffffff;
+  caret-color: var(--vitta-text);
+  opacity: 1;
+}
+.vitta-shell :is(input, textarea)::placeholder,
+.vitta-login-form-pane :is(input, textarea)::placeholder {
+  color: #475569 !important;
+  opacity: 1 !important;
+}
+.vitta-shell :is(input, textarea, select):disabled {
+  color: #475569 !important;
+  background: #f1f5f9 !important;
+  opacity: 1 !important;
+}
+.vitta-shell :is(.vitta-input, .vitta-textarea, .rt-SelectTrigger):focus-visible,
+.vitta-login-form-pane :is(input, button):focus-visible {
+  outline: 3px solid var(--vitta-primary) !important;
+  outline-offset: 2px;
+}
+.vitta-shell .rt-SelectTrigger,
+.vitta-shell .rt-TextFieldRoot,
+.vitta-shell .rt-TextAreaRoot {
+  background-color: #ffffff;
+  color: var(--vitta-text) !important;
+  --text-field-focus-color: var(--vitta-primary);
+}
+.vitta-shell .rt-SelectTrigger :is(.rt-Text, span) {
+  color: var(--vitta-text) !important;
+}
+.vitta-shell .vitta-nav-link:not([aria-current="page"]) {
+  color: var(--vitta-text-muted);
+}
+.vitta-shell .vitta-nav-link[aria-current="page"],
+.vitta-shell .vitta-nav-link[aria-current="page"] :is(span, p) {
+  color: #ffffff !important;
+}
+.vitta-shell :is(.vitta-data-row, .vitta-patient-row, .vitta-empty-state,
+                 .vitta-metric-card, .vitta-prescription-card) {
+  opacity: 1;
+}
+.vitta-shell :is(table, th, td, .rt-TableRoot) {
+  color: var(--vitta-text);
+}
+.vitta-shell :is(th, .rt-TableColumnHeaderCell) {
+  color: var(--vitta-text-muted);
+  font-weight: 700;
+}
+.vitta-shell .rt-Badge {
+  font-weight: 700;
+  opacity: 1;
+}
+.vitta-shell .vitta-section-kicker {
+  color: var(--vitta-primary) !important;
+}
+.vitta-shell [role="alert"],
+.vitta-dialog-content [role="alert"] {
+  color: #991b1b !important;
+}
+.vitta-shell [role="status"]:not(.rt-Badge) {
+  opacity: 1;
+}
+/* Radix portals live outside .vitta-shell in the DOM. */
+.rt-DialogContent,
+.rt-AlertDialogContent,
+.rt-PopoverContent,
+.rt-SelectContent,
+.rt-DropdownMenuContent,
+.vitta-dialog-content {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  color-scheme: light !important;
+  border-color: #cbd5e1;
+}
+:is(.rt-DialogContent, .rt-AlertDialogContent, .rt-PopoverContent,
+    .rt-SelectContent, .rt-DropdownMenuContent, .vitta-dialog-content)
+  :is(h1, h2, h3, h4, h5, h6, label, legend, .rt-Heading,
+      .rt-DialogTitle, .rt-DialogDescription, .rt-SelectItem, .rt-DropdownMenuItem) {
+  color: #0f172a !important;
+  opacity: 1 !important;
+}
+:is(.rt-DialogContent, .rt-AlertDialogContent, .rt-PopoverContent,
+    .rt-SelectContent, .rt-DropdownMenuContent, .vitta-dialog-content)
+  .rt-Text {
+  color: #334155 !important;
+  opacity: 1 !important;
+}
+:is(.rt-DialogContent, .rt-AlertDialogContent, .vitta-dialog-content)
+  :is(input, textarea, select) {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+:is(.rt-DialogContent, .rt-AlertDialogContent, .vitta-dialog-content)
+  :is(input, textarea)::placeholder {
+  color: #475569 !important;
+  opacity: 1 !important;
+}
+:is(.rt-DialogContent, .rt-AlertDialogContent, .vitta-dialog-content) :is(label, legend) {
+  font-weight: 650;
+}
+/* Keep the deliberately dark illustrative half of login white-on-teal. */
+.vitta-login-visual,
+.vitta-login-visual .rt-Heading,
+.vitta-login-visual .rt-Text {
+  color: #ffffff !important;
+}
+.vitta-login-form-pane .vitta-login-title {
+  color: #0f172a !important;
+}
+@media print {
+  .vitta-print-document,
+  .vitta-print-document :is(.rt-Heading, .rt-Text, p, span) {
+    color: #0f172a !important;
+    background: #ffffff !important;
+  }
+}
+
+/* Button labels retain their container contrast, despite shared text selectors. */
+.vitta-shell .rt-Button .rt-Text,
+.vitta-login-form-pane .rt-Button .rt-Text,
+.rt-DialogContent .rt-Button .rt-Text,
+.rt-AlertDialogContent .rt-Button .rt-Text {
+  color: inherit !important;
+}
+.vitta-shell [role="alert"] .rt-Text,
+.rt-DialogContent [role="alert"] .rt-Text {
+  color: #991b1b !important;
 }

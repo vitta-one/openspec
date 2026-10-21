@@ -6,6 +6,8 @@ import reflex as rx
 
 from vitta_one.appointment_scheduling.application import (
     admin_create_availability_slot,
+    admin_get_weekly_schedule,
+    admin_save_weekly_schedule,
     admin_list_active_professionals,
     admin_list_availability_slots,
     admin_set_availability_slot_active,
@@ -141,6 +143,12 @@ class AdminAvailabilityState(rx.State):
     slots: list[SlotRow] = []
 
     selected_professional: str = "__none__"
+    weekly_start_day: str = "0"
+    weekly_end_day: str = "4"
+    weekly_start_time: str = "08:00"
+    weekly_end_time: str = "17:00"
+    weekly_slot_minutes: str = "30"
+    weekly_existing: bool = False
     slot_datetime_local: str = ""
     slot_date_local: str = ""
     slot_time_local: str = ""
@@ -178,6 +186,14 @@ class AdminAvailabilityState(rx.State):
         self.slots = []
         self.selected_professional = "__none__"
 
+    def _apply_weekly_rule(self, rule) -> None:
+        self.weekly_existing = rule is not None
+        self.weekly_start_day = str(rule.weekday_start) if rule is not None else "0"
+        self.weekly_end_day = str(rule.weekday_end) if rule is not None else "4"
+        self.weekly_start_time = rule.time_start if rule is not None else "08:00"
+        self.weekly_end_time = rule.time_end if rule is not None else "17:00"
+        self.weekly_slot_minutes = str(rule.slot_minutes) if rule is not None else "30"
+
     def _professional_filter_id(self) -> int | None:
         return None if self.filter_professional == "__all__" else int(self.filter_professional)
 
@@ -202,6 +218,11 @@ class AdminAvailabilityState(rx.State):
         self.slots = _slot_rows(slot_items)
         if self.selected_professional == "__none__" and self.professionals:
             self.selected_professional = self.professionals[0]["value"]
+        with rx.session() as db:
+            rule = (admin_get_weekly_schedule(db, token=token,
+                    professional_id=int(self.selected_professional))
+                    if self.selected_professional != "__none__" else None)
+        self._apply_weekly_rule(rule)
 
     async def _authorization_redirect(self, exc: Exception):
         self._clear_sensitive()
@@ -232,8 +253,75 @@ class AdminAvailabilityState(rx.State):
             yield
 
     @rx.event
-    def update_selected_professional(self, value: str) -> None:
+    async def update_selected_professional(self, value: str):
         self.selected_professional = value
+        self._clear_feedback()
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                rule = (admin_get_weekly_schedule(db, token=token, professional_id=int(value))
+                        if value != "__none__" else None)
+            self._apply_weekly_rule(rule)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.error_message = "Não foi possível consultar o expediente deste médico."
+
+    @rx.event
+    def update_weekly_start_day(self, value: str) -> None:
+        self.weekly_start_day = value
+
+    @rx.event
+    def update_weekly_end_day(self, value: str) -> None:
+        self.weekly_end_day = value
+
+    @rx.event
+    def update_weekly_start_time(self, value: str) -> None:
+        self.weekly_start_time = value
+
+    @rx.event
+    def update_weekly_end_time(self, value: str) -> None:
+        self.weekly_end_time = value
+
+    @rx.event
+    def update_weekly_slot_minutes(self, value: str) -> None:
+        self.weekly_slot_minutes = value
+
+    @rx.event
+    async def save_weekly(self, _form_data: dict[str, Any]):
+        if self.is_submitting:
+            return
+        self.is_submitting = True
+        self._clear_feedback()
+        yield
+        try:
+            if self.selected_professional == "__none__":
+                raise SchedulingValidationError("Selecione o médico antes de configurar o expediente.")
+            token = await self._token()
+            with rx.session() as db:
+                count = admin_save_weekly_schedule(
+                    db, token=token, professional_id=int(self.selected_professional),
+                    weekday_start=int(self.weekly_start_day),
+                    weekday_end=int(self.weekly_end_day),
+                    time_start=self.weekly_start_time,
+                    time_end=self.weekly_end_time,
+                    slot_minutes=int(self.weekly_slot_minutes),
+                )
+            self._load_with_token(token)
+            self.success_message = (f"Expediente salvo. {count} novo(s) horário(s) publicado(s) "
+                                    "para agendamento nos próximos 45 dias.")
+        except (SchedulingValidationError, SchedulingConflictError,
+                SchedulingTimeValidationError, ClinicTimezoneConfigurationError, ValueError) as exc:
+            self.error_message = str(exc)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.error_message = "Não foi possível salvar o expediente. Confira o médico e os horários."
+        finally:
+            self.is_submitting = False
+            yield
 
     @rx.event
     def update_slot_datetime(self, value: str) -> None:

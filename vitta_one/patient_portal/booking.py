@@ -10,6 +10,7 @@ from sqlmodel import Session, select
 
 from vitta_one.appointment_scheduling.domain import AvailabilitySlotStatus
 from vitta_one.appointment_scheduling.service import SchedulingValidationError
+from vitta_one.appointment_scheduling.weekly import ensure_weekly_slots
 from vitta_one.appointment_scheduling.temporal import ensure_utc
 from vitta_one.models.appointment import ProfessionalAvailabilitySlot
 from vitta_one.models.professional import Professional, ProfessionalSpecialty, Specialty
@@ -87,6 +88,7 @@ def list_patient_slots(
     if specialty_id <= 0 or professional_id <= 0:
         return ()
     timestamp = _now(now)
+    ensure_weekly_slots(db, professional_id=professional_id, now=timestamp)
     rows = db.exec(
         select(ProfessionalAvailabilitySlot)
         .join(
@@ -110,7 +112,7 @@ def list_patient_slots(
             ),
         )
         .order_by(ProfessionalAvailabilitySlot.starts_at, ProfessionalAvailabilitySlot.id)
-        .limit(250)
+        .limit(1200)
     ).all()
     return tuple(
         BookableSlot(
