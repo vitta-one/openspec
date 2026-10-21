@@ -1704,3 +1704,61 @@ button:disabled,
     height: 15px;
   }
 }
+
+
+/* Contrast baseline: the app's fixed light surfaces must not inherit dark
+   foreground tokens from a browser extension or a nested Radix portal. */
+:root, .radix-themes {
+  color-scheme: light;
+}
+.vitta-shell,
+.vitta-login-shell {
+  color: var(--vitta-text);
+}
+.vitta-shell :is(h1, h2, h3, h4, h5, h6, legend, label),
+.vitta-login-form-pane :is(h1, h2, h3, h4, h5, h6, legend, label) {
+  color: var(--vitta-text) !important;
+  opacity: 1 !important;
+}
+.vitta-shell .vitta-page-header .rt-Heading,
+.vitta-shell .vitta-empty-state .rt-Heading,
+.vitta-shell .rt-Heading,
+.vitta-login-form-pane .rt-Heading {
+  color: var(--vitta-text) !important;
+  opacity: 1 !important;
+}
+.vitta-shell .vitta-data-row .rt-Text,
+.vitta-shell .vitta-empty-state .rt-Text {
+  color: var(--vitta-text-muted);
+  opacity: 1;
+}
+.vitta-dialog-content.rt-DialogContent,
+.vitta-dialog-content {
+  background: #ffffff !important;
+  color: var(--vitta-text) !important;
+  border: 1px solid var(--vitta-border-strong);
+  box-shadow: 0 28px 72px rgba(15, 23, 42, 0.24);
+  color-scheme: light;
+}
+.vitta-dialog-content :is(h1, h2, h3, h4, h5, h6, legend, label),
+.vitta-dialog-content :is(.rt-DialogTitle, .rt-DialogDescription, .rt-Heading) {
+  color: var(--vitta-text) !important;
+  opacity: 1 !important;
+}
+.vitta-dialog-content .vitta-input,
+.vitta-dialog-content .vitta-textarea {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #94a3b8;
+}
+.vitta-dialog-content .vitta-input::placeholder {
+  color: #475569 !important;
+  opacity: 1;
+}
+.vitta-dialog-content .rt-CheckboxRoot,
+.vitta-dialog-content .rt-Text {
+  color: var(--vitta-text) !important;
+}
+.vitta-dialog-content :focus-visible {
+  outline-color: var(--vitta-focus);
+}

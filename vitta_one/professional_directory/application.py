@@ -134,10 +134,12 @@ def admin_list_available_medical_accounts(
 def admin_register_medical_professional(
     db: Session, *, token: str, name: str, email: str,
     specialty_ids: list[int] | tuple[int, ...],
+    local_qa_password: str | None = None,
 ) -> MedicalRegistrationResult:
     require_role(db, token, Role.ADMINISTRADOR)
     return register_medical_professional(
-        db, name=name, email=email, specialty_ids=specialty_ids
+        db, name=name, email=email, specialty_ids=specialty_ids,
+        local_qa_password=local_qa_password,
     )
 
 

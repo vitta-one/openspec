@@ -3,6 +3,9 @@
 from typing import Any, TypedDict
 
 import reflex as rx
+from vitta_one.auth.local_qa import (
+    LocalQaAccountError, local_qa_enabled, reception_activate_qa_patient,
+)
 
 from vitta_one.appointment_scheduling.temporal import format_clinic_datetime
 from vitta_one.auth.authorization import AuthenticationRequiredError, RoleForbiddenError
@@ -229,6 +232,7 @@ class ReceptionQueueState(rx.State):
     selected_patient_name: str = ""
     selected_patient_phone: str = ""
     selected_patient_portal_status: str = ""
+    qa_local_enabled: bool = False
     is_loading_queue: bool = False
     is_submitting: bool = False
     error_message: str = ""
@@ -271,6 +275,7 @@ class ReceptionQueueState(rx.State):
         self.withdraw_is_scheduled = False
 
     def _clear_sensitive_view(self) -> None:
+        self.qa_local_enabled = False
         self.queue_rows = []
         self.selected_patient_id = 0
         self.selected_patient_name = ""
@@ -304,6 +309,7 @@ class ReceptionQueueState(rx.State):
         try:
             token = await self._token()
             self._load_queue_with_token(token)
+            self.qa_local_enabled = local_qa_enabled()
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
@@ -525,6 +531,41 @@ class ReceptionQueueState(rx.State):
                 yield event
         except Exception:
             self.error_message = "Não foi possível atualizar o cadastro agora. Tente novamente."
+        finally:
+            self.is_submitting = False
+            yield
+
+    @rx.event
+    async def activate_local_qa_patient(self, form_data: dict[str, Any]):
+        if not self.selected_patient_id:
+            self.error_message = "Cadastre ou localize o paciente primeiro."
+            return
+        if self.is_submitting:
+            return
+        self._clear_feedback()
+        self.is_submitting = True
+        yield
+        try:
+            token = await self._token()
+            consent = str(form_data.get("consent_confirmed", "")).casefold() in {
+                "on", "true", "1", "yes"
+            }
+            with rx.session() as db:
+                reception_activate_qa_patient(
+                    db, token=token, patient_id=self.selected_patient_id,
+                    email=str(form_data.get("email", "")),
+                    password=str(form_data.get("password", "")),
+                    consent_confirmed=consent,
+                )
+            self.selected_patient_portal_status = "Acesso ao portal ativo"
+            self.success_message = "Portal do paciente habilitado para QA. Faça login com o e-mail e senha definidos."
+        except LocalQaAccountError as exc:
+            self.error_message = str(exc)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.error_message = "Não foi possível habilitar o acesso ao portal."
         finally:
             self.is_submitting = False
             yield
