@@ -458,11 +458,11 @@ def release_reserved_slot(
     now: datetime,
 ) -> None:
     professional = db.get(Professional, slot.professional_id)
-    slot.status = (
-        AvailabilitySlotStatus.AVAILABLE.value
-        if ensure_utc(slot.starts_at) > now and professional is not None and professional.is_active
-        else AvailabilitySlotStatus.INACTIVE.value
-    )
+    can_reopen = ensure_utc(slot.starts_at) > now and professional is not None and professional.is_active
+    if can_reopen and slot.is_weekly_generated:
+        from vitta_one.appointment_scheduling.weekly import weekly_schedule_matches_instant
+        can_reopen = weekly_schedule_matches_instant(db, slot.professional_id, slot.starts_at)
+    slot.status = AvailabilitySlotStatus.AVAILABLE.value if can_reopen else AvailabilitySlotStatus.INACTIVE.value
     slot.updated_at = now
     db.add(slot)
 

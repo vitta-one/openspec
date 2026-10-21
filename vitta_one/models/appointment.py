@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 
 import reflex as rx
-from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint, text
+from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint, text
 from sqlmodel import Field
 
 from vitta_one.appointment_scheduling.domain import AvailabilitySlotStatus, ConsultationStatus
@@ -41,6 +41,7 @@ class ProfessionalAvailabilitySlot(rx.Model, table=True):
     starts_at: datetime = Field(
         sa_column=Column(DateTime(timezone=True), nullable=False, index=True)
     )
+    is_weekly_generated: bool = Field(default=False, sa_column=Column(Boolean, nullable=False, server_default=text('false')))
     status: str = Field(
         default=AvailabilitySlotStatus.AVAILABLE.value,
         sa_column=Column(String(16), nullable=False, index=True),
@@ -53,6 +54,25 @@ class ProfessionalAvailabilitySlot(rx.Model, table=True):
         default_factory=utc_now,
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
+
+
+class ProfessionalWeeklySchedule(rx.Model, table=True):
+    """One persisted weekly shift per doctor; UTC slots are materialized on demand."""
+    __tablename__ = "professional_weekly_schedules"
+    __table_args__ = (
+        CheckConstraint("weekday_start BETWEEN 0 AND 6", name="ck_weekly_start_day"),
+        CheckConstraint("weekday_end BETWEEN 0 AND 6", name="ck_weekly_end_day"),
+        CheckConstraint("weekday_end >= weekday_start", name="ck_weekly_day_order"),
+        CheckConstraint("slot_minutes IN (30, 60)", name="ck_weekly_slot_minutes"),
+    )
+    professional_id: int = Field(sa_column=Column(Integer, ForeignKey("professionals.id", ondelete="RESTRICT"), nullable=False, unique=True, index=True))
+    weekday_start: int = Field(sa_column=Column(Integer, nullable=False))
+    weekday_end: int = Field(sa_column=Column(Integer, nullable=False))
+    time_start: str = Field(sa_column=Column(String(5), nullable=False))
+    time_end: str = Field(sa_column=Column(String(5), nullable=False))
+    slot_minutes: int = Field(default=30, sa_column=Column(Integer, nullable=False, server_default=text("30")))
+    created_at: datetime = Field(default_factory=utc_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=utc_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
 
 class Consultation(rx.Model, table=True):
