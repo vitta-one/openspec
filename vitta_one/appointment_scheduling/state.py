@@ -11,6 +11,7 @@ from vitta_one.appointment_scheduling.application import (
     admin_set_availability_slot_active,
     reception_cancel_consultation,
     reception_get_agenda,
+    reception_get_consultation_by_id,
     reception_list_active_professionals,
     reception_reschedule_consultation,
     reception_schedule_consultation,
@@ -57,9 +58,7 @@ class SlotRow(TypedDict):
     time_label: str
     status: str
     status_label: str
-    confirmed_at: str
-    started_at: str
-    completed_at: str
+
 
 
 class SlotDayGroup(TypedDict):
@@ -102,15 +101,6 @@ def _slot_rows(items) -> list[SlotRow]:
             "time_label": format_clinic_datetime(item.starts_at).split(" às ")[1],
             "status": item.status.value,
             "status_label": item.status.label,
-            "confirmed_at": (
-                format_clinic_datetime(item.confirmed_at) if item.confirmed_at else ""
-            ),
-            "started_at": (
-                format_clinic_datetime(item.started_at) if item.started_at else ""
-            ),
-            "completed_at": (
-                format_clinic_datetime(item.completed_at) if item.completed_at else ""
-            ),
         }
         for item in items
     ]
@@ -706,8 +696,11 @@ class ReceptionAgendaState(rx.State):
         yield
         try:
             token = await self._token()
-            self._load_with_token(token)
-            row = self._current_consultation(consultation_id)
+            with rx.session() as db:
+                consultation = reception_get_consultation_by_id(
+                    db, token=token, consultation_id=consultation_id
+                )
+            row = _consultation_rows([consultation])[0]
             if row["status"] != ConsultationStatus.AGENDADA.value:
                 raise SchedulingTransitionError(
                     "A chegada só pode ser confirmada para uma consulta agendada."
@@ -804,8 +797,20 @@ class ReceptionAgendaState(rx.State):
         yield
         try:
             token = await self._token()
-            self._load_with_token(token)
-            row = self._current_consultation(consultation_id)
+            with rx.session() as db:
+                consultation = reception_get_consultation_by_id(
+                    db, token=token, consultation_id=consultation_id
+                )
+                # Daily actions must never inherit unrelated Agenda filters.
+                snapshot = reception_get_agenda(
+                    db,
+                    token=token,
+                    professional_id=consultation.professional_id,
+                    start_date=clinic_today_iso(),
+                    end_date=clinic_date_after_iso(14),
+                )
+            self.slots = _slot_rows(snapshot.slots)
+            row = _consultation_rows([consultation])[0]
             if row["status"] != ConsultationStatus.AGENDADA.value:
                 raise SchedulingTransitionError(
                     "Somente consultas agendadas podem ser reagendadas."
@@ -901,8 +906,11 @@ class ReceptionAgendaState(rx.State):
         yield
         try:
             token = await self._token()
-            self._load_with_token(token)
-            row = self._current_consultation(consultation_id)
+            with rx.session() as db:
+                consultation = reception_get_consultation_by_id(
+                    db, token=token, consultation_id=consultation_id
+                )
+            row = _consultation_rows([consultation])[0]
             if row["status"] != ConsultationStatus.AGENDADA.value:
                 raise SchedulingTransitionError(
                     "Somente consultas agendadas podem ser canceladas."

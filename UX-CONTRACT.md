@@ -159,12 +159,12 @@ Regras:
 
 ## 11. Atendimento clínico e histórico
 
-- O formulário clínico aparece somente quando o Médico possui atendimento ativo originado de Consulta agendada.
-- Walk-in mantém o fluxo operacional atual e não recebe `ClinicalCareRecord` nesta capability.
+- O formulário clínico aparece quando o Médico possui atendimento ativo, seja Consulta agendada confirmada, seja passagem direta da fila de pronto-socorro.
+- Walk-in recebe um `ClinicalCareRecord` vinculado exclusivamente ao `QueueEntry` sob o mesmo claim transacional; agendamentos preservam o vínculo à `Consultation`.
 - O formulário possui quatro áreas: queixa principal, anamnese, diagnóstico e conduta/observações.
 - Os campos aceitam salvamento parcial e preservam o texto local quando um erro corrigível ocorre.
 - O estado textual **Salvo** / **Alterações não salvas** é a fonte primária de feedback do rascunho.
-- O fluxo normal de **Finalizar atendimento** fica indisponível enquanto houver alterações locais não salvas; o Médico pode salvar ou descartar o rascunho para continuar.
+- O fluxo normal de **Finalizar atendimento** fica indisponível enquanto houver alterações locais não salvas; o Médico pode salvar ou descartar o rascunho para continuar. A confirmação é precedida por uma etapa de revisão de dados persistidos, antes do commit de finalização.
 - Textareas clínicas são a variante longa do formulário: mantêm foco visível e permitem `resize: vertical`; demais textareas do produto preservam o comportamento canônico existente.
 - O histórico clínico é somente leitura, inclui somente Consultas concluídas e usa paginação server-side de 10 registros.
 - O Médico acessa histórico somente no contexto do paciente do atendimento ativo autenticado.
@@ -175,7 +175,7 @@ Regras:
 
 ## 12. Prescrições e impressão
 
-- A seção **Prescrições** aparece somente para Atendimento ativo originado de Consulta agendada com `ClinicalCareRecord`.
+- A seção **Prescrições** aparece para Atendimento ativo com `ClinicalCareRecord`, tanto agendado quanto de pronto-socorro.
 - Um Atendimento pode possuir múltiplas Prescrições; cada documento é criado já com o primeiro item válido.
 - Cada item mostra medicamento/item como conteúdo principal, orientação/posologia logo abaixo e observações somente quando existirem.
 - “Nova prescrição”, adicionar/editar item e editar observações gerais usam dialogs controlados, com labels visíveis, limites refletidos nos campos e valores preservados em erro corrigível.
@@ -185,7 +185,7 @@ Regras:
 - O fluxo normal de **Finalizar atendimento** fica indisponível enquanto uma operação de Prescrição estiver em andamento.
 - Prescrições de Consultas concluídas aparecem no histórico como conteúdo somente leitura e ficam recolhidas por padrão para evitar expansão excessiva.
 - A visualização de impressão vive em rota protegida, sem shell operacional, e pode ser reaberta pelo Médico autor depois da conclusão.
-- A versão imprimível exibe paciente, profissional, registro profissional, data/hora da Consulta, itens e observações gerais.
+- A versão imprimível exibe paciente, profissional, registro profissional, data/hora do atendimento (instante agendado para Consulta, chamada real para pronto-socorro), itens e observações gerais.
 - A versão imprimível sempre informa **“Documento sem assinatura digital nesta etapa.”** e não mostra selo, QR Code ou indicadores ZapSign.
 - O Admin QA local projeta Prescrições reais em Atendimento/histórico somente leitura; fora da flag local não existe API clínica geral para Administrador.
 - Conteúdo de Prescrição não entra em URL, logs, mensagens de erro detalhadas ou telemetria.

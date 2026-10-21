@@ -583,3 +583,69 @@ def test_reception_dashboard_is_read_only_and_refreshes(page: Page) -> None:
     page.get_by_role("button", name="Atualizar consultas de hoje").click()
     expect(page.locator(".vitta-reception-day-row")).to_have_count(7, timeout=30000)
     expect(page.locator(".vitta-reception-day-updated")).to_be_visible(timeout=30000)
+
+
+
+def test_walkin_receipt_to_clinical_prescription_and_review(page: Page) -> None:
+    """Genuine Chromium: unbooked patient -> doctor claim -> clinical care -> Rx -> review.
+
+    All identities and text are synthetic, in disposable PostgreSQL only. The
+    pre-existing scheduled consultation for Doctor A remains untouched.
+    """
+    login(page, FIXTURE["doctor_b_email"])
+    expect(page.get_by_role("button", name="Chamar próximo")).to_be_visible(timeout=30000)
+    page.get_by_role("button", name="Chamar próximo").click()
+    expect(page.get_by_role("heading", name="Atendimento ativo")).to_be_visible(timeout=30000)
+    expect(page.get_by_text(FIXTURE["walkin_patient_name"], exact=True).first).to_be_visible()
+    expect(page.get_by_role("heading", name="Atendimento clínico")).to_be_visible()
+    expect(page.get_by_text("Consulta agendada", exact=True)).to_have_count(0)
+
+    page.locator("#clinical-chief-complaint").fill("Queixa sintética de teste")
+    page.locator("#clinical-anamnesis").fill("Anamnese fictícia para QA")
+    page.locator("#clinical-diagnosis").fill("Diagnóstico de teste")
+    page.locator("#clinical-conduct-notes").fill("Conduta de teste sem dados reais")
+    page.get_by_role("button", name="Salvar atendimento").click()
+    expect(page.get_by_text("Atendimento clínico salvo.")).to_be_visible(timeout=30000)
+
+    page.get_by_role("button", name="Nova prescrição").click()
+    dialog = page.get_by_role("dialog")
+    expect(dialog).to_be_visible(timeout=15000)
+    dialog.locator("#new-prescription-medication").fill("Item sintético QA PS")
+    dialog.locator("#new-prescription-instructions").fill(
+        "Orientação fictícia exclusiva de QA"
+    )
+    dialog.get_by_role("button", name="Criar prescrição").click()
+    expect(dialog).to_have_count(0, timeout=30000)
+    expect(page.get_by_text("Item sintético QA PS", exact=True).first).to_be_visible(
+        timeout=30000
+    )
+
+    for width in (1280, 375):
+        page.set_viewport_size({"width": width, "height": 850})
+        assert page.evaluate(
+            "document.documentElement.scrollWidth <= window.innerWidth + 2"
+        ), overflowing_elements(page)
+        page.screenshot(
+            path=f"qa-artifacts/pronto-atendimento-clinico-{width}px.png",
+            full_page=True,
+        )
+
+    page.get_by_role("button", name="Revisar e finalizar").click()
+    review = page.get_by_role("dialog")
+    expect(review).to_be_visible(timeout=15000)
+    expect(review.get_by_role("heading", name="Revisar finalização do atendimento")).to_be_visible()
+    expect(review.get_by_text(FIXTURE["walkin_patient_name"], exact=True)).to_be_visible()
+    page.screenshot(
+        path="qa-artifacts/pronto-atendimento-revisao.png", full_page=True
+    )
+    review.get_by_role("button", name="Voltar ao atendimento").click()
+    expect(review).to_have_count(0, timeout=15000)
+    expect(page.get_by_role("heading", name="Atendimento ativo")).to_be_visible()
+
+    page.get_by_role("button", name="Revisar e finalizar").click()
+    review = page.get_by_role("dialog")
+    expect(review).to_be_visible(timeout=15000)
+    review.get_by_role("button", name="Confirmar finalização").click()
+    expect(page.get_by_role("heading", name="Nenhum atendimento ativo")).to_be_visible(
+        timeout=30000
+    )

@@ -7,6 +7,7 @@ from vitta_one.appointment_scheduling.service import (
     AvailabilitySlotItem,
     ProfessionalOption,
     SchedulingValidationError,
+    SchedulingNotFoundError,
     cancel_consultation,
     create_availability_slot,
     get_agenda,
@@ -98,6 +99,17 @@ def reception_get_agenda(
         start_at=start_at,
         end_at=end_at,
     )
+
+
+def reception_get_consultation_by_id(
+    db: Session, *, token: str, consultation_id: int
+):
+    """Revalidate one chosen consultation under Reception RBAC, independent of filters."""
+    require_role(db, token, Role.RECEPCIONISTA)
+    items = list_consultations(db, consultation_id=consultation_id)
+    if not items:
+        raise SchedulingNotFoundError("Esta consulta não está mais disponível.")
+    return items[0]
 
 
 def reception_schedule_consultation(

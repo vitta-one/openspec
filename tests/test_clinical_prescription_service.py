@@ -603,7 +603,7 @@ def test_history_without_prescription_returns_empty_collection(db: Session) -> N
     assert page.items[0].prescriptions == ()
 
 
-def test_walkin_does_not_gain_prescription_context(db: Session) -> None:
+def test_walkin_receives_clinical_record_without_booked_consultation(db: Session) -> None:
     doctor = _doctor(db, "WALKIN")
     patient = create_patient(db, name="Paciente avulso", cpf=_cpf("505606707"))
     entry = create_queue_entry(
@@ -614,7 +614,10 @@ def test_walkin_does_not_gain_prescription_context(db: Session) -> None:
     )
     claimed = claim_next_patient(db, doctor_user_id=doctor.id)
     assert claimed.consultation_id is None
-    assert db.exec(select(ClinicalCareRecord)).all() == []
+    records = db.exec(select(ClinicalCareRecord)).all()
+    assert len(records) == 1
+    assert records[0].queue_entry_id == entry.id
+    assert records[0].consultation_id is None
     assert db.exec(select(Prescription)).all() == []
     assert db.get(QueueEntry, entry.id).status == QueueStatus.EM_ATENDIMENTO.value
 

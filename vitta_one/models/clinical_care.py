@@ -1,9 +1,9 @@
-"""Persistent clinical care record bound to one scheduled Consultation."""
+"""Clinical care record attached to a scheduled consultation OR walk-in queue entry."""
 
 from datetime import datetime, timezone
 
 import reflex as rx
-from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, Text, UniqueConstraint
+from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, Text, UniqueConstraint
 from sqlmodel import Field
 
 
@@ -20,6 +20,12 @@ class ClinicalCareRecord(rx.Model, table=True):
             "consultation_id",
             name="uq_clinical_care_records_consultation_id",
         ),
+        UniqueConstraint("queue_entry_id", name="uq_clinical_care_records_queue_entry_id"),
+        CheckConstraint(
+            "(consultation_id IS NOT NULL AND queue_entry_id IS NULL) OR "
+            "(consultation_id IS NULL AND queue_entry_id IS NOT NULL)",
+            name="ck_clinical_care_records_one_episode",
+        ),
         Index(
             "ix_clinical_care_records_patient_updated",
             "patient_id",
@@ -27,13 +33,23 @@ class ClinicalCareRecord(rx.Model, table=True):
         ),
     )
 
-    consultation_id: int = Field(
+    consultation_id: int | None = Field(
+        default=None,
         sa_column=Column(
             Integer,
             ForeignKey("consultations.id", ondelete="RESTRICT"),
-            nullable=False,
+            nullable=True,
             index=True,
         )
+    )
+    queue_entry_id: int | None = Field(
+        default=None,
+        sa_column=Column(
+            Integer,
+            ForeignKey("queue_entries.id", ondelete="RESTRICT"),
+            nullable=True,
+            index=True,
+        ),
     )
     patient_id: int = Field(
         sa_column=Column(

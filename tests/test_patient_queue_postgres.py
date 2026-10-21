@@ -5,9 +5,10 @@ from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
 
 import pytest
-from sqlmodel import Session, create_engine
+from sqlmodel import Session, create_engine, select
 
 from vitta_one.models.auth import User
+from vitta_one.models.clinical_care import ClinicalCareRecord
 from vitta_one.models.patient_queue import Patient, QueueEntry
 from vitta_one.patient_queue.service import (
     DoctorAlreadyAttendingError,
@@ -17,6 +18,14 @@ from vitta_one.patient_queue.service import (
     create_patient,
     create_queue_entry,
 )
+
+def _random_cpf() -> str:
+    digits = [int(x) for x in f"{uuid4().int % 1_000_000_000:09d}"]
+    for weights in (range(10, 1, -1), range(11, 1, -1)):
+        digit = (sum(n * w for n, w in zip(digits, weights)) * 10) % 11
+        digits.append(0 if digit == 10 else digit)
+    return "".join(str(x) for x in digits)
+
 
 _DATABASE_URL = os.getenv("DATABASE_URL", "")
 
@@ -49,7 +58,7 @@ def test_two_doctors_cannot_claim_the_same_waiting_entry() -> None:
             patient = create_patient(
                 db,
                 name="Paciente Concorrência",
-                cpf="52998224725",
+                cpf=_random_cpf(),
             )
             assert patient.id is not None
             patient_id = patient.id
@@ -86,6 +95,14 @@ def test_two_doctors_cannot_claim_the_same_waiting_entry() -> None:
     finally:
         with Session(engine) as db:
             if entry_id:
+                record = db.exec(
+                    select(ClinicalCareRecord).where(
+                        ClinicalCareRecord.queue_entry_id == entry_id
+                    )
+                ).first()
+                if record is not None:
+                    db.delete(record)
+                    db.flush()
                 row = db.get(QueueEntry, entry_id)
                 if row is not None:
                     db.delete(row)
@@ -127,8 +144,8 @@ def test_same_doctor_cannot_claim_two_patients_concurrently() -> None:
             doctor_id = doctor.id
 
             for name, cpf in (
-                ("Paciente Um", "52998224725"),
-                ("Paciente Dois", "16899535009"),
+                ("Paciente Um", _random_cpf()),
+                ("Paciente Dois", _random_cpf()),
             ):
                 patient = create_patient(db, name=name, cpf=cpf)
                 assert patient.id is not None
@@ -169,6 +186,15 @@ def test_same_doctor_cannot_claim_two_patients_concurrently() -> None:
             ) == 1
     finally:
         with Session(engine) as db:
+            for entry_id in entry_ids:
+                record = db.exec(
+                    select(ClinicalCareRecord).where(
+                        ClinicalCareRecord.queue_entry_id == entry_id
+                    )
+                ).first()
+                if record is not None:
+                    db.delete(record)
+            db.flush()
             for entry_id in entry_ids:
                 row = db.get(QueueEntry, entry_id)
                 if row is not None:

@@ -18,7 +18,7 @@ from vitta_one.clinical_prescription.service import add_prescription_item, creat
 from vitta_one.consultation_care.service import confirm_arrival
 from vitta_one.models.appointment import Consultation, ProfessionalAvailabilitySlot
 from vitta_one.models.auth import User
-from vitta_one.patient_queue.service import claim_next_patient, create_patient, finish_queue_entry
+from vitta_one.patient_queue.service import claim_next_patient, create_patient, create_queue_entry, finish_queue_entry
 from vitta_one.professional_directory.service import create_professional, create_specialty
 
 
@@ -185,11 +185,36 @@ def main() -> None:
             medication_or_item="Segundo item fictício QA",
             instructions="Segunda orientação fictícia",
         )
+        # A separate, unscheduled emergency-care journey for Chromium QA.
+        # Doctor B is deliberately independent from Doctor A's booked appointment.
+        create_professional(
+            db,
+            name="Dr. QA Pronto Atendimento",
+            registration_identifier="CRM-QA-WALKIN",
+            specialty_ids=[specialty.id],
+            user_id=doctors[1].id,
+        )
+        walkin_patient = create_patient(
+            db,
+            name="Paciente QA Pronto Atendimento",
+            cpf=_cpf("447588126"),
+        )
+        walkin_entry = create_queue_entry(
+            db,
+            patient_id=walkin_patient.id,
+            symptoms="Relato sintético de pronto-socorro QA",
+            priority="VERMELHO",
+            now=now + timedelta(minutes=12),
+        )
+        assert walkin_entry.consultation_id is None
+
         fixture = {
             "prescription_id": prescription.id,
             "patient_name": patient.name,
             "doctor_a_email": doctors[0].email,
             "doctor_b_email": doctors[1].email,
+            "walkin_patient_name": walkin_patient.name,
+            "walkin_entry_id": walkin_entry.id,
             "admin_email": admin.email,
             "reception_email": receptionist.email,
             "day_first_patient_name": day_first_patient_name,

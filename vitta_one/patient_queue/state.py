@@ -128,7 +128,7 @@ class PrescriptionItemRow(TypedDict):
 class PrescriptionRow(TypedDict):
     id: int
     clinical_care_record_id: int
-    consultation_id: int
+    consultation_id: int | None
     general_notes: str
     created_at: str
     items: list[PrescriptionItemRow]
@@ -137,7 +137,7 @@ class PrescriptionRow(TypedDict):
 
 class ClinicalHistoryRow(TypedDict):
     record_id: int
-    consultation_id: int
+    consultation_id: int | None
     professional_name: str
     scheduled_at: str
     completed_at: str
@@ -772,12 +772,17 @@ class DoctorQueueState(rx.State):
     is_loading: bool = False
     is_submitting: bool = False
     is_saving_clinical: bool = False
+    finish_dialog_open: bool = False
     error_message: str = ""
     success_message: str = ""
 
     @rx.var
+    def prescription_count(self) -> int:
+        return len(self.prescriptions)
+
+    @rx.var
     def has_clinical_record(self) -> bool:
-        return self.active_is_scheduled and self.clinical_record_id > 0
+        return self.has_active and self.clinical_record_id > 0
 
     @rx.var
     def clinical_is_dirty(self) -> bool:
@@ -861,6 +866,7 @@ class DoctorQueueState(rx.State):
         self._clear_prescriptions()
 
     def _clear_active(self) -> None:
+        self.finish_dialog_open = False
         self.has_active = False
         self.active_entry_id = 0
         self.active_consultation_id = 0
@@ -887,7 +893,8 @@ class DoctorQueueState(rx.State):
         self.active_priority = item.priority.value
         self.active_priority_label = item.priority.label
         self.active_called_at = (
-            item.called_at.strftime("%H:%M UTC") if item.called_at else ""
+            format_clinic_datetime(item.called_at).rsplit(" às ", 1)[-1]
+            if item.called_at else ""
         )
         self.active_is_scheduled = item.consultation_id is not None
         self.active_scheduled_at = (
@@ -928,7 +935,7 @@ class DoctorQueueState(rx.State):
         self._set_prescriptions(items)
 
     def _load_clinical_with_token(self, token: str, *, page: int = 1) -> None:
-        if not self.active_is_scheduled or not self.active_entry_id:
+        if not self.has_active or not self.active_entry_id:
             self._clear_clinical()
             return
         with rx.session() as db:
@@ -953,7 +960,7 @@ class DoctorQueueState(rx.State):
         self._set_prescriptions(prescriptions)
 
     def _load_history_with_token(self, token: str, *, page: int) -> None:
-        if not self.active_is_scheduled or not self.active_entry_id:
+        if not self.has_active or not self.active_entry_id:
             self.clinical_history = []
             self.clinical_history_page = 1
             self.clinical_history_total_pages = 1
@@ -974,7 +981,7 @@ class DoctorQueueState(rx.State):
             count = doctor_waiting_count(db, token=token)
         self._set_active(active)
         self.waiting_count = count
-        if self.active_is_scheduled:
+        if self.has_active:
             self._load_clinical_with_token(token, page=1)
 
     async def _authorization_redirect(self, exc: Exception):
@@ -1031,7 +1038,7 @@ class DoctorQueueState(rx.State):
                 count = doctor_waiting_count(db, token=token)
             self._set_active(item)
             self.waiting_count = count
-            if self.active_is_scheduled:
+            if self.has_active:
                 self._load_clinical_with_token(token, page=1)
             self.success_message = "Próximo paciente chamado para atendimento."
         except QueueEmptyError:
@@ -1526,9 +1533,36 @@ class DoctorQueueState(rx.State):
             yield
 
     @rx.event
+    def set_finish_dialog_open(self, is_open: bool) -> None:
+        if not self.is_submitting:
+            self.finish_dialog_open = is_open
+
+    @rx.event
+    def cancel_finish_review(self) -> None:
+        """Close the controlled review without modifying or finishing the episode."""
+        if not self.is_submitting:
+            self.finish_dialog_open = False
+
+    @rx.event
+    def begin_finish_review(self) -> None:
+        self._clear_feedback()
+        if not self.has_active or not self.active_entry_id:
+            self.error_message = "Chame um paciente antes de finalizar."
+            return
+        if self.clinical_is_dirty:
+            self.error_message = (
+                "Salve ou descarte as alterações clínicas antes de revisar."
+            )
+            return
+        if self.is_saving_clinical or self.is_prescription_submitting:
+            self.error_message = "Aguarde o salvamento terminar antes de revisar."
+            return
+        self.finish_dialog_open = True
+
+    @rx.event
     async def finish_active(self):
         self._clear_feedback()
-        if self.active_is_scheduled and self.clinical_is_dirty:
+        if self.clinical_is_dirty:
             self.error_message = (
                 "Salve ou descarte as alterações clínicas antes de finalizar o atendimento."
             )
