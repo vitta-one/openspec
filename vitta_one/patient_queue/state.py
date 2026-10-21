@@ -569,10 +569,17 @@ class ReceptionQueueState(rx.State):
             return
         try:
             token = await self._token()
+            with rx.session() as db:
+                patient = reception_get_patient_identity(
+                    db, token=token, patient_id=self.selected_patient_id
+                )
+            if patient is None:
+                self.error_message = "O cadastro selecionado não está mais disponível."
+                return
             from vitta_one.appointment_scheduling.state import ReceptionAgendaState
             agenda = await self.get_state(ReceptionAgendaState)
             agenda.selected_patient_id = self.selected_patient_id
-            agenda.selected_patient_name = self.selected_patient_name
+            agenda.selected_patient_name = patient.name
             agenda.patient_cpf = ""
             return rx.redirect("/recepcao/agenda")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
