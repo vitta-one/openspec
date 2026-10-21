@@ -602,6 +602,43 @@ Logs locais: `tail -n 100 reflex.log`, `python -m pip check`, `git status --shor
 - [ ] Testes executados separadamente em `vitta_one_test` e OpenSpec validado.
 - [ ] Cadastro/agenda testados com **dados sintéticos** e envio real de e-mail somente se explicitamente configurado.
 
+## Demonstração local completa sem Resend (apenas QA isolado)
+
+O fluxo a seguir só é habilitado quando **todos** os critérios são verdadeiros:
+`VITTA_ONE_LOCAL_ADMIN_PREVIEW=true`, `DATABASE_URL` apontando para PostgreSQL
+local (`127.0.0.1` / `localhost`) no banco **`vitta_one_qa`**, porta
+`5432`, `5433` ou `55432`, e `VITTA_ONE_PUBLIC_URL=http://localhost:3000`
+(ou `http://127.0.0.1:3000`). Fora deste ambiente, as ações locais somem
+e o servidor também as recusa. Não habilite isso no servidor de demonstração público.
+
+1. Acesse o login como Administrador e abra **Administração** (`/admin`).
+2. Cadastre uma especialidade e clique em **Novo profissional**. Informe nome, e-mail,
+   especialidade e, no QA local, uma **senha do Médico com 12+ caracteres**.
+   A credencial é armazenada como hash Argon2id; não depende de Resend.
+3. Na mesma página, em **Acesso da Recepção · QA local**, informe um e-mail distinto
+   e outra senha com 12+ caracteres. Clique em **Criar login de recepcionista**.
+4. Saia da conta Admin. Entre com o e-mail/senha da Recepção; abra
+   `/recepcao/pacientes` e cadastre o paciente com CPF válido, nome e telefone.
+5. Com o paciente selecionado, em **Acesso ao portal**, preencha o bloco
+   **Habilitar login do paciente (QA)**, confirmando o consentimento e definindo
+   e-mail e senha próprios para esse paciente.
+6. Saia da Recepção. Entre como Paciente, abra `/paciente/agendar`, selecione
+   especialidade, médico, data/hora e confirme a consulta.
+7. Entre como Médico usando a credencial criada no passo 2 e confira
+   `/medico/agenda`. Entre novamente na Recepção para confirmar a chegada,
+   e depois realize o atendimento médico com histórico e prescrição.
+
+As senhas de teste **não são devolvidas ao navegador depois de salvar**, nem
+ficam em Reflex State. Anote-as em seu gerenciador local. O usuário Médico e
+Recepcionista só existem após cadastro autenticado pelo Admin; a Recepção só
+pode ativar o paciente **já cadastrado e selecionado**, com consentimento.
+As rotas e serviços possuem autorização server-side. Não use dados reais.
+
+Em ambientes não locais, o Médico mantém o onboarding por Resend, enquanto o
+Paciente recebe convite e ativa um código único em `/ativar-paciente`.
+A criação de Recepcionista em produção precisa de fluxo de convite e gestão de
+colaboradores próprios — a operação de QA não substitui essa funcionalidade.
+
 ## Cadastro médico simplificado (QA / Resend)
 
 O fluxo de **Novo profissional** aceita nome, e-mail e uma ou mais especialidades. Se o e-mail ainda não possuir conta local, o servidor cria a identidade `MEDICO` com senha aleatória temporária (somente hash Argon2id em persistência), obrigando troca em `/primeiro-acesso` dentro de 24 horas.

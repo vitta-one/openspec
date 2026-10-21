@@ -205,10 +205,59 @@ def selected_patient_operations() -> rx.Component:
                         font_weight="700",
                     ),
                     rx.text(
-                        "O cadastro não cria uma conta. Envie um convite somente após confirmar consentimento com o paciente.",
+                        rx.cond(
+                            ReceptionQueueState.qa_local_enabled,
+                            "QA local: habilite o login abaixo com consentimento. O convite por e-mail continua disponível para testar o Resend.",
+                            "O cadastro não cria uma conta. Envie um convite somente após confirmar consentimento com o paciente.",
+                        ),
                         size="2",
                         color="var(--vitta-text-muted)",
                         line_height="1.5",
+                    ),
+                    rx.cond(
+                        ReceptionQueueState.qa_local_enabled
+                        & (ReceptionQueueState.selected_patient_portal_status != "Acesso ao portal ativo"),
+                        rx.el.form(
+                            rx.box(
+                                field_label("E-mail do paciente (QA local)", "patient-qa-email"),
+                                rx.el.input(
+                                    id="patient-qa-email", name="email", type="email",
+                                    required=True, max_length=320, class_name="vitta-input",
+                                    margin_top="0.4rem", auto_complete="off",
+                                    placeholder="paciente@example.invalid",
+                                ),
+                                width="100%",
+                            ),
+                            rx.box(
+                                field_label("Senha do paciente (12+ caracteres)", "patient-qa-password"),
+                                rx.el.input(
+                                    id="patient-qa-password", name="password", type="password",
+                                    required=True, min_length=12, max_length=128,
+                                    auto_complete="new-password", class_name="vitta-input",
+                                    margin_top="0.4rem",
+                                ),
+                                width="100%",
+                            ),
+                            rx.flex(
+                                rx.el.input(
+                                    id="patient-qa-consent", name="consent_confirmed",
+                                    type="checkbox", value="true", required=True,
+                                    aria_label="Consentimento para ativação local de QA",
+                                ),
+                                rx.text("Confirmo que o paciente consentiu com o acesso de demonstração.",
+                                        size="2", line_height="1.5"),
+                                gap="2", align="start",
+                            ),
+                            rx.button(
+                                "Habilitar login do paciente (QA)", type="submit",
+                                color_scheme="teal", high_contrast=True,
+                                disabled=ReceptionQueueState.is_submitting,
+                                loading=ReceptionQueueState.is_submitting,
+                            ),
+                            on_submit=ReceptionQueueState.activate_local_qa_patient,
+                            width="100%",
+                        ),
+                        rx.fragment(),
                     ),
                     rx.el.form(
                         rx.box(
