@@ -18,6 +18,22 @@ from vitta_one.appointment_scheduling.service import (
     schedule_consultation,
     set_availability_slot_active,
 )
+from vitta_one.appointment_scheduling.weekly import save_weekly_schedule
+from vitta_one.models.appointment import ProfessionalWeeklySchedule
+
+def admin_get_weekly_schedule(db: Session, *, token: str, professional_id: int):
+    require_role(db, token, Role.ADMINISTRADOR)
+    return db.exec(select(ProfessionalWeeklySchedule).where(
+        ProfessionalWeeklySchedule.professional_id == professional_id)).first()
+
+def admin_save_weekly_schedule(db: Session, *, token: str, professional_id: int,
+                               weekday_start: int, weekday_end: int, time_start: str,
+                               time_end: str, slot_minutes: int = 30) -> int:
+    require_role(db, token, Role.ADMINISTRADOR)
+    return save_weekly_schedule(db, professional_id=professional_id,
+                                weekday_start=weekday_start, weekday_end=weekday_end,
+                                time_start=time_start, time_end=time_end, slot_minutes=slot_minutes)
+
 from vitta_one.appointment_scheduling.temporal import (
     clinic_date_range_to_utc,
     parse_clinic_datetime_local,
