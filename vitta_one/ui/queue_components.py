@@ -116,6 +116,24 @@ def selected_patient_operations() -> rx.Component:
         rx.vstack(
             section_panel(
                 rx.vstack(
+                    rx.heading("Próximas ações", size="4"),
+                    rx.text(
+                        "Continue com o paciente selecionado, sem precisar pesquisar novamente.",
+                        size="2", color="var(--vitta-text-muted)",
+                    ),
+                    rx.button(
+                        rx.icon("calendar_plus", size=17),
+                        "Agendar consulta para este paciente",
+                        type="button", color_scheme="teal", high_contrast=True,
+                        min_height="2.75rem",
+                        on_click=ReceptionQueueState.open_selected_patient_agenda,
+                        disabled=ReceptionQueueState.is_submitting,
+                    ),
+                    spacing="3", align="stretch", width="100%",
+                )
+            ),
+            section_panel(
+                rx.vstack(
                     rx.heading("Cadastro operacional", size="4"),
                     rx.text(
                         "Atualize somente nome e telefone. O CPF e o vínculo do portal não podem ser alterados aqui.",

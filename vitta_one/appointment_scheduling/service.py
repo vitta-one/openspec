@@ -392,13 +392,30 @@ def schedule_consultation(
     slot_id: int,
     now: datetime | None = None,
 ) -> Consultation:
-    patient = db.get(Patient, patient_id)
+    # The patient lock serializes reservations even when two different doctors
+    # and available slots are selected concurrently for the same time.
+    patient = db.exec(
+        select(Patient).where(Patient.id == patient_id).with_for_update()
+    ).first()
     if patient is None:
         raise SchedulingValidationError("Selecione um paciente existente.")
 
     timestamp = _timestamp(now)
     slot = _locked_slot(db, slot_id)
     professional = _validate_bookable_slot(db, slot, now=timestamp)
+    if db.exec(
+        select(Consultation.id).where(
+            Consultation.patient_id == patient_id,
+            Consultation.scheduled_at == ensure_utc(slot.starts_at),
+            Consultation.status.in_(
+                [ConsultationStatus.AGENDADA.value, ConsultationStatus.CONFIRMADA.value,
+                 ConsultationStatus.EM_ANDAMENTO.value]
+            ),
+        )
+    ).first() is not None:
+        raise SchedulingConflictError(
+            "Você já possui uma consulta neste horário. Escolha outro."
+        )
 
     consultation = Consultation(
         patient_id=patient_id,
@@ -467,6 +484,14 @@ def reschedule_consultation(
     if consultation.availability_slot_id == new_slot_id:
         raise SchedulingValidationError("Escolha um horário diferente para reagendar.")
 
+    # Serialize the patient's appointment ledger against independent bookings
+    # on other doctors/slots before validating the destination time.
+    locked_patient = db.exec(
+        select(Patient).where(Patient.id == consultation.patient_id).with_for_update()
+    ).first()
+    if locked_patient is None:
+        raise SchedulingValidationError("O paciente da consulta não está disponível.")
+
     ids = sorted({consultation.availability_slot_id, new_slot_id})
     locked = db.exec(
         select(ProfessionalAvailabilitySlot)
@@ -484,6 +509,20 @@ def reschedule_consultation(
 
     previous_scheduled_at = ensure_utc(consultation.scheduled_at)
     next_scheduled_at = ensure_utc(new_slot.starts_at)
+    if db.exec(
+        select(Consultation.id).where(
+            Consultation.patient_id == consultation.patient_id,
+            Consultation.id != consultation.id,
+            Consultation.scheduled_at == next_scheduled_at,
+            Consultation.status.in_(
+                [ConsultationStatus.AGENDADA.value, ConsultationStatus.CONFIRMADA.value,
+                 ConsultationStatus.EM_ANDAMENTO.value]
+            ),
+        )
+    ).first() is not None:
+        raise SchedulingConflictError(
+            "O paciente já possui uma consulta neste horário. Escolha outro."
+        )
     release_reserved_slot(db, old_slot, now=timestamp)
     new_slot.status = AvailabilitySlotStatus.BOOKED.value
     new_slot.updated_at = timestamp

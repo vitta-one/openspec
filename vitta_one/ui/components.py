@@ -21,6 +21,7 @@ _NAV_BY_ROLE = {
     ),
     Role.PACIENTE: (
         ("Minhas consultas", "/paciente", "calendar_days", "consultas-paciente"),
+        ("Agendar consulta", "/paciente/agendar", "calendar_plus", "agendar-paciente"),
     ),
     Role.FINANCEIRO: (
         ("Financeiro", "/financeiro", "wallet", "financeiro"),
@@ -394,7 +395,7 @@ def authenticated_sidebar(role: Role, active: str) -> rx.Component:
             ),
             class_name="vitta-sidebar-session",
         ),
-        class_name="vitta-sidebar",
+        class_name=("vitta-sidebar vitta-sidebar--patient" if role is Role.PACIENTE else "vitta-sidebar"),
     )
 
 
