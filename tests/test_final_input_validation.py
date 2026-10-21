@@ -38,7 +38,7 @@ def test_phone_normalizes_masked_digits_and_optional_empty(value, expected):
 
 
 @pytest.mark.parametrize("value", [
-    "1198888123", "119888812345", "abc11988881234",
+    "119888812", "119888812345", "abc11988881234",
     "(11) abc98888-1234", "119 98888@1234",
 ])
 def test_phone_rejects_invalid_length_and_non_phone_characters(value):
