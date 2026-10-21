@@ -112,7 +112,7 @@ def list_patient_slots(
             ),
         )
         .order_by(ProfessionalAvailabilitySlot.starts_at, ProfessionalAvailabilitySlot.id)
-        .limit(250)
+        .limit(1200)
     ).all()
     return tuple(
         BookableSlot(

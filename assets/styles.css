@@ -1775,11 +1775,14 @@ button:disabled,
   --gray-9: #64748b;
 }
 .vitta-shell,
-.vitta-login-form-pane,
 .vitta-main,
 .vitta-page {
   color: var(--vitta-text);
   background-color: var(--vitta-canvas);
+}
+.vitta-login-form-pane {
+  color: var(--vitta-text);
+  background-color: #ffffff;
 }
 .vitta-shell .vitta-main,
 .vitta-shell .vitta-topbar,
