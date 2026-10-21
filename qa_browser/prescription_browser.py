@@ -741,7 +741,10 @@ def test_patient_books_own_appointment_and_both_staff_agendas_update(page: Page)
         context = browser.new_context(viewport={"width": 1280, "height": 850})
         role_page = context.new_page()
         try:
-            login(role_page, email)
+            if route.startswith("/recepcao"):
+                login_as_reception(role_page)
+            else:
+                login(role_page, email)
             role_page.goto(BASE + route, wait_until="domcontentloaded")
             expect(role_page.get_by_text(FIXTURE["booking_patient_name"], exact=True).first).to_be_visible(
                 timeout=30000
