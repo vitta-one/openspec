@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from vitta_one.auth.roles import Role
+from vitta_one.auth.local_qa import local_qa_enabled
 from vitta_one.auth.security import (
     hash_password, normalize_email, is_valid_email_identifier,
 )
@@ -489,29 +490,40 @@ def register_medical_professional(
     name: str,
     email: str,
     specialty_ids: list[int] | tuple[int, ...],
+    local_qa_password: str | None = None,
 ) -> MedicalRegistrationResult:
-    """Atomically create a doctor identity and professional without changing legacy users."""
+    """Create physician + identity; allow a chosen password ONLY in isolated local QA."""
     display_name = _validate_professional_name(name)
     normalized_email = normalize_email(email)
     if not is_valid_email_identifier(normalized_email):
         raise DirectoryValidationError("Informe um e-mail profissional válido.")
     valid_specialties = _validate_specialty_ids(db, specialty_ids)
+    if local_qa_password is not None:
+        if not local_qa_enabled():
+            raise DirectoryValidationError("Senha de teste disponível apenas no QA local isolado.")
+        if not 12 <= len(local_qa_password) <= 128:
+            raise DirectoryValidationError("A senha de QA deve conter entre 12 e 128 caracteres.")
 
     user = db.exec(select(User).where(User.email == normalized_email)).first()
     if user is not None:
+        if local_qa_password is not None:
+            raise DirectoryConflictError("A senha de uma conta existente não pode ser redefinida aqui.")
         if user.role != Role.MEDICO.value:
             raise DirectoryConflictError("Este e-mail já pertence a outro tipo de conta.")
         if db.exec(select(Professional).where(Professional.user_id == user.id)).first():
             raise DirectoryConflictError("Este e-mail já está vinculado a um profissional.")
     temporary_password: str | None = None
     if user is None:
-        temporary_password = secrets.token_urlsafe(32)
+        if local_qa_password is None:
+            temporary_password = secrets.token_urlsafe(32)
         user = User(
             email=normalized_email,
             role=Role.MEDICO.value,
-            password_hash=hash_password(temporary_password),
-            must_change_password=True,
-            temporary_password_expires_at=utc_now() + timedelta(hours=24),
+            password_hash=hash_password(local_qa_password or temporary_password),
+            must_change_password=local_qa_password is None,
+            temporary_password_expires_at=(
+                utc_now() + timedelta(hours=24) if local_qa_password is None else None
+            ),
         )
         db.add(user)
 

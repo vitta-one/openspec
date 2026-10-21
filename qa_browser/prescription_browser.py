@@ -935,3 +935,39 @@ def test_final_visual_audit_admin_workspace_routes(page: Page) -> None:
     audit_role_routes(
         page, "admin", ("/admin", "/admin/especialidades", "/admin/profissionais")
     )
+
+
+def test_admin_directory_and_modal_text_have_explicit_light_contrast(page: Page) -> None:
+    """Catch unreadable white-on-white headings/labels on the real Chromium page."""
+    login_as_admin(page)
+    title = page.get_by_role("heading", name="Profissionais e especialidades")
+    expect(title).to_be_visible(timeout=30000)
+    assert title.evaluate(
+        "el => getComputedStyle(el).color"
+    ) == "rgb(15, 23, 42)"
+    page.get_by_role("button", name="Nova especialidade").first.click()
+    dialog = page.get_by_role("dialog")
+    expect(dialog).to_be_visible(timeout=15000)
+    assert dialog.evaluate(
+        "el => getComputedStyle(el).backgroundColor"
+    ) == "rgb(255, 255, 255)"
+    label = dialog.locator('label[for="specialty-create-name"]')
+    expect(label).to_be_visible()
+    assert label.evaluate(
+        "el => getComputedStyle(el).color"
+    ) == "rgb(15, 23, 42)"
+    input_box = dialog.locator("#specialty-create-name")
+    assert input_box.evaluate(
+        "el => getComputedStyle(el).color"
+    ) == "rgb(15, 23, 42)"
+    page.screenshot(path="qa-artifacts/admin-contrast-specialty.png", full_page=True)
+    input_box.press("Escape")
+    page.get_by_role("button", name="Novo profissional").first.click()
+    dialog = page.get_by_role("dialog")
+    expect(dialog).to_be_visible(timeout=15000)
+    email = dialog.locator("#professional-email")
+    expect(email).to_be_visible()
+    assert email.evaluate(
+        "el => getComputedStyle(el).color"
+    ) == "rgb(15, 23, 42)"
+    page.screenshot(path="qa-artifacts/admin-contrast-professional.png", full_page=True)
