@@ -223,7 +223,7 @@ Regras:
 - `/admin/profissionais` e `/admin/especialidades` continuam como diretórios para busca, filtro, edição e controle de situação.
 - `/admin/horarios` separa em abas semânticas o **expediente semanal**, os **horários avulsos** e a **consulta dos horários**. Cada operação preserva os serviços, timezone e validações já existentes.
 - `/admin/configuracoes` apresenta apenas as configurações da clínica existentes, sem expor um formulário paralelo no dashboard.
-- `/recepcao/agenda` preserva o agendamento e o check-in, mas diferencia as abas **Agendar consulta** e **Consultas do período**; a aba de agendamento abre inicialmente para preservar o encaminhamento vindo do cadastro de paciente.
+- `/recepcao/agenda` preserva agendamento e check-in em abas: a entrada normal mostra **Consultas do período**, enquanto o encaminhamento explícito após selecionar um paciente abre **Agendar consulta**. O estado é controlado e não depende de aba invisível ou valor de rota sensível.
 - Todas as novas subrotas exigem `AuthState.load_protected` e `protected_workspace` com `verified_path`; autorização de negócio permanece no servidor.
 - Campos, placeholders, selects, menus portaled, badges e mensagens devem manter texto legível com contraste normal de pelo menos 4,5:1 e controles com foco visível. Estados desabilitados permanecem distinguíveis sem depender exclusivamente da cor.
 - Tarefas são verificadas em 320, 375, 768 e 1280 px com foco, navegação por teclado, ausência de overflow e fluxos reais. Testes estáticos e `reflex compile --dry` não substituem QA visual.
