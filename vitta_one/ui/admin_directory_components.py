@@ -5,6 +5,7 @@ import reflex as rx
 from vitta_one.professional_directory.state import AdminDirectoryState
 from vitta_one.ui.components import (
     error_banner,
+    breadcrumb,
     feedback_region,
     field_label,
     page_header,
@@ -1108,8 +1109,8 @@ def professional_registration_workspace() -> rx.Component:
             "Cadastrar médico",
             "Informe os dados do médico e selecione suas especialidades.",
         ),
-        rx.link("← Escolher outro perfil", href="/admin/funcionarios",
-                class_name="vitta-text-link"),
+        breadcrumb(("Administração", "/admin"), ("Funcionários", "/admin/funcionarios"),
+                   ("Cadastrar médico", None)),
         feedback_region(
             AdminDirectoryState.error_message,
             AdminDirectoryState.success_message,
