@@ -36,6 +36,8 @@ _ROLE_BY_ROUTE = {
     "/admin/especialidades": Role.ADMINISTRADOR,
     "/admin/profissionais": Role.ADMINISTRADOR,
     "/admin/funcionarios": Role.ADMINISTRADOR,
+    "/admin/funcionarios/novo": Role.ADMINISTRADOR,
+    "/admin/funcionarios/[employee_id]": Role.ADMINISTRADOR,
     "/admin/funcionarios/medico": Role.ADMINISTRADOR,
     "/admin/funcionarios/recepcionista": Role.ADMINISTRADOR,
     "/admin/horarios": Role.ADMINISTRADOR,
