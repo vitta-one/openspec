@@ -14,6 +14,10 @@ on:
       - "assets/styles.css"
   workflow_dispatch:
 
+concurrency:
+  group: chromium-qa-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -84,7 +88,7 @@ jobs:
       - name: Browser QA — security, keyboard and responsive
         run: python -m pytest qa_browser/prescription_browser.py -q
       - name: Capture all protected and public screens in Chromium
-        if: always()
+        if: success()
         run: python -m qa_browser.capture_all_screens
       - name: Upload synthetic visual QA evidence
         if: always()
