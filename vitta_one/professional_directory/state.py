@@ -771,6 +771,7 @@ class AdminDirectoryState(rx.State):
         self.is_submitting = True
         self._clear_feedback()
         was_saved = False
+        created_staff_user_id = 0
         yield
         try:
             token = await self._token()
@@ -800,6 +801,7 @@ class AdminDirectoryState(rx.State):
                             str(_form_data.get("qa_password", "")) or None
                         ),
                     )
+                    created_staff_user_id = registration.user_id
                     message = (
                         "Médico de QA cadastrado. Use o e-mail e a senha definidos no login."
                         if str(_form_data.get("qa_password", "")) else "Profissional cadastrado."
@@ -838,12 +840,16 @@ class AdminDirectoryState(rx.State):
             self.professional_dialog_open = False
             self._load_with_token(token)
             self.success_message = message
+            yield rx.toast.success(message, position="top-right")
+            if created_staff_user_id:
+                yield rx.redirect(f"/admin/funcionarios/{created_staff_user_id}")
         except (
             DirectoryValidationError,
             DirectoryConflictError,
             DirectoryNotFoundError,
         ) as exc:
             self.error_message = str(exc)
+            yield rx.toast.error(self.error_message, position="top-right")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
@@ -856,6 +862,7 @@ class AdminDirectoryState(rx.State):
                 )
             else:
                 self.error_message = "Não foi possível salvar o profissional agora."
+            yield rx.toast.error(self.error_message or self.success_message, position="top-right")
         finally:
             self.is_submitting = False
             yield
