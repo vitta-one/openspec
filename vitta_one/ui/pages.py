@@ -39,6 +39,7 @@ from vitta_one.ui.components import (
     breadcrumb,
     dashboard_shell,
     feedback_region,
+    empty_state,
     loading_surface,
     login_form,
     page_header,
@@ -51,6 +52,7 @@ from vitta_one.ui.queue_components import (
     active_queue_panel,
     doctor_active_panel,
     doctor_waiting_summary,
+    clinical_history_panel,
     enqueue_panel,
     patient_identity_panel,
     reassess_panel,
@@ -623,10 +625,52 @@ def doctor_page() -> rx.Component:
     return protected_workspace(
         Role.MEDICO,
         page_header(
-            "Atendimento",
-            "Fila médica",
-            "Chame o próximo paciente elegível e finalize somente o atendimento associado à sua sessão.",
+            "Consultório médico",
+            "Visão geral do consultório",
+            "Acompanhe a agenda, o pronto-socorro, os pacientes e os registros clínicos.",
         ),
+        rx.grid(
+            rx.link(
+                rx.vstack(
+                    rx.icon("list_ordered", color="var(--vitta-primary)", size=21),
+                    rx.heading(DoctorQueueState.waiting_count, size="6"),
+                    rx.text("Pacientes na espera", size="2", font_weight="650"),
+                    spacing="2", align="start",
+                ),
+                href="/medico", class_name="vitta-overview-card",
+            ),
+            rx.link(
+                rx.vstack(
+                    rx.icon("calendar_days", color="var(--vitta-primary)", size=21),
+                    rx.heading(DoctorWorkspaceState.consultation_rows.length(), size="6"),
+                    rx.text("Consultas no mês", size="2", font_weight="650"),
+                    spacing="2", align="start",
+                ),
+                href="/medico/agenda", class_name="vitta-overview-card",
+            ),
+            rx.link(
+                rx.vstack(
+                    rx.icon("file_heart", color="var(--vitta-primary)", size=21),
+                    rx.heading(rx.cond(DoctorQueueState.has_active, "Em andamento", "Sem atendimento"), size="4"),
+                    rx.text("Prontuário atual", size="2", font_weight="650"),
+                    spacing="2", align="start",
+                ),
+                href="/medico/prontuarios", class_name="vitta-overview-card",
+            ),
+            columns=rx.breakpoints(initial="1", sm="2", lg="3"),
+            gap="3", width="100%",
+        ),
+        rx.flex(
+            rx.link(rx.icon("calendar_days", size=17), "Abrir agenda",
+                    href="/medico/agenda", class_name="vitta-context-link"),
+            rx.link(rx.icon("users", size=17), "Meus pacientes",
+                    href="/medico/pacientes", class_name="vitta-context-link"),
+            rx.link(rx.icon("book_open", size=17), "Prontuário",
+                    href="/medico/prontuarios", class_name="vitta-context-link"),
+            gap="3", flex_wrap="wrap", align="center",
+        ),
+        rx.separator(),
+        rx.heading("Pronto-socorro e atendimento ativo", size="5"),
         feedback_region(
             DoctorQueueState.error_message,
             DoctorQueueState.success_message,
@@ -653,6 +697,32 @@ def doctor_page() -> rx.Component:
             doctor_active_panel(),
         ),
         active="atendimento",
+    )
+
+
+def doctor_records_page() -> rx.Component:
+    """Active-patient records only: no unrestricted medical history browsing."""
+    return protected_workspace(
+        Role.MEDICO,
+        breadcrumb(("Consultório", "/medico"), ("Prontuários", None)),
+        page_header(
+            "Prontuários", "Registro clínico do paciente atual",
+            "Acesso restrito ao atendimento associado à sua sessão médica.",
+        ),
+        rx.cond(
+            DoctorQueueState.has_active,
+            clinical_history_panel(),
+            section_panel(
+                empty_state(
+                    "clipboard_list", "Nenhum prontuário em atendimento",
+                    "Chame o próximo paciente no pronto-socorro para acessar o registro associado.",
+                    rx.link("Ir ao pronto-socorro", href="/medico",
+                            class_name="vitta-context-link"),
+                )
+            ),
+        ),
+        active="prontuarios",
+        verified_path="/medico/prontuarios",
     )
 
 
