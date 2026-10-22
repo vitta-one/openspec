@@ -691,7 +691,11 @@ def test_patient_books_own_appointment_and_both_staff_agendas_update(page: Page)
     page.get_by_role("option", name=FIXTURE["booking_specialty_name"], exact=True).click()
     page.locator("#patient-booking-doctor").click()
     page.get_by_role("option", name=re.compile("Dr. QA Pronto Atendimento")).click()
-    expect(page.get_by_role("heading", name="3. Escolha o horário")).to_be_visible()
+    expect(page.get_by_role("heading", name="3. Escolha o dia")).to_be_visible()
+    expect(page.get_by_role("button", name=re.compile("Selecionar horário de"))).to_have_count(0)
+    page.locator("#patient-booking-date").click()
+    page.get_by_role("option", name=re.compile(r"\\d{2}/\\d{2}/\\d{4}")).first.click()
+    expect(page.get_by_role("heading", name="4. Escolha o horário")).to_be_visible()
     choose = page.get_by_role("button", name=re.compile("Selecionar horário de")).first
     expect(choose).to_be_visible(timeout=30000)
     for width in (1280, 375, 320):

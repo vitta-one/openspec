@@ -72,30 +72,61 @@ def _doctor_select() -> rx.Component:
 
 
 def _slot_row(slot) -> rx.Component:
-    return rx.flex(
+    """Offer one available time on the date the patient explicitly chose."""
+    return rx.button(
         rx.hstack(
-            rx.icon("clock", size=17, color="var(--vitta-primary)"),
-            rx.text(slot["hour"], font_weight="750", size="3",
-                    class_name="vitta-tabular"),
-            spacing="2", align="center",
+            rx.icon("clock", size=16),
+            rx.text(slot["hour"], font_weight="750", class_name="vitta-tabular"),
+            spacing="2", align="center", justify="center",
         ),
-        rx.button(
-            "Selecionar horário",
-            type="button",
+        type="button",
+        size="3",
+        variant="outline",
+        color_scheme="teal",
+        high_contrast=True,
+        on_click=PatientBookingState.review_slot(slot["id"]),
+        disabled=PatientBookingState.is_submitting | PatientBookingState.is_loading,
+        aria_label="Selecionar horário de " + slot["label"],
+        width="100%",
+        min_height="3rem",
+        background="var(--vitta-surface)",
+    )
+
+
+def _day_select() -> rx.Component:
+    """Display only bookable dates, rather than a long multi-day list of times."""
+    return rx.box(
+        field_label("Data da consulta", "patient-booking-date"),
+        rx.select.root(
+            rx.select.trigger(
+                id="patient-booking-date",
+                width="100%",
+                placeholder="Selecione um dia disponível",
+                aria_label="Selecione a data da consulta",
+            ),
+            rx.select.content(
+                rx.select.item("Selecione uma data", value="__none__"),
+                rx.foreach(
+                    PatientBookingState.available_days,
+                    lambda option: rx.select.item(
+                        option["label"], value=option["value"]
+                    ),
+                ),
+                position="popper",
+            ),
+            value=PatientBookingState.selected_date,
+            on_change=PatientBookingState.choose_date,
+            disabled=PatientBookingState.is_loading | PatientBookingState.is_submitting,
+        ),
+        rx.text(
+            "A lista mostra apenas os dias com horários livres do médico escolhido.",
+            color="var(--vitta-text-muted)",
             size="2",
-            variant="outline",
-            color_scheme="teal",
-            on_click=PatientBookingState.review_slot(slot["id"]),
-            disabled=PatientBookingState.is_submitting
-                | PatientBookingState.is_loading,
-            aria_label="Selecionar horário de " + slot["label"],
+            margin_top="0.55rem",
+            line_height="1.5",
         ),
-        direction=rx.breakpoints(initial="column", sm="row"),
-        align=rx.breakpoints(initial="stretch", sm="center"),
-        justify="between", gap="3", width="100%",
-        padding="0.8rem 0.9rem",
-        border="1px solid var(--vitta-border)",
-        border_radius="0.8rem",
+        width="100%",
+        max_width="36rem",
     )
 
 
@@ -103,15 +134,15 @@ def _time_slots() -> rx.Component:
     return rx.vstack(
         rx.flex(
             rx.box(
-                rx.heading("3. Escolha o horário", size="4"),
+                rx.heading("3. Escolha o dia", size="4"),
                 rx.text(
-                    "Horários disponíveis para os próximos 45 dias. "
-                    "A reserva é confirmada somente após sua revisão.",
+                    "Datas disponíveis nos próximos 45 dias, conforme o expediente "
+                    "do médico. Selecione uma data para visualizar seus horários.",
                     color="var(--vitta-text-muted)", size="2",
                     margin_top="0.35rem", line_height="1.5",
                 ),
             ),
-            rx.badge("Horários da clínica", variant="soft", color_scheme="teal"),
+            rx.badge("Agenda do médico", variant="soft", color_scheme="teal"),
             align="center", justify="between", gap="2",
             flex_wrap="wrap", width="100%",
         ),
@@ -119,40 +150,73 @@ def _time_slots() -> rx.Component:
             PatientBookingState.selected_doctor == "__none__",
             empty_state(
                 "calendar_days", "Selecione um médico",
-                "Escolha a especialidade e o médico acima para ver a disponibilidade.",
+                "Escolha a especialidade e o médico acima para ver os dias disponíveis.",
             ),
             rx.cond(
                 PatientBookingState.is_loading,
                 rx.center(
                     rx.spinner(size="3"),
-                    rx.text("Buscando horários disponíveis…", role="status"),
+                    rx.text("Buscando datas disponíveis…", role="status"),
                     min_height="7rem", gap="3",
                 ),
                 rx.cond(
                     PatientBookingState.has_slots,
                     rx.vstack(
-                        rx.foreach(
-                            PatientBookingState.slot_groups,
-                            lambda day: rx.box(
-                                rx.heading(
-                                    day["date"], size="3",
-                                    margin_bottom="0.8rem",
-                                    class_name="vitta-tabular",
+                        _day_select(),
+                        rx.cond(
+                            PatientBookingState.selected_date != "__none__",
+                            rx.box(
+                                rx.heading("4. Escolha o horário", size="4"),
+                                rx.text(
+                                    "Horários livres para " + PatientBookingState.selected_date
+                                    + ". A reserva será confirmada após sua revisão.",
+                                    color="var(--vitta-text-muted)", size="2",
+                                    margin_top="0.35rem", margin_bottom="1rem",
+                                    line_height="1.5", role="status",
                                 ),
-                                rx.vstack(
-                                    rx.foreach(day["slots"], _slot_row),
-                                    spacing="2", width="100%",
+                                rx.cond(
+                                    PatientBookingState.has_selected_date_slots,
+                                    rx.grid(
+                                        rx.foreach(
+                                            PatientBookingState.selected_date_slots,
+                                            _slot_row,
+                                        ),
+                                        columns=rx.breakpoints(
+                                            initial="repeat(2, minmax(0, 1fr))",
+                                            sm="repeat(3, minmax(0, 1fr))",
+                                            lg="repeat(4, minmax(0, 1fr))",
+                                        ),
+                                        gap="0.75rem",
+                                        width="100%",
+                                    ),
+                                    rx.text(
+                                        "Não há horários disponíveis nesta data. Escolha outro dia.",
+                                        color="var(--vitta-text-muted)", role="status",
+                                    ),
                                 ),
                                 padding="1rem",
                                 border="1px solid var(--vitta-border)",
                                 border_radius="0.9rem",
                                 width="100%",
                             ),
+                            rx.box(
+                                rx.icon("calendar_days", size=24, color="var(--vitta-primary)"),
+                                rx.text(
+                                    "Selecione a data acima para visualizar os horários.",
+                                    color="var(--vitta-text-muted)",
+                                    margin_top="0.5rem",
+                                    role="status",
+                                ),
+                                padding="1rem",
+                                background="var(--vitta-surface-subtle)",
+                                border_radius="0.9rem",
+                                width="100%",
+                            ),
                         ),
-                        align="stretch", spacing="3", width="100%",
+                        align="stretch", spacing="4", width="100%",
                     ),
                     empty_state(
-                        "calendar_x", "Nenhum horário livre neste período",
+                        "calendar_x", "Nenhuma data com horário livre",
                         "Escolha outro médico ou peça orientação à recepção.",
                     ),
                 ),

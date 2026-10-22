@@ -1,4 +1,5 @@
 """Patient-controlled appointment booking with server-authorized option refreshes."""
+from datetime import datetime
 from typing import TypedDict
 
 import reflex as rx
@@ -36,6 +37,28 @@ class BookingDayGroup(TypedDict):
     slots: list[BookingSlotRow]
 
 
+class BookingDayOption(TypedDict):
+    value: str
+    label: str
+
+
+_WEEKDAYS_PT = ("segunda-feira", "terça-feira", "quarta-feira", "quinta-feira",
+                "sexta-feira", "sábado", "domingo")
+
+
+def available_booking_days(rows: list[BookingSlotRow]) -> list[BookingDayOption]:
+    """Build a concise picker of only dates with actual free appointments."""
+    options: list[BookingDayOption] = []
+    for group in group_booking_slots(rows):
+        date_label = group["date"]
+        weekday = _WEEKDAYS_PT[datetime.strptime(date_label, "%d/%m/%Y").weekday()]
+        quantity = len(group["slots"])
+        suffix = "horário disponível" if quantity == 1 else "horários disponíveis"
+        options.append({"value": date_label,
+                        "label": f"{weekday.capitalize()}, {date_label} · {quantity} {suffix}"})
+    return options
+
+
 def group_booking_slots(rows: list[BookingSlotRow]) -> list[BookingDayGroup]:
     days: dict[str, list[BookingSlotRow]] = {}
     for row in rows:
@@ -49,6 +72,7 @@ class PatientBookingState(rx.State):
     slots: list[BookingSlotRow] = []
     selected_specialty: str = "__none__"
     selected_doctor: str = "__none__"
+    selected_date: str = "__none__"
     selected_slot_id: int = 0
     selected_slot_label: str = ""
     selected_doctor_name: str = ""
@@ -63,6 +87,20 @@ class PatientBookingState(rx.State):
     @rx.var
     def slot_groups(self) -> list[BookingDayGroup]:
         return group_booking_slots(self.slots)
+
+    @rx.var
+    def available_days(self) -> list[BookingDayOption]:
+        return available_booking_days(self.slots)
+
+    @rx.var
+    def selected_date_slots(self) -> list[BookingSlotRow]:
+        if self.selected_date == "__none__":
+            return []
+        return [item for item in self.slots if item["date"] == self.selected_date]
+
+    @rx.var
+    def has_selected_date_slots(self) -> bool:
+        return bool(self.selected_date_slots)
 
     @rx.var
     def has_doctors(self) -> bool:
@@ -83,6 +121,7 @@ class PatientBookingState(rx.State):
     def _reset_selection(self) -> None:
         self.selected_specialty = "__none__"
         self.selected_doctor = "__none__"
+        self.selected_date = "__none__"
         self.selected_slot_id = 0
         self.selected_slot_label = ""
         self.selected_doctor_name = ""
@@ -131,6 +170,7 @@ class PatientBookingState(rx.State):
     async def choose_specialty(self, value: str):
         self.selected_specialty = value
         self.selected_doctor = "__none__"
+        self.selected_date = "__none__"
         self.doctors = []
         self.slots = []
         self.selected_slot_id = 0
@@ -165,6 +205,7 @@ class PatientBookingState(rx.State):
     @rx.event
     async def choose_doctor(self, value: str):
         self.selected_doctor = value
+        self.selected_date = "__none__"
         self.slots = []
         self.selected_slot_id = 0
         self.confirmation_open = False
@@ -201,14 +242,26 @@ class PatientBookingState(rx.State):
             yield
 
     @rx.event
+    def choose_date(self, value: str) -> None:
+        """Require an explicit available day before displaying its hours."""
+        self._clear_feedback()
+        self.selected_date = (
+            value if any(item["date"] == value for item in self.slots) else "__none__"
+        )
+        self.selected_slot_id = 0
+        self.selected_slot_label = ""
+        self.confirmation_open = False
+
+    @rx.event
     def review_slot(self, slot_id: int) -> None:
         self._clear_feedback()
         slot = next((s for s in self.slots if s["id"] == slot_id), None)
         doctor = next(
             (d for d in self.doctors if d["value"] == self.selected_doctor), None
         )
-        if slot is None or doctor is None:
-            self.error_message = "Atualize a disponibilidade e selecione outro horário."
+        if (slot is None or doctor is None or self.selected_date == "__none__"
+                or slot["date"] != self.selected_date):
+            self.error_message = "Selecione primeiro o dia e um horário livre dessa data."
             return
         self.selected_slot_id = slot_id
         self.selected_slot_label = slot["label"]
@@ -256,6 +309,7 @@ class PatientBookingState(rx.State):
             self.confirmation_open = False
             self.success_message = "Consulta agendada com sucesso."
             self.slots = []
+            self.selected_date = "__none__"
         except (
             SchedulingConflictError, SchedulingNotFoundError,
             SchedulingValidationError, ValueError,
@@ -280,6 +334,10 @@ class PatientBookingState(rx.State):
                 ]
             except Exception:
                 self.slots = []
+            if not any(slot["date"] == self.selected_date for slot in self.slots):
+                self.selected_date = "__none__"
+            self.selected_slot_id = 0
+            self.selected_slot_label = ""
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._redirect_for_auth(exc):
                 yield event
