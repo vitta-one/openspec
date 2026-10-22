@@ -777,6 +777,10 @@ def test_patient_books_own_appointment_and_both_staff_agendas_update(page: Page)
             else:
                 login(role_page, email)
             role_page.goto(BASE + route, wait_until="domcontentloaded")
+            if route.startswith("/recepcao"):
+                expect(role_page.get_by_role("tab", name="Consultas do período")).to_have_attribute(
+                    "data-state", "active", timeout=30000
+                )
             expect(role_page.get_by_text(FIXTURE["booking_patient_name"], exact=True).first).to_be_visible(
                 timeout=30000
             )
@@ -806,6 +810,9 @@ def test_reception_registers_patient_then_opens_its_agenda(page: Page) -> None:
     page.screenshot(path="qa-artifacts/recepcao-paciente-cadastrado.png", full_page=True)
     page.get_by_role("button", name="Agendar consulta para este paciente").click()
     expect(page).to_have_url(re.compile(r"/recepcao/agenda/?$"), timeout=30000)
+    expect(page.get_by_role("tab", name="Agendar consulta")).to_have_attribute(
+        "data-state", "active", timeout=30000
+    )
     expect(page.get_by_text("Paciente QA Cadastro Novo", exact=True).first).to_be_visible(
         timeout=30000
     )
