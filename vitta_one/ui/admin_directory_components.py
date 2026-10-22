@@ -1111,11 +1111,6 @@ def professional_registration_workspace() -> rx.Component:
         ),
         breadcrumb(("Administração", "/admin"), ("Funcionários", "/admin/funcionarios"),
                    ("Cadastrar médico", None)),
-        feedback_region(
-            AdminDirectoryState.error_message,
-            AdminDirectoryState.success_message,
-            "medical-registration-feedback",
-        ),
         rx.cond(
             AdminDirectoryState.is_loading,
             rx.center(rx.spinner(size="3"), min_height="12rem", width="100%",
