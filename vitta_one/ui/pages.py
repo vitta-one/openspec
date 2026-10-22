@@ -671,7 +671,7 @@ def doctor_page() -> rx.Component:
             gap="3", flex_wrap="wrap", align="center",
         ),
         rx.separator(),
-        rx.heading("Pronto-socorro e atendimento ativo", size="5"),
+        rx.heading("Operação de pronto-socorro", size="5"),
         feedback_region(
             DoctorQueueState.error_message,
             DoctorQueueState.success_message,
