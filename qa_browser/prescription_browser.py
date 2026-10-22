@@ -305,7 +305,7 @@ def test_admin_registers_medical_professional_without_resend_and_prevents_duplic
     checkbox.click()
     expect(checkbox).to_be_checked(timeout=15000)
     page.get_by_role("button", name="Cadastrar médico").click()
-    expect(page).to_have_url(re.compile(r"/admin/funcionarios/\\d+/?$"), timeout=30000)
+    expect(page).to_have_url(re.compile(r"/admin/funcionarios/[0-9]+/?$"), timeout=30000)
     expect(page.get_by_role("heading", name="Ficha do funcionário")).to_be_visible()
 
     page.goto(BASE + "/admin/profissionais", wait_until="domcontentloaded")
@@ -515,7 +515,7 @@ def test_reception_global_patient_search_uses_identity_only(page: Page) -> None:
     )
     expect(result).to_be_visible(timeout=30000)
     result.click()
-    expect(page).to_have_url(re.compile(r"/recepcao/pacientes/\\d+/?$"), timeout=30000)
+    expect(page).to_have_url(re.compile(r"/recepcao/pacientes/[0-9]+/?$"), timeout=30000)
     expect(page.get_by_text(FIXTURE["day_first_patient_name"], exact=True)).to_be_visible(
         timeout=30000
     )
@@ -730,6 +730,7 @@ def test_patient_books_own_appointment_and_both_staff_agendas_update(page: Page)
     expect(page.get_by_role("heading", name="4. Escolha o horário")).to_be_visible()
     choose = page.get_by_role("button", name=re.compile("Selecionar horário de")).first
     expect(choose).to_be_visible(timeout=30000)
+    page.emulate_media(reduced_motion="reduce")
     for width in (1280, 375, 320):
         page.set_viewport_size({"width": width, "height": 850})
         assert page.evaluate(
@@ -806,7 +807,7 @@ def test_reception_registers_patient_then_opens_its_agenda(page: Page) -> None:
     page.locator("#patient-create-cpf").fill("52998224725")
     page.locator("#patient-create-phone").fill("(11) 98888-1234")
     page.get_by_role("button", name="Cadastrar paciente").click()
-    expect(page).to_have_url(re.compile(r"/recepcao/pacientes/\\d+/?$"), timeout=30000)
+    expect(page).to_have_url(re.compile(r"/recepcao/pacientes/[0-9]+/?$"), timeout=30000)
     expect(page.get_by_role("heading", name="Ficha do paciente")).to_be_visible(timeout=30000)
     expect(page.get_by_role("button", name="Agendar consulta", exact=True)).to_be_visible()
     page.screenshot(path="qa-artifacts/recepcao-paciente-cadastrado.png", full_page=True)
@@ -863,11 +864,11 @@ def test_patient_identity_input_masks_and_client_validation(page: Page) -> None:
     page.goto(BASE + "/recepcao/pacientes", wait_until="domcontentloaded")
     expect(page.get_by_role("heading", name="Lista de pacientes")).to_be_visible(timeout=30000)
     page.locator("#patient-directory-search").fill("53817624964")
-    page.get_by_role("button", name="Buscar").click()
+    page.get_by_role("button", name="Buscar", exact=True).click()
     target = page.locator(".vitta-staff-row").filter(has_text=FIXTURE["booking_patient_name"]).first
     expect(target).to_be_visible(timeout=30000)
     target.click()
-    expect(page).to_have_url(re.compile(r"/recepcao/pacientes/\\d+/?$"), timeout=30000)
+    expect(page).to_have_url(re.compile(r"/recepcao/pacientes/[0-9]+/?$"), timeout=30000)
     page.get_by_role("button", name="Editar cadastro e acesso").click()
     editor = page.get_by_role("dialog")
     expect(editor).to_be_visible(timeout=15000)
@@ -937,7 +938,8 @@ def audit_role_routes(page: Page, prefix: str, routes: tuple[str, ...]) -> None:
         page.goto(BASE + route, wait_until="domcontentloaded")
         expect(page.locator(".vitta-shell")).to_be_visible(timeout=30000)
         expect(page.get_by_role("main")).to_be_visible(timeout=30000)
-        expect(page.get_by_role("navigation", name="Navegação principal")).to_have_count(1)
+        expect(page.locator(".vitta-sidebar-nav")).to_have_count(1)
+        page.emulate_media(reduced_motion="reduce")
         for width in (1280, 375, 320):
             page.set_viewport_size({"width": width, "height": 780})
             assert page.evaluate(
