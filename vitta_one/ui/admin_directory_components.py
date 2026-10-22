@@ -1100,3 +1100,49 @@ def professionals_management_workspace() -> rx.Component:
         medical_reissue_dialog(),
         spacing="4", align="stretch", width="100%",
     )
+
+
+def professional_registration_workspace() -> rx.Component:
+    """Dedicated medical registration, reusing the canonical form and submit event."""
+    return rx.vstack(
+        page_header(
+            "Administração / Funcionários",
+            "Cadastrar médico",
+            "Informe os dados do médico e selecione suas especialidades.",
+        ),
+        rx.link("← Escolher outro perfil", href="/admin/funcionarios",
+                class_name="vitta-text-link"),
+        feedback_region(
+            AdminDirectoryState.error_message,
+            AdminDirectoryState.success_message,
+            "medical-registration-feedback",
+        ),
+        rx.cond(
+            AdminDirectoryState.is_loading,
+            rx.center(rx.spinner(size="3"), min_height="12rem", width="100%",
+                      role="status", aria_live="polite"),
+            section_panel(
+                rx.el.form(
+                    rx.vstack(
+                        _professional_form_fields(),
+                        rx.flex(
+                            rx.link("Cancelar", href="/admin/funcionarios",
+                                    class_name="vitta-context-link"),
+                            rx.button(
+                                "Cadastrar médico",
+                                type="submit", color_scheme="teal", high_contrast=True,
+                                disabled=AdminDirectoryState.is_submitting,
+                                loading=AdminDirectoryState.is_submitting,
+                            ),
+                            direction=rx.breakpoints(initial="column-reverse", sm="row"),
+                            justify="end", align="center", gap="3", width="100%",
+                        ),
+                        spacing="4", align="stretch", width="100%",
+                    ),
+                    on_submit=AdminDirectoryState.save_professional,
+                    width="100%",
+                ),
+            ),
+        ),
+        spacing="4", align="stretch", width="100%",
+    )
