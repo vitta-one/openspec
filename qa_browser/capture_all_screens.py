@@ -26,7 +26,12 @@ SCREENS = {
         ("ativacao-paciente", "/ativar-paciente", "Ative seu portal"),
     ],
     "administrador": [
-        ("painel-admin", "/admin", "Especialidades"),
+        ("painel-admin", "/admin", "Gestão da clínica"),
+        ("funcionarios", "/admin/funcionarios", "Qual perfil deseja cadastrar?"),
+        ("cadastro-medico", "/admin/funcionarios/medico", "Cadastrar médico"),
+        ("cadastro-recepcionista", "/admin/funcionarios/recepcionista", "Cadastrar recepcionista"),
+        ("horarios-admin", "/admin/horarios", "Gerenciar horários"),
+        ("configuracoes", "/admin/configuracoes", "Configurações da clínica"),
         ("especialidades", "/admin/especialidades", "Todas as especialidades"),
         ("profissionais", "/admin/profissionais", "Todos os profissionais"),
         ("admin-previa-recepcao", "/admin/recepcao", "Recepção"),
