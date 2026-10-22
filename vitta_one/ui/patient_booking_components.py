@@ -10,7 +10,7 @@ def _specialty_select() -> rx.Component:
         field_label("1. Especialidade", "patient-booking-specialty"),
         rx.select.root(
             rx.select.trigger(
-                id="patient-booking-specialty", width="100%",
+                id="patient-booking-specialty", width="100%", class_name="vitta-select-trigger",
                 placeholder="Escolha uma especialidade",
                 aria_label="Escolha a especialidade para sua consulta",
             ),
@@ -37,7 +37,7 @@ def _doctor_select() -> rx.Component:
         field_label("2. Médico", "patient-booking-doctor"),
         rx.select.root(
             rx.select.trigger(
-                id="patient-booking-doctor", width="100%",
+                id="patient-booking-doctor", width="100%", class_name="vitta-select-trigger",
                 placeholder="Escolha um médico",
                 aria_label="Escolha o médico para sua consulta",
             ),
@@ -100,7 +100,7 @@ def _day_select() -> rx.Component:
         rx.select.root(
             rx.select.trigger(
                 id="patient-booking-date",
-                width="100%",
+                width="100%", class_name="vitta-select-trigger",
                 placeholder="Selecione um dia disponível",
                 aria_label="Selecione a data da consulta",
             ),
