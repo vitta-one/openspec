@@ -627,6 +627,7 @@ class ReceptionQueueState(rx.State):
             agenda.selected_patient_id = self.selected_patient_id
             agenda.selected_patient_name = patient.name
             agenda.patient_cpf = ""
+            agenda.focus_booking_on_next_load = True
             return rx.redirect("/recepcao/agenda")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             if isinstance(exc, AuthenticationRequiredError):
