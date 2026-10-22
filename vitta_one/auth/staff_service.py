@@ -23,3 +23,28 @@ def create_receptionist(db: Session, *, token: str, email: str, password: str) -
 def list_receptionists(db: Session, *, token: str) -> list[str]:
     require_role(db, token, Role.ADMINISTRADOR)
     return list(db.exec(select(User.email).where(User.role == Role.RECEPCIONISTA.value).order_by(User.email)).all())
+
+
+def list_employee_directory(db: Session, *, token: str) -> list[dict]:
+    """A read-only, admin-authorized list of staff identities (never patient users)."""
+    require_role(db, token, Role.ADMINISTRADOR)
+    users = db.exec(
+        select(User)
+        .where(User.role.in_((Role.MEDICO.value, Role.RECEPCIONISTA.value)))
+        .order_by(User.created_at.desc(), User.id.desc())
+    ).all()
+    return [
+        {"id": user.id, "email": user.email, "role": user.role,
+         "role_label": ("Médico" if user.role == Role.MEDICO.value else "Recepcionista")}
+        for user in users
+    ]
+
+
+def get_employee_detail(db: Session, *, token: str, employee_id: int) -> dict | None:
+    """Return only the staff member selected by an authorized Administrator."""
+    require_role(db, token, Role.ADMINISTRADOR)
+    user = db.get(User, employee_id)
+    if user is None or user.role not in (Role.MEDICO.value, Role.RECEPCIONISTA.value):
+        return None
+    return {"id": user.id, "email": user.email, "role": user.role,
+            "role_label": ("Médico" if user.role == Role.MEDICO.value else "Recepcionista")}
