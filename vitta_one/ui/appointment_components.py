@@ -208,249 +208,251 @@ def _weekday_select(*, control_id: str, value, on_change) -> rx.Component:
 
 
 def admin_availability_panel() -> rx.Component:
-    """Administrator availability surface: explicit slots, no calendar complexity."""
+    """Focused schedule management: each task has a separate accessible tab."""
     return section_panel(
         rx.vstack(
-            rx.flex(
-                rx.box(
-                    rx.text("AGENDA", class_name="vitta-section-kicker"),
-                    rx.heading("Horários de atendimento", size="5", margin_top="0.25rem"),
-                    rx.text(
-                        "Defina o expediente semanal do médico para publicar automaticamente horários de consulta. Também é possível cadastrar horários avulsos.",
-                        size="2",
-                        color="var(--vitta-text-muted)",
-                        line_height="1.55",
-                        margin_top="0.35rem",
-                        max_width="72ch",
-                    ),
-                ),
-                rx.badge("Horários disponíveis", color_scheme="teal", variant="soft"),
-                direction=rx.breakpoints(initial="column", md="row"),
-                justify="between",
-                align=rx.breakpoints(initial="stretch", md="start"),
-                gap="0.75rem",
-                width="100%",
-            ),
             feedback_region(
                 AdminAvailabilityState.error_message,
                 AdminAvailabilityState.success_message,
                 "availability-feedback",
             ),
-            rx.el.form(
-                rx.vstack(
-                    rx.heading("Expediente semanal do médico", size="4", color="var(--vitta-text)"),
-                    rx.text("Configure os dias e o intervalo de trabalho. Horários de consulta disponíveis são publicados para os próximos 45 dias, sem cancelar reservas já existentes.", color="var(--vitta-text-muted)", size="2", line_height="1.5"),
-                    rx.box(
-                        field_label("Médico", "admin-weekly-professional"),
+            rx.tabs.root(
+                rx.tabs.list(
+                    rx.tabs.trigger("Expediente semanal", value="weekly"),
+                    rx.tabs.trigger("Horário avulso", value="single"),
+                    rx.tabs.trigger("Consultar horários", value="search"),
+                    class_name="vitta-admin-schedule-tabs",
+                ),
+                rx.tabs.content(
+                rx.el.form(
+                    rx.vstack(
+                        rx.heading("Expediente semanal do médico", size="4", color="var(--vitta-text)"),
+                        rx.text("Configure os dias e o intervalo de trabalho. Horários de consulta disponíveis são publicados para os próximos 45 dias, sem cancelar reservas já existentes.", color="var(--vitta-text-muted)", size="2", line_height="1.5"),
                         rx.box(
-                            _professional_select(
-                                control_id="admin-weekly-professional",
-                                value=AdminAvailabilityState.selected_professional,
-                                on_change=AdminAvailabilityState.update_selected_professional,
-                                include_all=False,
-                                disabled=AdminAvailabilityState.is_submitting,
+                            field_label("Médico", "admin-weekly-professional"),
+                            rx.box(
+                                _professional_select(
+                                    control_id="admin-weekly-professional",
+                                    value=AdminAvailabilityState.selected_professional,
+                                    on_change=AdminAvailabilityState.update_selected_professional,
+                                    include_all=False,
+                                    disabled=AdminAvailabilityState.is_submitting,
+                                ),
+                                margin_top="0.4rem",
                             ),
-                            margin_top="0.4rem",
+                            width="100%",
                         ),
-                        width="100%",
+                        rx.grid(
+                            rx.box(
+                                field_label("Trabalha de", "admin-weekly-start-day"),
+                                rx.box(_weekday_select(control_id="admin-weekly-start-day",
+                                    value=AdminAvailabilityState.weekly_start_day,
+                                    on_change=AdminAvailabilityState.update_weekly_start_day), margin_top="0.4rem"),
+                            ),
+                            rx.box(
+                                field_label("Até", "admin-weekly-end-day"),
+                                rx.box(_weekday_select(control_id="admin-weekly-end-day",
+                                    value=AdminAvailabilityState.weekly_end_day,
+                                    on_change=AdminAvailabilityState.update_weekly_end_day), margin_top="0.4rem"),
+                            ),
+                            rx.box(
+                                field_label("Início do expediente", "admin-weekly-start-time"),
+                                rx.el.input(id="admin-weekly-start-time", type="time", name="start_time",
+                                            required=True, class_name="vitta-input", margin_top="0.4rem",
+                                            value=AdminAvailabilityState.weekly_start_time,
+                                            on_change=AdminAvailabilityState.update_weekly_start_time),
+                            ),
+                            rx.box(
+                                field_label("Fim do expediente", "admin-weekly-end-time"),
+                                rx.el.input(id="admin-weekly-end-time", type="time", name="end_time",
+                                            required=True, class_name="vitta-input", margin_top="0.4rem",
+                                            value=AdminAvailabilityState.weekly_end_time,
+                                            on_change=AdminAvailabilityState.update_weekly_end_time),
+                            ),
+                            rx.box(
+                                field_label("Duração da consulta", "admin-weekly-duration"),
+                                rx.select.root(
+                                    rx.select.trigger(id="admin-weekly-duration", width="100%", class_name="vitta-select-trigger"),
+                                    rx.select.content(
+                                        rx.select.item("30 minutos", value="30"),
+                                        rx.select.item("60 minutos", value="60"),
+                                        position="popper",
+                                    ),
+                                    value=AdminAvailabilityState.weekly_slot_minutes,
+                                    on_change=AdminAvailabilityState.update_weekly_slot_minutes,
+                                    size="3",
+                                ),
+                            ),
+                            columns=rx.breakpoints(initial="1", sm="repeat(2, minmax(0, 1fr))", xl="repeat(5, minmax(0, 1fr))"),
+                            gap="0.75rem", width="100%",
+                        ),
+                        rx.button(
+                            rx.cond(AdminAvailabilityState.weekly_existing, "Salvar alterações do expediente", "Publicar expediente semanal"),
+                            type="submit", color_scheme="teal", high_contrast=True,
+                            disabled=AdminAvailabilityState.is_submitting | ~AdminAvailabilityState.has_professionals,
+                            loading=AdminAvailabilityState.is_submitting, min_height="2.85rem",
+                        ),
+                        spacing="3", align="stretch", width="100%",
                     ),
+                    on_submit=AdminAvailabilityState.save_weekly,
+                    width="100%",
+                ),
+                    value="weekly",
+                    padding_top="1.25rem",
+                ),
+                rx.tabs.content(
+                rx.box(
+                    rx.heading("Horário avulso", size="4", color="var(--vitta-text)"),
+                    rx.text("Para encaixes ou exceções que não fazem parte do expediente semanal.", color="var(--vitta-text-muted)", size="2"),
+                    width="100%",
+                ),
+                rx.el.form(
                     rx.grid(
                         rx.box(
-                            field_label("Trabalha de", "admin-weekly-start-day"),
-                            rx.box(_weekday_select(control_id="admin-weekly-start-day",
-                                value=AdminAvailabilityState.weekly_start_day,
-                                on_change=AdminAvailabilityState.update_weekly_start_day), margin_top="0.4rem"),
-                        ),
-                        rx.box(
-                            field_label("Até", "admin-weekly-end-day"),
-                            rx.box(_weekday_select(control_id="admin-weekly-end-day",
-                                value=AdminAvailabilityState.weekly_end_day,
-                                on_change=AdminAvailabilityState.update_weekly_end_day), margin_top="0.4rem"),
-                        ),
-                        rx.box(
-                            field_label("Início do expediente", "admin-weekly-start-time"),
-                            rx.el.input(id="admin-weekly-start-time", type="time", name="start_time",
-                                        required=True, class_name="vitta-input", margin_top="0.4rem",
-                                        value=AdminAvailabilityState.weekly_start_time,
-                                        on_change=AdminAvailabilityState.update_weekly_start_time),
-                        ),
-                        rx.box(
-                            field_label("Fim do expediente", "admin-weekly-end-time"),
-                            rx.el.input(id="admin-weekly-end-time", type="time", name="end_time",
-                                        required=True, class_name="vitta-input", margin_top="0.4rem",
-                                        value=AdminAvailabilityState.weekly_end_time,
-                                        on_change=AdminAvailabilityState.update_weekly_end_time),
-                        ),
-                        rx.box(
-                            field_label("Duração da consulta", "admin-weekly-duration"),
-                            rx.select.root(
-                                rx.select.trigger(id="admin-weekly-duration", width="100%", class_name="vitta-select-trigger"),
-                                rx.select.content(
-                                    rx.select.item("30 minutos", value="30"),
-                                    rx.select.item("60 minutos", value="60"),
-                                    position="popper",
+                            field_label("Profissional", "admin-slot-professional"),
+                            rx.box(
+                                _professional_select(
+                                    control_id="admin-slot-professional",
+                                    value=AdminAvailabilityState.selected_professional,
+                                    on_change=AdminAvailabilityState.update_selected_professional,
+                                    include_all=False,
+                                    disabled=AdminAvailabilityState.is_submitting,
                                 ),
-                                value=AdminAvailabilityState.weekly_slot_minutes,
-                                on_change=AdminAvailabilityState.update_weekly_slot_minutes,
-                                size="3",
+                                margin_top="0.4rem",
                             ),
                         ),
-                        columns=rx.breakpoints(initial="1", sm="repeat(2, minmax(0, 1fr))", xl="repeat(5, minmax(0, 1fr))"),
-                        gap="0.75rem", width="100%",
-                    ),
-                    rx.button(
-                        rx.cond(AdminAvailabilityState.weekly_existing, "Salvar alterações do expediente", "Publicar expediente semanal"),
-                        type="submit", color_scheme="teal", high_contrast=True,
-                        disabled=AdminAvailabilityState.is_submitting | ~AdminAvailabilityState.has_professionals,
-                        loading=AdminAvailabilityState.is_submitting, min_height="2.85rem",
-                    ),
-                    spacing="3", align="stretch", width="100%",
-                ),
-                on_submit=AdminAvailabilityState.save_weekly,
-                width="100%",
-            ),
-            rx.box(
-                rx.heading("Horário avulso", size="4", color="var(--vitta-text)"),
-                rx.text("Para encaixes ou exceções que não fazem parte do expediente semanal.", color="var(--vitta-text-muted)", size="2"),
-                width="100%",
-            ),
-            rx.el.form(
-                rx.grid(
-                    rx.box(
-                        field_label("Profissional", "admin-slot-professional"),
                         rx.box(
-                            _professional_select(
-                                control_id="admin-slot-professional",
-                                value=AdminAvailabilityState.selected_professional,
-                                on_change=AdminAvailabilityState.update_selected_professional,
-                                include_all=False,
-                                disabled=AdminAvailabilityState.is_submitting,
+                            field_label("Data do atendimento", "admin-slot-date"),
+                            rx.el.input(
+                                id="admin-slot-date",
+                                name="date",
+                                type="date",
+                                value=AdminAvailabilityState.slot_date_local,
+                                on_change=AdminAvailabilityState.update_slot_date,
+                                required=True,
+                                class_name="vitta-input",
+                                margin_top="0.4rem",
                             ),
-                            margin_top="0.4rem",
                         ),
-                    ),
-                    rx.box(
-                        field_label("Data do atendimento", "admin-slot-date"),
-                        rx.el.input(
-                            id="admin-slot-date",
-                            name="date",
-                            type="date",
-                            value=AdminAvailabilityState.slot_date_local,
-                            on_change=AdminAvailabilityState.update_slot_date,
-                            required=True,
-                            class_name="vitta-input",
-                            margin_top="0.4rem",
-                        ),
-                    ),
-                    rx.box(
-                        field_label("Hora do atendimento", "admin-slot-time"),
-                        rx.el.input(
-                            id="admin-slot-time",
-                            name="time",
-                            type="time",
-                            value=AdminAvailabilityState.slot_time_local,
-                            on_change=AdminAvailabilityState.update_slot_time,
-                            required=True,
-                            class_name="vitta-input",
-                            margin_top="0.4rem",
-                        ),
-                    ),
-                    rx.button(
-                        rx.hstack(rx.icon("plus", size=17), rx.text("Adicionar horário"), spacing="2", align="center"),
-                        type="submit",
-                        color_scheme="teal",
-                        high_contrast=True,
-                        min_height="3rem",
-                        align_self="end",
-                        disabled=AdminAvailabilityState.is_submitting | ~AdminAvailabilityState.has_professionals,
-                        loading=AdminAvailabilityState.is_submitting,
-                    ),
-                    columns=rx.breakpoints(initial="1", md="repeat(2, minmax(0, 1fr))", xl="minmax(13rem, 1.5fr) minmax(9rem, 1fr) minmax(9rem, 1fr) auto"),
-                    gap="0.75rem",
-                    align_items="end",
-                    width="100%",
-                ),
-                on_submit=AdminAvailabilityState.create_slot,
-                no_validate=False,
-                width="100%",
-            ),
-            rx.box(
-                rx.grid(
-                    rx.box(
-                        field_label("Filtrar profissional", "admin-filter-professional"),
                         rx.box(
-                            _professional_select(
-                                control_id="admin-filter-professional",
-                                value=AdminAvailabilityState.filter_professional,
-                                on_change=AdminAvailabilityState.update_filter_professional,
-                                include_all=True,
-                                disabled=AdminAvailabilityState.is_loading,
+                            field_label("Hora do atendimento", "admin-slot-time"),
+                            rx.el.input(
+                                id="admin-slot-time",
+                                name="time",
+                                type="time",
+                                value=AdminAvailabilityState.slot_time_local,
+                                on_change=AdminAvailabilityState.update_slot_time,
+                                required=True,
+                                class_name="vitta-input",
+                                margin_top="0.4rem",
                             ),
-                            margin_top="0.4rem",
                         ),
-                    ),
-                    rx.box(
-                        field_label("Data inicial", "admin-filter-start"),
-                        rx.el.input(
-                            id="admin-filter-start",
-                            type="date",
-                            value=AdminAvailabilityState.filter_start_date,
-                            on_change=AdminAvailabilityState.update_filter_start_date,
-                            class_name="vitta-input",
-                            margin_top="0.4rem",
+                        rx.button(
+                            rx.hstack(rx.icon("plus", size=17), rx.text("Adicionar horário"), spacing="2", align="center"),
+                            type="submit",
+                            color_scheme="teal",
+                            high_contrast=True,
+                            min_height="3rem",
+                            align_self="end",
+                            disabled=AdminAvailabilityState.is_submitting | ~AdminAvailabilityState.has_professionals,
+                            loading=AdminAvailabilityState.is_submitting,
                         ),
-                    ),
-                    rx.box(
-                        field_label("Data final", "admin-filter-end"),
-                        rx.el.input(
-                            id="admin-filter-end",
-                            type="date",
-                            value=AdminAvailabilityState.filter_end_date,
-                            on_change=AdminAvailabilityState.update_filter_end_date,
-                            class_name="vitta-input",
-                            margin_top="0.4rem",
-                        ),
-                    ),
-                    rx.button(
-                        "Aplicar filtros",
-                        type="button",
-                        variant="outline",
-                        color_scheme="teal",
-                        min_height="3rem",
-                        align_self="end",
-                        on_click=AdminAvailabilityState.refresh,
-                        disabled=AdminAvailabilityState.is_loading,
-                    ),
-                    columns=rx.breakpoints(initial="1", lg="minmax(14rem, 1fr) 10rem 10rem auto"),
-                    gap="0.65rem",
-                    align_items="end",
-                    width="100%",
-                ),
-                class_name="vitta-filter-strip",
-            ),
-            rx.cond(
-                AdminAvailabilityState.is_loading,
-                rx.center(rx.spinner(size="3"), min_height="8rem", width="100%", role="status", aria_live="polite"),
-                rx.cond(
-                    AdminAvailabilityState.has_slots,
-                    rx.vstack(
-                        rx.foreach(AdminAvailabilityState.slots_by_day, _admin_slot_day),
-                        spacing="2",
-                        align="stretch",
+                        columns=rx.breakpoints(initial="1", md="repeat(2, minmax(0, 1fr))", xl="minmax(13rem, 1.5fr) minmax(9rem, 1fr) minmax(9rem, 1fr) auto"),
+                        gap="0.75rem",
+                        align_items="end",
                         width="100%",
-                        role="list",
                     ),
-                    empty_state(
-                        "calendar",
-                        "Nenhum horário neste período",
-                        "Adicione um horário futuro ou ajuste os filtros.",
+                    on_submit=AdminAvailabilityState.create_slot,
+                    no_validate=False,
+                    width="100%",
+                ),
+                    value="single",
+                    padding_top="1.25rem",
+                ),
+                rx.tabs.content(
+                rx.box(
+                    rx.grid(
+                        rx.box(
+                            field_label("Filtrar profissional", "admin-filter-professional"),
+                            rx.box(
+                                _professional_select(
+                                    control_id="admin-filter-professional",
+                                    value=AdminAvailabilityState.filter_professional,
+                                    on_change=AdminAvailabilityState.update_filter_professional,
+                                    include_all=True,
+                                    disabled=AdminAvailabilityState.is_loading,
+                                ),
+                                margin_top="0.4rem",
+                            ),
+                        ),
+                        rx.box(
+                            field_label("Data inicial", "admin-filter-start"),
+                            rx.el.input(
+                                id="admin-filter-start",
+                                type="date",
+                                value=AdminAvailabilityState.filter_start_date,
+                                on_change=AdminAvailabilityState.update_filter_start_date,
+                                class_name="vitta-input",
+                                margin_top="0.4rem",
+                            ),
+                        ),
+                        rx.box(
+                            field_label("Data final", "admin-filter-end"),
+                            rx.el.input(
+                                id="admin-filter-end",
+                                type="date",
+                                value=AdminAvailabilityState.filter_end_date,
+                                on_change=AdminAvailabilityState.update_filter_end_date,
+                                class_name="vitta-input",
+                                margin_top="0.4rem",
+                            ),
+                        ),
+                        rx.button(
+                            "Aplicar filtros",
+                            type="button",
+                            variant="outline",
+                            color_scheme="teal",
+                            min_height="3rem",
+                            align_self="end",
+                            on_click=AdminAvailabilityState.refresh,
+                            disabled=AdminAvailabilityState.is_loading,
+                        ),
+                        columns=rx.breakpoints(initial="1", lg="minmax(14rem, 1fr) 10rem 10rem auto"),
+                        gap="0.65rem",
+                        align_items="end",
+                        width="100%",
+                    ),
+                    class_name="vitta-filter-strip",
+                ),
+                rx.cond(
+                    AdminAvailabilityState.is_loading,
+                    rx.center(rx.spinner(size="3"), min_height="8rem", width="100%", role="status", aria_live="polite"),
+                    rx.cond(
+                        AdminAvailabilityState.has_slots,
+                        rx.vstack(
+                            rx.foreach(AdminAvailabilityState.slots_by_day, _admin_slot_day),
+                            spacing="2",
+                            align="stretch",
+                            width="100%",
+                            role="list",
+                        ),
+                        empty_state(
+                            "calendar",
+                            "Nenhum horário neste período",
+                            "Adicione um horário futuro ou ajuste os filtros.",
+                        ),
                     ),
                 ),
+                    value="search",
+                    padding_top="1.25rem",
+                ),
+                default_value="weekly",
+                width="100%",
             ),
             spacing="4",
             align="stretch",
             width="100%",
-        )
+        ),
     )
 
 
