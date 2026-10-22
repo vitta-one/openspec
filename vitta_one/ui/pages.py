@@ -5,7 +5,10 @@ import reflex as rx
 from vitta_one.appointment_scheduling.state import AdminAvailabilityState, ReceptionAgendaState
 from vitta_one.auth.roles import Role
 from vitta_one.ui.staff_components import admin_staff_panel
-from vitta_one.ui.admin_hub_components import admin_hub_workspace, admin_staff_type_workspace
+from vitta_one.ui.admin_hub_components import (
+    admin_hub_workspace, admin_staff_type_workspace,
+    admin_staff_create_workspace, admin_staff_detail_workspace,
+)
 from vitta_one.auth.state import AuthState
 from vitta_one.doctor_workspace.state import DoctorWorkspaceState
 from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
@@ -30,6 +33,7 @@ from vitta_one.ui.admin_preview_components import (
 from vitta_one.ui.components import (
     admin_preview_workspace,
     brand_logo,
+    breadcrumb,
     dashboard_shell,
     feedback_region,
     loading_surface,
@@ -394,6 +398,24 @@ def admin_staff_types_page() -> rx.Component:
     )
 
 
+def admin_staff_create_page() -> rx.Component:
+    return protected_workspace(
+        Role.ADMINISTRADOR,
+        admin_staff_create_workspace(),
+        active="funcionarios",
+        verified_path="/admin/funcionarios/novo",
+    )
+
+
+def admin_staff_detail_page() -> rx.Component:
+    return protected_workspace(
+        Role.ADMINISTRADOR,
+        admin_staff_detail_workspace(),
+        active="funcionarios",
+        verified_path="/admin/funcionarios/[employee_id]",
+    )
+
+
 def admin_medical_staff_page() -> rx.Component:
     return protected_workspace(
         Role.ADMINISTRADOR,
@@ -411,8 +433,8 @@ def admin_receptionist_staff_page() -> rx.Component:
             "Cadastrar recepcionista",
             "Defina as credenciais iniciais para uma conta de Recepção.",
         ),
-        rx.link("← Escolher outro perfil", href="/admin/funcionarios",
-                class_name="vitta-text-link"),
+        breadcrumb(("Administração", "/admin"), ("Funcionários", "/admin/funcionarios"),
+                   ("Cadastrar recepcionista", None)),
         admin_staff_panel(),
         active="funcionarios",
         verified_path="/admin/funcionarios/recepcionista",
@@ -427,8 +449,7 @@ def admin_hours_page() -> rx.Component:
             "Gerenciar horários",
             "Configure e consulte a disponibilidade dos médicos, uma tarefa por vez.",
         ),
-        rx.link("← Voltar à administração", href="/admin",
-                class_name="vitta-text-link"),
+        breadcrumb(("Administração", "/admin"), ("Horários", None)),
         admin_availability_panel(),
         active="horarios",
         verified_path="/admin/horarios",
@@ -443,8 +464,7 @@ def admin_clinic_settings_page() -> rx.Component:
             "Configurações da clínica",
             "Mantenha atualizadas as informações exibidas no portal do paciente.",
         ),
-        rx.link("← Voltar à administração", href="/admin",
-                class_name="vitta-text-link"),
+        breadcrumb(("Administração", "/admin"), ("Configurações", None)),
         admin_clinic_configuration(),
         active="administracao",
         verified_path="/admin/configuracoes",
