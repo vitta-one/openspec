@@ -618,6 +618,30 @@ class AdminDirectoryState(rx.State):
             yield
 
     @rx.event
+    async def prepare_new_professional_page(self):
+        """Prepare the same medical form for a dedicated, authenticated route."""
+        self.is_loading = True
+        self._clear_feedback()
+        yield
+        try:
+            token = await self._token()
+            self._load_with_token(token)
+            with rx.session() as db:
+                accounts = admin_list_available_medical_accounts(db, token=token)
+            self._set_medical_accounts(accounts)
+            self._reset_professional_form()
+            self.professional_dialog_open = False
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self._clear_sensitive_data()
+            self.error_message = "Não foi possível preparar o cadastro. Atualize a página."
+        finally:
+            self.is_loading = False
+            yield
+
+    @rx.event
     async def start_new_professional(self):
         self._clear_feedback()
         try:
