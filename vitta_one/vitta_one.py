@@ -38,6 +38,8 @@ from vitta_one.ui.pages import (
     admin_finance_preview_page,
     admin_page,
     admin_staff_types_page,
+    admin_staff_create_page,
+    admin_staff_detail_page,
     admin_medical_staff_page,
     admin_receptionist_staff_page,
     admin_hours_page,
@@ -127,8 +129,21 @@ app.add_page(
 app.add_page(
     admin_staff_types_page,
     route="/admin/funcionarios",
-    title="Criar funcionário | Vitta-One",
-    on_load=AuthState.load_protected,
+    title="Funcionários | Vitta-One",
+    on_load=[AuthState.load_protected, AdminStaffState.load],
+)
+app.add_page(
+    admin_staff_create_page,
+    route="/admin/funcionarios/novo",
+    title="Novo funcionário | Vitta-One",
+    on_load=[AuthState.load_protected, AdminStaffState.load,
+             AdminDirectoryState.prepare_new_professional_page],
+)
+app.add_page(
+    admin_staff_detail_page,
+    route="/admin/funcionarios/[employee_id]",
+    title="Ficha do funcionário | Vitta-One",
+    on_load=[AuthState.load_protected, AdminStaffState.load_detail],
 )
 app.add_page(
     admin_medical_staff_page,
