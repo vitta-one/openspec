@@ -1,5 +1,19 @@
 """Administration state for a paginated employee directory and staff onboarding."""
 import reflex as rx
+from typing import TypedDict
+
+
+class EmployeeRow(TypedDict):
+    id: int
+    email: str
+    role: str
+    role_label: str
+    href: str
+
+
+_EMPTY_EMPLOYEE: EmployeeRow = {
+    "id": 0, "email": "", "role": "", "role_label": "", "href": "",
+}
 
 from vitta_one.auth.state import AuthState
 from vitta_one.auth.authorization import AuthenticationRequiredError, RoleForbiddenError
@@ -13,8 +27,8 @@ from vitta_one.auth.staff_service import (
 
 class AdminStaffState(rx.State):
     emails: list[str] = []
-    employees: list[dict[str, str | int]] = []
-    employee_detail: dict[str, str | int] = {}
+    employees: list[EmployeeRow] = []
+    employee_detail: EmployeeRow = _EMPTY_EMPLOYEE
     employee_search: str = ""
     current_page: int = 1
     page_size: int = 10
@@ -24,7 +38,7 @@ class AdminStaffState(rx.State):
     saving: bool = False
 
     @rx.var
-    def filtered_employees(self) -> list[dict[str, str | int]]:
+    def filtered_employees(self) -> list[EmployeeRow]:
         search = self.employee_search.strip().casefold()
         return [employee for employee in self.employees
                 if not search or search in str(employee["email"]).casefold()
@@ -84,7 +98,7 @@ class AdminStaffState(rx.State):
 
     @rx.event
     async def load_detail(self):
-        self.employee_detail = {}
+        self.employee_detail = _EMPTY_EMPLOYEE
         try:
             raw_id = self.router.page.params.get("employee_id", "")
             if not str(raw_id).isdigit():
