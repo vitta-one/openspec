@@ -35,6 +35,8 @@ _ADMIN_PREVIEW_NAV = (
     ("Pacientes", "/admin/pacientes", "user", "pacientes"),
     ("Financeiro", "/admin/financeiro", "wallet", "financeiro"),
     ("Administração", "/admin", "settings", "administracao"),
+    ("Funcionários", "/admin/funcionarios", "users", "funcionarios"),
+    ("Horários", "/admin/horarios", "calendar_clock", "horarios"),
 )
 
 
@@ -297,6 +299,18 @@ def _admin_navigation(active: str) -> rx.Component:
             "/admin",
             "settings",
             active=active == "administracao",
+        ),
+        _nav_link(
+            "Funcionários",
+            "/admin/funcionarios",
+            "users",
+            active=active == "funcionarios",
+        ),
+        _nav_link(
+            "Horários",
+            "/admin/horarios",
+            "calendar_clock",
+            active=active == "horarios",
         ),
         spacing="1",
         align="stretch",
