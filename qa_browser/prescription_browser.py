@@ -937,13 +937,14 @@ def audit_role_routes(page: Page, prefix: str, routes: tuple[str, ...]) -> None:
         page.goto(BASE + route, wait_until="domcontentloaded")
         expect(page.locator(".vitta-shell")).to_be_visible(timeout=30000)
         expect(page.get_by_role("main")).to_be_visible(timeout=30000)
-        expect(page.get_by_role("navigation", name="Navegação principal")).to_be_visible()
+        expect(page.get_by_role("navigation", name="Navegação principal")).to_have_count(1)
         for width in (1280, 375, 320):
             page.set_viewport_size({"width": width, "height": 780})
             assert page.evaluate(
                 "document.documentElement.scrollWidth <= window.innerWidth + 2"
             ), (route, width, overflowing_elements(page))
-            if width <= 375 and prefix in {"recepcao", "medico"}:
+            if width <= 375:
+                page.get_by_role("button", name="Abrir ou fechar navegação").click()
                 nav = page.get_by_role("navigation", name="Navegação principal")
                 for item in nav.get_by_role("link").all():
                     expect(item).to_be_visible()
@@ -952,6 +953,7 @@ def audit_role_routes(page: Page, prefix: str, routes: tuple[str, ...]) -> None:
                     assert rect["x"] >= -2 and rect["x"] + rect["width"] <= width + 2, (
                         route, width, item.inner_text(), rect
                     )
+                page.locator(".vitta-sidebar-scrim").click(position={"x": width - 15, "y": 120})
             page.screenshot(
                 path=f"qa-artifacts/audit-{prefix}-{slug}-{width}px.png",
                 full_page=True,
@@ -962,14 +964,15 @@ def test_final_visual_audit_reception_workspace_routes(page: Page) -> None:
     login_as_reception(page)
     audit_role_routes(
         page, "recepcao",
-        ("/recepcao", "/recepcao/agenda", "/recepcao/pacientes", "/recepcao/fila"),
+        ("/recepcao", "/recepcao/agenda", "/recepcao/pacientes",
+         "/recepcao/pacientes/novo", "/recepcao/fila"),
     )
 
 
 def test_final_visual_audit_doctor_workspace_routes(page: Page) -> None:
     login(page, FIXTURE["doctor_b_email"])
     audit_role_routes(
-        page, "medico", ("/medico", "/medico/agenda", "/medico/pacientes")
+        page, "medico", ("/medico", "/medico/agenda", "/medico/pacientes", "/medico/prontuarios")
     )
 
 
@@ -977,7 +980,7 @@ def test_final_visual_audit_admin_workspace_routes(page: Page) -> None:
     login_as_admin(page)
     audit_role_routes(
         page, "admin", (
-            "/admin", "/admin/funcionarios", "/admin/funcionarios/medico",
+            "/admin", "/admin/funcionarios", "/admin/funcionarios/novo", "/admin/funcionarios/medico",
             "/admin/funcionarios/recepcionista", "/admin/horarios",
             "/admin/configuracoes", "/admin/especialidades", "/admin/profissionais",
         )
