@@ -89,7 +89,7 @@ def _employee_row(employee) -> rx.Component:
             rx.icon("chevron_right", size=18, color="var(--vitta-text-muted)"),
             justify="between", align="center", gap="3", width="100%",
         ),
-        href=employee["href"],
+        href=employee["href"].to(str),
         class_name="vitta-staff-row",
     )
 
