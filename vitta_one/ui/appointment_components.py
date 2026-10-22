@@ -1038,7 +1038,7 @@ def reception_agenda_panel() -> rx.Component:
                     value="booking",
                     padding_top="1.25rem",
                 ),
-                default_value="consultations",
+                default_value="booking",
                 width="100%",
             ),
             reception_agenda_dialogs(),
