@@ -509,7 +509,7 @@ def register_medical_professional(
         if local_qa_password is not None:
             raise DirectoryConflictError("A senha de uma conta existente não pode ser redefinida aqui.")
         if user.role != Role.MEDICO.value:
-            raise DirectoryConflictError("Este e-mail já pertence a outro tipo de conta.")
+            raise DirectoryConflictError("Não foi possível concluir o cadastro com os dados informados.")
         if db.exec(select(Professional).where(Professional.user_id == user.id)).first():
             raise DirectoryConflictError("Este e-mail já está vinculado a um profissional.")
     temporary_password: str | None = None
