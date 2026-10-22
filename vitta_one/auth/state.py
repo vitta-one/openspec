@@ -40,6 +40,7 @@ _ROLE_BY_ROUTE = {
     "/recepcao/fila": Role.RECEPCIONISTA,
     "/medico/agenda": Role.MEDICO,
     "/medico/pacientes": Role.MEDICO,
+    "/paciente/agendar": Role.PACIENTE,
 }
 _ADMIN_PREVIEW_ROUTES = frozenset(
     {
@@ -98,6 +99,7 @@ class AuthState(rx.State):
         from vitta_one.clinical_prescription.state import PrintPrescriptionState
         from vitta_one.doctor_workspace.state import DoctorWorkspaceState
         from vitta_one.patient_portal.state import PatientPortalState
+        from vitta_one.patient_portal.booking_state import PatientBookingState
         from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
 
         queue = await self.get_state(ReceptionQueueState)
@@ -109,6 +111,13 @@ class AuthState(rx.State):
         portal = await self.get_state(PatientPortalState)
         portal._clear()
         portal.error_message = ""
+        booking = await self.get_state(PatientBookingState)
+        booking.specialties = []
+        booking._reset_selection()
+        booking.booked = False
+        booking.booked_description = ""
+        booking.error_message = ""
+        booking.success_message = ""
         prescriptions = await self.get_state(PrintPrescriptionState)
         prescriptions._clear()
         preview = await self.get_state(AdminPreviewState)

@@ -36,11 +36,12 @@ class Prescription(rx.Model, table=True):
             index=True,
         )
     )
-    consultation_id: int = Field(
+    consultation_id: int | None = Field(
+        default=None,
         sa_column=Column(
             Integer,
             ForeignKey("consultations.id", ondelete="RESTRICT"),
-            nullable=False,
+            nullable=True,
             index=True,
         )
     )

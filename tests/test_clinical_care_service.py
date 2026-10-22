@@ -180,7 +180,7 @@ def test_scheduled_claim_creates_exactly_one_empty_record(db: Session) -> None:
     assert record.conduct_notes == ""
 
 
-def test_walkin_claim_does_not_create_clinical_record(db: Session) -> None:
+def test_walkin_claim_creates_clinical_record_without_booking(db: Session) -> None:
     doctor = _doctor(db, "WALKIN")
     patient = create_patient(db, name="Paciente avulso", cpf=_cpf("987654321"))
     create_queue_entry(
@@ -192,7 +192,12 @@ def test_walkin_claim_does_not_create_clinical_record(db: Session) -> None:
 
     item = claim_next_patient(db, doctor_user_id=doctor.id)
     assert item.consultation_id is None
-    assert db.exec(select(ClinicalCareRecord)).all() == []
+    records = db.exec(select(ClinicalCareRecord)).all()
+    assert len(records) == 1
+    assert records[0].queue_entry_id == item.id
+    assert records[0].consultation_id is None
+    assert records[0].patient_id == patient.id
+    assert records[0].doctor_user_id == doctor.id
 
 
 def test_duplicate_record_is_rejected_and_claim_rolls_back(db: Session) -> None:

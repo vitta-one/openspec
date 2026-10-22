@@ -410,6 +410,29 @@ def _professional_form_fields() -> rx.Component:
             ),
             width="100%",
         ),
+        rx.cond(
+            AdminDirectoryState.qa_local_enabled & ~AdminDirectoryState.is_editing_professional,
+            rx.box(
+                field_label("Senha do médico (somente QA local)", "professional-qa-password"),
+                rx.el.input(
+                    id="professional-qa-password",
+                    name="qa_password",
+                    type="password",
+                    auto_complete="new-password",
+                    required=AdminDirectoryState.qa_local_enabled & ~AdminDirectoryState.is_editing_professional,
+                    min_length=12,
+                    max_length=128,
+                    class_name="vitta-input",
+                    margin_top="0.4rem",
+                ),
+                rx.text(
+                    "Defina uma senha de 12 a 128 caracteres para entrar como Médico sem Resend.",
+                    size="2", color="var(--vitta-text-muted)", margin_top="0.3rem",
+                ),
+                width="100%",
+            ),
+            rx.fragment(),
+        ),
         rx.el.fieldset(
             rx.el.legend(
                 "Especialidades",
@@ -491,7 +514,6 @@ def professional_dialog() -> rx.Component:
                     width="100%",
                 ),
                 on_submit=AdminDirectoryState.save_professional,
-                no_validate=True,
                 width="100%",
             ),
             class_name="vitta-dialog-content vitta-dialog-content-wide",
@@ -707,6 +729,56 @@ def professionals_list_panel() -> rx.Component:
     )
 
 
+def qa_receptionist_panel() -> rx.Component:
+    """Server-gated staff login setup for a private, isolated local QA database."""
+    return rx.cond(
+        AdminDirectoryState.qa_local_enabled,
+        section_panel(
+            rx.vstack(
+                rx.heading("Acesso da Recepção · QA local", size="4"),
+                rx.text(
+                    "Crie o login de uma recepcionista para testar o fluxo com sessões separadas. "
+                    "Disponível somente no banco vitta_one_qa local.",
+                    color="var(--vitta-text-muted)", size="2",
+                ),
+                rx.el.form(
+                    rx.flex(
+                        rx.box(
+                            field_label("E-mail da recepcionista", "qa-reception-email"),
+                            rx.el.input(
+                                id="qa-reception-email", name="email", type="email",
+                                required=True, max_length=320,
+                                auto_complete="off", class_name="vitta-input",
+                                margin_top="0.4rem", placeholder="recepcao@example.invalid",
+                            ), flex="1", min_width="0",
+                        ),
+                        rx.box(
+                            field_label("Senha de acesso (12+ caracteres)", "qa-reception-password"),
+                            rx.el.input(
+                                id="qa-reception-password", name="password", type="password",
+                                required=True, min_length=12, max_length=128,
+                                auto_complete="new-password", class_name="vitta-input",
+                                margin_top="0.4rem",
+                            ), flex="1", min_width="0",
+                        ),
+                        direction=rx.breakpoints(initial="column", md="row"),
+                        gap="3", width="100%",
+                    ),
+                    rx.button(
+                        "Criar login de recepcionista", type="submit", color_scheme="teal",
+                        high_contrast=True, disabled=AdminDirectoryState.is_submitting,
+                        loading=AdminDirectoryState.is_submitting,
+                    ),
+                    on_submit=AdminDirectoryState.create_qa_receptionist,
+                    width="100%",
+                ),
+                spacing="3", align="stretch", width="100%",
+            )
+        ),
+        rx.fragment(),
+    )
+
+
 def admin_directory_workspace() -> rx.Component:
     """Compose the premium administrator directory workspace."""
     return rx.vstack(
@@ -726,6 +798,16 @@ def admin_directory_workspace() -> rx.Component:
                 color_scheme="teal",
                 on_click=AdminDirectoryState.start_new_specialty,
                 disabled=AdminDirectoryState.is_submitting,
+            ),
+            rx.cond(
+                AdminDirectoryState.qa_local_enabled,
+                rx.link(
+                    rx.hstack(rx.icon("user_plus", size=17), "Nova recepcionista (QA)",
+                              spacing="2", align="center"),
+                    href="#qa-receptionist-setup",
+                    class_name="vitta-context-link",
+                ),
+                rx.fragment(),
             ),
             rx.button(
                 rx.hstack(
@@ -776,6 +858,8 @@ def admin_directory_workspace() -> rx.Component:
                 align_items="start",
             ),
         ),
+        rx.box(qa_receptionist_panel(), id="qa-receptionist-setup", width="100%",
+               scroll_margin_top="6rem"),
         specialty_dialog(),
         professional_dialog(),
         medical_reissue_dialog(),

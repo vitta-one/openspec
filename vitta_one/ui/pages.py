@@ -4,10 +4,12 @@ import reflex as rx
 
 from vitta_one.appointment_scheduling.state import AdminAvailabilityState, ReceptionAgendaState
 from vitta_one.auth.roles import Role
+from vitta_one.ui.staff_components import admin_staff_panel
 from vitta_one.auth.state import AuthState
 from vitta_one.doctor_workspace.state import DoctorWorkspaceState
 from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
 from vitta_one.patient_portal.state import PatientPortalState
+from vitta_one.ui.patient_booking_components import patient_booking_workspace
 from vitta_one.professional_directory.state import AdminDirectoryState
 from vitta_one.reception.dashboard.components import reception_dashboard
 from vitta_one.ui.admin_directory_components import (
@@ -253,15 +255,29 @@ def patient_activation_page() -> rx.Component:
                             width="100%",
                         ),
                         rx.text("Use pelo menos 12 caracteres. A senha não é enviada ao estado Reflex.", size="1", color="var(--vitta-text-muted)"),
-                        rx.button("Ativar acesso", type="submit", width="100%", min_height="2.8rem", color_scheme="teal", high_contrast=True),
+                        rx.el.button(
+                            "Ativar acesso",
+                            type="button",
+                            width="100%",
+                            min_height="2.8rem",
+                            padding="0.7rem 1.15rem",
+                            border_radius="var(--vitta-radius-control)",
+                            background="var(--vitta-primary)",
+                            color="#fff",
+                            font_weight="750",
+                            class_name="vitta-primary-action",
+                            on_click=rx.call_script(
+                                "(() => { const form = document.getElementById('patient-activation-form'); if (form?.reportValidity()) form.submit(); })()"
+                            ),
+                        ),
                         spacing="4",
                         width="100%",
                         align="stretch",
                     ),
+                    id="patient-activation-form",
                     action="/api/paciente/ativar",
                     method="post",
                     enc_type="application/x-www-form-urlencoded",
-                    no_validate=True,
                     width="100%",
                 )
             ),
@@ -364,6 +380,7 @@ def admin_page() -> rx.Component:
         admin_clinic_configuration(),
         admin_directory_workspace(),
         admin_availability_panel(),
+        admin_staff_panel(),
         active="administracao",
     )
 
@@ -534,6 +551,23 @@ def doctor_patients_page() -> rx.Component:
     )
 
 
+def patient_booking_page() -> rx.Component:
+    """Self-service booking, always scoped to the patient session."""
+    return protected_workspace(
+        Role.PACIENTE,
+        page_header(
+            "Agenda",
+            "Agendar consulta",
+            "Encontre uma especialidade, escolha o médico e reserve seu horário.",
+            rx.link("Voltar às minhas consultas", href="/paciente",
+                    class_name="vitta-context-link"),
+        ),
+        patient_booking_workspace(),
+        active="agendar-paciente",
+        verified_path="/paciente/agendar",
+    )
+
+
 def patient_portal_page() -> rx.Component:
     return protected_workspace(
         Role.PACIENTE,
@@ -541,6 +575,15 @@ def patient_portal_page() -> rx.Component:
             "Minhas consultas",
             "Agenda do paciente",
             "Consulte compromissos futuros e passados vinculados à sua conta.",
+            rx.link(
+                rx.button(
+                    rx.icon("calendar_plus", size=17),
+                    "Agendar nova consulta",
+                    color_scheme="teal", high_contrast=True,
+                    min_height="2.75rem",
+                ),
+                href="/paciente/agendar",
+            ),
         ),
         feedback_region(PatientPortalState.error_message, "", "patient-portal-feedback"),
         patient_clinic_location(),

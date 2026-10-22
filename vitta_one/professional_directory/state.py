@@ -4,6 +4,9 @@ from typing import Any, TypedDict
 import asyncio
 
 import reflex as rx
+from vitta_one.auth.local_qa import (
+    LocalQaAccountError, admin_create_qa_receptionist, local_qa_enabled,
+)
 
 from vitta_one.auth.authorization import AuthenticationRequiredError, RoleForbiddenError
 from vitta_one.auth.state import AuthState
@@ -126,6 +129,7 @@ class AdminDirectoryState(rx.State):
     is_submitting: bool = False
     error_message: str = ""
     success_message: str = ""
+    qa_local_enabled: bool = False
 
     specialty_dialog_open: bool = False
     professional_dialog_open: bool = False
@@ -246,6 +250,7 @@ class AdminDirectoryState(rx.State):
         self.success_message = ""
 
     def _clear_sensitive_data(self) -> None:
+        self.qa_local_enabled = False
         self.specialties = []
         self.professionals = []
         self.recent_specialties = []
@@ -290,6 +295,7 @@ class AdminDirectoryState(rx.State):
 
     def _load_with_token(self, token: str) -> None:
         """Dashboard queries only its latest three rows; full pages load the directory."""
+        self.qa_local_enabled = local_qa_enabled()
         is_dashboard = self.router.route_id == "/admin"
         with rx.session() as db:
             if is_dashboard:
@@ -708,6 +714,33 @@ class AdminDirectoryState(rx.State):
         self.specialty_options = updated
 
     @rx.event
+    async def create_qa_receptionist(self, form_data: dict[str, Any]):
+        if self.is_submitting:
+            return
+        self._clear_feedback()
+        self.is_submitting = True
+        yield
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                admin_create_qa_receptionist(
+                    db, token=token,
+                    email=str(form_data.get("email", "")),
+                    password=str(form_data.get("password", "")),
+                )
+            self.success_message = "Recepcionista de QA criado. Entre com o e-mail e senha definidos."
+        except (LocalQaAccountError, ValueError) as exc:
+            self.error_message = str(exc)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.error_message = "Não foi possível criar o acesso de recepcionista."
+        finally:
+            self.is_submitting = False
+            yield
+
+    @rx.event
     async def save_professional(self, _form_data: dict[str, Any]):
         if self.is_submitting:
             return
@@ -739,8 +772,14 @@ class AdminDirectoryState(rx.State):
                     registration = admin_register_medical_professional(
                         db, token=token, name=self.professional_name,
                         email=self.professional_email, specialty_ids=specialty_ids,
+                        local_qa_password=(
+                            str(_form_data.get("qa_password", "")) or None
+                        ),
                     )
-                    message = "Profissional cadastrado."
+                    message = (
+                        "Médico de QA cadastrado. Use o e-mail e a senha definidos no login."
+                        if str(_form_data.get("qa_password", "")) else "Profissional cadastrado."
+                    )
             # Domain services commit before the external provider request.
             # Once committed, do not report an e-mail failure as a failed registration.
             was_saved = True

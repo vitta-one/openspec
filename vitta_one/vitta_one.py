@@ -7,6 +7,7 @@ from vitta_one.appointment_scheduling.state import AdminAvailabilityState, Recep
 from vitta_one.doctor_workspace.state import DoctorWorkspaceState
 from vitta_one.auth.roles import Role
 from vitta_one.auth.state import AuthState
+from vitta_one.auth.staff_state import AdminStaffState
 from vitta_one.clinical_prescription.state import PrintPrescriptionState
 from vitta_one.models import (
     AuthSession,
@@ -19,6 +20,7 @@ from vitta_one.models import (
     PrescriptionItem,
     Professional,
     ProfessionalAvailabilitySlot,
+    ProfessionalWeeklySchedule,
     ProfessionalSpecialty,
     QueueEntry,
     Specialty,
@@ -26,6 +28,7 @@ from vitta_one.models import (
 )
 from vitta_one.patient_portal.activation_api import activation_api
 from vitta_one.patient_portal.state import AdminClinicConfigurationState, PatientPortalState
+from vitta_one.patient_portal.booking_state import PatientBookingState
 from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
 from vitta_one.professional_directory.state import AdminDirectoryState
 from vitta_one.reception.dashboard.state import ReceptionDashboardState
@@ -47,6 +50,7 @@ from vitta_one.ui.pages import (
     first_access_page,
     patient_activation_page,
     patient_portal_page,
+    patient_booking_page,
     prescription_print_page,
     reception_page,
     reception_agenda_page,
@@ -65,6 +69,7 @@ _PERSISTENT_MODELS = (
     Specialty,
     Professional,
     ProfessionalAvailabilitySlot,
+    ProfessionalWeeklySchedule,
     ProfessionalSpecialty,
     Consultation,
     ClinicalCareRecord,
@@ -115,6 +120,7 @@ app.add_page(
     on_load=[
         AuthState.load_protected,
         AdminDirectoryState.load,
+        AdminStaffState.load,
         AdminAvailabilityState.load,
         AdminClinicConfigurationState.load,
     ],
@@ -209,6 +215,12 @@ app.add_page(
     route=Role.PACIENTE.dashboard_path,
     title="Minhas consultas | Vitta-One",
     on_load=[AuthState.load_protected, PatientPortalState.load],
+)
+app.add_page(
+    patient_booking_page,
+    route="/paciente/agendar",
+    title="Agendar consulta | Vitta-One",
+    on_load=[AuthState.load_protected, PatientBookingState.load],
 )
 app.add_page(
     finance_page,

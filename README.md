@@ -602,6 +602,43 @@ Logs locais: `tail -n 100 reflex.log`, `python -m pip check`, `git status --shor
 - [ ] Testes executados separadamente em `vitta_one_test` e OpenSpec validado.
 - [ ] Cadastro/agenda testados com **dados sintéticos** e envio real de e-mail somente se explicitamente configurado.
 
+## Demonstração local completa sem Resend (apenas QA isolado)
+
+O fluxo a seguir só é habilitado quando **todos** os critérios são verdadeiros:
+`VITTA_ONE_LOCAL_ADMIN_PREVIEW=true`, `DATABASE_URL` apontando para PostgreSQL
+local (`127.0.0.1` / `localhost`) no banco **`vitta_one_qa`**, porta
+`5432`, `5433` ou `55432`, e `VITTA_ONE_PUBLIC_URL=http://localhost:3000`
+(ou `http://127.0.0.1:3000`). Fora deste ambiente, as ações locais somem
+e o servidor também as recusa. Não habilite isso no servidor de demonstração público.
+
+1. Acesse o login como Administrador e abra **Administração** (`/admin`).
+2. Cadastre uma especialidade e clique em **Novo profissional**. Informe nome, e-mail,
+   especialidade e, no QA local, uma **senha do Médico com 12+ caracteres**.
+   A credencial é armazenada como hash Argon2id; não depende de Resend.
+3. Na mesma página, em **Acesso da Recepção · QA local**, informe um e-mail distinto
+   e outra senha com 12+ caracteres. Clique em **Criar login de recepcionista**.
+4. Saia da conta Admin. Entre com o e-mail/senha da Recepção; abra
+   `/recepcao/pacientes` e cadastre o paciente com CPF válido, nome e telefone.
+5. Com o paciente selecionado, em **Acesso ao portal**, preencha o bloco
+   **Habilitar login do paciente (QA)**, confirmando o consentimento e definindo
+   e-mail e senha próprios para esse paciente.
+6. Saia da Recepção. Entre como Paciente, abra `/paciente/agendar`, selecione
+   especialidade, médico, data/hora e confirme a consulta.
+7. Entre como Médico usando a credencial criada no passo 2 e confira
+   `/medico/agenda`. Entre novamente na Recepção para confirmar a chegada,
+   e depois realize o atendimento médico com histórico e prescrição.
+
+As senhas de teste **não são devolvidas ao navegador depois de salvar**, nem
+ficam em Reflex State. Anote-as em seu gerenciador local. O usuário Médico e
+Recepcionista só existem após cadastro autenticado pelo Admin; a Recepção só
+pode ativar o paciente **já cadastrado e selecionado**, com consentimento.
+As rotas e serviços possuem autorização server-side. Não use dados reais.
+
+Em ambientes não locais, o Médico mantém o onboarding por Resend, enquanto o
+Paciente recebe convite e ativa um código único em `/ativar-paciente`.
+A criação de Recepcionista em produção precisa de fluxo de convite e gestão de
+colaboradores próprios — a operação de QA não substitui essa funcionalidade.
+
 ## Cadastro médico simplificado (QA / Resend)
 
 O fluxo de **Novo profissional** aceita nome, e-mail e uma ou mais especialidades. Se o e-mail ainda não possuir conta local, o servidor cria a identidade `MEDICO` com senha aleatória temporária (somente hash Argon2id em persistência), obrigando troca em `/primeiro-acesso` dentro de 24 horas.
@@ -624,7 +661,8 @@ Os valores acima são placeholders, **não credenciais funcionais**. O remetente
 - `/admin/especialidades` e `/admin/profissionais`: diretórios completos com busca, filtros e paginação, exclusivos do Administrador;
 - `/primeiro-acesso`: troca obrigatória de senha temporária Médica;
 - `/medico/agenda` e `/medico/pacientes`: agenda e lista derivadas do profissional associado à sessão;
-- `/paciente`: consultas do cadastro vinculado à conta do paciente;
+- `/paciente`: calendário, histórico e consultas vinculadas à conta do paciente;
+- `/paciente/agendar`: o paciente autenticado escolhe especialidade, médico e horário disponível, revisa e confirma a própria consulta;
 - `/ativar-paciente`: ativação por e-mail, código de uso único e senha escolhida pelo paciente;
 - `/recepcao`: agenda de Consultas, confirmação de chegada, cadastro/localização de pacientes, entrada avulsa, reavaliação, retirada e acompanhamento da fila ativa;
 - `/medico`: fila elegível, registro clínico, múltiplas Prescrições com itens e histórico concluído do paciente;
@@ -634,7 +672,7 @@ Os valores acima são placeholders, **não credenciais funcionais**. O remetente
 
 Financeiro ainda permanece shell. Administrador executa a gestão do diretório e Recepção/Médico executam a capability de fila; prioridade é sempre informada pela operação (`VERMELHO`, `AMARELO`, `VERDE`) e nunca é calculada ou elevada automaticamente pelo Vitta-One. A autorização é revalidada no backend e não depende apenas de componentes escondidos no frontend.
 
-Uma Consulta agendada continua fora da fila até a Recepção usar **Confirmar chegada**. Quando o Médico marcado chama o paciente, nasce um único `ClinicalCareRecord`. Durante `EM_ANDAMENTO`, o Médico pode salvar o registro clínico e criar uma ou mais Prescrições com itens. Ao finalizar, Consulta/fila passam para `CONCLUIDA`/`FINALIZADO`; Atendimento e Prescrições tornam-se somente leitura e passam a integrar o histórico. A Prescrição possui visualização HTML/CSS para impressão, mas **a assinatura ZapSign ainda não está implementada**. Walk-ins continuam sem Consulta, registro clínico ou Prescrição nesta etapa.
+Uma Consulta agendada continua fora da fila até a Recepção usar **Confirmar chegada**. Quando o Médico marcado chama o paciente, nasce um único `ClinicalCareRecord`. Durante `EM_ANDAMENTO`, o Médico pode salvar o registro clínico e criar uma ou mais Prescrições com itens. Ao finalizar, Consulta/fila passam para `CONCLUIDA`/`FINALIZADO`; Atendimento e Prescrições tornam-se somente leitura e passam a integrar o histórico. A Prescrição possui visualização HTML/CSS para impressão, mas **a assinatura ZapSign ainda não está implementada**. Atendimentos avulsos de pronto-socorro não criam uma Consulta agendada: o registro clínico e as prescrições são vinculados diretamente à passagem da fila, com histórico preservado após finalização. O fluxo de autogendamento não altera a classificação da fila.
 
 ## Fluxo de desenvolvimento
 
@@ -645,3 +683,12 @@ Contexto → Explore → Propose → Review → Apply → Archive
 ```
 
 Antes de alterar funcionalidades, leia `AGENTS.md`, `docs/project-overview.md`, `docs/domain-model.md` e `openspec/config.yaml`.
+
+
+### Jornada de autogendamento e homologação
+
+O cadastro operacional da recepção em `/recepcao/pacientes` permite enviar convite de acesso mediante consentimento. O paciente ativa a conta em `/ativar-paciente` usando e-mail, código temporário e senha de pelo menos 12 caracteres. O agendamento em `/paciente/agendar` usa **a identidade da sessão**, não um ID de paciente recebido do navegador. A seleção é feita por especialidade ativa, médico ativo e horários livres para os próximos 45 dias. A reserva usa o mesmo serviço transacional da recepção, impede sobreposição no mesmo horário e aparece nas agendas de paciente, médico e recepcionista.
+
+**Caminho sintético de demonstração:** recepcionista cadastra paciente, confirma consentimento e envia convite; paciente ativa e entra; escolhe especialidade, médico, data/hora e confirma; entra como médico para verificar a agenda; recepção confirma chegada para inserir o agendamento na fila; médico chama e finaliza. A confirmação real de entrega dos e-mails via Resend depende de credenciais e remetente verificado configurados na implantação, e não é verificada pelo CI. O Chromium usa ativação/usuários sintéticos no banco descartável. Não execute o seed de QA em produção.
+
+O ambiente de desenvolvimento não deve mostrar prescrições ou dados pessoais reais nas capturas. Para homologação de migração e e-mail no ambiente final: faça backup PostgreSQL, valide `alembic upgrade head` no destino controlado, confirme recebimento efetivo no endereço de testes, ativação única e login, e só então habilite a demonstração pública.

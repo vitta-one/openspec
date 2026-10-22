@@ -190,6 +190,23 @@ def _reception_slot_day(day) -> rx.Component:
     )
 
 
+def _weekday_select(*, control_id: str, value, on_change) -> rx.Component:
+    return rx.select.root(
+        rx.select.trigger(id=control_id, width="100%", class_name="vitta-select-trigger"),
+        rx.select.content(
+            rx.select.item("Segunda-feira", value="0"),
+            rx.select.item("Terça-feira", value="1"),
+            rx.select.item("Quarta-feira", value="2"),
+            rx.select.item("Quinta-feira", value="3"),
+            rx.select.item("Sexta-feira", value="4"),
+            rx.select.item("Sábado", value="5"),
+            rx.select.item("Domingo", value="6"),
+            position="popper",
+        ),
+        value=value, on_change=on_change, size="3",
+    )
+
+
 def admin_availability_panel() -> rx.Component:
     """Administrator availability surface: explicit slots, no calendar complexity."""
     return section_panel(
@@ -199,7 +216,7 @@ def admin_availability_panel() -> rx.Component:
                     rx.text("AGENDA", class_name="vitta-section-kicker"),
                     rx.heading("Horários de atendimento", size="5", margin_top="0.25rem"),
                     rx.text(
-                        "Escolha um profissional, a data e a hora em que ele poderá atender. Veja abaixo os horários já cadastrados.",
+                        "Defina o expediente semanal do médico para publicar automaticamente horários de consulta. Também é possível cadastrar horários avulsos.",
                         size="2",
                         color="var(--vitta-text-muted)",
                         line_height="1.55",
@@ -218,6 +235,84 @@ def admin_availability_panel() -> rx.Component:
                 AdminAvailabilityState.error_message,
                 AdminAvailabilityState.success_message,
                 "availability-feedback",
+            ),
+            rx.el.form(
+                rx.vstack(
+                    rx.heading("Expediente semanal do médico", size="4", color="var(--vitta-text)"),
+                    rx.text("Configure os dias e o intervalo de trabalho. Horários de consulta disponíveis são publicados para os próximos 45 dias, sem cancelar reservas já existentes.", color="var(--vitta-text-muted)", size="2", line_height="1.5"),
+                    rx.box(
+                        field_label("Médico", "admin-weekly-professional"),
+                        rx.box(
+                            _professional_select(
+                                control_id="admin-weekly-professional",
+                                value=AdminAvailabilityState.selected_professional,
+                                on_change=AdminAvailabilityState.update_selected_professional,
+                                include_all=False,
+                                disabled=AdminAvailabilityState.is_submitting,
+                            ),
+                            margin_top="0.4rem",
+                        ),
+                        width="100%",
+                    ),
+                    rx.grid(
+                        rx.box(
+                            field_label("Trabalha de", "admin-weekly-start-day"),
+                            rx.box(_weekday_select(control_id="admin-weekly-start-day",
+                                value=AdminAvailabilityState.weekly_start_day,
+                                on_change=AdminAvailabilityState.update_weekly_start_day), margin_top="0.4rem"),
+                        ),
+                        rx.box(
+                            field_label("Até", "admin-weekly-end-day"),
+                            rx.box(_weekday_select(control_id="admin-weekly-end-day",
+                                value=AdminAvailabilityState.weekly_end_day,
+                                on_change=AdminAvailabilityState.update_weekly_end_day), margin_top="0.4rem"),
+                        ),
+                        rx.box(
+                            field_label("Início do expediente", "admin-weekly-start-time"),
+                            rx.el.input(id="admin-weekly-start-time", type="time", name="start_time",
+                                        required=True, class_name="vitta-input", margin_top="0.4rem",
+                                        value=AdminAvailabilityState.weekly_start_time,
+                                        on_change=AdminAvailabilityState.update_weekly_start_time),
+                        ),
+                        rx.box(
+                            field_label("Fim do expediente", "admin-weekly-end-time"),
+                            rx.el.input(id="admin-weekly-end-time", type="time", name="end_time",
+                                        required=True, class_name="vitta-input", margin_top="0.4rem",
+                                        value=AdminAvailabilityState.weekly_end_time,
+                                        on_change=AdminAvailabilityState.update_weekly_end_time),
+                        ),
+                        rx.box(
+                            field_label("Duração da consulta", "admin-weekly-duration"),
+                            rx.select.root(
+                                rx.select.trigger(id="admin-weekly-duration", width="100%", class_name="vitta-select-trigger"),
+                                rx.select.content(
+                                    rx.select.item("30 minutos", value="30"),
+                                    rx.select.item("60 minutos", value="60"),
+                                    position="popper",
+                                ),
+                                value=AdminAvailabilityState.weekly_slot_minutes,
+                                on_change=AdminAvailabilityState.update_weekly_slot_minutes,
+                                size="3",
+                            ),
+                        ),
+                        columns=rx.breakpoints(initial="1", sm="repeat(2, minmax(0, 1fr))", xl="repeat(5, minmax(0, 1fr))"),
+                        gap="0.75rem", width="100%",
+                    ),
+                    rx.button(
+                        rx.cond(AdminAvailabilityState.weekly_existing, "Salvar alterações do expediente", "Publicar expediente semanal"),
+                        type="submit", color_scheme="teal", high_contrast=True,
+                        disabled=AdminAvailabilityState.is_submitting | ~AdminAvailabilityState.has_professionals,
+                        loading=AdminAvailabilityState.is_submitting, min_height="2.85rem",
+                    ),
+                    spacing="3", align="stretch", width="100%",
+                ),
+                on_submit=AdminAvailabilityState.save_weekly,
+                width="100%",
+            ),
+            rx.box(
+                rx.heading("Horário avulso", size="4", color="var(--vitta-text)"),
+                rx.text("Para encaixes ou exceções que não fazem parte do expediente semanal.", color="var(--vitta-text-muted)", size="2"),
+                width="100%",
             ),
             rx.el.form(
                 rx.grid(
@@ -809,7 +904,12 @@ def reception_agenda_panel() -> rx.Component:
                             auto_complete="off",
                             value=ReceptionAgendaState.patient_cpf,
                             on_change=ReceptionAgendaState.update_patient_cpf,
-                            placeholder="Somente números ou CPF formatado",
+                            placeholder="000.000.000-00",
+                            required=True,
+                            max_length=14,
+                            min_length=14,
+                            pattern=r"[0-9]{3}\.[0-9]{3}\.[0-9]{3}-[0-9]{2}",
+                            title="Informe o CPF completo: 000.000.000-00",
                             class_name="vitta-input",
                             margin_top="0.4rem",
                         ),
@@ -831,7 +931,6 @@ def reception_agenda_panel() -> rx.Component:
                     width="100%",
                 ),
                 on_submit=ReceptionAgendaState.find_patient,
-                no_validate=True,
                 width="100%",
             ),
             rx.cond(

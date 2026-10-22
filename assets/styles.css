@@ -14,12 +14,12 @@
   --vitta-border-hover: #cbd5e1;
   --vitta-info: #0284c7;
   --vitta-info-soft: #f0f9ff;
-  --vitta-warning: #d97706;
+  --vitta-warning: #92400e;
   --vitta-warning-soft: #fffbeb;
-  --vitta-danger: #e11d48;
+  --vitta-danger: #be123c;
   --vitta-danger-soft: #fff1f2;
   --vitta-danger-border: #fecdd3;
-  --vitta-success: #059669;
+  --vitta-success: #065f46;
   --vitta-success-soft: #ecfdf5;
   --vitta-success-border: #a7f3d0;
   --vitta-focus: #0f766e;
@@ -1626,5 +1626,399 @@ button:disabled,
 
   .vitta-topbar-account {
     order: 2;
+  }
+}
+
+
+/* Patient portal has two high-priority destinations; keep both fully visible
+   rather than clipping the booking action in the horizontal mobile nav. */
+@media (max-width: 520px) {
+  .vitta-sidebar--patient {
+    overflow: visible;
+  }
+  .vitta-sidebar--patient .vitta-sidebar-nav {
+    overflow: visible;
+  }
+  .vitta-sidebar--patient .vitta-sidebar-nav > div {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    gap: 0.35rem;
+  }
+  .vitta-sidebar--patient .vitta-nav-link {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+    justify-content: center;
+    padding: 0.55rem 0.3rem;
+    font-size: 0.79rem;
+    gap: 0.3rem;
+    text-align: center;
+  }
+  .vitta-sidebar--patient .vitta-nav-link svg {
+    display: none;
+  }
+}
+
+/* Show all operational destinations on narrow phones. A horizontally clipped
+   active tab looks like a missing module even without document overflow. */
+@media (max-width: 520px) {
+  .vitta-sidebar--reception,
+  .vitta-sidebar--doctor {
+    overflow: visible;
+  }
+
+  .vitta-sidebar--reception .vitta-sidebar-nav,
+  .vitta-sidebar--doctor .vitta-sidebar-nav {
+    overflow: visible;
+  }
+
+  .vitta-sidebar--reception .vitta-sidebar-nav > div,
+  .vitta-sidebar--doctor .vitta-sidebar-nav > div {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: 0.4rem;
+  }
+
+  .vitta-sidebar--reception .vitta-nav-link,
+  .vitta-sidebar--doctor .vitta-nav-link {
+    width: 100%;
+    min-width: 0;
+    min-height: 2.75rem;
+    padding: 0.5rem;
+    font-size: 0.78rem;
+    gap: 0.35rem;
+  }
+
+  .vitta-sidebar--reception .vitta-nav-link :where(span, p),
+  .vitta-sidebar--doctor .vitta-nav-link :where(span, p) {
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+  }
+
+  .vitta-sidebar--reception .vitta-nav-link svg,
+  .vitta-sidebar--doctor .vitta-nav-link svg {
+    flex-shrink: 0;
+    width: 15px;
+    height: 15px;
+  }
+}
+
+
+/*
+ * VITTA-ONE / UNIFIED ACCESSIBLE CONTRAST
+ *
+ * Reflex/Radix draws text, selects and dialogs using CSS variables and
+ * portals. Multiple unrelated overrides made fields look disabled (pale copy
+ * against gray backgrounds). Keep a single scoped light-theme contract below.
+ *
+ * Do not set every span/button to dark: teal primary buttons, status badges,
+ * selected navigation and the dark login illustration need their own palette.
+ * These selectors cover shared components across every authenticated role.
+ */
+:root,
+.radix-themes {
+  color-scheme: light;
+  --gray-12: #0f172a;
+  --gray-11: #334155;
+  --gray-10: #475569;
+  --gray-9: #64748b;
+  --vitta-contrast-heading: #0f172a;
+  --vitta-contrast-body: #334155;
+  --vitta-contrast-secondary: #475569;
+  --vitta-contrast-border: #94a3b8;
+  --vitta-contrast-field: #ffffff;
+  --vitta-contrast-disabled: #e2e8f0;
+  --vitta-contrast-disabled-text: #475569;
+}
+
+/* Core pages, dashboard tiles, directories, reception/doctor panels, portal. */
+.vitta-shell,
+.vitta-main,
+.vitta-page,
+.vitta-login-form-pane {
+  color: var(--vitta-contrast-body);
+  color-scheme: light;
+}
+.vitta-shell :is(h1, h2, h3, h4, h5, h6, .rt-Heading),
+.vitta-login-form-pane :is(h1, h2, h3, h4, h5, h6, .rt-Heading) {
+  color: var(--vitta-contrast-heading) !important;
+  opacity: 1 !important;
+}
+.vitta-shell :is(label, legend),
+.vitta-login-form-pane :is(label, legend) {
+  color: var(--vitta-contrast-heading) !important;
+  opacity: 1 !important;
+}
+.vitta-shell .rt-Text:not(.rt-Badge),
+.vitta-login-form-pane .rt-Text:not(.rt-Badge) {
+  opacity: 1 !important;
+}
+.vitta-shell :is(.vitta-data-row, .vitta-patient-row, .vitta-empty-state,
+                 .vitta-metric-card, .vitta-prescription-card, .vitta-clinical-history-card) {
+  opacity: 1;
+}
+.vitta-shell :is(.vitta-empty-state, .vitta-future-module, .vitta-info-strip),
+.vitta-shell :is(.vitta-data-row, .vitta-patient-row),
+.vitta-shell :is(.vitta-reception-day-panel, .vitta-reception-day-card) {
+  color: var(--vitta-contrast-body);
+}
+.vitta-shell .vitta-section-kicker {
+  color: #115e59 !important;
+}
+.vitta-shell :is(table, th, td, .rt-TableRoot) {
+  color: var(--vitta-contrast-heading);
+}
+.vitta-shell :is(th, .rt-TableColumnHeaderCell) {
+  color: var(--vitta-contrast-secondary);
+  font-weight: 700;
+}
+.vitta-shell .vitta-main :is(.vitta-text-link, .vitta-context-link),
+.vitta-login-form-pane :is(.vitta-text-link, .vitta-context-link) {
+  color: #0f766e !important;
+}
+.vitta-shell .vitta-main :is(.vitta-text-link, .vitta-context-link):hover {
+  color: #115e59 !important;
+}
+
+/* Native inputs and text fields on every surface. Keep intentional
+ * topbar-search transparency; its container already supplies the background. */
+.vitta-shell :is(.vitta-input, .vitta-textarea, .rt-TextFieldInput,
+                 input:not([type="checkbox"]):not([type="radio"]):not(.vitta-topbar-search-input),
+                 textarea, select),
+.vitta-login-form-pane :is(.vitta-input, input) {
+  color: var(--vitta-contrast-heading) !important;
+  -webkit-text-fill-color: var(--vitta-contrast-heading);
+  background-color: var(--vitta-contrast-field) !important;
+  opacity: 1 !important;
+  caret-color: var(--vitta-contrast-heading);
+}
+.vitta-shell :is(input, textarea)::placeholder,
+.vitta-login-form-pane :is(input, textarea)::placeholder {
+  color: var(--vitta-contrast-secondary) !important;
+  -webkit-text-fill-color: var(--vitta-contrast-secondary);
+  opacity: 1 !important;
+}
+.vitta-shell :is(.vitta-input, .vitta-textarea, .rt-TextFieldInput, .rt-TextAreaInput),
+.vitta-login-form-pane .vitta-input {
+  border-color: var(--vitta-contrast-border);
+}
+.vitta-shell .vitta-topbar-search-input {
+  background: transparent !important;
+  color: var(--vitta-contrast-heading) !important;
+}
+.vitta-shell :is(input, textarea, select):is(:disabled, [aria-disabled="true"]),
+.vitta-shell :is(input:not([type="checkbox"]):not([type="radio"]):not(.vitta-topbar-search-input), textarea):read-only,
+.vitta-login-form-pane input:disabled {
+  color: var(--vitta-contrast-disabled-text) !important;
+  -webkit-text-fill-color: var(--vitta-contrast-disabled-text) !important;
+  background-color: #f1f5f9 !important;
+  opacity: 1 !important;
+}
+.vitta-shell :is(.vitta-input, .vitta-textarea, input, textarea, select):focus-visible,
+.vitta-login-form-pane :is(input, button):focus-visible {
+  outline: 3px solid #0f766e !important;
+  outline-offset: 2px !important;
+}
+
+/* Reflex Radix Select (including booking, doctors, specialties, dates and
+ * scheduling), both inside app shell and in portaled dropdowns. The selected
+ * label must NEVER be white text on a gray/white trigger. */
+.vitta-shell .rt-SelectTrigger,
+.vitta-shell .vitta-select-trigger,
+.vitta-dialog-content .rt-SelectTrigger {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  border: 1px solid #94a3b8 !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+  min-height: 2.75rem;
+}
+.vitta-shell .rt-SelectTrigger :is(span, .rt-Text, .rt-SelectIcon),
+.vitta-dialog-content .rt-SelectTrigger :is(span, .rt-Text, .rt-SelectIcon),
+.vitta-shell .vitta-select-trigger :is(span, svg) {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  opacity: 1 !important;
+}
+.vitta-shell .rt-SelectTrigger[data-placeholder] :is(span, .rt-Text),
+.vitta-dialog-content .rt-SelectTrigger[data-placeholder] :is(span, .rt-Text) {
+  color: #475569 !important;
+  -webkit-text-fill-color: #475569 !important;
+}
+.vitta-shell :is(.rt-SelectTrigger, .vitta-select-trigger):is(:disabled, [data-disabled]),
+.vitta-dialog-content .rt-SelectTrigger:is(:disabled, [data-disabled]) {
+  color: #475569 !important;
+  -webkit-text-fill-color: #475569 !important;
+  background: #e2e8f0 !important;
+  border-color: #94a3b8 !important;
+  opacity: 1 !important;
+  cursor: not-allowed !important;
+}
+.vitta-shell .rt-SelectTrigger:is(:disabled, [data-disabled]) :is(span, .rt-Text),
+.vitta-dialog-content .rt-SelectTrigger:is(:disabled, [data-disabled]) :is(span, .rt-Text) {
+  color: #475569 !important;
+  -webkit-text-fill-color: #475569 !important;
+  opacity: 1 !important;
+}
+.vitta-shell .rt-SelectTrigger:focus-visible,
+.vitta-dialog-content .rt-SelectTrigger:focus-visible {
+  outline: 3px solid #0f766e !important;
+  outline-offset: 2px !important;
+}
+
+/* Popovers/menus/dialogs are Radix portals outside .vitta-shell. */
+:is(.rt-DialogContent, .rt-AlertDialogContent, .rt-PopoverContent,
+    .rt-SelectContent, .rt-DropdownMenuContent, .vitta-dialog-content) {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  color-scheme: light !important;
+  border-color: #cbd5e1 !important;
+  opacity: 1 !important;
+}
+:is(.rt-DialogContent, .rt-AlertDialogContent, .rt-PopoverContent,
+    .rt-SelectContent, .rt-DropdownMenuContent, .vitta-dialog-content)
+  :is(h1, h2, h3, h4, h5, h6, .rt-Heading,
+      .rt-DialogTitle, .rt-AlertDialogTitle, label, legend) {
+  color: #0f172a !important;
+  opacity: 1 !important;
+}
+:is(.rt-DialogContent, .rt-AlertDialogContent, .rt-PopoverContent,
+    .rt-SelectContent, .rt-DropdownMenuContent, .vitta-dialog-content)
+  :is(.rt-DialogDescription, .rt-AlertDialogDescription) {
+  color: #334155 !important;
+  opacity: 1 !important;
+}
+:is(.rt-DialogContent, .rt-AlertDialogContent, .rt-PopoverContent,
+    .rt-SelectContent, .rt-DropdownMenuContent, .vitta-dialog-content)
+  .rt-Text:not(.rt-Badge):not(.rt-Button .rt-Text) {
+  opacity: 1 !important;
+}
+:is(.rt-DialogContent, .rt-AlertDialogContent, .vitta-dialog-content)
+  :is(input:not([type="checkbox"]), textarea, select) {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  border-color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+:is(.rt-DialogContent, .rt-AlertDialogContent, .vitta-dialog-content)
+  :is(input, textarea)::placeholder {
+  color: #475569 !important;
+  -webkit-text-fill-color: #475569 !important;
+  opacity: 1 !important;
+}
+:is(.rt-DialogContent, .rt-AlertDialogContent, .vitta-dialog-content)
+  input:disabled {
+  background: #e2e8f0 !important;
+  color: #475569 !important;
+  -webkit-text-fill-color: #475569 !important;
+}
+.rt-SelectContent :is(.rt-SelectItem, [role="option"]),
+.rt-DropdownMenuContent :is(.rt-DropdownMenuItem, [role="menuitem"]) {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  opacity: 1 !important;
+}
+.rt-SelectContent :is(.rt-SelectItem, [role="option"])[data-highlighted],
+.rt-DropdownMenuContent :is(.rt-DropdownMenuItem, [role="menuitem"])[data-highlighted] {
+  color: #134e4a !important;
+  background: #ccfbf1 !important;
+}
+.rt-SelectContent :is(.rt-SelectItem, [role="option"])[data-disabled],
+.rt-DropdownMenuContent :is(.rt-DropdownMenuItem, [role="menuitem"])[data-disabled] {
+  color: #475569 !important;
+  opacity: 1 !important;
+}
+:is(.rt-DialogContent, .rt-AlertDialogContent, .vitta-dialog-content)
+  :is(label, legend) {
+  font-weight: 650;
+}
+.vitta-dialog-content .rt-CheckboxRoot {
+  border: 1px solid #64748b;
+}
+.vitta-dialog-content .rt-CheckboxRoot[data-state="checked"] {
+  background: #0f766e;
+  color: #ffffff;
+}
+
+/* Colored actions and active navigation MUST keep white-on-teal labels. */
+.vitta-shell .vitta-nav-link:not([aria-current="page"]) {
+  color: #475569;
+}
+.vitta-shell .vitta-nav-link[aria-current="page"],
+.vitta-shell .vitta-nav-link[aria-current="page"] :is(span, p, svg) {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+.vitta-shell .rt-Button .rt-Text,
+.vitta-login-form-pane .rt-Button .rt-Text,
+.rt-DialogContent .rt-Button .rt-Text,
+.rt-AlertDialogContent .rt-Button .rt-Text {
+  color: inherit !important;
+  -webkit-text-fill-color: inherit !important;
+}
+.vitta-shell .rt-Badge,
+.rt-DialogContent .rt-Badge {
+  opacity: 1 !important;
+  font-weight: 700;
+}
+.vitta-shell .rt-Badge[data-accent-color="teal"],
+.rt-DialogContent .rt-Badge[data-accent-color="teal"] {
+  background: #ccfbf1 !important;
+  color: #115e59 !important;
+}
+.vitta-shell .rt-Badge[data-accent-color="green"] {
+  background: #dcfce7 !important;
+  color: #166534 !important;
+}
+.vitta-shell .rt-Badge[data-accent-color="amber"] {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+}
+.vitta-shell .rt-Badge[data-accent-color="blue"] {
+  background: #dbeafe !important;
+  color: #1e40af !important;
+}
+
+/* Active, loading and explicitly disabled controls remain distinguishable,
+ * without washing the label out with Radix default opacity. */
+.vitta-shell .rt-Button:is(:disabled, [data-disabled]),
+.vitta-login-form-pane .rt-Button:is(:disabled, [data-disabled]),
+.rt-DialogContent .rt-Button:is(:disabled, [data-disabled]) {
+  background: #e2e8f0 !important;
+  color: #475569 !important;
+  border-color: #94a3b8 !important;
+  opacity: 1 !important;
+  cursor: not-allowed !important;
+}
+.vitta-shell [role="alert"],
+.rt-DialogContent [role="alert"] {
+  color: #991b1b !important;
+}
+.vitta-shell [role="alert"] .rt-Text,
+.rt-DialogContent [role="alert"] .rt-Text {
+  color: #991b1b !important;
+}
+.vitta-shell [role="status"]:not(.rt-Badge) {
+  opacity: 1;
+}
+
+/* Preserve intentionally dark login illustration and its white copy. */
+.vitta-login-visual,
+.vitta-login-visual .rt-Heading,
+.vitta-login-visual .rt-Text {
+  color: #ffffff !important;
+}
+
+/* Preserve existing printable medical document contrast. */
+@media print {
+  .vitta-print-document,
+  .vitta-print-document :is(.rt-Heading, .rt-Text, p, span) {
+    color: #0f172a !important;
+    background: #ffffff !important;
   }
 }
