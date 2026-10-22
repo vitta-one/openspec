@@ -798,24 +798,19 @@ def test_patient_books_own_appointment_and_both_staff_agendas_update(page: Page)
 
 
 def test_reception_registers_patient_then_opens_its_agenda(page: Page) -> None:
-    """The receptionist keeps the newly created patient selected across modules."""
+    """Standalone onboarding -> patient detail -> existing scheduling handoff."""
     login_as_reception(page)
-    page.goto(BASE + "/recepcao/pacientes", wait_until="domcontentloaded")
-    expect(page.get_by_role("heading", name="Cadastro e localização")).to_be_visible(
-        timeout=30000
-    )
+    page.goto(BASE + "/recepcao/pacientes/novo", wait_until="domcontentloaded")
+    expect(page.get_by_role("heading", name="Novo paciente")).to_be_visible(timeout=30000)
     page.locator("#patient-create-name").fill("Paciente QA Cadastro Novo")
     page.locator("#patient-create-cpf").fill("52998224725")
     page.locator("#patient-create-phone").fill("(11) 98888-1234")
     page.get_by_role("button", name="Cadastrar paciente").click()
-    expect(page.get_by_text("Paciente cadastrado e selecionado para a fila.")).to_be_visible(
-        timeout=30000
-    )
-    expect(
-        page.get_by_role("button", name="Agendar consulta para este paciente")
-    ).to_be_visible(timeout=30000)
+    expect(page).to_have_url(re.compile(r"/recepcao/pacientes/\\d+/?$"), timeout=30000)
+    expect(page.get_by_role("heading", name="Ficha do paciente")).to_be_visible(timeout=30000)
+    expect(page.get_by_role("button", name="Agendar consulta", exact=True)).to_be_visible()
     page.screenshot(path="qa-artifacts/recepcao-paciente-cadastrado.png", full_page=True)
-    page.get_by_role("button", name="Agendar consulta para este paciente").click()
+    page.get_by_role("button", name="Agendar consulta", exact=True).click()
     expect(page).to_have_url(re.compile(r"/recepcao/agenda/?$"), timeout=30000)
     expect(page.get_by_role("tab", name="Agendar consulta")).to_have_attribute(
         "data-state", "active", timeout=30000
@@ -835,12 +830,10 @@ def test_staff_cannot_open_patient_self_booking(page: Page) -> None:
 
 
 def test_patient_identity_input_masks_and_client_validation(page: Page) -> None:
-    """Real DOM input: paste, CPF checksum, DDD mobile/landline and edit fields."""
+    """Validate CPF/phone input in new-page form and editing in detail modal."""
     login_as_reception(page)
-    page.goto(BASE + "/recepcao/pacientes", wait_until="domcontentloaded")
-    expect(page.get_by_role("heading", name="Cadastro e localização")).to_be_visible(
-        timeout=30000
-    )
+    page.goto(BASE + "/recepcao/pacientes/novo", wait_until="domcontentloaded")
+    expect(page.get_by_role("heading", name="Novo paciente")).to_be_visible(timeout=30000)
     page.wait_for_function("window.__vittaInputMasksInstalled === true", timeout=30000)
 
     cpf = page.locator("#patient-create-cpf")
@@ -866,31 +859,29 @@ def test_patient_identity_input_masks_and_client_validation(page: Page) -> None:
     phone.fill("")
     assert phone.evaluate("(el) => el.checkValidity()")
 
-    search = page.locator("#patient-search-cpf")
-    search.fill("53817624964")
-    expect(search).to_have_value("538.176.249-64")
-    page.get_by_role("button", name="Localizar paciente").click()
-    expect(page.get_by_text(FIXTURE["booking_patient_name"], exact=True).first).to_be_visible(
-        timeout=30000
-    )
-    edit_phone = page.locator("#patient-edit-phone")
+    # Search is no longer mixed with registration: use the directory page.
+    page.goto(BASE + "/recepcao/pacientes", wait_until="domcontentloaded")
+    expect(page.get_by_role("heading", name="Lista de pacientes")).to_be_visible(timeout=30000)
+    page.locator("#patient-directory-search").fill("53817624964")
+    page.get_by_role("button", name="Buscar").click()
+    target = page.locator(".vitta-staff-row").filter(has_text=FIXTURE["booking_patient_name"]).first
+    expect(target).to_be_visible(timeout=30000)
+    target.click()
+    expect(page).to_have_url(re.compile(r"/recepcao/pacientes/\\d+/?$"), timeout=30000)
+    page.get_by_role("button", name="Editar cadastro e acesso").click()
+    editor = page.get_by_role("dialog")
+    expect(editor).to_be_visible(timeout=15000)
+    edit_phone = editor.locator("#patient-edit-phone")
     edit_phone.fill("11988881234")
     expect(edit_phone).to_have_value("(11) 98888-1234")
-    page.get_by_role("button", name="Salvar cadastro").click()
-    expect(page.get_by_text("Cadastro operacional atualizado.")).to_be_visible(
-        timeout=30000
-    )
-    # Reload from PostgreSQL, not just in-memory Reflex State.
+    editor.get_by_role("button", name="Salvar cadastro").click()
+    expect(edit_phone).to_have_value("(11) 98888-1234", timeout=30000)
     page.reload(wait_until="domcontentloaded")
-    expect(page.get_by_role("heading", name="Cadastro e localização")).to_be_visible(
-        timeout=30000
-    )
-    page.locator("#patient-search-cpf").fill("53817624964")
-    page.get_by_role("button", name="Localizar paciente").click()
-    expect(page.locator("#patient-edit-phone")).to_have_value(
+    expect(page.get_by_role("heading", name="Ficha do paciente")).to_be_visible(timeout=30000)
+    page.get_by_role("button", name="Editar cadastro e acesso").click()
+    expect(page.get_by_role("dialog").locator("#patient-edit-phone")).to_have_value(
         "(11) 98888-1234", timeout=30000
     )
-
     page.set_viewport_size({"width": 375, "height": 800})
     assert page.evaluate(
         "document.documentElement.scrollWidth <= window.innerWidth + 2"
