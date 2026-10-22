@@ -162,7 +162,6 @@ def patient_create_workspace() -> rx.Component:
                 on_submit=S.create_patient,
                 width="100%",
             ),
-            width="100%",
         ),
         spacing="4", width="100%", align="stretch",
     )
