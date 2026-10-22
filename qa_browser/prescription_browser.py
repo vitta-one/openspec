@@ -234,22 +234,23 @@ def test_admin_specialty_search_and_professional_routes_at_mobile_width(page: Pa
 
 
 def test_admin_staff_role_selection_is_accessible_and_guarded(page: Page) -> None:
-    """Role choice precedes registration; forms remain separate."""
+    """Searchable employee directory, then one conditional create form."""
     login_as_admin(page)
     page.get_by_role("link", name=re.compile("^Criar funcionário")).click()
     expect(page).to_have_url(re.compile(r"/admin/funcionarios/?$"), timeout=30000)
+    expect(page.get_by_role("heading", name="Funcionários", exact=True)).to_be_visible()
     expect(page.locator("#staff-password")).to_have_count(0)
-    choice = page.get_by_role("link", name=re.compile("^Recepcionista"))
-    choice.focus()
-    expect(choice).to_be_focused()
-    choice.press("Enter")
-    expect(page).to_have_url(re.compile(r"/admin/funcionarios/recepcionista/?$"), timeout=30000)
+    page.get_by_role("link", name=re.compile("Novo funcionário")).click()
+    expect(page).to_have_url(re.compile(r"/admin/funcionarios/novo/?$"), timeout=30000)
+    choice = page.locator("#staff-create-role")
+    expect(choice).to_be_visible()
+    choice.click()
+    page.get_by_role("option", name="Recepcionista", exact=True).click()
     expect(page.locator("#staff-email")).to_be_visible(timeout=30000)
     expect(page.locator("#staff-password")).to_be_visible()
     expect(page.locator("#professional-name")).to_have_count(0)
-    page.get_by_role("link", name="Escolher outro perfil").click()
-    expect(page).to_have_url(re.compile(r"/admin/funcionarios/?$"), timeout=30000)
-    page.get_by_role("link", name=re.compile("^Médico")).click()
+    choice.click()
+    page.get_by_role("option", name="Médico", exact=True).click()
     expect(page.locator("#professional-name")).to_be_visible(timeout=30000)
     expect(page.locator("#staff-password")).to_have_count(0)
 
@@ -293,16 +294,19 @@ def test_admin_registers_medical_professional_without_resend_and_prevents_duplic
     login_as_admin(page)
     page.get_by_role("link", name=re.compile("^Criar funcionário")).click()
     expect(page).to_have_url(re.compile(r"/admin/funcionarios/?$"), timeout=30000)
-    page.get_by_role("link", name=re.compile("^Médico")).click()
-    expect(page).to_have_url(re.compile(r"/admin/funcionarios/medico/?$"), timeout=30000)
-    expect(page.get_by_role("heading", name="Cadastrar médico")).to_be_visible(timeout=30000)
+    page.get_by_role("link", name=re.compile("Novo funcionário")).click()
+    expect(page).to_have_url(re.compile(r"/admin/funcionarios/novo/?$"), timeout=30000)
+    page.locator("#staff-create-role").click()
+    page.get_by_role("option", name="Médico", exact=True).click()
+    expect(page.get_by_role("heading", name="Dados profissionais")).to_be_visible(timeout=30000)
     page.locator("#professional-name").fill("Dra. Onboarding QA")
     page.locator("#professional-email").fill("onboarding-qa@example.invalid")
     checkbox = page.get_by_role("checkbox", name="Especialidade QA Extra 2")
     checkbox.click()
     expect(checkbox).to_be_checked(timeout=15000)
     page.get_by_role("button", name="Cadastrar médico").click()
-    expect(page.get_by_text("Resend não configurado; e-mail não enviado.", exact=False)).to_be_visible(timeout=15000)
+    expect(page).to_have_url(re.compile(r"/admin/funcionarios/\\d+/?$"), timeout=30000)
+    expect(page.get_by_role("heading", name="Ficha do funcionário")).to_be_visible()
 
     page.goto(BASE + "/admin/profissionais", wait_until="domcontentloaded")
     expect(page.get_by_role("heading", name="Todos os profissionais")).to_be_visible(timeout=30000)
@@ -318,7 +322,8 @@ def test_admin_registers_medical_professional_without_resend_and_prevents_duplic
     checkbox.click()
     expect(checkbox).to_be_checked(timeout=15000)
     page.get_by_role("button", name="Cadastrar médico").click()
-    expect(page.get_by_text("Este e-mail já está vinculado a um profissional.")).to_be_visible(timeout=15000)
+    expect(page.get_by_text("Este e-mail já pertence a outro tipo de conta.")).to_have_count(0)
+    expect(page.get_by_text("Não foi possível concluir o cadastro", exact=False)).to_be_visible(timeout=15000)
 
 
 def test_admin_specialty_pagination_has_real_second_page(page: Page) -> None:
@@ -482,7 +487,7 @@ def test_reception_routes_and_responsive_daily_table(page: Page) -> None:
 
     for path, heading in (
         ("/recepcao/agenda", "Agenda e check-in"),
-        ("/recepcao/pacientes", "Cadastro e localização"),
+        ("/recepcao/pacientes", "Lista de pacientes"),
         ("/recepcao/fila", "Fila de espera"),
     ):
         page.goto(BASE + path, wait_until="domcontentloaded")
@@ -510,7 +515,7 @@ def test_reception_global_patient_search_uses_identity_only(page: Page) -> None:
     )
     expect(result).to_be_visible(timeout=30000)
     result.click()
-    expect(page).to_have_url(re.compile(r"/recepcao/pacientes/?$"), timeout=30000)
+    expect(page).to_have_url(re.compile(r"/recepcao/pacientes/\\d+/?$"), timeout=30000)
     expect(page.get_by_text(FIXTURE["day_first_patient_name"], exact=True)).to_be_visible(
         timeout=30000
     )
