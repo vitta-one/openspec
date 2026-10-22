@@ -163,9 +163,7 @@ def specialty_option(option) -> rx.Component:
                 rx.fragment(),
             ),
             width="100%",
-            padding="0.65rem 0.75rem",
-            border="1px solid var(--vitta-border)",
-            border_radius="var(--vitta-radius-control)",
+            class_name="vitta-specialty-choice",
             background=rx.cond(
                 option["locked"],
                 "var(--vitta-surface-muted)",
