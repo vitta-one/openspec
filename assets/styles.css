@@ -12,7 +12,7 @@
   --vitta-border: #e2e8f0;
   --vitta-border-strong: #cbd5e1;
   --vitta-border-hover: #cbd5e1;
-  --vitta-info: #0284c7;
+  --vitta-info: #0369a1;
   --vitta-info-soft: #f0f9ff;
   --vitta-warning: #92400e;
   --vitta-warning-soft: #fffbeb;
@@ -120,7 +120,7 @@ a {
 
 .vitta-input::placeholder,
 .vitta-textarea::placeholder {
-  color: #94a3b8;
+  color: #475569;
 }
 
 .vitta-input:hover:not(:disabled),
@@ -2021,4 +2021,94 @@ button:disabled,
     color: #0f172a !important;
     background: #ffffff !important;
   }
+}
+
+
+/* Shared administration navigation. Real links rather than cosmetic cards. */
+.vitta-admin-action {
+  display: block;
+  width: 100%;
+  padding: 0.95rem 1rem;
+  border-radius: var(--vitta-radius-control);
+  border: 1px solid transparent;
+  color: var(--vitta-text);
+  text-decoration: none;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+.vitta-admin-action + .vitta-admin-action {
+  border-top-color: var(--vitta-border);
+}
+.vitta-admin-action:hover {
+  background: var(--vitta-primary-soft);
+  border-color: var(--vitta-border-strong);
+}
+.vitta-admin-action:focus-visible {
+  outline: 3px solid var(--vitta-focus);
+  outline-offset: 2px;
+  background: var(--vitta-primary-soft);
+}
+.vitta-admin-action-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  color: #115e59;
+  background: var(--vitta-primary-soft);
+  border-radius: var(--vitta-radius-control);
+}
+
+/* Radix tabs own keyboard navigation; do not hide secondary workflows. */
+.vitta-admin-schedule-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 100%;
+}
+.vitta-admin-schedule-tabs .rt-TabsTrigger {
+  min-height: 2.75rem;
+  color: #334155;
+  font-weight: 650;
+  white-space: normal;
+}
+.vitta-admin-schedule-tabs .rt-TabsTrigger[data-state="active"] {
+  color: #115e59;
+  font-weight: 750;
+}
+.vitta-admin-schedule-tabs .rt-TabsTrigger:focus-visible {
+  outline: 3px solid var(--vitta-focus);
+  outline-offset: 2px;
+}
+
+/* Clear error, field and option treatments across all operational roles. */
+.vitta-shell :is(.vitta-input, .vitta-textarea, .rt-TextFieldInput, .rt-TextAreaInput),
+.vitta-login-form-pane .vitta-input {
+  border-color: var(--vitta-contrast-border);
+}
+.vitta-shell :is(.vitta-input, .vitta-textarea, .rt-TextFieldInput, .rt-TextAreaInput)[aria-invalid="true"],
+:is(.rt-DialogContent, .rt-AlertDialogContent) :is(input, textarea)[aria-invalid="true"] {
+  border-color: #be123c !important;
+  box-shadow: 0 0 0 2px #ffe4e6;
+}
+.rt-SelectContent [role="option"][data-state="checked"] {
+  color: #115e59 !important;
+  background-color: #e8f5f3 !important;
+}
+.vitta-shell .rt-Badge[data-accent-color="gray"],
+.rt-DialogContent .rt-Badge[data-accent-color="gray"] {
+  background: #e2e8f0 !important;
+  color: #334155 !important;
+}
+@media (max-width: 520px) {
+  .vitta-admin-action {
+    padding: 0.8rem 0.6rem;
+  }
+  .vitta-admin-schedule-tabs .rt-TabsTrigger {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vitta-admin-action { transition: none; }
 }
