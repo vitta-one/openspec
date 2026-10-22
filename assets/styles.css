@@ -24,7 +24,7 @@
   --vitta-success-border: #a7f3d0;
   --vitta-focus: #0f766e;
   --vitta-focus-soft: rgba(15, 118, 110, 0.14);
-  --vitta-scroll-thumb: #94a3b8;
+  --vitta-scroll-thumb: #64748b;
   --vitta-scroll-track: #f1f5f9;
   --vitta-radius-control: 0.625rem;
   --vitta-radius-panel: 0.875rem;
@@ -1727,7 +1727,7 @@ button:disabled,
   --vitta-contrast-heading: #0f172a;
   --vitta-contrast-body: #334155;
   --vitta-contrast-secondary: #475569;
-  --vitta-contrast-border: #94a3b8;
+  --vitta-contrast-border: #64748b;
   --vitta-contrast-field: #ffffff;
   --vitta-contrast-disabled: #e2e8f0;
   --vitta-contrast-disabled-text: #475569;
@@ -1832,7 +1832,7 @@ button:disabled,
   background-color: #ffffff !important;
   color: #0f172a !important;
   -webkit-text-fill-color: #0f172a !important;
-  border: 1px solid #94a3b8 !important;
+  border: 1px solid #64748b !important;
   box-shadow: none !important;
   opacity: 1 !important;
   min-height: 2.75rem;
@@ -1902,7 +1902,7 @@ button:disabled,
   background: #ffffff !important;
   color: #0f172a !important;
   -webkit-text-fill-color: #0f172a !important;
-  border-color: #94a3b8 !important;
+  border-color: #64748b !important;
   opacity: 1 !important;
 }
 :is(.rt-DialogContent, .rt-AlertDialogContent, .vitta-dialog-content)
