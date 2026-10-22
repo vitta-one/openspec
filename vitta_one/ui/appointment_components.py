@@ -221,7 +221,7 @@ def admin_availability_panel() -> rx.Component:
                     rx.tabs.trigger("Expediente semanal", value="weekly"),
                     rx.tabs.trigger("Horário avulso", value="single"),
                     rx.tabs.trigger("Consultar horários", value="search"),
-                    class_name="vitta-admin-schedule-tabs",
+                    class_name="vitta-task-tabs",
                 ),
                 rx.tabs.content(
                 rx.el.form(
@@ -899,7 +899,7 @@ def reception_agenda_panel() -> rx.Component:
                 rx.tabs.list(
                     rx.tabs.trigger("Consultas do período", value="consultations"),
                     rx.tabs.trigger("Agendar consulta", value="booking"),
-                    class_name="vitta-admin-schedule-tabs",
+                    class_name="vitta-task-tabs",
                 ),
                 rx.tabs.content(
                     rx.cond(
