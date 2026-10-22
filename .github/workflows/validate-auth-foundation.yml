@@ -52,6 +52,16 @@ jobs:
             requirements.txt
             requirements-dev.txt
 
+      - name: Validate local Docker and startup shortcuts
+        env:
+          POSTGRES_USER: vittaqa
+          POSTGRES_PASSWORD: ci-only-compose-placeholder
+          POSTGRES_DB: vitta_one_qa
+        run: |
+          bash -n scripts/dev-local.sh
+          docker compose -p vitta-one-local -f compose.dev.yaml config --quiet
+          make -n dev admin db-only db-stop db-logs db-status
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
