@@ -50,6 +50,7 @@ from vitta_one.ui.pages import (
     admin_reception_preview_page,
     doctor_page,
     doctor_agenda_page,
+    doctor_records_page,
     doctor_patients_page,
     finance_page,
     forbidden_page,
@@ -254,13 +255,19 @@ app.add_page(
     doctor_page,
     route=Role.MEDICO.dashboard_path,
     title="Painel médico | Vitta-One",
-    on_load=[AuthState.load_protected, DoctorQueueState.load],
+    on_load=[AuthState.load_protected, DoctorQueueState.load, DoctorWorkspaceState.load],
 )
 app.add_page(
     doctor_agenda_page,
     route="/medico/agenda",
     title="Agenda médica | Vitta-One",
     on_load=[AuthState.load_protected, DoctorWorkspaceState.load],
+)
+app.add_page(
+    doctor_records_page,
+    route="/medico/prontuarios",
+    title="Prontuários | Vitta-One",
+    on_load=[AuthState.load_protected, DoctorQueueState.load],
 )
 app.add_page(
     doctor_patients_page,
