@@ -61,6 +61,7 @@ from vitta_one.ui.queue_components import (
 from vitta_one.ui.workspace_components import (
     admin_clinic_configuration,
     doctor_calendar,
+    doctor_week_calendar,
     doctor_consultation_list,
     doctor_patient_list,
     patient_calendar,
@@ -736,6 +737,8 @@ def doctor_agenda_page() -> rx.Component:
         ),
         feedback_region(DoctorWorkspaceState.error_message, "", "doctor-agenda-feedback"),
         rx.link("Abrir fila e atendimento clínico", href="/medico", class_name="vitta-context-link"),
+        doctor_week_calendar(),
+        rx.heading("Calendário do mês", size="5"),
         doctor_calendar(),
         doctor_consultation_list(),
         active="agenda-medica",
