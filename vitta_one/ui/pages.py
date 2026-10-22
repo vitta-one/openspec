@@ -14,8 +14,11 @@ from vitta_one.doctor_workspace.state import DoctorWorkspaceState
 from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
 from vitta_one.patient_portal.state import PatientPortalState
 from vitta_one.ui.patient_booking_components import patient_booking_workspace
+from vitta_one.ui.patient_directory_components import (
+    patient_directory_workspace, patient_create_workspace, patient_detail_workspace,
+)
 from vitta_one.professional_directory.state import AdminDirectoryState
-from vitta_one.reception.dashboard.components import reception_dashboard
+from vitta_one.reception.dashboard.components import reception_dashboard, reception_week_calendar
 from vitta_one.ui.admin_directory_components import (
     admin_directory_workspace,
     professional_registration_workspace,
@@ -509,6 +512,7 @@ def reception_agenda_page() -> rx.Component:
             "Agenda e check-in",
             "Consulte horários por profissional, agende, reagende e confirme a chegada.",
         ),
+        reception_week_calendar(),
         reception_agenda_panel(),
         active="agenda",
         verified_path="/recepcao/agenda",
@@ -516,53 +520,100 @@ def reception_agenda_page() -> rx.Component:
 
 
 def reception_patients_page() -> rx.Component:
-    """Existing patient creation and lookup, now accessible as its own workspace."""
+    """Directory list and server-side search, separate from registration."""
     return protected_workspace(
         Role.RECEPCIONISTA,
-        page_header(
-            "Pacientes",
-            "Cadastro e localização",
-            "Identifique um paciente existente pelo CPF ou cadastre com validação.",
-        ),
-        feedback_region(
-            ReceptionQueueState.error_message,
-            ReceptionQueueState.success_message,
-        ),
-        patient_identity_panel(),
-        rx.hstack(
-            rx.link("Ir para fila de espera", href="/recepcao/fila",
-                    class_name="vitta-context-link"),
-            rx.link("Abrir agenda", href="/recepcao/agenda",
-                    class_name="vitta-context-link"),
-            flex_wrap="wrap", gap="2",
-        ),
+        patient_directory_workspace(),
         active="pacientes",
         verified_path="/recepcao/pacientes",
     )
 
 
-def reception_queue_page() -> rx.Component:
-    """Reception queue, walk-in entry, re-evaluation and withdrawal."""
+def reception_patient_create_page() -> rx.Component:
     return protected_workspace(
         Role.RECEPCIONISTA,
+        patient_create_workspace(),
+        active="pacientes",
+        verified_path="/recepcao/pacientes/novo",
+    )
+
+
+def reception_patient_detail_page() -> rx.Component:
+    return protected_workspace(
+        Role.RECEPCIONISTA,
+        patient_detail_workspace(),
+        active="pacientes",
+        verified_path="/recepcao/pacientes/[patient_id]",
+    )
+
+
+def reception_queue_page() -> rx.Component:
+    """Independent queue board; registration lives exclusively under Patients."""
+    return protected_workspace(
+        Role.RECEPCIONISTA,
+        breadcrumb(("Recepção", "/recepcao"), ("Fila de espera", None)),
         page_header(
             "Fila",
             "Fila de espera",
-            "Acompanhe prioridades informadas, entradas avulsas, reavaliações e retiradas.",
-        ),
-        feedback_region(
-            ReceptionQueueState.error_message,
-            ReceptionQueueState.success_message,
+            "Acompanhe prioridades, reavaliações e entradas de pronto-socorro.",
         ),
         rx.flex(
-            patient_identity_panel(),
-            enqueue_panel(),
-            direction=rx.breakpoints(initial="column", xl="row"),
-            gap="1rem", align="start", width="100%",
+            rx.dialog.root(
+                rx.dialog.trigger(
+                    rx.button(rx.icon("plus", size=17), "Adicionar à fila",
+                              color_scheme="teal", high_contrast=True),
+                ),
+                rx.dialog.content(
+                    rx.dialog.title("Nova entrada no pronto-socorro"),
+                    rx.dialog.description(
+                        "Selecione um paciente da lista antes de registrar a prioridade.",
+                        margin_bottom="1rem",
+                    ),
+                    rx.cond(
+                        ReceptionQueueState.selected_patient_id > 0,
+                        enqueue_panel(),
+                        rx.vstack(
+                            rx.text("Nenhum paciente selecionado.",
+                                    color="var(--vitta-text-muted)"),
+                            rx.link("Localizar paciente", href="/recepcao/pacientes",
+                                    class_name="vitta-context-link"),
+                            spacing="3",
+                        ),
+                    ),
+                    rx.dialog.close(rx.button("Fechar", variant="outline",
+                                              color_scheme="gray", margin_top="1rem")),
+                    class_name="vitta-dialog-content", max_width="40rem",
+                ),
+            ),
+            rx.link(rx.icon("users", size=17), "Pacientes",
+                    href="/recepcao/pacientes", class_name="vitta-context-link"),
+            gap="3", align="center", flex_wrap="wrap", width="100%",
         ),
         active_queue_panel(),
-        reassess_panel(),
-        withdraw_panel(),
+        rx.cond(
+            ReceptionQueueState.reassess_entry_id > 0,
+            rx.dialog.root(
+                rx.dialog.content(
+                    reassess_panel(),
+                    class_name="vitta-dialog-content", max_width="39rem",
+                    max_height="85vh", overflow_y="auto",
+                ),
+                open=True,
+            ),
+            rx.fragment(),
+        ),
+        rx.cond(
+            ReceptionQueueState.withdraw_entry_id > 0,
+            rx.dialog.root(
+                rx.dialog.content(
+                    withdraw_panel(),
+                    class_name="vitta-dialog-content", max_width="39rem",
+                    max_height="85vh", overflow_y="auto",
+                ),
+                open=True,
+            ),
+            rx.fragment(),
+        ),
         active="fila",
         verified_path="/recepcao/fila",
     )
