@@ -27,7 +27,8 @@ SCREENS = {
     ],
     "administrador": [
         ("painel-admin", "/admin", "Gestão da clínica"),
-        ("funcionarios", "/admin/funcionarios", "Qual perfil deseja cadastrar?"),
+        ("funcionarios", "/admin/funcionarios", "Funcionários"),
+        ("funcionarios-novo", "/admin/funcionarios/novo", "Novo funcionário"),
         ("cadastro-medico", "/admin/funcionarios/medico", "Cadastrar médico"),
         ("cadastro-recepcionista", "/admin/funcionarios/recepcionista", "Cadastrar recepcionista"),
         ("horarios-admin", "/admin/horarios", "Gerenciar horários"),
@@ -43,11 +44,13 @@ SCREENS = {
     "recepcionista": [
         ("painel-recepcao", "/recepcao", "Recepção — Operação do Dia"),
         ("agenda-recepcao", "/recepcao/agenda", "Agenda e check-in"),
-        ("cadastro-pacientes", "/recepcao/pacientes", "Cadastro e localização"),
+        ("lista-pacientes", "/recepcao/pacientes", "Lista de pacientes"),
+        ("cadastro-pacientes", "/recepcao/pacientes/novo", "Novo paciente"),
         ("fila-espera", "/recepcao/fila", "Fila de espera"),
     ],
     "medico": [
-        ("painel-medico", "/medico", "Fila médica"),
+        ("painel-medico", "/medico", "Visão geral do consultório"),
+        ("prontuarios-medico", "/medico/prontuarios", "Registro clínico do paciente atual"),
         ("agenda-medico", "/medico/agenda", "Minha agenda"),
         ("pacientes-medico", "/medico/pacientes", "Pacientes vinculados"),
         ("impressao-prescricao", f"/medico/prescricao/{FIXTURE['prescription_id']}", None),
