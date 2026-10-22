@@ -51,6 +51,7 @@ _NAV_BY_ROLE = {
         ("Atendimento clínico", "/medico", "stethoscope", "atendimento"),
         ("Agenda", "/medico/agenda", "calendar_days", "agenda-medica"),
         ("Pacientes", "/medico/pacientes", "users", "pacientes-medico"),
+        ("Prontuários", "/medico/prontuarios", "file_text", "prontuarios"),
     ),
     Role.PACIENTE: (
         ("Minhas consultas", "/paciente", "calendar_days", "consultas-paciente"),
