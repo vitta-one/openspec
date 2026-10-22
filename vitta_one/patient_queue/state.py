@@ -45,6 +45,7 @@ from vitta_one.patient_queue.application import (
     reception_create_patient,
     reception_get_patient_identity,
     reception_search_patients,
+    reception_list_patient_directory,
     reception_enqueue,
     reception_find_patient,
     reception_update_patient,
@@ -92,6 +93,13 @@ class PatientSearchResultRow(TypedDict):
     id: int
     name: str
     phone: str
+
+
+class PatientDirectoryRow(TypedDict):
+    id: int
+    name: str
+    phone: str
+    href: str
 
 
 class QueueFormData(TypedDict):
@@ -228,6 +236,13 @@ class ReceptionQueueState(rx.State):
     """Reception-only UI state; every data operation revalidates RBAC server-side."""
 
     queue_rows: list[QueueRow] = []
+    patient_directory: list[PatientDirectoryRow] = []
+    patient_directory_query: str = ""
+    patient_directory_total: int = 0
+    patient_directory_page: int = 1
+    patient_directory_pages: int = 1
+    patient_directory_loading: bool = False
+
     selected_patient_id: int = 0
     selected_patient_name: str = ""
     selected_patient_phone: str = ""
@@ -299,6 +314,84 @@ class ReceptionQueueState(rx.State):
             yield rx.redirect("/login")
         else:
             yield rx.redirect("/acesso-negado")
+
+    @rx.var
+    def patient_directory_page_label(self) -> str:
+        return f"{self.patient_directory_page} de {self.patient_directory_pages}"
+
+    @rx.event
+    def update_patient_directory_query(self, value: str):
+        self.patient_directory_query = str(value or "")[:100]
+
+    @rx.event
+    async def load_patient_list(self):
+        self.patient_directory_loading = True
+        yield
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                items, total = reception_list_patient_directory(
+                    db, token=token, search=self.patient_directory_query,
+                    page=self.patient_directory_page, size=10,
+                )
+            self.patient_directory = [
+                {"id": item["id"], "name": item["name"],
+                 "phone": _format_patient_contact(item["phone"]),
+                 "href": item["href"]}
+                for item in items
+            ]
+            self.patient_directory_total = total
+            self.patient_directory_pages = max(1, (total + 9) // 10)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.error_message = "Não foi possível carregar os pacientes."
+            yield rx.toast.error(self.error_message, position="top-right")
+        finally:
+            self.patient_directory_loading = False
+            yield
+
+    @rx.event
+    async def search_patient_directory(self, _form_data: dict):
+        self.patient_directory_page = 1
+        yield ReceptionQueueState.load_patient_list
+
+    @rx.event
+    def move_patient_directory_page(self, delta: int):
+        self.patient_directory_page = max(
+            1, min(self.patient_directory_page + delta, self.patient_directory_pages)
+        )
+        return ReceptionQueueState.load_patient_list
+
+    @rx.event
+    async def load_patient_detail(self):
+        """Resolve patient ID under server-side RBAC on every request."""
+        try:
+            raw_id = self.router.page.params.get("patient_id", "")
+            if not str(raw_id).isdigit():
+                yield rx.redirect("/recepcao/pacientes")
+                return
+            token = await self._token()
+            with rx.session() as db:
+                patient = reception_get_patient_identity(db, token=token, patient_id=int(raw_id))
+                if patient is None:
+                    yield rx.redirect("/recepcao/pacientes")
+                    return
+                status = reception_get_patient_portal_status(
+                    db, token=token, patient_id=patient.id,
+                )
+            self.selected_patient_id = patient.id
+            self.selected_patient_name = patient.name
+            self.selected_patient_phone = format_patient_phone_input(patient.phone)
+            self.selected_patient_portal_status = status.label
+            self.qa_local_enabled = local_qa_enabled()
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            yield rx.toast.error("Não foi possível abrir a ficha do paciente.")
+            yield rx.redirect("/recepcao/pacientes")
 
     @rx.event
     async def load(self):
