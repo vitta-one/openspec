@@ -1809,7 +1809,7 @@ button:disabled,
   color: var(--vitta-contrast-heading) !important;
 }
 .vitta-shell :is(input, textarea, select):is(:disabled, [aria-disabled="true"]),
-.vitta-shell :is(input, textarea):read-only:not(.vitta-topbar-search-input),
+.vitta-shell :is(input:not([type="checkbox"]):not([type="radio"]):not(.vitta-topbar-search-input), textarea):read-only,
 .vitta-login-form-pane input:disabled {
   color: var(--vitta-contrast-disabled-text) !important;
   -webkit-text-fill-color: var(--vitta-contrast-disabled-text) !important;
