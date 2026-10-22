@@ -1144,3 +1144,30 @@ def professional_registration_workspace() -> rx.Component:
         ),
         spacing="4", align="stretch", width="100%",
     )
+
+
+def medical_registration_form_panel() -> rx.Component:
+    """Reusable medical onboarding form inside the unified employee creation route."""
+    return section_panel(
+        rx.el.form(
+            rx.vstack(
+                rx.heading("Dados profissionais", size="4"),
+                rx.text("Informe os dados de identificação, o acesso e as especialidades do médico.",
+                        color="var(--vitta-text-muted)", size="2", line_height="1.6"),
+                _professional_form_fields(),
+                rx.flex(
+                    rx.link("Cancelar", href="/admin/funcionarios", class_name="vitta-context-link"),
+                    rx.button(
+                        "Cadastrar médico", type="submit", color_scheme="teal",
+                        high_contrast=True, disabled=AdminDirectoryState.is_submitting,
+                        loading=AdminDirectoryState.is_submitting, min_height="2.85rem",
+                    ),
+                    justify="end", align="center", gap="3", flex_wrap="wrap", width="100%",
+                ),
+                spacing="5", align="stretch", width="100%",
+                class_name="vitta-form-panel",
+            ),
+            on_submit=AdminDirectoryState.save_professional,
+            width="100%",
+        )
+    )
