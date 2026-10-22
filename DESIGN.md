@@ -24,7 +24,7 @@ colors:
   success: "#059669"
   success-soft: "#ECFDF5"
   focus: "#0F766E"
-  scroll-thumb: "#94A3B8"
+  scroll-thumb: "#64748B"
   scroll-track: "#F1F5F9"
 typography:
   display:
