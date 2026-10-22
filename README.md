@@ -48,6 +48,85 @@ A fundação de acesso, paciente/fila, profissionais/especialidades, agenda, lif
 
 > `vitta_one/` contém a aplicação Reflex. `openspec/` é reservado exclusivamente aos artefatos do OpenSpec.
 
+## Início rápido para desenvolvimento local — Docker + um comando
+
+Este é o caminho recomendado para **testar a aplicação no próprio computador**.
+O Docker Compose inicia apenas o **PostgreSQL 16**; o **Reflex roda no host**,
+com hot reload. Isso evita rebuild do frontend a cada alteração e permite
+iniciar o conjunto com `make dev` em execuções seguintes.
+
+**Pré-requisitos:** Docker com Compose V2 (`docker compose version`), Python
+3.12, Git e Make. Tenha Node.js disponível conforme o setup Reflex descrito
+abaixo. No Linux, seu usuário precisa conseguir usar `docker info` sem erro.
+
+Se ainda não clonou, clone a branch disponível para testes:
+
+~~~bash
+git clone --branch feat/admin-ux-contrast-navigation \
+  git@github.com:vitta-one/openspec.git
+cd openspec
+~~~
+
+Se já clonou o repositório, preserve alterações locais antes de trocar de
+branch. Para obter a versão da PR #323:
+
+~~~bash
+cd ~/Documents/openspec
+git fetch origin
+git switch feat/admin-ux-contrast-navigation
+git pull --ff-only
+~~~
+
+Na **primeira utilização**, cadastre uma conta de Administrador, com e-mail e
+senha escolhidos na hora (a senha **não aparece no terminal**):
+
+~~~bash
+make admin
+~~~
+
+Depois, **sempre que for desenvolver/testar**, basta:
+
+~~~bash
+make dev
+~~~
+
+Abra **http://localhost:3000/login**. O script:
+
+- cria `.env.docker` local com senha aleatória protegida por permissões `600`;
+- inicia um **PostgreSQL 16** via `compose.dev.yaml` e aguarda o banco ficar pronto;
+- configura o banco `vitta_one_qa` em `127.0.0.1:5433` para não conflitar com
+  um PostgreSQL nativo em `5432`;
+- cria `.venv` Python 3.12 e instala dependências **somente na primeira execução
+  ou quando `requirements*.txt` mudarem**;
+- aplica `reflex db migrate` apenas nesse banco QA local;
+- inicia `reflex run --env dev`, com hot reload.
+
+Atalhos adicionais:
+
+| Comando | Ação |
+| --- | --- |
+| `make dev` | Inicia o banco e o Reflex em modo desenvolvimento |
+| `make admin` | Cria o primeiro administrador, preservando o existente |
+| `make db-only` | Inicia só o banco PostgreSQL |
+| `make db-status` | Exibe status do contêiner |
+| `make db-logs` | Acompanha logs do banco |
+| `make db-stop` | Para o banco sem excluir os dados |
+
+**Para parar o Reflex**, use `Ctrl+C` no terminal de `make dev`. O PostgreSQL
+continua ativo e seu volume `vitta_one_dev_pgdata` **não é removido**.
+Se não tiver Make, use `bash scripts/dev-local.sh dev` (ou `admin`).
+
+**Segurança:** o Compose escuta somente em `127.0.0.1:5433`; as credenciais
+locais ficam em `.env.docker`, ignorado pelo Git. Nunca rode
+`docker compose down -v` nem apague o volume para "reiniciar" o ambiente:
+isso destruiria seus dados locais. Se `.env.docker` for perdido e o volume ainda
+existir, o script recusa recriar credenciais em vez de alterar o banco existente.
+Não use dados reais de pacientes e não execute os seeds descartáveis do CI
+nessa instância persistente.
+
+A seção seguinte documenta o setup **manual/legado** para ambientes que não
+usam Docker, além dos procedimentos completos de QA e validação.
+
 ## Instalação e setup completo — do zero até o QA
 
 Este roteiro é a referência oficial para rodar o projeto, tanto numa máquina nova quanto depois de novos merges. **Execute os comandos a partir da raiz `openspec/`.** Use apenas dados sintéticos no ambiente de QA.
