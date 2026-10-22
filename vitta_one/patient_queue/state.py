@@ -489,7 +489,7 @@ class ReceptionQueueState(rx.State):
             self.quick_search_query = ""
             self.quick_search_results = []
             self.quick_search_error = ""
-            return rx.redirect("/recepcao/pacientes")
+            return rx.redirect(f"/recepcao/pacientes/{patient.id}")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             self._clear_sensitive_view()
             if isinstance(exc, AuthenticationRequiredError):
@@ -523,20 +523,21 @@ class ReceptionQueueState(rx.State):
             self.selected_patient_name = patient.name
             self.selected_patient_phone = format_patient_phone_input(patient.phone)
             self.selected_patient_portal_status = "Sem acesso ao portal"
-            self.success_message = "Paciente cadastrado e selecionado para a fila."
+            self.success_message = "Paciente cadastrado com sucesso."
+            yield rx.toast.success(self.success_message, position="top-right")
+            yield rx.redirect(f"/recepcao/pacientes/{patient.id}")
         except PatientAlreadyExistsError:
-            self.error_message = (
-                "Este CPF já está cadastrado. Localize o paciente existente para continuar."
-            )
+            self.error_message = "Não foi possível concluir o cadastro. Confira os dados ou localize o paciente."
+            yield rx.toast.error(self.error_message, position="top-right")
         except PatientValidationError as exc:
             self.error_message = str(exc)
+            yield rx.toast.error(self.error_message, position="top-right")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
-            self.error_message = (
-                "Não foi possível cadastrar o paciente agora. Tente novamente."
-            )
+            self.error_message = "Não foi possível cadastrar o paciente agora."
+            yield rx.toast.error(self.error_message, position="top-right")
         finally:
             self.is_submitting = False
             yield
@@ -568,7 +569,8 @@ class ReceptionQueueState(rx.State):
                         db, token=token, patient_id=patient.id
                     )
                 self.selected_patient_portal_status = portal_status.label
-                self.success_message = "Paciente localizado e selecionado."
+                self.success_message = "Paciente localizado."
+                yield rx.redirect(f"/recepcao/pacientes/{patient.id}")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
