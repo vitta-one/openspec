@@ -2059,24 +2059,24 @@ button:disabled,
 }
 
 /* Radix tabs own keyboard navigation; do not hide secondary workflows. */
-.vitta-admin-schedule-tabs {
+.vitta-task-tabs {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   width: 100%;
   max-width: 100%;
 }
-.vitta-admin-schedule-tabs .rt-TabsTrigger {
+.vitta-task-tabs .rt-TabsTrigger {
   min-height: 2.75rem;
   color: #334155;
   font-weight: 650;
   white-space: normal;
 }
-.vitta-admin-schedule-tabs .rt-TabsTrigger[data-state="active"] {
+.vitta-task-tabs .rt-TabsTrigger[data-state="active"] {
   color: #115e59;
   font-weight: 750;
 }
-.vitta-admin-schedule-tabs .rt-TabsTrigger:focus-visible {
+.vitta-task-tabs .rt-TabsTrigger:focus-visible {
   outline: 3px solid var(--vitta-focus);
   outline-offset: 2px;
 }
@@ -2104,7 +2104,7 @@ button:disabled,
   .vitta-admin-action {
     padding: 0.8rem 0.6rem;
   }
-  .vitta-admin-schedule-tabs .rt-TabsTrigger {
+  .vitta-task-tabs .rt-TabsTrigger {
     flex: 1 1 100%;
     justify-content: flex-start;
   }
