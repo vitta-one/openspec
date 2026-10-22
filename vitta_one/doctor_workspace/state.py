@@ -1,7 +1,7 @@
 """Reflex state for the doctor's own agenda and consultation-derived roster."""
 
 from calendar import monthrange
-from datetime import date
+from datetime import date, timedelta
 from typing import TypedDict
 
 import reflex as rx
@@ -11,6 +11,7 @@ from vitta_one.appointment_scheduling.application import (
     doctor_list_my_patients,
 )
 from vitta_one.appointment_scheduling.service import SchedulingValidationError
+from vitta_one.appointment_scheduling.settings import clinic_timezone
 from vitta_one.appointment_scheduling.temporal import clinic_today_iso, format_clinic_datetime
 from vitta_one.auth.authorization import AuthenticationRequiredError, RoleForbiddenError
 from vitta_one.auth.state import AuthState
@@ -28,6 +29,18 @@ class DoctorConsultationRow(TypedDict):
 class DoctorPatientRow(TypedDict):
     name: str
     recent_consultation: str
+
+
+class DoctorWeekEvent(TypedDict):
+    time: str
+    patient_name: str
+    status: str
+
+
+class DoctorWeekDay(TypedDict):
+    day_label: str
+    date_label: str
+    entries: list[DoctorWeekEvent]
 
 
 class CalendarCell(TypedDict):
@@ -70,6 +83,7 @@ class DoctorWorkspaceState(rx.State):
     consultation_rows: list[DoctorConsultationRow] = []
     patient_rows: list[DoctorPatientRow] = []
     calendar_cells: list[CalendarCell] = []
+    calendar_week: list[DoctorWeekDay] = []
     is_loading: bool = False
     error_message: str = ""
 
@@ -90,6 +104,7 @@ class DoctorWorkspaceState(rx.State):
         self.consultation_rows = []
         self.patient_rows = []
         self.calendar_cells = []
+        self.calendar_week = []
         self.error_message = ""
 
     @rx.event
@@ -143,6 +158,34 @@ class DoctorWorkspaceState(rx.State):
                     self.consultation_rows = rows
                     self.calendar_cells = _calendar_cells(self.month, rows)
                     self.patient_rows = []
+                    # A second authorized query keeps the upcoming week accurate
+                    # even when it crosses a month boundary.
+                    first_day = date.fromisoformat(clinic_today_iso())
+                    last_week_day = first_day + timedelta(days=6)
+                    _, week_items = doctor_get_my_agenda(
+                        db,
+                        token=token,
+                        start_date=first_day.isoformat(),
+                        end_date=last_week_day.isoformat(),
+                    )
+                    by_date: dict[str, list[DoctorWeekEvent]] = {}
+                    for item in week_items:
+                        local_dt = item.scheduled_at.astimezone(clinic_timezone())
+                        by_date.setdefault(local_dt.date().isoformat(), []).append(
+                            {
+                                "time": local_dt.strftime("%H:%M"),
+                                "patient_name": item.patient_name,
+                                "status": item.status.label,
+                            }
+                        )
+                    self.calendar_week = [
+                        {
+                            "day_label": ("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")[(first_day + timedelta(days=i)).weekday()],
+                            "date_label": (first_day + timedelta(days=i)).strftime("%d/%m"),
+                            "entries": by_date.get((first_day + timedelta(days=i)).isoformat(), []),
+                        }
+                        for i in range(7)
+                    ]
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             self._clear()
             if isinstance(exc, AuthenticationRequiredError):
