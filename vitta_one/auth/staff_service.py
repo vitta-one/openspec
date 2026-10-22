@@ -35,7 +35,8 @@ def list_employee_directory(db: Session, *, token: str) -> list[dict]:
     ).all()
     return [
         {"id": user.id, "email": user.email, "role": user.role,
-         "role_label": ("Médico" if user.role == Role.MEDICO.value else "Recepcionista")}
+         "role_label": ("Médico" if user.role == Role.MEDICO.value else "Recepcionista"),
+         "href": f"/admin/funcionarios/{user.id}"}
         for user in users
     ]
 
@@ -47,4 +48,5 @@ def get_employee_detail(db: Session, *, token: str, employee_id: int) -> dict | 
     if user is None or user.role not in (Role.MEDICO.value, Role.RECEPCIONISTA.value):
         return None
     return {"id": user.id, "email": user.email, "role": user.role,
-            "role_label": ("Médico" if user.role == Role.MEDICO.value else "Recepcionista")}
+            "role_label": ("Médico" if user.role == Role.MEDICO.value else "Recepcionista"),
+            "href": f"/admin/funcionarios/{user.id}"}
