@@ -233,6 +233,27 @@ def test_admin_specialty_search_and_professional_routes_at_mobile_width(page: Pa
         page.screenshot(path=f"qa-artifacts/admin-diretorio-{width}px.png", full_page=True)
 
 
+def test_admin_staff_role_selection_is_accessible_and_guarded(page: Page) -> None:
+    """Role choice precedes registration; forms remain separate."""
+    login_as_admin(page)
+    page.get_by_role("link", name=re.compile("^Criar funcionário")).click()
+    expect(page).to_have_url(re.compile(r"/admin/funcionarios/?$"), timeout=30000)
+    expect(page.locator("#staff-password")).to_have_count(0)
+    choice = page.get_by_role("link", name=re.compile("^Recepcionista"))
+    choice.focus()
+    expect(choice).to_be_focused()
+    choice.press("Enter")
+    expect(page).to_have_url(re.compile(r"/admin/funcionarios/recepcionista/?$"), timeout=30000)
+    expect(page.locator("#staff-email")).to_be_visible(timeout=30000)
+    expect(page.locator("#staff-password")).to_be_visible()
+    expect(page.locator("#professional-name")).to_have_count(0)
+    page.get_by_role("link", name="Escolher outro perfil").click()
+    expect(page).to_have_url(re.compile(r"/admin/funcionarios/?$"), timeout=30000)
+    page.get_by_role("link", name=re.compile("^Médico")).click()
+    expect(page.locator("#professional-name")).to_be_visible(timeout=30000)
+    expect(page.locator("#staff-password")).to_have_count(0)
+
+
 def test_non_admin_cannot_open_admin_directory_subroutes(page: Page) -> None:
     login(page, FIXTURE["doctor_b_email"])
     page.goto(BASE + "/admin/profissionais", wait_until="domcontentloaded")
