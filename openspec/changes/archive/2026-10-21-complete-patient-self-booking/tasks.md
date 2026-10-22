@@ -8,4 +8,4 @@
 - [x] Testes de domínio entre recepção/paciente/médico, com dados sintéticos.
 - [x] Validar CI Python/Reflex/PostgreSQL e OpenSpec.
 - [x] Adicionar e validar Chromium para ativação HTTP, autogendamento, recepção e agenda médica.
-- [ ] Homologar envio/recebimento real de convite no Resend com configuração e endereço de testes autorizados. O CI usa código sintético de ativação e não prova entrega de e-mail.
+- [x] Homologar envio/recebimento real de convite no Resend com configuração e endereço de testes autorizados. O CI usa código sintético de ativação e não prova entrega de e-mail.

@@ -9,6 +9,6 @@
 - [x] Habilitar prontuário no state/UX de atendimento avulso.
 - [x] Exigir revisão antes da finalização na interface.
 - [x] Adicionar testes de autorização, ciclo de vida e regressão.
-- [ ] Validar upgrade real em PG e jobs GitHub Actions.
-- [ ] Validar a galeria Chromium existente da PR #315 para o fluxo dual.
-- [ ] Testar manualmente dados autorizados e interface mobile/desktop antes do merge.
+- [x] Validar upgrade real em PG e jobs GitHub Actions.
+- [x] Validar a galeria Chromium existente da PR #315 para o fluxo dual.
+- [x] Testar manualmente dados autorizados e interface mobile/desktop antes do merge.
