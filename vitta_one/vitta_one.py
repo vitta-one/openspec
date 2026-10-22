@@ -37,6 +37,11 @@ from vitta_one.ui.pages import (
     admin_clinical_preview_page,
     admin_finance_preview_page,
     admin_page,
+    admin_staff_types_page,
+    admin_medical_staff_page,
+    admin_receptionist_staff_page,
+    admin_hours_page,
+    admin_clinic_settings_page,
     admin_specialties_page,
     admin_professionals_page,
     admin_patients_preview_page,
@@ -117,13 +122,37 @@ app.add_page(
     admin_page,
     route=Role.ADMINISTRADOR.dashboard_path,
     title="Painel administrativo | Vitta-One",
-    on_load=[
-        AuthState.load_protected,
-        AdminDirectoryState.load,
-        AdminStaffState.load,
-        AdminAvailabilityState.load,
-        AdminClinicConfigurationState.load,
-    ],
+    on_load=AuthState.load_protected,
+)
+app.add_page(
+    admin_staff_types_page,
+    route="/admin/funcionarios",
+    title="Criar funcionário | Vitta-One",
+    on_load=AuthState.load_protected,
+)
+app.add_page(
+    admin_medical_staff_page,
+    route="/admin/funcionarios/medico",
+    title="Cadastrar médico | Vitta-One",
+    on_load=[AuthState.load_protected, AdminDirectoryState.prepare_new_professional_page],
+)
+app.add_page(
+    admin_receptionist_staff_page,
+    route="/admin/funcionarios/recepcionista",
+    title="Cadastrar recepcionista | Vitta-One",
+    on_load=[AuthState.load_protected, AdminStaffState.load],
+)
+app.add_page(
+    admin_hours_page,
+    route="/admin/horarios",
+    title="Horários de atendimento | Vitta-One",
+    on_load=[AuthState.load_protected, AdminAvailabilityState.load],
+)
+app.add_page(
+    admin_clinic_settings_page,
+    route="/admin/configuracoes",
+    title="Configurações da clínica | Vitta-One",
+    on_load=[AuthState.load_protected, AdminClinicConfigurationState.load],
 )
 app.add_page(
     admin_specialties_page,
