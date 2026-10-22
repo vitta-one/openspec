@@ -737,6 +737,7 @@ def test_patient_books_own_appointment_and_both_staff_agendas_update(page: Page)
         ), overflowing_elements(page)
         if width <= 375:
             for label in ("Minhas consultas", "Agendar consulta"):
+                page.get_by_role("button", name="Abrir ou fechar navegação").click()
                 nav = page.get_by_role("navigation", name="Navegação principal")
                 item = nav.get_by_role("link", name=label)
                 expect(item).to_be_visible()
@@ -744,6 +745,7 @@ def test_patient_books_own_appointment_and_both_staff_agendas_update(page: Page)
                 assert bounds is not None
                 assert bounds["x"] >= -2 and bounds["x"] + bounds["width"] <= width + 2
                 assert item.evaluate("(el) => el.scrollWidth <= el.clientWidth + 2")
+                page.locator(".vitta-sidebar-scrim").click(position={"x": width - 15, "y": 120})
         page.screenshot(
             path=f"qa-artifacts/paciente-autogendamento-{width}px.png", full_page=True
         )
