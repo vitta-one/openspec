@@ -12,7 +12,7 @@ CSS = (ROOT / "assets" / "styles.css").read_text(encoding="utf-8")
 
 
 def token(name: str) -> str:
-    match = re.search(rf"^\\s*--vitta-{re.escape(name)}:\\s*(#[0-9a-fA-F]{{6}});", CSS, re.M)
+    match = re.search(rf"^\s*--vitta-{re.escape(name)}:\s*(#[0-9a-fA-F]{{6}});", CSS, re.M)
     assert match is not None, f"Token CSS ausente: --vitta-{name}"
     return match.group(1)
 
