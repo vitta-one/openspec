@@ -913,7 +913,13 @@ def test_reception_agenda_cpf_mask_does_not_discard_selected_patient(page: Page)
     login_as_reception(page)
     page.goto(BASE + "/recepcao/agenda", wait_until="domcontentloaded")
     expect(page.get_by_role("heading", name="Agenda e check-in")).to_be_visible(timeout=30000)
-    expect(page.get_by_role("tab", name="Agendar consulta")).to_be_visible()
+    expect(page.get_by_role("tab", name="Consultas do período")).to_have_attribute(
+        "data-state", "active", timeout=30000
+    )
+    page.get_by_role("tab", name="Agendar consulta").click()
+    expect(page.get_by_role("tab", name="Agendar consulta")).to_have_attribute(
+        "data-state", "active", timeout=30000
+    )
     page.wait_for_function("window.__vittaInputMasksInstalled === true", timeout=30000)
     search = page.locator("#agenda-patient-cpf")
     search.fill("53817624964")
