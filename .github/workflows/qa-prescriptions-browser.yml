@@ -72,6 +72,13 @@ jobs:
         run: python -m scripts.qa_seed_prescriptions
       - name: Create synthetic accounts for full visual coverage
         run: python -m scripts.qa_seed_visual_accounts
+      - name: Refresh generated frontend lock on disposable CI runner
+        run: |
+          # The committed lock can become incompatible with an expanded route graph.
+          # Remove ONLY the generated copy in this temporary CI checkout.
+          rm -rf reflex.lock
+          mkdir -p qa-artifacts
+
       - name: Launch Reflex production server
         run: |
           set -euo pipefail
