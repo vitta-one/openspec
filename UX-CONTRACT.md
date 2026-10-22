@@ -212,3 +212,18 @@ Regras:
 - A leitura inicial mostra carregamento; uma falha limpa dados protegidos e permite tentar novamente; a atualização é manual e exibe quando a última leitura terminou. Não há promessa de tempo real.
 - Os controles de busca, filtro, paginação e acesso à Agenda mantêm rótulos acessíveis, foco visível, operação por teclado e tabela horizontalmente contida em telas estreitas, sem ampliar o documento.
 - A tela não mostra conteúdo clínico, prontuário ou unidade não configurada.
+
+
+## 15. Administração por tarefas e legibilidade global
+
+- `/admin` concentra **navegação**, não renderiza simultaneamente formulários de clínica, funcionários e horários.
+- `/admin/funcionarios` apresenta somente os perfis com cadastro suportado pelo back-end: Médico e Recepcionista. Não oferece falsas opções para Administrador ou Financeiro.
+- `/admin/funcionarios/medico` reutiliza formulário, verificações de especialidades, validação e persistência de `AdminDirectoryState`; o formulário tem navegação de volta e feedback recuperável sem depender de modal.
+- `/admin/funcionarios/recepcionista` reutiliza `AdminStaffState` e mantém a exigência de senha inicial; informações sensíveis nunca aparecem na URL.
+- `/admin/profissionais` e `/admin/especialidades` continuam como diretórios para busca, filtro, edição e controle de situação.
+- `/admin/horarios` separa em abas semânticas o **expediente semanal**, os **horários avulsos** e a **consulta dos horários**. Cada operação preserva os serviços, timezone e validações já existentes.
+- `/admin/configuracoes` apresenta apenas as configurações da clínica existentes, sem expor um formulário paralelo no dashboard.
+- `/recepcao/agenda` preserva o agendamento e o check-in, mas diferencia as abas **Agendar consulta** e **Consultas do período**; a aba de agendamento abre inicialmente para preservar o encaminhamento vindo do cadastro de paciente.
+- Todas as novas subrotas exigem `AuthState.load_protected` e `protected_workspace` com `verified_path`; autorização de negócio permanece no servidor.
+- Campos, placeholders, selects, menus portaled, badges e mensagens devem manter texto legível com contraste normal de pelo menos 4,5:1 e controles com foco visível. Estados desabilitados permanecem distinguíveis sem depender exclusivamente da cor.
+- Tarefas são verificadas em 320, 375, 768 e 1280 px com foco, navegação por teclado, ausência de overflow e fluxos reais. Testes estáticos e `reflex compile --dry` não substituem QA visual.
