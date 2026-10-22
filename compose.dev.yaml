@@ -1,0 +1,24 @@
+# Postgres local isolado; o Reflex roda no host para preservar hot reload.
+# Nunca use este compose com dados clínicos reais ou segredos de produção.
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Defina POSTGRES_USER em .env.docker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD em .env.docker}
+      POSTGRES_DB: ${POSTGRES_DB:?Defina POSTGRES_DB em .env.docker}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - vitta_one_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+volumes:
+  vitta_one_pgdata:
+    name: vitta_one_dev_pgdata

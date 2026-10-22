@@ -5,15 +5,23 @@ import reflex as rx
 from vitta_one.appointment_scheduling.state import AdminAvailabilityState, ReceptionAgendaState
 from vitta_one.auth.roles import Role
 from vitta_one.ui.staff_components import admin_staff_panel
+from vitta_one.ui.admin_hub_components import (
+    admin_hub_workspace, admin_staff_type_workspace,
+    admin_staff_create_workspace, admin_staff_detail_workspace,
+)
 from vitta_one.auth.state import AuthState
 from vitta_one.doctor_workspace.state import DoctorWorkspaceState
 from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
 from vitta_one.patient_portal.state import PatientPortalState
 from vitta_one.ui.patient_booking_components import patient_booking_workspace
+from vitta_one.ui.patient_directory_components import (
+    patient_directory_workspace, patient_create_workspace, patient_detail_workspace,
+)
 from vitta_one.professional_directory.state import AdminDirectoryState
-from vitta_one.reception.dashboard.components import reception_dashboard
+from vitta_one.reception.dashboard.components import reception_dashboard, reception_week_calendar
 from vitta_one.ui.admin_directory_components import (
     admin_directory_workspace,
+    professional_registration_workspace,
     specialties_management_workspace,
     professionals_management_workspace,
 )
@@ -28,8 +36,10 @@ from vitta_one.ui.admin_preview_components import (
 from vitta_one.ui.components import (
     admin_preview_workspace,
     brand_logo,
+    breadcrumb,
     dashboard_shell,
     feedback_region,
+    empty_state,
     loading_surface,
     login_form,
     page_header,
@@ -42,6 +52,7 @@ from vitta_one.ui.queue_components import (
     active_queue_panel,
     doctor_active_panel,
     doctor_waiting_summary,
+    clinical_history_panel,
     enqueue_panel,
     patient_identity_panel,
     reassess_panel,
@@ -50,6 +61,7 @@ from vitta_one.ui.queue_components import (
 from vitta_one.ui.workspace_components import (
     admin_clinic_configuration,
     doctor_calendar,
+    doctor_week_calendar,
     doctor_consultation_list,
     doctor_patient_list,
     patient_calendar,
@@ -375,13 +387,93 @@ def first_access_page() -> rx.Component:
 
 
 def admin_page() -> rx.Component:
+    """Focused administration entry point; tools are in dedicated routes."""
     return protected_workspace(
         Role.ADMINISTRADOR,
-        admin_clinic_configuration(),
-        admin_directory_workspace(),
-        admin_availability_panel(),
-        admin_staff_panel(),
+        admin_hub_workspace(),
         active="administracao",
+    )
+
+
+def admin_staff_types_page() -> rx.Component:
+    return protected_workspace(
+        Role.ADMINISTRADOR,
+        admin_staff_type_workspace(),
+        active="funcionarios",
+        verified_path="/admin/funcionarios",
+    )
+
+
+def admin_staff_create_page() -> rx.Component:
+    return protected_workspace(
+        Role.ADMINISTRADOR,
+        admin_staff_create_workspace(),
+        active="funcionarios",
+        verified_path="/admin/funcionarios/novo",
+    )
+
+
+def admin_staff_detail_page() -> rx.Component:
+    return protected_workspace(
+        Role.ADMINISTRADOR,
+        admin_staff_detail_workspace(),
+        active="funcionarios",
+        verified_path="/admin/funcionarios/[employee_id]",
+    )
+
+
+def admin_medical_staff_page() -> rx.Component:
+    return protected_workspace(
+        Role.ADMINISTRADOR,
+        professional_registration_workspace(),
+        active="funcionarios",
+        verified_path="/admin/funcionarios/medico",
+    )
+
+
+def admin_receptionist_staff_page() -> rx.Component:
+    return protected_workspace(
+        Role.ADMINISTRADOR,
+        page_header(
+            "Administração / Funcionários",
+            "Cadastrar recepcionista",
+            "Defina as credenciais iniciais para uma conta de Recepção.",
+        ),
+        breadcrumb(("Administração", "/admin"), ("Funcionários", "/admin/funcionarios"),
+                   ("Cadastrar recepcionista", None)),
+        admin_staff_panel(),
+        active="funcionarios",
+        verified_path="/admin/funcionarios/recepcionista",
+    )
+
+
+def admin_hours_page() -> rx.Component:
+    return protected_workspace(
+        Role.ADMINISTRADOR,
+        page_header(
+            "Administração / Agenda",
+            "Gerenciar horários",
+            "Configure e consulte a disponibilidade dos médicos, uma tarefa por vez.",
+        ),
+        breadcrumb(("Administração", "/admin"), ("Horários", None)),
+        admin_availability_panel(),
+        active="horarios",
+        verified_path="/admin/horarios",
+    )
+
+
+def admin_clinic_settings_page() -> rx.Component:
+    return protected_workspace(
+        Role.ADMINISTRADOR,
+        page_header(
+            "Administração",
+            "Configurações da clínica",
+            "Mantenha atualizadas as informações exibidas no portal do paciente.",
+        ),
+        breadcrumb(("Administração", "/admin"), ("Configurações", None)),
+        admin_clinic_configuration(),
+        active="administracao",
+        verified_path="/admin/configuracoes",
     )
 
 
@@ -423,6 +515,7 @@ def reception_agenda_page() -> rx.Component:
             "Agenda e check-in",
             "Consulte horários por profissional, agende, reagende e confirme a chegada.",
         ),
+        reception_week_calendar(),
         reception_agenda_panel(),
         active="agenda",
         verified_path="/recepcao/agenda",
@@ -430,53 +523,100 @@ def reception_agenda_page() -> rx.Component:
 
 
 def reception_patients_page() -> rx.Component:
-    """Existing patient creation and lookup, now accessible as its own workspace."""
+    """Directory list and server-side search, separate from registration."""
     return protected_workspace(
         Role.RECEPCIONISTA,
-        page_header(
-            "Pacientes",
-            "Cadastro e localização",
-            "Identifique um paciente existente pelo CPF ou cadastre com validação.",
-        ),
-        feedback_region(
-            ReceptionQueueState.error_message,
-            ReceptionQueueState.success_message,
-        ),
-        patient_identity_panel(),
-        rx.hstack(
-            rx.link("Ir para fila de espera", href="/recepcao/fila",
-                    class_name="vitta-context-link"),
-            rx.link("Abrir agenda", href="/recepcao/agenda",
-                    class_name="vitta-context-link"),
-            flex_wrap="wrap", gap="2",
-        ),
+        patient_directory_workspace(),
         active="pacientes",
         verified_path="/recepcao/pacientes",
     )
 
 
-def reception_queue_page() -> rx.Component:
-    """Reception queue, walk-in entry, re-evaluation and withdrawal."""
+def reception_patient_create_page() -> rx.Component:
     return protected_workspace(
         Role.RECEPCIONISTA,
+        patient_create_workspace(),
+        active="pacientes",
+        verified_path="/recepcao/pacientes/novo",
+    )
+
+
+def reception_patient_detail_page() -> rx.Component:
+    return protected_workspace(
+        Role.RECEPCIONISTA,
+        patient_detail_workspace(),
+        active="pacientes",
+        verified_path="/recepcao/pacientes/[patient_id]",
+    )
+
+
+def reception_queue_page() -> rx.Component:
+    """Independent queue board; registration lives exclusively under Patients."""
+    return protected_workspace(
+        Role.RECEPCIONISTA,
+        breadcrumb(("Recepção", "/recepcao"), ("Fila de espera", None)),
         page_header(
             "Fila",
             "Fila de espera",
-            "Acompanhe prioridades informadas, entradas avulsas, reavaliações e retiradas.",
-        ),
-        feedback_region(
-            ReceptionQueueState.error_message,
-            ReceptionQueueState.success_message,
+            "Acompanhe prioridades, reavaliações e entradas de pronto-socorro.",
         ),
         rx.flex(
-            patient_identity_panel(),
-            enqueue_panel(),
-            direction=rx.breakpoints(initial="column", xl="row"),
-            gap="1rem", align="start", width="100%",
+            rx.dialog.root(
+                rx.dialog.trigger(
+                    rx.button(rx.icon("plus", size=17), "Adicionar à fila",
+                              color_scheme="teal", high_contrast=True),
+                ),
+                rx.dialog.content(
+                    rx.dialog.title("Nova entrada no pronto-socorro"),
+                    rx.dialog.description(
+                        "Selecione um paciente da lista antes de registrar a prioridade.",
+                        margin_bottom="1rem",
+                    ),
+                    rx.cond(
+                        ReceptionQueueState.selected_patient_id > 0,
+                        enqueue_panel(),
+                        rx.vstack(
+                            rx.text("Nenhum paciente selecionado.",
+                                    color="var(--vitta-text-muted)"),
+                            rx.link("Localizar paciente", href="/recepcao/pacientes",
+                                    class_name="vitta-context-link"),
+                            spacing="3",
+                        ),
+                    ),
+                    rx.dialog.close(rx.button("Fechar", variant="outline",
+                                              color_scheme="gray", margin_top="1rem")),
+                    class_name="vitta-dialog-content", max_width="40rem",
+                ),
+            ),
+            rx.link(rx.icon("users", size=17), "Pacientes",
+                    href="/recepcao/pacientes", class_name="vitta-context-link"),
+            gap="3", align="center", flex_wrap="wrap", width="100%",
         ),
         active_queue_panel(),
-        reassess_panel(),
-        withdraw_panel(),
+        rx.cond(
+            ReceptionQueueState.reassess_entry_id > 0,
+            rx.dialog.root(
+                rx.dialog.content(
+                    reassess_panel(),
+                    class_name="vitta-dialog-content", max_width="39rem",
+                    max_height="85vh", overflow_y="auto",
+                ),
+                open=True,
+            ),
+            rx.fragment(),
+        ),
+        rx.cond(
+            ReceptionQueueState.withdraw_entry_id > 0,
+            rx.dialog.root(
+                rx.dialog.content(
+                    withdraw_panel(),
+                    class_name="vitta-dialog-content", max_width="39rem",
+                    max_height="85vh", overflow_y="auto",
+                ),
+                open=True,
+            ),
+            rx.fragment(),
+        ),
         active="fila",
         verified_path="/recepcao/fila",
     )
@@ -486,10 +626,52 @@ def doctor_page() -> rx.Component:
     return protected_workspace(
         Role.MEDICO,
         page_header(
-            "Atendimento",
-            "Fila médica",
-            "Chame o próximo paciente elegível e finalize somente o atendimento associado à sua sessão.",
+            "Consultório médico",
+            "Visão geral do consultório",
+            "Acompanhe a agenda, o pronto-socorro, os pacientes e os registros clínicos.",
         ),
+        rx.grid(
+            rx.link(
+                rx.vstack(
+                    rx.icon("list_ordered", color="var(--vitta-primary)", size=21),
+                    rx.heading(DoctorQueueState.waiting_count, size="6"),
+                    rx.text("Pacientes na espera", size="2", font_weight="650"),
+                    spacing="2", align="start",
+                ),
+                href="/medico", class_name="vitta-overview-card",
+            ),
+            rx.link(
+                rx.vstack(
+                    rx.icon("calendar_days", color="var(--vitta-primary)", size=21),
+                    rx.heading(DoctorWorkspaceState.consultation_rows.length(), size="6"),
+                    rx.text("Consultas no mês", size="2", font_weight="650"),
+                    spacing="2", align="start",
+                ),
+                href="/medico/agenda", class_name="vitta-overview-card",
+            ),
+            rx.link(
+                rx.vstack(
+                    rx.icon("file_heart", color="var(--vitta-primary)", size=21),
+                    rx.heading(rx.cond(DoctorQueueState.has_active, "Em andamento", "Sem atendimento"), size="4"),
+                    rx.text("Prontuário atual", size="2", font_weight="650"),
+                    spacing="2", align="start",
+                ),
+                href="/medico/prontuarios", class_name="vitta-overview-card",
+            ),
+            columns=rx.breakpoints(initial="1", sm="2", lg="3"),
+            gap="3", width="100%",
+        ),
+        rx.flex(
+            rx.link(rx.icon("calendar_days", size=17), "Abrir agenda",
+                    href="/medico/agenda", class_name="vitta-context-link"),
+            rx.link(rx.icon("users", size=17), "Meus pacientes",
+                    href="/medico/pacientes", class_name="vitta-context-link"),
+            rx.link(rx.icon("book_open", size=17), "Prontuário",
+                    href="/medico/prontuarios", class_name="vitta-context-link"),
+            gap="3", flex_wrap="wrap", align="center",
+        ),
+        rx.separator(),
+        rx.heading("Operação de pronto-socorro", size="5"),
         feedback_region(
             DoctorQueueState.error_message,
             DoctorQueueState.success_message,
@@ -519,6 +701,32 @@ def doctor_page() -> rx.Component:
     )
 
 
+def doctor_records_page() -> rx.Component:
+    """Active-patient records only: no unrestricted medical history browsing."""
+    return protected_workspace(
+        Role.MEDICO,
+        breadcrumb(("Consultório", "/medico"), ("Prontuários", None)),
+        page_header(
+            "Prontuários", "Registro clínico do paciente atual",
+            "Acesso restrito ao atendimento associado à sua sessão médica.",
+        ),
+        rx.cond(
+            DoctorQueueState.has_active,
+            clinical_history_panel(),
+            section_panel(
+                empty_state(
+                    "clipboard_list", "Nenhum prontuário em atendimento",
+                    "Chame o próximo paciente no pronto-socorro para acessar o registro associado.",
+                    rx.link("Ir ao pronto-socorro", href="/medico",
+                            class_name="vitta-context-link"),
+                )
+            ),
+        ),
+        active="prontuarios",
+        verified_path="/medico/prontuarios",
+    )
+
+
 def doctor_agenda_page() -> rx.Component:
     return protected_workspace(
         Role.MEDICO,
@@ -529,6 +737,8 @@ def doctor_agenda_page() -> rx.Component:
         ),
         feedback_region(DoctorWorkspaceState.error_message, "", "doctor-agenda-feedback"),
         rx.link("Abrir fila e atendimento clínico", href="/medico", class_name="vitta-context-link"),
+        doctor_week_calendar(),
+        rx.heading("Calendário do mês", size="5"),
         doctor_calendar(),
         doctor_consultation_list(),
         active="agenda-medica",

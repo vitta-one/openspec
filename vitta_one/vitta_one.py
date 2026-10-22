@@ -37,12 +37,20 @@ from vitta_one.ui.pages import (
     admin_clinical_preview_page,
     admin_finance_preview_page,
     admin_page,
+    admin_staff_types_page,
+    admin_staff_create_page,
+    admin_staff_detail_page,
+    admin_medical_staff_page,
+    admin_receptionist_staff_page,
+    admin_hours_page,
+    admin_clinic_settings_page,
     admin_specialties_page,
     admin_professionals_page,
     admin_patients_preview_page,
     admin_reception_preview_page,
     doctor_page,
     doctor_agenda_page,
+    doctor_records_page,
     doctor_patients_page,
     finance_page,
     forbidden_page,
@@ -55,6 +63,8 @@ from vitta_one.ui.pages import (
     reception_page,
     reception_agenda_page,
     reception_patients_page,
+    reception_patient_create_page,
+    reception_patient_detail_page,
     reception_queue_page,
     root_page,
 )
@@ -117,13 +127,50 @@ app.add_page(
     admin_page,
     route=Role.ADMINISTRADOR.dashboard_path,
     title="Painel administrativo | Vitta-One",
-    on_load=[
-        AuthState.load_protected,
-        AdminDirectoryState.load,
-        AdminStaffState.load,
-        AdminAvailabilityState.load,
-        AdminClinicConfigurationState.load,
-    ],
+    on_load=AuthState.load_protected,
+)
+app.add_page(
+    admin_staff_types_page,
+    route="/admin/funcionarios",
+    title="Funcionários | Vitta-One",
+    on_load=[AuthState.load_protected, AdminStaffState.load],
+)
+app.add_page(
+    admin_staff_create_page,
+    route="/admin/funcionarios/novo",
+    title="Novo funcionário | Vitta-One",
+    on_load=[AuthState.load_protected, AdminStaffState.load,
+             AdminDirectoryState.prepare_new_professional_page],
+)
+app.add_page(
+    admin_staff_detail_page,
+    route="/admin/funcionarios/[employee_id]",
+    title="Ficha do funcionário | Vitta-One",
+    on_load=[AuthState.load_protected, AdminStaffState.load_detail],
+)
+app.add_page(
+    admin_medical_staff_page,
+    route="/admin/funcionarios/medico",
+    title="Cadastrar médico | Vitta-One",
+    on_load=[AuthState.load_protected, AdminDirectoryState.prepare_new_professional_page],
+)
+app.add_page(
+    admin_receptionist_staff_page,
+    route="/admin/funcionarios/recepcionista",
+    title="Cadastrar recepcionista | Vitta-One",
+    on_load=[AuthState.load_protected, AdminStaffState.load],
+)
+app.add_page(
+    admin_hours_page,
+    route="/admin/horarios",
+    title="Horários de atendimento | Vitta-One",
+    on_load=[AuthState.load_protected, AdminAvailabilityState.load],
+)
+app.add_page(
+    admin_clinic_settings_page,
+    route="/admin/configuracoes",
+    title="Configurações da clínica | Vitta-One",
+    on_load=[AuthState.load_protected, AdminClinicConfigurationState.load],
 )
 app.add_page(
     admin_specialties_page,
@@ -178,13 +225,25 @@ app.add_page(
     reception_agenda_page,
     route="/recepcao/agenda",
     title="Agenda e check-in | Vitta-One",
-    on_load=[AuthState.load_protected, ReceptionAgendaState.load],
+    on_load=[AuthState.load_protected, ReceptionAgendaState.load, ReceptionDashboardState.load],
 )
 app.add_page(
     reception_patients_page,
     route="/recepcao/pacientes",
     title="Pacientes | Vitta-One",
+    on_load=[AuthState.load_protected, ReceptionQueueState.load_patient_list],
+)
+app.add_page(
+    reception_patient_create_page,
+    route="/recepcao/pacientes/novo",
+    title="Novo paciente | Vitta-One",
     on_load=[AuthState.load_protected, ReceptionQueueState.load],
+)
+app.add_page(
+    reception_patient_detail_page,
+    route="/recepcao/pacientes/[patient_id]",
+    title="Ficha do paciente | Vitta-One",
+    on_load=[AuthState.load_protected, ReceptionQueueState.load_patient_detail],
 )
 app.add_page(
     reception_queue_page,
@@ -196,13 +255,19 @@ app.add_page(
     doctor_page,
     route=Role.MEDICO.dashboard_path,
     title="Painel médico | Vitta-One",
-    on_load=[AuthState.load_protected, DoctorQueueState.load],
+    on_load=[AuthState.load_protected, DoctorQueueState.load, DoctorWorkspaceState.load],
 )
 app.add_page(
     doctor_agenda_page,
     route="/medico/agenda",
     title="Agenda médica | Vitta-One",
     on_load=[AuthState.load_protected, DoctorWorkspaceState.load],
+)
+app.add_page(
+    doctor_records_page,
+    route="/medico/prontuarios",
+    title="Prontuários | Vitta-One",
+    on_load=[AuthState.load_protected, DoctorQueueState.load],
 )
 app.add_page(
     doctor_patients_page,

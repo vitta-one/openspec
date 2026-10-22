@@ -7,6 +7,39 @@ from vitta_one.auth.state import AuthState
 from vitta_one.patient_queue.state import ReceptionQueueState
 
 
+class SidebarState(rx.State):
+    """Independent desktop collapse and mobile navigation visibility."""
+
+    desktop_open: bool = True
+    mobile_open: bool = False
+
+    @rx.event
+    def toggle_desktop(self):
+        self.desktop_open = not self.desktop_open
+
+    @rx.event
+    def toggle_mobile(self):
+        self.mobile_open = not self.mobile_open
+
+    @rx.event
+    def close_mobile(self):
+        self.mobile_open = False
+
+
+def breadcrumb(*items: tuple[str, str | None]) -> rx.Component:
+    """Show a real navigation hierarchy instead of isolated back links."""
+    parts = []
+    for index, (label, href) in enumerate(items):
+        if index:
+            parts.append(rx.icon("chevron_right", size=14, color="var(--vitta-text-subtle)"))
+        if href:
+            parts.append(rx.link(label, href=href, class_name="vitta-breadcrumb-link"))
+        else:
+            parts.append(rx.text(label, font_weight="750", color="var(--vitta-text)", size="2", aria_current="page"))
+    return rx.hstack(*parts, gap="2", flex_wrap="wrap", align="center", class_name="vitta-breadcrumb", role="navigation", aria_label="Trilha de navegação")
+
+
+
 _NAV_BY_ROLE = {
     Role.RECEPCIONISTA: (
         ("Recepção", "/recepcao", "layout_dashboard", "recepcao"),
@@ -18,6 +51,7 @@ _NAV_BY_ROLE = {
         ("Atendimento clínico", "/medico", "stethoscope", "atendimento"),
         ("Agenda", "/medico/agenda", "calendar_days", "agenda-medica"),
         ("Pacientes", "/medico/pacientes", "users", "pacientes-medico"),
+        ("Prontuários", "/medico/prontuarios", "file_text", "prontuarios"),
     ),
     Role.PACIENTE: (
         ("Minhas consultas", "/paciente", "calendar_days", "consultas-paciente"),
@@ -35,6 +69,8 @@ _ADMIN_PREVIEW_NAV = (
     ("Pacientes", "/admin/pacientes", "user", "pacientes"),
     ("Financeiro", "/admin/financeiro", "wallet", "financeiro"),
     ("Administração", "/admin", "settings", "administracao"),
+    ("Funcionários", "/admin/funcionarios", "users", "funcionarios"),
+    ("Horários", "/admin/horarios", "calendar_clock", "horarios"),
 )
 
 
@@ -271,6 +307,7 @@ def _nav_link(
             align="center",
         ),
         href=href,
+        on_click=SidebarState.close_mobile,
         class_name="vitta-nav-link",
         background=("var(--vitta-primary)" if active else "transparent"),
         color=("#ffffff" if active else "var(--vitta-text-muted)"),
@@ -297,6 +334,18 @@ def _admin_navigation(active: str) -> rx.Component:
             "/admin",
             "settings",
             active=active == "administracao",
+        ),
+        _nav_link(
+            "Funcionários",
+            "/admin/funcionarios",
+            "users",
+            active=active == "funcionarios",
+        ),
+        _nav_link(
+            "Horários",
+            "/admin/horarios",
+            "calendar_clock",
+            active=active == "horarios",
         ),
         spacing="1",
         align="stretch",
@@ -502,6 +551,12 @@ def _reception_topbar_search() -> rx.Component:
 def authenticated_topbar() -> rx.Component:
     """Render real shell controls and a receptionist-only persisted patient search."""
     return rx.el.header(
+        rx.button(rx.icon("menu", size=21), type="button", variant="ghost", color_scheme="gray",
+                  on_click=SidebarState.toggle_desktop, aria_label="Recolher ou expandir menu",
+                  aria_expanded=SidebarState.desktop_open, class_name="vitta-hamburger-desktop"),
+        rx.button(rx.icon("menu", size=21), type="button", variant="ghost", color_scheme="gray",
+                  on_click=SidebarState.toggle_mobile, aria_label="Abrir ou fechar navegação",
+                  aria_expanded=SidebarState.mobile_open, class_name="vitta-hamburger-mobile"),
         _reception_topbar_search(),
         rx.hstack(
             rx.icon("layout_dashboard", size=16, color="var(--vitta-primary)"),
@@ -693,6 +748,9 @@ def _product_shell(role: Role, active: str, *children: rx.Component) -> rx.Compo
     return rx.box(
         rx.script(src="/input-masks.js"),
         authenticated_sidebar(role, active),
+        rx.cond(SidebarState.mobile_open,
+                rx.box(class_name="vitta-sidebar-scrim", on_click=SidebarState.close_mobile,
+                       role="presentation"), rx.fragment()),
         rx.box(
             authenticated_topbar(),
             rx.el.main(
@@ -706,7 +764,9 @@ def _product_shell(role: Role, active: str, *children: rx.Component) -> rx.Compo
             ),
             class_name="vitta-main",
         ),
-        class_name="vitta-shell",
+        class_name=rx.cond(SidebarState.desktop_open,
+                           rx.cond(SidebarState.mobile_open, "vitta-shell is-sidebar-open is-mobile-nav-open", "vitta-shell is-sidebar-open"),
+                           rx.cond(SidebarState.mobile_open, "vitta-shell is-sidebar-closed is-mobile-nav-open", "vitta-shell is-sidebar-closed")),
     )
 
 

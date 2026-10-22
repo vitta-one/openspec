@@ -466,6 +466,11 @@ class ReceptionAgendaState(rx.State):
     selected_patient_id: int = 0
     selected_patient_name: str = ""
 
+    # Navigation from patient selection can activate booking exactly once;
+    # otherwise the Agenda opens with its existing consultations.
+    active_tab: str = "consultations"
+    focus_booking_on_next_load: bool = False
+
     arrival_dialog_open: bool = False
     arrival_consultation_id: int = 0
     arrival_patient_name: str = ""
@@ -526,6 +531,8 @@ class ReceptionAgendaState(rx.State):
         self.consultations = []
         self.selected_patient_id = 0
         self.selected_patient_name = ""
+        self.active_tab = "consultations"
+        self.focus_booking_on_next_load = False
         self._reset_arrival()
         self._reset_reschedule()
         self._reset_cancel()
@@ -633,7 +640,16 @@ class ReceptionAgendaState(rx.State):
             yield rx.redirect("/acesso-negado")
 
     @rx.event
+    def change_active_tab(self, value: str) -> None:
+        if value in {"consultations", "booking"}:
+            self.active_tab = value
+
+    @rx.event
     async def load(self):
+        self.active_tab = (
+            "booking" if self.focus_booking_on_next_load else "consultations"
+        )
+        self.focus_booking_on_next_load = False
         self.is_loading = True
         self._clear_feedback()
         yield

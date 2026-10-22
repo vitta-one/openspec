@@ -14,6 +14,10 @@ on:
       - "assets/styles.css"
   workflow_dispatch:
 
+concurrency:
+  group: chromium-qa-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -68,6 +72,13 @@ jobs:
         run: python -m scripts.qa_seed_prescriptions
       - name: Create synthetic accounts for full visual coverage
         run: python -m scripts.qa_seed_visual_accounts
+      - name: Refresh generated frontend lock on disposable CI runner
+        run: |
+          # The committed lock can become incompatible with an expanded route graph.
+          # Remove ONLY the generated copy in this temporary CI checkout.
+          rm -rf reflex.lock
+          mkdir -p qa-artifacts
+
       - name: Launch Reflex production server
         run: |
           set -euo pipefail
@@ -84,7 +95,7 @@ jobs:
       - name: Browser QA — security, keyboard and responsive
         run: python -m pytest qa_browser/prescription_browser.py -q
       - name: Capture all protected and public screens in Chromium
-        if: always()
+        if: success()
         run: python -m qa_browser.capture_all_screens
       - name: Upload synthetic visual QA evidence
         if: always()

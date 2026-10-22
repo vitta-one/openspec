@@ -1,6 +1,7 @@
 """Authorized application operations for the patient reception queue."""
 
-from sqlmodel import Session
+from sqlmodel import Session, select
+from sqlalchemy import func, or_
 
 from vitta_one.auth.authorization import require_role
 from vitta_one.auth.roles import Role
@@ -137,3 +138,33 @@ def doctor_finish(db: Session, *, token: str, entry_id: int) -> QueueEntry:
         entry_id=entry_id,
         doctor_user_id=identity.id,
     )
+
+
+
+def reception_list_patient_directory(
+    db: Session, *, token: str, search: str = "", page: int = 1, size: int = 10,
+) -> tuple[list[dict[str, str | int]], int]:
+    """Paginate patient identities after server-side receptionist authorization."""
+    require_role(db, token, Role.RECEPCIONISTA)
+    page = max(1, int(page))
+    size = max(1, min(int(size), 30))
+    term = str(search or "").strip()[:100]
+    statement = select(Patient)
+    if term:
+        normalized_digits = "".join(char for char in term if char.isdigit())
+        conditions = [Patient.name.ilike(f"%{term}%")]
+        if normalized_digits:
+            conditions.append(Patient.cpf.like(f"%{normalized_digits}%"))
+        statement = statement.where(or_(*conditions))
+    total = int(db.exec(select(func.count()).select_from(statement.subquery())).one())
+    patients = db.exec(
+        statement.order_by(Patient.name, Patient.id).offset((page - 1) * size).limit(size)
+    ).all()
+    return [
+        {
+            "id": patient.id, "name": patient.name,
+            "phone": patient.phone or "",
+            "href": f"/recepcao/pacientes/{patient.id}",
+        }
+        for patient in patients
+    ], total

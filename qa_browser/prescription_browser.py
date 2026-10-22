@@ -188,25 +188,24 @@ def login_as_admin(page: Page) -> None:
     page.locator("#login-password").fill(os.environ["VITTA_ONE_QA_PASSWORD"])
     page.get_by_role("button", name="Entrar").click()
     expect(page).to_have_url(re.compile(r"/admin/?$"), timeout=30000)
-    expect(page.get_by_role("heading", name="Especialidades", exact=True)).to_be_visible(timeout=30000)
+    expect(page.get_by_role("heading", name="Gestão da clínica")).to_be_visible(timeout=30000)
 
 
 def test_admin_dashboard_is_compact_and_routes_to_complete_directory(page: Page) -> None:
+    """Every administrative action is reachable without loading unrelated forms."""
     login_as_admin(page)
-    expect(page.get_by_role("link", name="Ver todas as especialidades")).to_be_visible()
-    expect(page.get_by_role("link", name="Ver todos os profissionais")).to_be_visible()
-    expect(page.get_by_text("Especialidade QA Extra 12", exact=True)).to_be_visible(timeout=15000)
-    # Verify the dashboard card itself rather than other areas referencing the specialty.
-    specialty_panel = page.get_by_role("heading", name="Especialidades", exact=True).locator("xpath=../../../..")
-    assert specialty_panel.locator('[role="listitem"]').count() == 3
-    link = page.get_by_role("link", name="Ver todas as especialidades")
+    expect(page.get_by_role("heading", name="Gestão da clínica")).to_be_visible()
+    expect(page.get_by_role("link", name=re.compile("^Criar funcionário"))).to_be_visible()
+    expect(page.get_by_role("link", name=re.compile("^Gerenciar horários"))).to_be_visible()
+    expect(page.locator("#admin-slot-date")).to_have_count(0)
+    expect(page.locator("#staff-password")).to_have_count(0)
+    link = page.get_by_role("link", name=re.compile("^Especialidades"))
     assert link.evaluate("(el) => getComputedStyle(el).cursor") == "pointer"
     link.focus()
     link.press("Enter")
     expect(page).to_have_url(re.compile(r"/admin/especialidades/?$"), timeout=30000)
-    page.get_by_role("button", name="Próxima").click()
-    expect(page.locator('[role="listitem"]').get_by_text("Medicina QA Navegador", exact=True).first).to_be_visible(timeout=15000)
     expect(page.get_by_role("heading", name="Todas as especialidades")).to_be_visible()
+
 
 
 def test_admin_specialty_search_and_professional_routes_at_mobile_width(page: Page) -> None:
@@ -225,13 +224,35 @@ def test_admin_specialty_search_and_professional_routes_at_mobile_width(page: Pa
         page.locator("#specialty-directory-search").fill("")
         page.get_by_role("link", name="Voltar ao painel").click()
         expect(page).to_have_url(re.compile(r"/admin/?$"), timeout=30000)
-        page.get_by_role("link", name="Ver todos os profissionais").click()
+        page.get_by_role("link", name=re.compile("^Gerenciar médicos")).click()
         expect(page).to_have_url(re.compile(r"/admin/profissionais/?$"), timeout=30000)
         expect(page.get_by_role("heading", name="Todos os profissionais")).to_be_visible(timeout=30000)
         assert page.evaluate(
             "document.documentElement.scrollWidth <= window.innerWidth + 2"
         ), overflowing_elements(page)
         page.screenshot(path=f"qa-artifacts/admin-diretorio-{width}px.png", full_page=True)
+
+
+def test_admin_staff_role_selection_is_accessible_and_guarded(page: Page) -> None:
+    """Searchable employee directory, then one conditional create form."""
+    login_as_admin(page)
+    page.get_by_role("link", name=re.compile("^Criar funcionário")).click()
+    expect(page).to_have_url(re.compile(r"/admin/funcionarios/?$"), timeout=30000)
+    expect(page.get_by_role("heading", name="Funcionários", exact=True)).to_be_visible()
+    expect(page.locator("#staff-password")).to_have_count(0)
+    page.get_by_role("link", name=re.compile("Novo funcionário")).click()
+    expect(page).to_have_url(re.compile(r"/admin/funcionarios/novo/?$"), timeout=30000)
+    choice = page.locator("#staff-create-role")
+    expect(choice).to_be_visible()
+    choice.click()
+    page.get_by_role("option", name="Recepcionista", exact=True).click()
+    expect(page.locator("#staff-email")).to_be_visible(timeout=30000)
+    expect(page.locator("#staff-password")).to_be_visible()
+    expect(page.locator("#professional-name")).to_have_count(0)
+    choice.click()
+    page.get_by_role("option", name="Médico", exact=True).click()
+    expect(page.locator("#professional-name")).to_be_visible(timeout=30000)
+    expect(page.locator("#staff-password")).to_have_count(0)
 
 
 def test_non_admin_cannot_open_admin_directory_subroutes(page: Page) -> None:
@@ -271,17 +292,21 @@ def test_admin_specialty_create_and_rename_keep_history(page: Page) -> None:
 def test_admin_registers_medical_professional_without_resend_and_prevents_duplicate(page: Page) -> None:
     """Real full-stack flow on a disposable database with no Resend API key."""
     login_as_admin(page)
-    page.get_by_role("button", name="Novo profissional").click()
-    dialog = page.get_by_role("dialog")
-    expect(dialog).to_be_visible(timeout=15000)
-    dialog.locator("#professional-name").fill("Dra. Onboarding QA")
-    dialog.locator("#professional-email").fill("onboarding-qa@example.invalid")
-    checkbox = dialog.get_by_role("checkbox", name="Especialidade QA Extra 2")
+    page.get_by_role("link", name=re.compile("^Criar funcionário")).click()
+    expect(page).to_have_url(re.compile(r"/admin/funcionarios/?$"), timeout=30000)
+    page.get_by_role("link", name=re.compile("Novo funcionário")).click()
+    expect(page).to_have_url(re.compile(r"/admin/funcionarios/novo/?$"), timeout=30000)
+    page.locator("#staff-create-role").click()
+    page.get_by_role("option", name="Médico", exact=True).click()
+    expect(page.get_by_role("heading", name="Dados profissionais")).to_be_visible(timeout=30000)
+    page.locator("#professional-name").fill("Dra. Onboarding QA")
+    page.locator("#professional-email").fill("onboarding-qa@example.invalid")
+    checkbox = page.get_by_role("checkbox", name="Especialidade QA Extra 2")
     checkbox.click()
     expect(checkbox).to_be_checked(timeout=15000)
-    dialog.get_by_role("button", name="Cadastrar profissional").click()
-    expect(dialog).to_have_count(0, timeout=30000)
-    expect(page.get_by_text("Resend não configurado; e-mail não enviado.", exact=False)).to_be_visible(timeout=15000)
+    page.get_by_role("button", name="Cadastrar médico").click()
+    expect(page).to_have_url(re.compile(r"/admin/funcionarios/[0-9]+/?$"), timeout=30000)
+    expect(page.get_by_role("heading", name="Ficha do funcionário")).to_be_visible()
 
     page.goto(BASE + "/admin/profissionais", wait_until="domcontentloaded")
     expect(page.get_by_role("heading", name="Todos os profissionais")).to_be_visible(timeout=30000)
@@ -289,16 +314,16 @@ def test_admin_registers_medical_professional_without_resend_and_prevents_duplic
     expect(row).to_be_visible(timeout=20000)
     expect(row.get_by_text("E-mail de acesso ainda não enviado.")).to_be_visible()
 
-    page.get_by_role("button", name="Novo profissional").click()
-    dialog = page.get_by_role("dialog")
-    dialog.locator("#professional-name").fill("Dra. Duplicada QA")
-    dialog.locator("#professional-email").fill("ONBOARDING-QA@example.invalid")
-    checkbox = dialog.get_by_role("checkbox", name="Especialidade QA Extra 2")
+    page.goto(BASE + "/admin/funcionarios/medico", wait_until="domcontentloaded")
+    expect(page.get_by_role("heading", name="Cadastrar médico")).to_be_visible(timeout=30000)
+    page.locator("#professional-name").fill("Dra. Duplicada QA")
+    page.locator("#professional-email").fill("ONBOARDING-QA@example.invalid")
+    checkbox = page.get_by_role("checkbox", name="Especialidade QA Extra 2")
     checkbox.click()
     expect(checkbox).to_be_checked(timeout=15000)
-    dialog.get_by_role("button", name="Cadastrar profissional").click()
-    expect(dialog).to_be_visible(timeout=15000)
-    expect(dialog.get_by_text("Este e-mail já está vinculado a um profissional.")).to_be_visible(timeout=15000)
+    page.get_by_role("button", name="Cadastrar médico").click()
+    expect(page.get_by_text("Este e-mail já pertence a outro tipo de conta.")).to_have_count(0)
+    expect(page.get_by_text("Não foi possível concluir o cadastro", exact=False)).to_be_visible(timeout=15000)
 
 
 def test_admin_specialty_pagination_has_real_second_page(page: Page) -> None:
@@ -320,10 +345,12 @@ def test_admin_specialty_pagination_has_real_second_page(page: Page) -> None:
 def test_admin_availability_controls_are_understandable_and_responsive(page: Page) -> None:
     """Verify the operational calendar surface at three viewport sizes."""
     login_as_admin(page)
+    page.goto(BASE + "/admin/horarios", wait_until="domcontentloaded")
     for width, height in ((320, 640), (375, 667), (768, 1024)):
         page.set_viewport_size({"width": width, "height": height})
         page.emulate_media(reduced_motion="reduce")
-        expect(page.get_by_role("heading", name="Horários de atendimento")).to_be_visible(timeout=30000)
+        expect(page.get_by_role("heading", name="Gerenciar horários")).to_be_visible(timeout=30000)
+        page.get_by_role("tab", name="Horário avulso").click()
         date = page.locator("#admin-slot-date")
         hour = page.locator("#admin-slot-time")
         expect(date).to_be_visible()
@@ -343,6 +370,7 @@ def test_admin_availability_controls_are_understandable_and_responsive(page: Pag
 def test_medical_registration_modal_mobile_form(page: Page) -> None:
     """Doctor onboarding fields remain understandable and operable on narrow screens."""
     login_as_admin(page)
+    page.goto(BASE + "/admin/profissionais", wait_until="domcontentloaded")
     for width, height in ((320, 640), (375, 667), (768, 1024)):
         page.set_viewport_size({"width": width, "height": height})
         page.get_by_role("button", name="Novo profissional").click()
@@ -459,7 +487,7 @@ def test_reception_routes_and_responsive_daily_table(page: Page) -> None:
 
     for path, heading in (
         ("/recepcao/agenda", "Agenda e check-in"),
-        ("/recepcao/pacientes", "Cadastro e localização"),
+        ("/recepcao/pacientes", "Lista de pacientes"),
         ("/recepcao/fila", "Fila de espera"),
     ):
         page.goto(BASE + path, wait_until="domcontentloaded")
@@ -487,7 +515,7 @@ def test_reception_global_patient_search_uses_identity_only(page: Page) -> None:
     )
     expect(result).to_be_visible(timeout=30000)
     result.click()
-    expect(page).to_have_url(re.compile(r"/recepcao/pacientes/?$"), timeout=30000)
+    expect(page).to_have_url(re.compile(r"/recepcao/pacientes/[0-9]+/?$"), timeout=30000)
     expect(page.get_by_text(FIXTURE["day_first_patient_name"], exact=True)).to_be_visible(
         timeout=30000
     )
@@ -694,10 +722,15 @@ def test_patient_books_own_appointment_and_both_staff_agendas_update(page: Page)
     expect(page.get_by_role("heading", name="3. Escolha o dia")).to_be_visible()
     expect(page.get_by_role("button", name=re.compile("Selecionar horário de"))).to_have_count(0)
     page.locator("#patient-booking-date").click()
-    page.get_by_role("option", name=re.compile(r"\d{2}/\d{2}/\d{4}")).first.click()
+    # The date select begins with one placeholder; choose the first real date.
+    # Avoid regular expressions in Radix option-name selectors on Playwright 1.56.
+    date_options = page.get_by_role("option")
+    expect(date_options.nth(1)).to_be_visible(timeout=30000)
+    date_options.nth(1).click()
     expect(page.get_by_role("heading", name="4. Escolha o horário")).to_be_visible()
     choose = page.get_by_role("button", name=re.compile("Selecionar horário de")).first
     expect(choose).to_be_visible(timeout=30000)
+    page.emulate_media(reduced_motion="reduce")
     for width in (1280, 375, 320):
         page.set_viewport_size({"width": width, "height": 850})
         assert page.evaluate(
@@ -705,6 +738,7 @@ def test_patient_books_own_appointment_and_both_staff_agendas_update(page: Page)
         ), overflowing_elements(page)
         if width <= 375:
             for label in ("Minhas consultas", "Agendar consulta"):
+                page.get_by_role("button", name="Abrir ou fechar navegação").click()
                 nav = page.get_by_role("navigation", name="Navegação principal")
                 item = nav.get_by_role("link", name=label)
                 expect(item).to_be_visible()
@@ -712,6 +746,7 @@ def test_patient_books_own_appointment_and_both_staff_agendas_update(page: Page)
                 assert bounds is not None
                 assert bounds["x"] >= -2 and bounds["x"] + bounds["width"] <= width + 2
                 assert item.evaluate("(el) => el.scrollWidth <= el.clientWidth + 2")
+                page.locator(".vitta-sidebar-scrim").click(position={"x": width - 15, "y": 120})
         page.screenshot(
             path=f"qa-artifacts/paciente-autogendamento-{width}px.png", full_page=True
         )
@@ -750,6 +785,10 @@ def test_patient_books_own_appointment_and_both_staff_agendas_update(page: Page)
             else:
                 login(role_page, email)
             role_page.goto(BASE + route, wait_until="domcontentloaded")
+            if route.startswith("/recepcao"):
+                expect(role_page.get_by_role("tab", name="Consultas do período")).to_have_attribute(
+                    "data-state", "active", timeout=30000
+                )
             expect(role_page.get_by_text(FIXTURE["booking_patient_name"], exact=True).first).to_be_visible(
                 timeout=30000
             )
@@ -760,25 +799,23 @@ def test_patient_books_own_appointment_and_both_staff_agendas_update(page: Page)
 
 
 def test_reception_registers_patient_then_opens_its_agenda(page: Page) -> None:
-    """The receptionist keeps the newly created patient selected across modules."""
+    """Standalone onboarding -> patient detail -> existing scheduling handoff."""
     login_as_reception(page)
-    page.goto(BASE + "/recepcao/pacientes", wait_until="domcontentloaded")
-    expect(page.get_by_role("heading", name="Cadastro e localização")).to_be_visible(
-        timeout=30000
-    )
+    page.goto(BASE + "/recepcao/pacientes/novo", wait_until="domcontentloaded")
+    expect(page.get_by_role("heading", name="Novo paciente")).to_be_visible(timeout=30000)
     page.locator("#patient-create-name").fill("Paciente QA Cadastro Novo")
     page.locator("#patient-create-cpf").fill("52998224725")
     page.locator("#patient-create-phone").fill("(11) 98888-1234")
     page.get_by_role("button", name="Cadastrar paciente").click()
-    expect(page.get_by_text("Paciente cadastrado e selecionado para a fila.")).to_be_visible(
-        timeout=30000
-    )
-    expect(
-        page.get_by_role("button", name="Agendar consulta para este paciente")
-    ).to_be_visible(timeout=30000)
+    expect(page).to_have_url(re.compile(r"/recepcao/pacientes/[0-9]+/?$"), timeout=30000)
+    expect(page.get_by_role("heading", name="Ficha do paciente")).to_be_visible(timeout=30000)
+    expect(page.get_by_role("button", name="Agendar consulta", exact=True)).to_be_visible()
     page.screenshot(path="qa-artifacts/recepcao-paciente-cadastrado.png", full_page=True)
-    page.get_by_role("button", name="Agendar consulta para este paciente").click()
+    page.get_by_role("button", name="Agendar consulta", exact=True).click()
     expect(page).to_have_url(re.compile(r"/recepcao/agenda/?$"), timeout=30000)
+    expect(page.get_by_role("tab", name="Agendar consulta")).to_have_attribute(
+        "data-state", "active", timeout=30000
+    )
     expect(page.get_by_text("Paciente QA Cadastro Novo", exact=True).first).to_be_visible(
         timeout=30000
     )
@@ -794,12 +831,10 @@ def test_staff_cannot_open_patient_self_booking(page: Page) -> None:
 
 
 def test_patient_identity_input_masks_and_client_validation(page: Page) -> None:
-    """Real DOM input: paste, CPF checksum, DDD mobile/landline and edit fields."""
+    """Validate CPF/phone input in new-page form and editing in detail modal."""
     login_as_reception(page)
-    page.goto(BASE + "/recepcao/pacientes", wait_until="domcontentloaded")
-    expect(page.get_by_role("heading", name="Cadastro e localização")).to_be_visible(
-        timeout=30000
-    )
+    page.goto(BASE + "/recepcao/pacientes/novo", wait_until="domcontentloaded")
+    expect(page.get_by_role("heading", name="Novo paciente")).to_be_visible(timeout=30000)
     page.wait_for_function("window.__vittaInputMasksInstalled === true", timeout=30000)
 
     cpf = page.locator("#patient-create-cpf")
@@ -825,31 +860,29 @@ def test_patient_identity_input_masks_and_client_validation(page: Page) -> None:
     phone.fill("")
     assert phone.evaluate("(el) => el.checkValidity()")
 
-    search = page.locator("#patient-search-cpf")
-    search.fill("53817624964")
-    expect(search).to_have_value("538.176.249-64")
-    page.get_by_role("button", name="Localizar paciente").click()
-    expect(page.get_by_text(FIXTURE["booking_patient_name"], exact=True).first).to_be_visible(
-        timeout=30000
-    )
-    edit_phone = page.locator("#patient-edit-phone")
+    # Search is no longer mixed with registration: use the directory page.
+    page.goto(BASE + "/recepcao/pacientes", wait_until="domcontentloaded")
+    expect(page.get_by_role("heading", name="Lista de pacientes")).to_be_visible(timeout=30000)
+    page.locator("#patient-directory-search").fill("53817624964")
+    page.get_by_role("button", name="Buscar", exact=True).click()
+    target = page.locator(".vitta-staff-row").filter(has_text=FIXTURE["booking_patient_name"]).first
+    expect(target).to_be_visible(timeout=30000)
+    target.click()
+    expect(page).to_have_url(re.compile(r"/recepcao/pacientes/[0-9]+/?$"), timeout=30000)
+    page.get_by_role("button", name="Editar cadastro e acesso").click()
+    editor = page.get_by_role("dialog")
+    expect(editor).to_be_visible(timeout=15000)
+    edit_phone = editor.locator("#patient-edit-phone")
     edit_phone.fill("11988881234")
     expect(edit_phone).to_have_value("(11) 98888-1234")
-    page.get_by_role("button", name="Salvar cadastro").click()
-    expect(page.get_by_text("Cadastro operacional atualizado.")).to_be_visible(
-        timeout=30000
-    )
-    # Reload from PostgreSQL, not just in-memory Reflex State.
+    editor.get_by_role("button", name="Salvar cadastro").click()
+    expect(edit_phone).to_have_value("(11) 98888-1234", timeout=30000)
     page.reload(wait_until="domcontentloaded")
-    expect(page.get_by_role("heading", name="Cadastro e localização")).to_be_visible(
-        timeout=30000
-    )
-    page.locator("#patient-search-cpf").fill("53817624964")
-    page.get_by_role("button", name="Localizar paciente").click()
-    expect(page.locator("#patient-edit-phone")).to_have_value(
+    expect(page.get_by_role("heading", name="Ficha do paciente")).to_be_visible(timeout=30000)
+    page.get_by_role("button", name="Editar cadastro e acesso").click()
+    expect(page.get_by_role("dialog").locator("#patient-edit-phone")).to_have_value(
         "(11) 98888-1234", timeout=30000
     )
-
     page.set_viewport_size({"width": 375, "height": 800})
     assert page.evaluate(
         "document.documentElement.scrollWidth <= window.innerWidth + 2"
@@ -879,6 +912,13 @@ def test_reception_agenda_cpf_mask_does_not_discard_selected_patient(page: Page)
     login_as_reception(page)
     page.goto(BASE + "/recepcao/agenda", wait_until="domcontentloaded")
     expect(page.get_by_role("heading", name="Agenda e check-in")).to_be_visible(timeout=30000)
+    expect(page.get_by_role("tab", name="Consultas do período")).to_have_attribute(
+        "data-state", "active", timeout=30000
+    )
+    page.get_by_role("tab", name="Agendar consulta").click()
+    expect(page.get_by_role("tab", name="Agendar consulta")).to_have_attribute(
+        "data-state", "active", timeout=30000
+    )
     page.wait_for_function("window.__vittaInputMasksInstalled === true", timeout=30000)
     search = page.locator("#agenda-patient-cpf")
     search.fill("53817624964")
@@ -898,13 +938,15 @@ def audit_role_routes(page: Page, prefix: str, routes: tuple[str, ...]) -> None:
         page.goto(BASE + route, wait_until="domcontentloaded")
         expect(page.locator(".vitta-shell")).to_be_visible(timeout=30000)
         expect(page.get_by_role("main")).to_be_visible(timeout=30000)
-        expect(page.get_by_role("navigation", name="Navegação principal")).to_be_visible()
+        expect(page.locator(".vitta-sidebar-nav")).to_have_count(1)
+        page.emulate_media(reduced_motion="reduce")
         for width in (1280, 375, 320):
             page.set_viewport_size({"width": width, "height": 780})
             assert page.evaluate(
                 "document.documentElement.scrollWidth <= window.innerWidth + 2"
             ), (route, width, overflowing_elements(page))
-            if width <= 375 and prefix in {"recepcao", "medico"}:
+            if width <= 375:
+                page.get_by_role("button", name="Abrir ou fechar navegação").click()
                 nav = page.get_by_role("navigation", name="Navegação principal")
                 for item in nav.get_by_role("link").all():
                     expect(item).to_be_visible()
@@ -913,6 +955,7 @@ def audit_role_routes(page: Page, prefix: str, routes: tuple[str, ...]) -> None:
                     assert rect["x"] >= -2 and rect["x"] + rect["width"] <= width + 2, (
                         route, width, item.inner_text(), rect
                     )
+                page.locator(".vitta-sidebar-scrim").click(position={"x": width - 15, "y": 120})
             page.screenshot(
                 path=f"qa-artifacts/audit-{prefix}-{slug}-{width}px.png",
                 full_page=True,
@@ -923,28 +966,34 @@ def test_final_visual_audit_reception_workspace_routes(page: Page) -> None:
     login_as_reception(page)
     audit_role_routes(
         page, "recepcao",
-        ("/recepcao", "/recepcao/agenda", "/recepcao/pacientes", "/recepcao/fila"),
+        ("/recepcao", "/recepcao/agenda", "/recepcao/pacientes",
+         "/recepcao/pacientes/novo", "/recepcao/fila"),
     )
 
 
 def test_final_visual_audit_doctor_workspace_routes(page: Page) -> None:
     login(page, FIXTURE["doctor_b_email"])
     audit_role_routes(
-        page, "medico", ("/medico", "/medico/agenda", "/medico/pacientes")
+        page, "medico", ("/medico", "/medico/agenda", "/medico/pacientes", "/medico/prontuarios")
     )
 
 
 def test_final_visual_audit_admin_workspace_routes(page: Page) -> None:
     login_as_admin(page)
     audit_role_routes(
-        page, "admin", ("/admin", "/admin/especialidades", "/admin/profissionais")
+        page, "admin", (
+            "/admin", "/admin/funcionarios", "/admin/funcionarios/novo", "/admin/funcionarios/medico",
+            "/admin/funcionarios/recepcionista", "/admin/horarios",
+            "/admin/configuracoes", "/admin/especialidades", "/admin/profissionais",
+        )
     )
 
 
 def test_admin_directory_and_modal_text_have_explicit_light_contrast(page: Page) -> None:
     """Catch unreadable white-on-white headings/labels on the real Chromium page."""
     login_as_admin(page)
-    title = page.get_by_role("heading", name="Profissionais e especialidades")
+    page.goto(BASE + "/admin/especialidades", wait_until="domcontentloaded")
+    title = page.get_by_role("heading", name="Todas as especialidades")
     expect(title).to_be_visible(timeout=30000)
     assert title.evaluate(
         "el => getComputedStyle(el).color"
@@ -966,6 +1015,7 @@ def test_admin_directory_and_modal_text_have_explicit_light_contrast(page: Page)
     ) == "rgb(15, 23, 42)"
     page.screenshot(path="qa-artifacts/admin-contrast-specialty.png", full_page=True)
     input_box.press("Escape")
+    page.goto(BASE + "/admin/profissionais", wait_until="domcontentloaded")
     page.get_by_role("button", name="Novo profissional").first.click()
     dialog = page.get_by_role("dialog")
     expect(dialog).to_be_visible(timeout=15000)

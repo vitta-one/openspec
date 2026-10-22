@@ -12,7 +12,7 @@
   --vitta-border: #e2e8f0;
   --vitta-border-strong: #cbd5e1;
   --vitta-border-hover: #cbd5e1;
-  --vitta-info: #0284c7;
+  --vitta-info: #0369a1;
   --vitta-info-soft: #f0f9ff;
   --vitta-warning: #92400e;
   --vitta-warning-soft: #fffbeb;
@@ -24,7 +24,7 @@
   --vitta-success-border: #a7f3d0;
   --vitta-focus: #0f766e;
   --vitta-focus-soft: rgba(15, 118, 110, 0.14);
-  --vitta-scroll-thumb: #94a3b8;
+  --vitta-scroll-thumb: #64748b;
   --vitta-scroll-track: #f1f5f9;
   --vitta-radius-control: 0.625rem;
   --vitta-radius-panel: 0.875rem;
@@ -120,7 +120,7 @@ a {
 
 .vitta-input::placeholder,
 .vitta-textarea::placeholder {
-  color: #94a3b8;
+  color: #475569;
 }
 
 .vitta-input:hover:not(:disabled),
@@ -1727,7 +1727,7 @@ button:disabled,
   --vitta-contrast-heading: #0f172a;
   --vitta-contrast-body: #334155;
   --vitta-contrast-secondary: #475569;
-  --vitta-contrast-border: #94a3b8;
+  --vitta-contrast-border: #64748b;
   --vitta-contrast-field: #ffffff;
   --vitta-contrast-disabled: #e2e8f0;
   --vitta-contrast-disabled-text: #475569;
@@ -1832,7 +1832,7 @@ button:disabled,
   background-color: #ffffff !important;
   color: #0f172a !important;
   -webkit-text-fill-color: #0f172a !important;
-  border: 1px solid #94a3b8 !important;
+  border: 1px solid #64748b !important;
   box-shadow: none !important;
   opacity: 1 !important;
   min-height: 2.75rem;
@@ -1902,7 +1902,7 @@ button:disabled,
   background: #ffffff !important;
   color: #0f172a !important;
   -webkit-text-fill-color: #0f172a !important;
-  border-color: #94a3b8 !important;
+  border-color: #64748b !important;
   opacity: 1 !important;
 }
 :is(.rt-DialogContent, .rt-AlertDialogContent, .vitta-dialog-content)
@@ -2021,4 +2021,323 @@ button:disabled,
     color: #0f172a !important;
     background: #ffffff !important;
   }
+}
+
+
+/* Shared administration navigation. Real links rather than cosmetic cards. */
+.vitta-admin-action {
+  display: block;
+  width: 100%;
+  padding: 0.95rem 1rem;
+  border-radius: var(--vitta-radius-control);
+  border: 1px solid transparent;
+  color: var(--vitta-text);
+  text-decoration: none;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+.vitta-admin-action + .vitta-admin-action {
+  border-top-color: var(--vitta-border);
+}
+.vitta-admin-action:hover {
+  background: var(--vitta-primary-soft);
+  border-color: var(--vitta-border-strong);
+}
+.vitta-admin-action:focus-visible {
+  outline: 3px solid var(--vitta-focus);
+  outline-offset: 2px;
+  background: var(--vitta-primary-soft);
+}
+.vitta-admin-action-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  color: #115e59;
+  background: var(--vitta-primary-soft);
+  border-radius: var(--vitta-radius-control);
+}
+
+/* Radix tabs own keyboard navigation; do not hide secondary workflows. */
+.vitta-task-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 100%;
+}
+.vitta-task-tabs .rt-TabsTrigger {
+  min-height: 2.75rem;
+  color: #334155;
+  font-weight: 650;
+  white-space: normal;
+}
+.vitta-task-tabs .rt-TabsTrigger[data-state="active"] {
+  color: #115e59;
+  font-weight: 750;
+}
+.vitta-task-tabs .rt-TabsTrigger:focus-visible {
+  outline: 3px solid var(--vitta-focus);
+  outline-offset: 2px;
+}
+
+/* Clear error, field and option treatments across all operational roles. */
+.vitta-shell :is(.vitta-input, .vitta-textarea, .rt-TextFieldInput, .rt-TextAreaInput),
+.vitta-login-form-pane .vitta-input {
+  border-color: var(--vitta-contrast-border);
+}
+.vitta-shell :is(.vitta-input, .vitta-textarea, .rt-TextFieldInput, .rt-TextAreaInput)[aria-invalid="true"],
+:is(.rt-DialogContent, .rt-AlertDialogContent) :is(input, textarea)[aria-invalid="true"] {
+  border-color: #be123c !important;
+  box-shadow: 0 0 0 2px #ffe4e6;
+}
+.rt-SelectContent [role="option"][data-state="checked"] {
+  color: #115e59 !important;
+  background-color: #e8f5f3 !important;
+}
+.vitta-shell .rt-Badge[data-accent-color="gray"],
+.rt-DialogContent .rt-Badge[data-accent-color="gray"] {
+  background: #e2e8f0 !important;
+  color: #334155 !important;
+}
+@media (max-width: 520px) {
+  .vitta-admin-action {
+    padding: 0.8rem 0.6rem;
+  }
+  .vitta-task-tabs .rt-TabsTrigger {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vitta-admin-action { transition: none; }
+}
+
+/* UX refinement — consistent spacing, readable controls and collapsible navigation. */
+.vitta-shell.is-sidebar-closed { grid-template-columns: 0 minmax(0, 1fr); }
+.vitta-shell.is-sidebar-closed .vitta-sidebar {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+}
+.vitta-hamburger-desktop, .vitta-hamburger-mobile {
+  flex: 0 0 auto;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  color: var(--vitta-text) !important;
+}
+.vitta-hamburger-mobile { display: none !important; }
+.vitta-sidebar-scrim { display: none; }
+.vitta-shell .vitta-nav-link:not([aria-current="page"]):is(:hover, :focus-visible) {
+  color: #0f172a !important;
+  background: #dcefeb !important;
+  outline-offset: 2px;
+}
+.vitta-shell .vitta-nav-link:not([aria-current="page"]):is(:hover, :focus-visible) :is(span, p, svg) {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+}
+.vitta-shell .vitta-nav-link[aria-current="page"]:is(:hover, :focus-visible) {
+  background: #115e59 !important;
+}
+.vitta-breadcrumb {
+  width: 100%;
+  min-height: 2.5rem;
+  padding-block: 0.3rem 0.7rem;
+  color: var(--vitta-text-muted);
+}
+.vitta-breadcrumb-link {
+  text-decoration: none;
+  color: #115e59 !important;
+  font-size: 0.875rem;
+  font-weight: 650;
+  border-radius: 0.3rem;
+}
+.vitta-breadcrumb-link:is(:hover, :focus-visible) {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  color: #0f172a !important;
+}
+.vitta-page > div:has(> .vitta-breadcrumb) {
+  margin-bottom: 0.25rem;
+}
+.vitta-shell .rt-SelectTrigger,
+.vitta-shell .vitta-select-trigger,
+.rt-DialogContent .rt-SelectTrigger,
+.vitta-dialog-content .vitta-select-trigger {
+  justify-content: flex-start !important;
+  text-align: left !important;
+  min-height: 2.85rem;
+  padding-inline: 0.85rem !important;
+  gap: 0.75rem !important;
+}
+.vitta-shell .rt-SelectTrigger .rt-SelectIcon,
+.rt-DialogContent .rt-SelectTrigger .rt-SelectIcon { margin-left: auto !important; }
+.vitta-shell .rt-SelectTrigger :is(span, .rt-SelectValue),
+.rt-DialogContent .rt-SelectTrigger :is(span, .rt-SelectValue) {
+  text-align: left !important;
+}
+.vitta-shell :is(.vitta-input, .rt-TextFieldInput, input:not([type=checkbox]):not([type=radio])),
+.rt-DialogContent :is(.vitta-input, .rt-TextFieldInput) {
+  min-height: 2.8rem;
+}
+.vitta-shell label:not(.rt-CheckboxLabel),
+.rt-DialogContent label:not(.rt-CheckboxLabel) {
+  display: inline-block;
+  margin-bottom: 0.3rem;
+  line-height: 1.5;
+}
+.vitta-shell fieldset { min-width: 0; }
+.vitta-specialty-choice {
+  border: 1px solid var(--vitta-border-strong);
+  border-radius: 0.8rem;
+  background: #fff;
+  min-height: 3.25rem;
+  padding: 0.9rem 1rem;
+  transition: border-color 130ms ease, background-color 130ms ease;
+}
+.vitta-specialty-choice:has([data-state="checked"]) {
+  background: #ecfdf5;
+  border-color: #0f766e;
+}
+.vitta-specialty-choice:hover { border-color: #0f766e; background: #f0fdfa; }
+.vitta-specialty-choice .rt-CheckboxRoot {
+  min-width: 1.3rem;
+  min-height: 1.3rem;
+  border: 1.5px solid #64748b !important;
+}
+.vitta-specialty-choice :is(label, span) { font-weight: 650; color: #0f172a; }
+.vitta-admin-action + .vitta-admin-action { border-top-color: transparent; }
+.vitta-admin-action { border: 1px solid var(--vitta-border); margin-bottom: 0.7rem; }
+.vitta-admin-action:hover { border-color: #0f766e; }
+.vitta-page :is(.rt-Button, button) { min-height: 2.5rem; }
+.vitta-page :is(.rt-Card, .vitta-reception-day-panel) { overflow-wrap: anywhere; }
+.vitta-patient-workspace-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.vitta-form-panel { display: flex; flex-direction: column; gap: 1.25rem; }
+.vitta-form-panel :is(.rt-Text, p) { line-height: 1.5; }
+.vitta-staff-directory { display: flex; flex-direction: column; gap: 0.75rem; }
+.vitta-staff-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--vitta-border);
+  border-radius: 0.8rem;
+  background: var(--vitta-surface);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1050px) {
+  .vitta-shell, .vitta-shell.is-sidebar-closed { grid-template-columns: minmax(0, 1fr); }
+  .vitta-shell .vitta-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(20rem, 84vw);
+    height: 100dvh;
+    z-index: 51;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 1rem;
+    transform: translateX(-105%);
+    opacity: 0;
+    visibility: hidden;
+    border: 0;
+    border-right: 1px solid var(--vitta-border);
+    pointer-events: none;
+    transition: transform 160ms ease, opacity 160ms ease;
+  }
+  .vitta-shell.is-mobile-nav-open .vitta-sidebar {
+    visibility: visible;
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .vitta-shell.is-mobile-nav-open .vitta-sidebar-brand,
+  .vitta-shell.is-mobile-nav-open .vitta-sidebar-session { display: block; }
+  .vitta-shell.is-mobile-nav-open .vitta-sidebar-nav { overflow: visible; flex-direction: column; }
+  .vitta-shell.is-mobile-nav-open .vitta-sidebar-nav > div { flex-direction: column; width: 100%; }
+  .vitta-shell.is-mobile-nav-open .vitta-nav-link { width: 100%; min-width: 0; }
+  .vitta-shell.is-mobile-nav-open .vitta-sidebar-scrim {
+    display: block;
+    position: fixed; inset: 0;
+    background: rgba(15,23,42,0.48);
+    z-index: 50;
+  }
+  .vitta-hamburger-desktop { display: none !important; }
+  .vitta-hamburger-mobile { display: inline-flex !important; }
+  .vitta-topbar { position: sticky; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vitta-shell .vitta-sidebar { transition: none !important; }
+}
+
+/* Operational dashboard and weekly agenda, aligned with the existing design system. */
+.vitta-overview-card {
+  display: block;
+  text-decoration: none;
+  background: #fff;
+  border: 1px solid var(--vitta-border);
+  border-radius: 0.95rem;
+  padding: 1.1rem 1.2rem;
+  min-height: 9rem;
+  box-shadow: var(--vitta-shadow-xs);
+  transition: border-color 130ms ease, box-shadow 130ms ease, transform 130ms ease;
+}
+.vitta-overview-card:is(:hover, :focus-visible) {
+  border-color: var(--vitta-primary);
+  box-shadow: var(--vitta-shadow-sm);
+  transform: translateY(-2px);
+}
+.vitta-overview-card:focus-visible {
+  outline: 3px solid var(--vitta-focus);
+  outline-offset: 3px;
+}
+.vitta-agenda-week-scroll {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 0.8rem;
+  scrollbar-color: #64748b #f1f5f9;
+}
+.vitta-agenda-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(9rem, 1fr));
+  min-width: 67rem;
+  align-items: stretch;
+  gap: 0.5rem;
+  padding-bottom: 0.6rem;
+}
+.vitta-agenda-day {
+  min-width: 0;
+  min-height: 17rem;
+  padding: 0.9rem;
+  border: 1px solid #dbe3ea;
+  border-radius: 0.75rem;
+  background: #f8fafc;
+}
+.vitta-agenda-event {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.7rem;
+  border-left: 3px solid #0f766e;
+  border-radius: 0.45rem;
+  background: #ffffff;
+  box-shadow: var(--vitta-shadow-xs);
+  overflow-wrap: anywhere;
+}
+.vitta-agenda-event:nth-child(3n + 2) { border-left-color: #0369a1; }
+.vitta-agenda-event:nth-child(3n + 3) { border-left-color: #92400e; }
+.vitta-patient-workspace-actions > a { margin-bottom: 0.25rem; }
+.vitta-dialog-content:has(.vitta-staff-row) { overflow-y: auto; }
+@media (max-width: 640px) {
+  .vitta-overview-card { min-height: 7.5rem; padding: 1rem; }
+  .vitta-staff-row { padding: 0.85rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vitta-overview-card { transition: none; transform: none !important; }
 }

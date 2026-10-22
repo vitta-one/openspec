@@ -15,7 +15,7 @@ colors:
   text-subtle: "#64748B"
   border: "#E2E8F0"
   border-strong: "#CBD5E1"
-  info: "#0284C7"
+  info: "#0369A1"
   info-soft: "#F0F9FF"
   warning: "#D97706"
   warning-soft: "#FFFBEB"
@@ -24,7 +24,7 @@ colors:
   success: "#059669"
   success-soft: "#ECFDF5"
   focus: "#0F766E"
-  scroll-thumb: "#94A3B8"
+  scroll-thumb: "#64748B"
   scroll-track: "#F1F5F9"
 typography:
   display:
@@ -90,7 +90,7 @@ A base é fria e discreta para reduzir fadiga. O canvas `#F7F8FC` separa a pági
 
 Semântica operacional:
 
-- **Informação / Agendada:** `#0284C7` sobre `#F0F9FF`.
+- **Informação / Agendada:** `#0369A1` sobre `#F0F9FF`.
 - **Chegada confirmada / Na fila:** teal primário `#0F766E` sobre `#E8F5F3`.
 - **Atenção / Em andamento:** `#D97706` sobre `#FFFBEB`.
 - **Sucesso / Concluída:** `#059669` sobre `#ECFDF5`.

@@ -1,6 +1,6 @@
 """State for the receptionist's daily appointments workspace."""
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import TypedDict
 
 import reflex as rx
@@ -14,7 +14,7 @@ from vitta_one.auth.authorization import (
     RoleForbiddenError,
 )
 from vitta_one.auth.state import AuthState
-from vitta_one.reception.dashboard.application import reception_day_operations
+from vitta_one.reception.dashboard.application import reception_day_operations, reception_overview
 
 
 _WEEKDAYS = (
@@ -77,10 +77,29 @@ def _clinic_day_label(value: str) -> str:
     return f"{weekday}, {day.day} de {_MONTHS[day.month - 1]}"
 
 
+class AgendaEntry(TypedDict):
+    id: int
+    time: str
+    patient_name: str
+    professional_name: str
+
+
+class AgendaDay(TypedDict):
+    day_label: str
+    date_label: str
+    entries: list[AgendaEntry]
+
+
 class ReceptionDashboardState(rx.State):
     """Daily operational state; all reads revalidate receptionist authorization."""
 
     appointments: list[ReceptionAppointmentRow] = []
+    overview_scheduled: int = 0
+    overview_waiting: int = 0
+    overview_attending: int = 0
+    overview_pending: int = 0
+    overview_completed: int = 0
+    calendar_week: list[AgendaDay] = []
     professional_options: list[ProfessionalOptionRow] = []
     professional_filter: str = "__all__"
     search_query: str = ""
@@ -142,6 +161,12 @@ class ReceptionDashboardState(rx.State):
 
     def _clear_data(self) -> None:
         self.appointments = []
+        self.calendar_week = []
+        self.overview_scheduled = 0
+        self.overview_waiting = 0
+        self.overview_attending = 0
+        self.overview_pending = 0
+        self.overview_completed = 0
         self.professional_options = []
         self.total_count = 0
         self.total_pages = 1
@@ -196,6 +221,33 @@ class ReceptionDashboardState(rx.State):
         self.last_updated = format_clinic_datetime(snapshot.as_of)
         self.has_loaded = True
 
+    def _apply_overview(self, overview):
+        """Build persisted real-time cards and a seven-day calendar."""
+        self.overview_scheduled = overview.scheduled_today
+        self.overview_waiting = overview.waiting
+        self.overview_attending = overview.attending
+        self.overview_pending = overview.arrivals_pending
+        self.overview_completed = overview.finished_today
+        start = date.fromisoformat(overview.clinic_date)
+        events_by_date: dict[str, list[AgendaEntry]] = {}
+        for appointment in overview.calendar_consultations:
+            local_dt = appointment.scheduled_at.astimezone(clinic_timezone())
+            key = local_dt.date().isoformat()
+            events_by_date.setdefault(key, []).append({
+                "id": appointment.id,
+                "time": local_dt.strftime("%H:%M"),
+                "patient_name": appointment.patient_name,
+                "professional_name": appointment.professional_name,
+            })
+        self.calendar_week = [
+            {
+                "day_label": _WEEKDAYS[(start + timedelta(days=i)).weekday()].capitalize(),
+                "date_label": (start + timedelta(days=i)).strftime("%d/%m"),
+                "entries": events_by_date.get((start + timedelta(days=i)).isoformat(), []),
+            }
+            for i in range(7)
+        ]
+
     async def _reload(self):
         self.is_loading = True
         self.error_message = ""
@@ -211,7 +263,9 @@ class ReceptionDashboardState(rx.State):
                     page=self.current_page,
                     page_size=7,
                 )
+                overview = reception_overview(db, token=token)
             self._apply_snapshot(snapshot)
+            self._apply_overview(overview)
         except (AuthenticationRequiredError, PasswordChangeRequiredError):
             self._clear_data()
             yield rx.redirect("/login")

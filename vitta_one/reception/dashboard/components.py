@@ -265,8 +265,10 @@ def _appointments_table() -> rx.Component:
                 ),
                 empty_state(
                     "calendar",
-                    "Nenhuma consulta encontrada",
-                    "Não há consultas para os filtros selecionados neste dia.",
+                    "Nenhuma consulta agendada hoje",
+                    "Sua operação está livre por enquanto. Cadastre um paciente ou crie a primeira consulta.",
+                    rx.link("Agendar primeira consulta", href="/recepcao/agenda",
+                            class_name="vitta-context-link"),
                     min_height="10rem",
                     padding="1.25rem",
                 ),
@@ -481,12 +483,116 @@ def _reception_day_toolbar() -> rx.Component:
     )
 
 
+def _reception_metric(label: str, value, description: str, icon_name: str, href: str) -> rx.Component:
+    return rx.link(
+        rx.vstack(
+            rx.flex(
+                rx.text(label, font_weight="700", color="var(--vitta-text-muted)", size="2"),
+                rx.icon(icon_name, size=19, color="var(--vitta-primary)"),
+                justify="between", align="center", gap="2", width="100%",
+            ),
+            rx.heading(value, size="7", color="var(--vitta-text)", class_name="vitta-tabular"),
+            rx.text(description, size="1", color="var(--vitta-text-muted)"),
+            spacing="2", align="stretch", width="100%",
+        ),
+        href=href,
+        class_name="vitta-overview-card",
+        aria_label=label,
+    )
+
+
+def reception_overview_cards() -> rx.Component:
+    """Real operational KPIs from the authorized receptionist overview service."""
+    return rx.grid(
+        _reception_metric("Consultas hoje", S.overview_scheduled,
+                          "Agendadas e confirmadas", "calendar_days", "/recepcao/agenda"),
+        _reception_metric("Na espera", S.overview_waiting,
+                          "Pacientes na fila", "users", "/recepcao/fila"),
+        _reception_metric("Em atendimento", S.overview_attending,
+                          "Atendimentos em curso", "stethoscope", "/recepcao/fila"),
+        _reception_metric("Chegadas pendentes", S.overview_pending,
+                          "Horários anteriores ainda sem check-in", "clock", "/recepcao/agenda"),
+        _reception_metric("Concluídos hoje", S.overview_completed,
+                          "Atendimentos finalizados", "check_circle", "/recepcao/fila"),
+        columns=rx.breakpoints(initial="1", sm="2", lg="3", xl="5"),
+        gap="3", width="100%",
+    )
+
+
+def _agenda_day_card(day) -> rx.Component:
+    return rx.box(
+        rx.vstack(
+            rx.text(day["day_label"], size="2", font_weight="700",
+                    color="var(--vitta-text-muted)"),
+            rx.heading(day["date_label"], size="5"),
+            rx.separator(),
+            rx.cond(day["entries"].length() > 0,
+                rx.vstack(
+                    rx.foreach(day["entries"], lambda item: rx.box(
+                        rx.text(item["time"], font_weight="800", color="#115e59",
+                                class_name="vitta-tabular", size="2"),
+                        rx.text(item["patient_name"], size="2", font_weight="650"),
+                        rx.text(item["professional_name"], size="1",
+                                color="var(--vitta-text-muted)"),
+                        class_name="vitta-agenda-event",
+                    )),
+                    spacing="2", align="stretch", width="100%",
+                ),
+                rx.text("Sem consultas", size="1", color="var(--vitta-text-muted)",
+                        padding_top="0.75rem"),
+            ),
+            spacing="3", align="stretch", width="100%",
+        ),
+        class_name="vitta-agenda-day",
+    )
+
+
+def reception_week_calendar() -> rx.Component:
+    """Seven-day read-only appointment calendar; scheduling/actions remain below."""
+    return section_panel(
+        rx.vstack(
+            rx.flex(
+                rx.vstack(
+                    rx.heading("Visão semanal", size="5"),
+                    rx.text("Próximos sete dias da clínica. Os horários vêm das consultas salvas.",
+                            size="2", color="var(--vitta-text-muted)"),
+                    spacing="2", align="start",
+                ),
+                rx.link(rx.icon("plus", size=17), "Agendar consulta",
+                        href="/recepcao/agenda", class_name="vitta-context-link"),
+                justify="between", align="center", flex_wrap="wrap", gap="3", width="100%",
+            ),
+            rx.box(
+                rx.grid(
+                    rx.foreach(S.calendar_week, _agenda_day_card),
+                    columns="7", gap="2",
+                    class_name="vitta-agenda-week-grid",
+                ),
+                class_name="vitta-agenda-week-scroll",
+                width="100%", overflow_x="auto",
+            ),
+            spacing="4", align="stretch", width="100%",
+        )
+    )
+
+
 def reception_dashboard() -> rx.Component:
     return rx.vstack(
         rx.box(
             _reception_day_header(),
             _reception_day_toolbar(),
             class_name="vitta-reception-day-top",
+        ),
+        reception_overview_cards(),
+        rx.flex(
+            rx.link(rx.icon("user_plus", size=17), "Novo paciente",
+                    href="/recepcao/pacientes/novo", class_name="vitta-context-link"),
+            rx.link(rx.icon("list_ordered", size=17), "Fila de espera",
+                    href="/recepcao/fila", class_name="vitta-context-link"),
+            rx.link(rx.icon("calendar_days", size=17), "Ver agenda semanal",
+                    href="/recepcao/agenda", class_name="vitta-context-link"),
+            flex_wrap="wrap", gap="3", width="100%",
+            class_name="vitta-patient-workspace-actions",
         ),
         rx.cond(
             S.error_message != "",

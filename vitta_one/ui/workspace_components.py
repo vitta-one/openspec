@@ -55,6 +55,56 @@ def _calendar_grid(cells, month_label, previous, next_) -> rx.Component:
     )
 
 
+def _doctor_week_day(day) -> rx.Component:
+    return rx.box(
+        rx.vstack(
+            rx.text(day["day_label"], size="2", font_weight="700",
+                    color="var(--vitta-text-muted)"),
+            rx.heading(day["date_label"], size="5"),
+            rx.separator(),
+            rx.cond(
+                day["entries"].length() > 0,
+                rx.vstack(
+                    rx.foreach(day["entries"], lambda event:
+                        rx.box(
+                            rx.text(event["time"], font_weight="750",
+                                    color="#115e59", size="2"),
+                            rx.text(event["patient_name"], font_weight="650", size="2"),
+                            rx.text(event["status"], color="var(--vitta-text-muted)",
+                                    size="1"),
+                            class_name="vitta-agenda-event",
+                        )
+                    ),
+                    spacing="2", width="100%", align="stretch",
+                ),
+                rx.text("Sem consultas", size="1",
+                        color="var(--vitta-text-muted)", padding_top="0.75rem"),
+            ),
+            spacing="3", width="100%", align="stretch",
+        ),
+        class_name="vitta-agenda-day",
+    )
+
+
+def doctor_week_calendar() -> rx.Component:
+    """Reuse the seven-lane calendar visual language from Reception."""
+    return section_panel(
+        rx.vstack(
+            rx.heading("Minha semana", size="5"),
+            rx.text("Próximos sete dias de consultas sob sua responsabilidade.",
+                    size="2", color="var(--vitta-text-muted)"),
+            rx.box(
+                rx.grid(
+                    rx.foreach(DoctorWorkspaceState.calendar_week, _doctor_week_day),
+                    columns="7", gap="2", class_name="vitta-agenda-week-grid",
+                ),
+                width="100%", overflow_x="auto", class_name="vitta-agenda-week-scroll",
+            ),
+            spacing="4", align="stretch", width="100%",
+        ),
+    )
+
+
 def doctor_calendar() -> rx.Component:
     return _calendar_grid(
         DoctorWorkspaceState.calendar_cells,
