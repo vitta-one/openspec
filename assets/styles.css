@@ -2275,3 +2275,69 @@ button:disabled,
 @media (prefers-reduced-motion: reduce) {
   .vitta-shell .vitta-sidebar { transition: none !important; }
 }
+
+/* Operational dashboard and weekly agenda, aligned with the existing design system. */
+.vitta-overview-card {
+  display: block;
+  text-decoration: none;
+  background: #fff;
+  border: 1px solid var(--vitta-border);
+  border-radius: 0.95rem;
+  padding: 1.1rem 1.2rem;
+  min-height: 9rem;
+  box-shadow: var(--vitta-shadow-xs);
+  transition: border-color 130ms ease, box-shadow 130ms ease, transform 130ms ease;
+}
+.vitta-overview-card:is(:hover, :focus-visible) {
+  border-color: var(--vitta-primary);
+  box-shadow: var(--vitta-shadow-sm);
+  transform: translateY(-2px);
+}
+.vitta-overview-card:focus-visible {
+  outline: 3px solid var(--vitta-focus);
+  outline-offset: 3px;
+}
+.vitta-agenda-week-scroll {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 0.8rem;
+  scrollbar-color: #64748b #f1f5f9;
+}
+.vitta-agenda-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(9rem, 1fr));
+  min-width: 67rem;
+  align-items: stretch;
+  gap: 0.5rem;
+  padding-bottom: 0.6rem;
+}
+.vitta-agenda-day {
+  min-width: 0;
+  min-height: 17rem;
+  padding: 0.9rem;
+  border: 1px solid #dbe3ea;
+  border-radius: 0.75rem;
+  background: #f8fafc;
+}
+.vitta-agenda-event {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.7rem;
+  border-left: 3px solid #0f766e;
+  border-radius: 0.45rem;
+  background: #ffffff;
+  box-shadow: var(--vitta-shadow-xs);
+  overflow-wrap: anywhere;
+}
+.vitta-agenda-event:nth-child(3n + 2) { border-left-color: #0369a1; }
+.vitta-agenda-event:nth-child(3n + 3) { border-left-color: #92400e; }
+.vitta-patient-workspace-actions > a { margin-bottom: 0.25rem; }
+.vitta-dialog-content:has(.vitta-staff-row) { overflow-y: auto; }
+@media (max-width: 640px) {
+  .vitta-overview-card { min-height: 7.5rem; padding: 1rem; }
+  .vitta-staff-row { padding: 0.85rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vitta-overview-card { transition: none; transform: none !important; }
+}
