@@ -507,7 +507,7 @@ def register_medical_professional(
     user = db.exec(select(User).where(User.email == normalized_email)).first()
     if user is not None:
         if local_qa_password is not None:
-            raise DirectoryConflictError("Não foi possível concluir o cadastro com os dados informados.")
+            raise DirectoryConflictError("A senha de uma conta existente não pode ser redefinida aqui.")
         if user.role != Role.MEDICO.value:
             raise DirectoryConflictError("Não foi possível concluir o cadastro com os dados informados.")
         if db.exec(select(Professional).where(Professional.user_id == user.id)).first():
