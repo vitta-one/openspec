@@ -84,6 +84,12 @@ senha escolhidos na hora (a senha **não aparece no terminal**):
 make admin
 ~~~
 
+Para criar **outros usuários de demonstração** diretamente no banco QA local,
+execute `make user`. O assistente pede perfil, e-mail e senha sem exibi-la.
+Para Médico ou Paciente, cadastre primeiro o profissional/paciente na aplicação
+e informe o ID para vincular a conta; o Paciente exige confirmação de consentimento.
+O comando não altera contas existentes e recusa bancos que não sejam o QA local.
+
 Depois, **sempre que for desenvolver/testar**, basta:
 
 ~~~bash
@@ -107,6 +113,7 @@ Atalhos adicionais:
 | --- | --- |
 | `make dev` | Inicia o banco e o Reflex em modo desenvolvimento |
 | `make admin` | Cria o primeiro administrador, preservando o existente |
+| `make user` | Cria uma nova conta de teste no banco QA local, com perfil e vínculo quando necessário |
 | `make db-only` | Inicia só o banco PostgreSQL |
 | `make db-status` | Exibe status do contêiner |
 | `make db-logs` | Acompanha logs do banco |
