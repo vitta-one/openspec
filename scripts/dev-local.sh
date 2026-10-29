@@ -7,8 +7,8 @@ cd "$ROOT_DIR"
 
 MODE="${1:-dev}"
 case "$MODE" in
-  dev|admin|db-only) ;;
-  *) echo "Uso: bash scripts/dev-local.sh [dev|admin|db-only]" >&2; exit 2 ;;
+  dev|admin|user|db-only) ;;
+  *) echo "Uso: bash scripts/dev-local.sh [dev|admin|user|db-only]" >&2; exit 2 ;;
 esac
 
 require() {
@@ -138,6 +138,14 @@ if [[ "$MODE" == "admin" ]]; then
   unset VITTA_ONE_BOOTSTRAP_ADMIN_EMAIL VITTA_ONE_BOOTSTRAP_ADMIN_PASSWORD
   echo "Acesse http://localhost:3000/login após 'make dev'."
   exit 0
+fi
+
+if [[ "$MODE" == "user" ]]; then
+  if [[ ! -t 0 || ! -t 1 ]]; then
+    echo "Abra um terminal interativo para criar uma conta QA local." >&2
+    exit 1
+  fi
+  exec "$VENV_PY" -m vitta_one.auth.local_user_cli
 fi
 
 echo "PostgreSQL pronto e migrations aplicadas."
