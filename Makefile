@@ -1,11 +1,14 @@
 # Desenvolvimento local: Reflex no host, apenas PostgreSQL em Docker.
-.PHONY: dev admin db-only db-stop db-logs db-status
+.PHONY: dev admin user db-only db-stop db-logs db-status
 
 dev:
 	@bash scripts/dev-local.sh dev
 
 admin:
 	@bash scripts/dev-local.sh admin
+
+user:
+	@bash scripts/dev-local.sh user
 
 db-only:
 	@bash scripts/dev-local.sh db-only
