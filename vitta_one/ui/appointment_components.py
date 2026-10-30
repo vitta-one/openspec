@@ -207,20 +207,123 @@ def _weekday_select(*, control_id: str, value, on_change) -> rx.Component:
     )
 
 
+def _admin_calendar_day(day) -> rx.Component:
+    """Calendar cell: only dates containing persisted slots are interactive."""
+    return rx.button(
+        rx.vstack(
+            rx.text(day["day"], font_weight="700", size="3"),
+            rx.cond(
+                day["has_slots"],
+                rx.text(day["slot_count"], " horários", size="1",
+                        class_name="vitta-calendar-day-count"),
+                rx.fragment(),
+            ),
+            spacing="1", align="center", justify="center",
+        ),
+        type="button",
+        class_name=rx.cond(
+            day["is_selected"],
+            "vitta-calendar-date is-selected",
+            rx.cond(
+                day["has_slots"],
+                "vitta-calendar-date has-slots",
+                "vitta-calendar-date is-unavailable",
+            ),
+        ),
+        disabled=~day["has_slots"],
+        on_click=AdminAvailabilityState.select_calendar_day(day["date_label"]),
+        aria_label=day["aria_label"],
+        aria_pressed=day["is_selected"],
+        width="100%",
+    )
+
+
+def admin_calendar_view() -> rx.Component:
+    """Compact month navigation and single-day drill-down, not a 500-row list."""
+    return rx.vstack(
+        rx.flex(
+            rx.box(
+                rx.heading("Disponibilidade dos médicos", size="4"),
+                rx.text("Selecione um dia destacado para consultar e gerenciar os horários.",
+                        color="var(--vitta-text-muted)", size="2", margin_top="0.35rem"),
+            ),
+            rx.box(
+                field_label("Profissional", "admin-calendar-professional"),
+                _professional_select(
+                    control_id="admin-calendar-professional",
+                    value=AdminAvailabilityState.filter_professional,
+                    on_change=AdminAvailabilityState.update_filter_professional,
+                    include_all=True,
+                    disabled=AdminAvailabilityState.is_loading,
+                ),
+                width=rx.breakpoints(initial="100%", md="min(22rem, 100%)"),
+            ),
+            direction=rx.breakpoints(initial="column", lg="row"),
+            justify="between", align="center", gap="4", width="100%",
+        ),
+        rx.box(
+            rx.flex(
+                rx.button(rx.icon("chevron_left", size=19), type="button", variant="ghost",
+                          on_click=AdminAvailabilityState.move_calendar_month(-1),
+                          aria_label="Mês anterior", disabled=AdminAvailabilityState.is_loading),
+                rx.heading(AdminAvailabilityState.calendar_month_title, size="4"),
+                rx.button(rx.icon("chevron_right", size=19), type="button", variant="ghost",
+                          on_click=AdminAvailabilityState.move_calendar_month(1),
+                          aria_label="Próximo mês", disabled=AdminAvailabilityState.is_loading),
+                align="center", justify="between", width="100%",
+                class_name="vitta-calendar-header",
+            ),
+            rx.grid(
+                *[rx.center(rx.text(name, size="2", font_weight="700"))
+                  for name in ("Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb")],
+                columns="7", gap="1", class_name="vitta-calendar-weekdays",
+            ),
+            rx.cond(
+                AdminAvailabilityState.is_loading,
+                rx.center(rx.spinner(size="3"), min_height="15rem", width="100%"),
+                rx.grid(
+                    rx.foreach(AdminAvailabilityState.calendar_days, _admin_calendar_day),
+                    columns="7", gap="1", class_name="vitta-calendar-grid",
+                ),
+            ),
+            class_name="vitta-availability-calendar",
+        ),
+        rx.cond(
+            AdminAvailabilityState.selected_calendar_day != "",
+            rx.vstack(
+                rx.flex(
+                    rx.heading(AdminAvailabilityState.selected_calendar_day, size="4"),
+                    rx.text(AdminAvailabilityState.selected_day_slots.length(), " horário(s) encontrado(s)",
+                            size="2", color="var(--vitta-text-muted)"),
+                    justify="between", align="center", gap="3", width="100%", flex_wrap="wrap",
+                ),
+                rx.vstack(
+                    rx.foreach(AdminAvailabilityState.selected_day_slots, _admin_slot_row),
+                    spacing="2", align="stretch", width="100%",
+                ),
+                class_name="vitta-calendar-day-details",
+                spacing="4", align="stretch", width="100%",
+            ),
+            rx.box(
+                rx.icon("calendar_days", size=24, color="var(--vitta-text-subtle)"),
+                rx.text("Escolha uma data com horários configurados.",
+                        color="var(--vitta-text-muted)", margin_top="0.6rem"),
+                class_name="vitta-calendar-empty",
+            ),
+        ),
+        spacing="5", align="stretch", width="100%",
+    )
+
+
 def admin_availability_panel() -> rx.Component:
     """Focused schedule management: each task has a separate accessible tab."""
     return section_panel(
         rx.vstack(
-            feedback_region(
-                AdminAvailabilityState.error_message,
-                AdminAvailabilityState.success_message,
-                "availability-feedback",
-            ),
             rx.tabs.root(
                 rx.tabs.list(
                     rx.tabs.trigger("Expediente semanal", value="weekly"),
                     rx.tabs.trigger("Horário avulso", value="single"),
-                    rx.tabs.trigger("Consultar horários", value="search"),
+                    rx.tabs.trigger("Calendário de horários", value="search"),
                     class_name="vitta-task-tabs",
                 ),
                 rx.tabs.content(
@@ -370,79 +473,7 @@ def admin_availability_panel() -> rx.Component:
                     padding_top="1.25rem",
                 ),
                 rx.tabs.content(
-                rx.box(
-                    rx.grid(
-                        rx.box(
-                            field_label("Filtrar profissional", "admin-filter-professional"),
-                            rx.box(
-                                _professional_select(
-                                    control_id="admin-filter-professional",
-                                    value=AdminAvailabilityState.filter_professional,
-                                    on_change=AdminAvailabilityState.update_filter_professional,
-                                    include_all=True,
-                                    disabled=AdminAvailabilityState.is_loading,
-                                ),
-                                margin_top="0.4rem",
-                            ),
-                        ),
-                        rx.box(
-                            field_label("Data inicial", "admin-filter-start"),
-                            rx.el.input(
-                                id="admin-filter-start",
-                                type="date",
-                                value=AdminAvailabilityState.filter_start_date,
-                                on_change=AdminAvailabilityState.update_filter_start_date,
-                                class_name="vitta-input",
-                                margin_top="0.4rem",
-                            ),
-                        ),
-                        rx.box(
-                            field_label("Data final", "admin-filter-end"),
-                            rx.el.input(
-                                id="admin-filter-end",
-                                type="date",
-                                value=AdminAvailabilityState.filter_end_date,
-                                on_change=AdminAvailabilityState.update_filter_end_date,
-                                class_name="vitta-input",
-                                margin_top="0.4rem",
-                            ),
-                        ),
-                        rx.button(
-                            "Aplicar filtros",
-                            type="button",
-                            variant="outline",
-                            color_scheme="teal",
-                            min_height="3rem",
-                            align_self="end",
-                            on_click=AdminAvailabilityState.refresh,
-                            disabled=AdminAvailabilityState.is_loading,
-                        ),
-                        columns=rx.breakpoints(initial="1", lg="minmax(14rem, 1fr) 10rem 10rem auto"),
-                        gap="0.65rem",
-                        align_items="end",
-                        width="100%",
-                    ),
-                    class_name="vitta-filter-strip",
-                ),
-                rx.cond(
-                    AdminAvailabilityState.is_loading,
-                    rx.center(rx.spinner(size="3"), min_height="8rem", width="100%", role="status", aria_live="polite"),
-                    rx.cond(
-                        AdminAvailabilityState.has_slots,
-                        rx.vstack(
-                            rx.foreach(AdminAvailabilityState.slots_by_day, _admin_slot_day),
-                            spacing="2",
-                            align="stretch",
-                            width="100%",
-                            role="list",
-                        ),
-                        empty_state(
-                            "calendar",
-                            "Nenhum horário neste período",
-                            "Adicione um horário futuro ou ajuste os filtros.",
-                        ),
-                    ),
-                ),
+                    admin_calendar_view(),
                     value="search",
                     padding_top="1.25rem",
                 ),
