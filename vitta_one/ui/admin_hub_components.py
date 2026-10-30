@@ -80,8 +80,9 @@ def _employee_row(employee) -> rx.Component:
             rx.hstack(
                 rx.box(rx.icon("user_round", size=19), class_name="vitta-admin-action-icon"),
                 rx.vstack(
-                    rx.text(employee["email"], font_weight="700", overflow_wrap="anywhere"),
-                    rx.text(employee["role_label"], color="var(--vitta-text-muted)", size="2"),
+                    rx.text(employee["name"], font_weight="700", overflow_wrap="anywhere"),
+                    rx.text(employee["email"], color="var(--vitta-text-muted)", size="2"),
+                    rx.text(employee["role_label"], color="var(--vitta-primary)", size="1"),
                     spacing="1", align="start",
                 ),
                 gap="3", align="center",
@@ -102,8 +103,16 @@ def admin_staff_type_workspace() -> rx.Component:
             "Equipe",
             "Funcionários",
             "Consulte os acessos cadastrados ou adicione um novo membro da clínica.",
-            rx.link(rx.icon("user_plus", size=17), "Novo funcionário",
-                    href="/admin/funcionarios/novo", class_name="vitta-primary-action"),
+            rx.link(
+                rx.hstack(
+                    rx.icon("user_plus", size=17, flex_shrink="0"),
+                    rx.text("Novo funcionário", font_weight="700"),
+                    spacing="2", align="center", justify="center",
+                ),
+                href="/admin/funcionarios/novo",
+                class_name="vitta-primary-action vitta-staff-create-action",
+                aria_label="Cadastrar novo funcionário",
+            ),
         ),
         section_panel(
             rx.vstack(
@@ -232,6 +241,8 @@ def admin_staff_detail_workspace() -> rx.Component:
                     gap="3", align="center",
                 ),
                 rx.separator(),
+                rx.text("Nome", color="var(--vitta-text-muted)", size="2"),
+                rx.text(AdminStaffState.employee_detail["name"], font_weight="700", size="4"),
                 rx.text("E-mail de acesso", color="var(--vitta-text-muted)", size="2"),
                 rx.text(AdminStaffState.employee_detail["email"], font_weight="700", size="4"),
                 rx.text("Perfil", color="var(--vitta-text-muted)", size="2"),
