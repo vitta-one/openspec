@@ -21,6 +21,7 @@ from vitta_one.appointment_scheduling.application import (
     reception_schedule_consultation,
 )
 from vitta_one.appointment_scheduling.domain import AvailabilitySlotStatus, ConsultationStatus
+from vitta_one.appointment_scheduling.ical_export import build_consultation_ics
 from vitta_one.appointment_scheduling.service import (
     SchedulingConflictError,
     SchedulingNotFoundError,
@@ -879,6 +880,31 @@ class ReceptionAgendaState(rx.State):
         self.selected_patient_id = 0
         self.selected_patient_name = ""
         self._clear_feedback()
+
+    @rx.event
+    async def download_appointment_calendar(self, consultation_id: int):
+        """Download an .ics file only after authorized re-read of the appointment."""
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                item = reception_get_consultation_by_id(
+                    db, token=token, consultation_id=consultation_id
+                )
+            calendar_data = build_consultation_ics(item)
+            yield rx.download(
+                data=calendar_data,
+                filename=f"vitta-one-consulta-{item.id}.ics",
+            )
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except (SchedulingNotFoundError, ValueError) as exc:
+            yield rx.toast.error(str(exc), position="top-right")
+        except Exception:
+            yield rx.toast.error(
+                "Não foi possível preparar o calendário da consulta.",
+                position="top-right",
+            )
 
     @rx.event
     async def schedule(self, slot_id: int):
