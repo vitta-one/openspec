@@ -548,6 +548,41 @@ def reception_patient_detail_page() -> rx.Component:
     )
 
 
+def reception_patient_edit_page() -> rx.Component:
+    return protected_workspace(
+        Role.RECEPCIONISTA,
+        patient_edit_workspace(),
+        active="pacientes",
+        verified_path="/recepcao/pacientes/[patient_id]/editar",
+    )
+
+
+def reception_queue_new_page() -> rx.Component:
+    return protected_workspace(
+        Role.RECEPCIONISTA,
+        breadcrumb(("Recepção", "/recepcao"), ("Fila de espera", "/recepcao/fila"),
+                   ("Adicionar à fila", None)),
+        page_header("Fila", "Adicionar à fila",
+                    "Selecione um paciente cadastrado e registre sua prioridade."),
+        rx.cond(
+            ReceptionQueueState.selected_patient_id > 0,
+            enqueue_panel(),
+            section_panel(
+                rx.vstack(
+                    rx.heading("Selecione um paciente", size="4"),
+                    rx.text("Localize ou cadastre um paciente antes de iniciar a entrada.",
+                            color="var(--vitta-text-muted)"),
+                    rx.link("Ir aos pacientes", href="/recepcao/pacientes",
+                            class_name="vitta-context-link"),
+                    spacing="3", align="stretch",
+                ),
+            ),
+        ),
+        active="fila",
+        verified_path="/recepcao/fila/nova",
+    )
+
+
 def reception_queue_page() -> rx.Component:
     """Independent queue board; registration lives exclusively under Patients."""
     return protected_workspace(
@@ -559,35 +594,13 @@ def reception_queue_page() -> rx.Component:
             "Acompanhe prioridades, reavaliações e entradas de pronto-socorro.",
         ),
         rx.flex(
-            rx.dialog.root(
-                rx.dialog.trigger(
-                    rx.button(rx.icon("plus", size=17), "Adicionar à fila",
-                              color_scheme="teal", high_contrast=True),
-                ),
-                rx.dialog.content(
-                    rx.dialog.title("Nova entrada no pronto-socorro"),
-                    rx.dialog.description(
-                        "Selecione um paciente da lista antes de registrar a prioridade.",
-                        margin_bottom="1rem",
-                    ),
-                    rx.cond(
-                        ReceptionQueueState.selected_patient_id > 0,
-                        enqueue_panel(),
-                        rx.vstack(
-                            rx.text("Nenhum paciente selecionado.",
-                                    color="var(--vitta-text-muted)"),
-                            rx.link("Localizar paciente", href="/recepcao/pacientes",
-                                    class_name="vitta-context-link"),
-                            spacing="3",
-                        ),
-                    ),
-                    rx.dialog.close(rx.button("Fechar", variant="outline",
-                                              color_scheme="gray", margin_top="1rem")),
-                    class_name="vitta-dialog-content", max_width="40rem",
-                ),
+            rx.link(
+                rx.hstack(rx.icon("plus", size=17), rx.text("Adicionar à fila"),
+                          spacing="2", align="center"),
+                href="/recepcao/fila/nova",
+                class_name="vitta-primary-action",
             ),
-            rx.link(rx.icon("users", size=17), "Pacientes",
-                    href="/recepcao/pacientes", class_name="vitta-context-link"),
+            rx.link("Pacientes", href="/recepcao/pacientes", class_name="vitta-context-link"),
             gap="3", align="center", flex_wrap="wrap", width="100%",
         ),
         active_queue_panel(),
