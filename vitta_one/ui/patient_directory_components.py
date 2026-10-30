@@ -238,7 +238,6 @@ def patient_edit_workspace() -> rx.Component:
     """Separate editable patient and portal configuration, never buried in a modal."""
     return rx.vstack(
         breadcrumb(("Recepção", "/recepcao"), ("Pacientes", "/recepcao/pacientes"),
-                   ("Ficha do paciente", "/recepcao/pacientes/" + S.selected_patient_id.to(str)),
                    ("Editar cadastro", None)),
         page_header("Pacientes", "Editar cadastro e acesso",
                     "Atualize a identificação e gerencie o portal com consentimento."),
