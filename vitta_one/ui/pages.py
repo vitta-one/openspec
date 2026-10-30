@@ -81,14 +81,7 @@ def login_page() -> rx.Component:
         rx.box(
             rx.box(
                 brand_logo(width="10rem"),
-                rx.hstack(
-                    rx.box(class_name="vitta-online-dot", aria_hidden="true"),
-                    rx.text("Ambiente interno", font_weight="750", font_size="0.74rem"),
-                    spacing="2",
-                    align="center",
-                    color="var(--vitta-primary)",
-                    margin_top="1.25rem",
-                ),
+
             ),
             rx.box(
                 rx.text(
@@ -115,16 +108,7 @@ def login_page() -> rx.Component:
                 rx.box(login_form(), margin_top="1.75rem"),
                 class_name="vitta-login-form-wrap",
             ),
-            rx.hstack(
-                rx.icon("shield_check", size=15),
-                rx.text(
-                    "Sessões e permissões são validadas no servidor.",
-                    font_size="0.74rem",
-                    color="var(--vitta-text-subtle)",
-                ),
-                spacing="2",
-                align="center",
-            ),
+
             class_name="vitta-login-form-pane",
         ),
         rx.box(
