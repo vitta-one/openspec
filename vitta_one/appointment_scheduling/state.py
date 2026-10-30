@@ -573,6 +573,8 @@ class ReceptionAgendaState(rx.State):
     # Navigation from patient selection can activate booking exactly once;
     # otherwise the Agenda opens with its existing consultations.
     active_tab: str = "consultations"
+    consultation_page: int = 1
+    consultation_page_size: int = 10
     focus_booking_on_next_load: bool = False
 
     arrival_dialog_open: bool = False
@@ -597,6 +599,21 @@ class ReceptionAgendaState(rx.State):
     is_submitting: bool = False
     error_message: str = ""
     success_message: str = ""
+
+    @rx.var
+    def consultation_total_pages(self) -> int:
+        return max(1, (len(self.consultations) + self.consultation_page_size - 1) // self.consultation_page_size)
+
+    @rx.var
+    def paged_consultations(self) -> list[ConsultationRow]:
+        start = (self.consultation_page - 1) * self.consultation_page_size
+        return self.consultations[start:start + self.consultation_page_size]
+
+    @rx.event
+    def move_consultation_page(self, delta: int) -> None:
+        self.consultation_page = max(1, min(
+            self.consultation_page + delta, self.consultation_total_pages
+        ))
 
     @rx.var
     def available_slots(self) -> list[SlotRow]:
@@ -774,14 +791,21 @@ class ReceptionAgendaState(rx.State):
     @rx.event
     def update_filter_professional(self, value: str) -> None:
         self.filter_professional = value
+        self.consultation_page = 1
 
     @rx.event
     def update_filter_start_date(self, value: str) -> None:
         self.filter_start_date = value
+        self.consultation_page = 1
 
     @rx.event
     def update_filter_end_date(self, value: str) -> None:
         self.filter_end_date = value
+        self.consultation_page = 1
+
+    @rx.event
+    def reset_consultation_page(self) -> None:
+        self.consultation_page = 1
 
     @rx.event
     async def refresh(self):
@@ -859,6 +883,8 @@ class ReceptionAgendaState(rx.State):
                 )
             self._load_with_token(token)
             self.success_message = "Consulta agendada."
+            yield rx.toast.success(self.success_message, position="top-right")
+            yield rx.redirect("/recepcao/agenda")
         except (
             SchedulingValidationError,
             SchedulingConflictError,
