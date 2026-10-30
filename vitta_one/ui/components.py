@@ -384,54 +384,18 @@ def authenticated_sidebar(role: Role, active: str) -> rx.Component:
             class_name="vitta-sidebar-nav",
         ),
         rx.box(
-            rx.vstack(
+            rx.button(
                 rx.hstack(
-                    rx.box(
-                        rx.icon("user", size=16),
-                        class_name="vitta-session-avatar",
-                    ),
-                    rx.box(
-                        rx.text(
-                            AuthState.role_label,
-                            font_size="0.78rem",
-                            font_weight="750",
-                            color="var(--vitta-text)",
-                        ),
-                        rx.text(
-                            AuthState.current_email,
-                            font_size="0.7rem",
-                            color="var(--vitta-text-subtle)",
-                            overflow="hidden",
-                            text_overflow="ellipsis",
-                            white_space="nowrap",
-                        ),
-                        min_width="0",
-                        flex="1",
-                    ),
-                    spacing="2",
-                    align="center",
-                    width="100%",
+                    rx.icon("log_out", size=16),
+                    rx.text("Sair"),
+                    spacing="2", align="center",
                 ),
-                rx.button(
-                    rx.hstack(
-                        rx.icon("log_out", size=16),
-                        rx.text("Sair"),
-                        spacing="2",
-                        align="center",
-                    ),
-                    type="button",
-                    variant="ghost",
-                    size="2",
-                    color_scheme="gray",
-                    width="100%",
-                    justify_content="flex-start",
-                    on_click=AuthState.logout,
-                ),
-                spacing="3",
-                align="stretch",
-                width="100%",
+                type="button", variant="ghost", color_scheme="gray",
+                width="100%", justify_content="flex-start",
+                on_click=AuthState.logout,
+                aria_label="Sair da conta",
             ),
-            class_name="vitta-sidebar-session",
+            class_name="vitta-sidebar-session vitta-sidebar-logout",
         ),
         class_name={
             Role.RECEPCIONISTA: "vitta-sidebar vitta-sidebar--reception",
