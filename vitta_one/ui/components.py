@@ -242,10 +242,12 @@ def login_form() -> rx.Component:
                 ),
                 width="100%",
             ),
-            rx.cond(
-                AuthState.login_error != "",
-                error_banner(AuthState.login_error, "login-error"),
-                rx.fragment(),
+            rx.box(
+                AuthState.login_error,
+                id="login-error",
+                role="status",
+                aria_live="polite",
+                class_name="vitta-sr-only",
             ),
             rx.button(
                 rx.hstack(
@@ -267,19 +269,6 @@ def login_form() -> rx.Component:
                 high_contrast=True,
                 disabled=AuthState.is_submitting,
                 class_name="vitta-primary-action",
-            ),
-            rx.hstack(
-                rx.icon("shield_check", size=15),
-                rx.text(
-                    "Acesso restrito à equipe autorizada.",
-                    font_size="0.78rem",
-                    line_height="1.45",
-                ),
-                spacing="2",
-                justify="center",
-                align="center",
-                color="var(--vitta-text-subtle)",
-                width="100%",
             ),
             spacing="4",
             width="100%",
@@ -549,49 +538,25 @@ def _reception_topbar_search() -> rx.Component:
 
 
 def authenticated_topbar() -> rx.Component:
-    """Render real shell controls and a receptionist-only persisted patient search."""
+    """Compact shell bar: navigation only, without duplicate identity or global search."""
     return rx.el.header(
-        rx.button(rx.icon("menu", size=21), type="button", variant="ghost", color_scheme="gray",
-                  on_click=SidebarState.toggle_desktop, aria_label="Recolher ou expandir menu",
-                  aria_expanded=SidebarState.desktop_open, class_name="vitta-hamburger-desktop"),
-        rx.button(rx.icon("menu", size=21), type="button", variant="ghost", color_scheme="gray",
-                  on_click=SidebarState.toggle_mobile, aria_label="Abrir ou fechar navegação",
-                  aria_expanded=SidebarState.mobile_open, class_name="vitta-hamburger-mobile"),
-        _reception_topbar_search(),
-        rx.hstack(
-            rx.icon("layout_dashboard", size=16, color="var(--vitta-primary)"),
-            rx.text(
-                rx.cond(
-                    AuthState.current_role == Role.RECEPCIONISTA.value,
-                    "Vitta-One · Recepção",
-                    "Sessão ativa",
-                ),
-                font_size="0.78rem",
-                font_weight="700",
-                color="var(--vitta-text-muted)",
-                white_space="nowrap",
-            ),
-            spacing="2",
-            align="center",
-            class_name="vitta-topbar-system-status",
+        rx.button(
+            rx.icon("menu", size=21),
+            type="button", variant="ghost", color_scheme="gray",
+            on_click=SidebarState.toggle_desktop,
+            aria_label="Recolher ou expandir menu",
+            aria_expanded=SidebarState.desktop_open,
+            class_name="vitta-hamburger-desktop",
         ),
-        rx.hstack(
-            rx.text(
-                AuthState.current_email,
-                font_size="0.78rem",
-                color="var(--vitta-text-subtle)",
-                display=rx.breakpoints(initial="none", sm="block"),
-            ),
-            rx.badge(
-                AuthState.role_label,
-                variant="soft",
-                color_scheme="teal",
-                high_contrast=True,
-            ),
-            spacing="3",
-            align="center",
-            class_name="vitta-topbar-account",
+        rx.button(
+            rx.icon("menu", size=21),
+            type="button", variant="ghost", color_scheme="gray",
+            on_click=SidebarState.toggle_mobile,
+            aria_label="Abrir ou fechar navegação",
+            aria_expanded=SidebarState.mobile_open,
+            class_name="vitta-hamburger-mobile",
         ),
+        rx.box(flex="1"),
         class_name="vitta-topbar",
     )
 
