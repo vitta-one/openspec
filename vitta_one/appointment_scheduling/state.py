@@ -863,6 +863,7 @@ class ReceptionAgendaState(rx.State):
                 self.selected_patient_id = patient.id
                 self.selected_patient_name = patient.name
                 self.success_message = "Paciente selecionado para agendamento."
+            yield rx.toast.success(self.success_message, position="top-right")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
@@ -907,11 +908,13 @@ class ReceptionAgendaState(rx.State):
             SchedulingNotFoundError,
         ) as exc:
             self.error_message = str(exc)
+            yield rx.toast.error(self.error_message, position="top-right")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
             self.error_message = "Não foi possível agendar a consulta agora."
+            yield rx.toast.error(self.error_message, position="top-right")
         finally:
             self.is_submitting = False
             yield
@@ -962,6 +965,7 @@ class ReceptionAgendaState(rx.State):
                 yield event
         except (SchedulingNotFoundError, SchedulingTransitionError) as exc:
             self.error_message = str(exc)
+            yield rx.toast.error(self.error_message, position="top-right")
         except Exception:
             self.error_message = "Não foi possível abrir a confirmação de chegada."
         finally:
@@ -1006,6 +1010,7 @@ class ReceptionAgendaState(rx.State):
             queue_state = await self.get_state(ReceptionQueueState)
             queue_state._load_queue_with_token(token)
             self.success_message = "Chegada confirmada e paciente incluído na fila."
+            yield rx.toast.success(self.success_message, position="top-right")
             async for event in self._refresh_daily_dashboard_if_loaded():
                 yield event
         except (
@@ -1014,11 +1019,13 @@ class ReceptionAgendaState(rx.State):
             CareLifecycleConflictError,
         ) as exc:
             self.error_message = str(exc)
+            yield rx.toast.error(self.error_message, position="top-right")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
             self.error_message = "Não foi possível confirmar a chegada agora."
+            yield rx.toast.error(self.error_message, position="top-right")
         finally:
             self.is_submitting = False
             yield
@@ -1072,6 +1079,7 @@ class ReceptionAgendaState(rx.State):
                 yield event
         except (SchedulingNotFoundError, SchedulingTransitionError) as exc:
             self.error_message = str(exc)
+            yield rx.toast.error(self.error_message, position="top-right")
         except Exception:
             self.error_message = "Não foi possível abrir o reagendamento agora."
         finally:
@@ -1109,6 +1117,7 @@ class ReceptionAgendaState(rx.State):
             self._reset_reschedule()
             self._load_with_token(token)
             self.success_message = "Consulta reagendada."
+            yield rx.toast.success(self.success_message, position="top-right")
             async for event in self._refresh_daily_dashboard_if_loaded():
                 yield event
         except (
@@ -1118,11 +1127,13 @@ class ReceptionAgendaState(rx.State):
             SchedulingTransitionError,
         ) as exc:
             self.error_message = str(exc)
+            yield rx.toast.error(self.error_message, position="top-right")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
             self.error_message = "Não foi possível reagendar a consulta agora."
+            yield rx.toast.error(self.error_message, position="top-right")
         finally:
             self.is_submitting = False
             yield
@@ -1172,6 +1183,7 @@ class ReceptionAgendaState(rx.State):
                 yield event
         except (SchedulingNotFoundError, SchedulingTransitionError) as exc:
             self.error_message = str(exc)
+            yield rx.toast.error(self.error_message, position="top-right")
         except Exception:
             self.error_message = "Não foi possível abrir o cancelamento agora."
         finally:
@@ -1212,11 +1224,13 @@ class ReceptionAgendaState(rx.State):
             SchedulingTransitionError,
         ) as exc:
             self.error_message = str(exc)
+            yield rx.toast.error(self.error_message, position="top-right")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
             self.error_message = "Não foi possível cancelar a consulta agora."
+            yield rx.toast.error(self.error_message, position="top-right")
         finally:
             self.is_submitting = False
             yield
