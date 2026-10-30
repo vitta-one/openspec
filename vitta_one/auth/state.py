@@ -206,10 +206,15 @@ class AuthState(rx.State):
         password = str(form_data.get("password", ""))
         normalized_email = normalize_email(email)
 
-        if not is_valid_email_identifier(normalized_email) or not password:
+        if not email.strip() or not password:
             self.login_error = _LOGIN_REQUIRED
             self.is_submitting = False
-            yield
+            yield rx.toast.error(self.login_error, position="top-right")
+            return
+        if not is_valid_email_identifier(normalized_email) or "." not in normalized_email.rsplit("@", 1)[1]:
+            self.login_error = "Informe um e-mail válido, como nome@dominio.com."
+            self.is_submitting = False
+            yield rx.toast.error(self.login_error, position="top-right")
             return
 
         try:
@@ -218,7 +223,7 @@ class AuthState(rx.State):
                 if user is None or user.id is None:
                     self.login_error = _INVALID_CREDENTIALS
                     self.is_submitting = False
-                    yield
+                    yield rx.toast.error(self.login_error, position="top-right")
                     return
 
                 if user.must_change_password and temporary_password_is_expired(user):
@@ -226,7 +231,7 @@ class AuthState(rx.State):
                         "Sua senha inicial expirou. Solicite novo acesso à administração."
                     )
                     self.is_submitting = False
-                    yield
+                    yield rx.toast.error(self.login_error, position="top-right")
                     return
                 requires_initial_change = user.must_change_password
                 role = Role(user.role)
@@ -240,7 +245,7 @@ class AuthState(rx.State):
         except Exception:
             self.login_error = _SYSTEM_LOGIN_ERROR
             self.is_submitting = False
-            yield
+            yield rx.toast.error(self.login_error, position="top-right")
             return
 
         await self._clear_sensitive_states()
