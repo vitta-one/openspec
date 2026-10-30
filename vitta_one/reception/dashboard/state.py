@@ -330,6 +330,14 @@ class ReceptionDashboardState(rx.State):
             yield event
 
     @rx.event
+    async def tick(self, _value: str):
+        """Refresh the overview periodically while the page is mounted."""
+        if self.is_loading:
+            return
+        async for event in self._reload():
+            yield event
+
+    @rx.event
     async def clear_filters(self):
         self.search_query = ""
         self.professional_filter = "__all__"
