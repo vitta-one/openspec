@@ -270,6 +270,22 @@ class ReceptionQueueState(rx.State):
     def has_queue(self) -> bool:
         return bool(self.queue_rows)
 
+    @rx.var
+    def queue_count(self) -> int:
+        return len(self.queue_rows)
+
+    @rx.var
+    def red_waiting_count(self) -> int:
+        return sum(row["priority"] == "VERMELHO" for row in self.queue_rows)
+
+    @rx.var
+    def yellow_waiting_count(self) -> int:
+        return sum(row["priority"] == "AMARELO" for row in self.queue_rows)
+
+    @rx.var
+    def green_waiting_count(self) -> int:
+        return sum(row["priority"] == "VERDE" for row in self.queue_rows)
+
     async def _token(self) -> str:
         auth = await self.get_state(AuthState)
         return auth.session_token
