@@ -43,6 +43,7 @@ _ROLE_BY_ROUTE = {
     "/admin/horarios": Role.ADMINISTRADOR,
     "/admin/configuracoes": Role.ADMINISTRADOR,
     "/recepcao/agenda": Role.RECEPCIONISTA,
+    "/recepcao/agenda/nova": Role.RECEPCIONISTA,
     "/recepcao/pacientes": Role.RECEPCIONISTA,
     "/recepcao/pacientes/novo": Role.RECEPCIONISTA,
     "/recepcao/pacientes/[patient_id]": Role.RECEPCIONISTA,
