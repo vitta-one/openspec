@@ -2563,3 +2563,59 @@ button:disabled,
   .vitta-shell, .vitta-shell .vitta-sidebar,
   .vitta-page .vitta-calendar-date { transition: none !important; }
 }
+
+/* Toast notifications must remain above Radix dialog/overlay layers. */
+[data-sonner-toaster] {
+  z-index: 10000 !important;
+}
+.vitta-sidebar-logout {
+  margin-top: auto;
+  background: transparent;
+  padding: .45rem;
+  border: 0;
+}
+.vitta-sidebar-logout .rt-Button {
+  min-height: 2.75rem;
+  padding: .6rem .85rem;
+}
+.vitta-patient-profile {
+  max-width: 56rem;
+}
+.vitta-patient-profile-mark {
+  width: 4.25rem;
+  height: 4.25rem;
+  display: grid;
+  place-items: center;
+  border-radius: 1rem;
+  background: var(--vitta-primary-soft);
+  flex: none;
+}
+.vitta-patient-profile-actions {
+  padding-block: .25rem;
+  gap: 1rem !important;
+}
+.vitta-queue-summary {
+  background: var(--vitta-surface);
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-panel);
+  min-height: 6rem;
+  padding: 1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: .5rem;
+}
+.vitta-queue-summary.is-urgent {
+  border-color: #fecdd3;
+  background: #fff1f2;
+}
+.vitta-queue-summary.is-attention {
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+.vitta-queue-patient-row {
+  padding: 1.25rem !important;
+  border-radius: var(--vitta-radius-panel) !important;
+  box-shadow: var(--vitta-shadow-xs);
+}
+.vitta-queue-patient-row > div { gap: 1rem; }
