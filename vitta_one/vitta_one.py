@@ -62,6 +62,7 @@ from vitta_one.ui.pages import (
     prescription_print_page,
     reception_page,
     reception_agenda_page,
+    reception_booking_page,
     reception_patients_page,
     reception_patient_create_page,
     reception_patient_detail_page,
@@ -226,6 +227,12 @@ app.add_page(
     route="/recepcao/agenda",
     title="Agenda e check-in | Vitta-One",
     on_load=[AuthState.load_protected, ReceptionAgendaState.load, ReceptionDashboardState.load],
+)
+app.add_page(
+    reception_booking_page,
+    route="/recepcao/agenda/nova",
+    title="Agendar consulta | Vitta-One",
+    on_load=[AuthState.load_protected, ReceptionAgendaState.load],
 )
 app.add_page(
     reception_patients_page,
