@@ -6,13 +6,14 @@ from typing import TypedDict
 class EmployeeRow(TypedDict):
     id: int
     email: str
+    name: str
     role: str
     role_label: str
     href: str
 
 
 _EMPTY_EMPLOYEE: EmployeeRow = {
-    "id": 0, "email": "", "role": "", "role_label": "", "href": "",
+    "id": 0, "email": "", "name": "", "role": "", "role_label": "", "href": "",
 }
 
 from vitta_one.auth.state import AuthState
@@ -132,6 +133,7 @@ class AdminStaffState(rx.State):
             with rx.session() as db:
                 created = create_receptionist(
                     db, token=token, email=str(form_data.get("email", "")),
+                    name=str(form_data.get("name", "")),
                     password=str(form_data.get("password", "")),
                 )
                 self.emails = list_receptionists(db, token=token)
