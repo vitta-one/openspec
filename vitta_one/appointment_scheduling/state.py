@@ -435,8 +435,24 @@ class AdminAvailabilityState(rx.State):
         self.slot_time_local = value
 
     @rx.event
-    def update_filter_professional(self, value: str) -> None:
+    @rx.event
+    async def update_filter_professional(self, value: str):
+        """The month calendar immediately reflects the chosen physician."""
         self.filter_professional = value
+        self.selected_calendar_day = ""
+        self.is_loading = True
+        yield
+        try:
+            token = await self._token()
+            self._load_with_token(token)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            yield rx.toast.error("Não foi possível filtrar a agenda.", position="top-right")
+        finally:
+            self.is_loading = False
+            yield
 
     @rx.event
     def update_filter_start_date(self, value: str) -> None:
