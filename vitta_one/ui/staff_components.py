@@ -7,7 +7,7 @@ from vitta_one.ui.components import section_panel, field_label
 def admin_staff_panel() -> rx.Component:
     return section_panel(
         rx.vstack(
-            rx.heading("Dados de acesso da Recepção", size="4"),
+            rx.heading("Dados do funcionário", size="4"),
             rx.text(
                 "Cadastre o e-mail institucional e defina uma senha inicial. "
                 "A conta será exibida na lista de funcionários.",
@@ -15,6 +15,16 @@ def admin_staff_panel() -> rx.Component:
             ),
             rx.el.form(
                 rx.vstack(
+                    rx.box(
+                        field_label("Nome completo", "staff-name"),
+                        rx.el.input(
+                            id="staff-name", name="name", type="text", required=True,
+                            min_length=2, max_length=160, auto_complete="name",
+                            class_name="vitta-input", margin_top="0.55rem",
+                            placeholder="Nome e sobrenome",
+                        ),
+                        width="100%",
+                    ),
                     rx.box(
                         field_label("E-mail do recepcionista", "staff-email"),
                         rx.el.input(id="staff-email", name="email", type="email",
