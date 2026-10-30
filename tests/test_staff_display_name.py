@@ -11,7 +11,7 @@ from vitta_one.auth.security import hash_password, verify_password
 from vitta_one.auth.service import create_session
 from vitta_one.auth.staff_service import create_receptionist, list_employee_directory
 from vitta_one.auth.authorization import RoleForbiddenError
-from vitta_one.models.auth import User
+from vitta_one.models.auth import User, AuthSession
 
 
 @pytest.fixture
@@ -21,7 +21,7 @@ def db():
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
-    SQLModel.metadata.create_all(engine, tables=[User.__table__])
+    SQLModel.metadata.create_all(engine, tables=[User.__table__, AuthSession.__table__])
     with Session(engine) as session:
         yield session
     engine.dispose()
