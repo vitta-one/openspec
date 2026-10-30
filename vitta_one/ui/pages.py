@@ -16,6 +16,7 @@ from vitta_one.patient_portal.state import PatientPortalState
 from vitta_one.ui.patient_booking_components import patient_booking_workspace
 from vitta_one.ui.patient_directory_components import (
     patient_directory_workspace, patient_create_workspace, patient_detail_workspace,
+    patient_edit_workspace,
 )
 from vitta_one.professional_directory.state import AdminDirectoryState
 from vitta_one.reception.dashboard.components import reception_dashboard, reception_week_calendar
