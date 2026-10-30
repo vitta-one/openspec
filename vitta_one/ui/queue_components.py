@@ -602,7 +602,7 @@ def reception_queue_row(row) -> rx.Component:
                     size="2",
                     line_height="1.55",
                     overflow_wrap="anywhere",
-                    margin_top="0.2rem",
+                    margin_top="0.45rem",
                 ),
                 width="100%",
             ),
@@ -646,6 +646,11 @@ def reception_queue_row(row) -> rx.Component:
         border_radius="var(--vitta-radius-control)",
         background="var(--vitta-surface)",
         role="listitem",
+        class_name="vitta-queue-patient-row",
+        border_left=rx.cond(
+            row["priority"] == "VERMELHO", "4px solid #be123c",
+            rx.cond(row["priority"] == "AMARELO", "4px solid #b45309", "4px solid #0f766e"),
+        ),
     )
 
 def reassess_panel() -> rx.Component:
@@ -824,7 +829,7 @@ def active_queue_panel() -> rx.Component:
                 rx.box(
                     rx.heading("Fila ativa", size="5"),
                     rx.text(
-                        "Ordenação aplicada no servidor: Vermelho, Amarelo e Verde; em cada prioridade, entra primeiro quem chegou antes.",
+                        "Prioridades definidas na triagem. Dentro de cada prioridade, quem chegou primeiro é atendido primeiro.",
                         color="var(--vitta-text-muted)",
                         size="2",
                         line_height="1.55",
@@ -847,6 +852,30 @@ def active_queue_panel() -> rx.Component:
                 align=rx.breakpoints(initial="stretch", sm="center"),
                 gap="1rem",
                 width="100%",
+            ),
+            rx.grid(
+                rx.box(
+                    rx.text("Aguardando", size="2", color="var(--vitta-text-muted)"),
+                    rx.heading(ReceptionQueueState.queue_count, size="6"),
+                    class_name="vitta-queue-summary",
+                ),
+                rx.box(
+                    rx.text("Urgentes", size="2", color="var(--vitta-text-muted)"),
+                    rx.heading(ReceptionQueueState.red_waiting_count, size="6"),
+                    class_name="vitta-queue-summary is-urgent",
+                ),
+                rx.box(
+                    rx.text("Atenção", size="2", color="var(--vitta-text-muted)"),
+                    rx.heading(ReceptionQueueState.yellow_waiting_count, size="6"),
+                    class_name="vitta-queue-summary is-attention",
+                ),
+                rx.box(
+                    rx.text("Baixa prioridade", size="2", color="var(--vitta-text-muted)"),
+                    rx.heading(ReceptionQueueState.green_waiting_count, size="6"),
+                    class_name="vitta-queue-summary",
+                ),
+                columns=rx.breakpoints(initial="2", md="4"),
+                gap="4", width="100%",
             ),
             rx.cond(
                 ReceptionQueueState.is_loading_queue,
