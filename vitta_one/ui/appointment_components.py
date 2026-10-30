@@ -847,32 +847,23 @@ def reception_agenda_dialogs() -> rx.Component:
 
 
 def reception_agenda_panel() -> rx.Component:
-    """Reception agenda kept intentionally simple: filters, patient, slots and history."""
+    """Paginated consultation results. Booking lives on its dedicated route."""
     return section_panel(
         rx.vstack(
             rx.flex(
-                rx.box(
-                    rx.text("AGENDA", class_name="vitta-section-kicker"),
-                    rx.heading("Agendamentos", size="5", margin_top="0.25rem"),
-                    rx.text(
-                        "Localize o paciente, escolha um horário disponível e acompanhe as consultas do período.",
-                        size="2",
-                        color="var(--vitta-text-muted)",
-                        line_height="1.55",
-                        margin_top="0.35rem",
-                    ),
+                rx.vstack(
+                    rx.heading("Consultas agendadas", size="5"),
+                    rx.text("Consulte e gerencie os agendamentos do período.",
+                            color="var(--vitta-text-muted)", size="2"),
+                    spacing="2", align="start",
                 ),
-                rx.fragment(),
-                direction=rx.breakpoints(initial="column", md="row"),
-                justify="between",
-                align=rx.breakpoints(initial="stretch", md="start"),
-                gap="0.75rem",
-                width="100%",
-            ),
-            feedback_region(
-                ReceptionAgendaState.error_message,
-                ReceptionAgendaState.success_message,
-                "agenda-feedback",
+                rx.link(
+                    rx.hstack(rx.icon("calendar_plus", size=17),
+                              rx.text("Nova consulta"), spacing="2", align="center"),
+                    href="/recepcao/agenda/nova",
+                    class_name="vitta-primary-action",
+                ),
+                justify="between", align="center", gap="4", flex_wrap="wrap", width="100%",
             ),
             rx.grid(
                 rx.box(
@@ -926,45 +917,101 @@ def reception_agenda_panel() -> rx.Component:
                 width="100%",
                 class_name="vitta-filter-strip",
             ),
-            rx.tabs.root(
-                rx.tabs.list(
-                    rx.tabs.trigger("Consultas do período", value="consultations"),
-                    rx.tabs.trigger("Agendar consulta", value="booking"),
-                    class_name="vitta-task-tabs",
-                ),
-                rx.tabs.content(
-                    rx.cond(
-                        ReceptionAgendaState.is_loading,
-                        rx.center(rx.spinner(size="3"), min_height="10rem", width="100%",
-                                  role="status", aria_live="polite"),
-                        rx.vstack(
-                            rx.box(
-                                rx.heading("Consultas do período", size="4"),
-                                rx.cond(
-                                    ReceptionAgendaState.has_consultations,
-                                    rx.vstack(
-                                        rx.foreach(ReceptionAgendaState.consultations, _consultation_row),
-                                        spacing="2",
-                                        align="stretch",
-                                        width="100%",
-                                        role="list",
-                                        margin_top="0.8rem",
-                                    ),
-                                    empty_state(
-                                        "calendar_days",
-                                        "Nenhuma consulta neste período",
-                                        "Consultas agendadas e canceladas aparecerão aqui sem dados fictícios.",
-                                    ),
-                                ),
-                                min_width="0",
-                            ),
-                            spacing="3", align="stretch", width="100%",
-                        ),
+            rx.cond(
+                ReceptionAgendaState.is_loading,
+                rx.center(rx.spinner(size="3"), min_height="10rem", width="100%"),
+                rx.cond(
+                    ReceptionAgendaState.has_consultations,
+                    rx.vstack(
+                        rx.foreach(ReceptionAgendaState.paged_consultations, _consultation_row),
+                        spacing="3", align="stretch", width="100%",
                     ),
-                    value="consultations",
-                    padding_top="1.25rem",
+                    empty_state(
+                        "calendar_days", "Nenhuma consulta neste período",
+                        "Ajuste os filtros ou cadastre uma nova consulta.",
+                    ),
                 ),
-                rx.tabs.content(
+            ),
+            rx.flex(
+                rx.text("Página ", ReceptionAgendaState.consultation_page,
+                        " de ", ReceptionAgendaState.consultation_total_pages,
+                        color="var(--vitta-text-muted)", size="2"),
+                rx.hstack(
+                    rx.button("Anterior", variant="outline", color_scheme="teal",
+                              on_click=ReceptionAgendaState.move_consultation_page(-1),
+                              disabled=ReceptionAgendaState.consultation_page <= 1),
+                    rx.button("Próxima", variant="outline", color_scheme="teal",
+                              on_click=ReceptionAgendaState.move_consultation_page(1),
+                              disabled=ReceptionAgendaState.consultation_page >= ReceptionAgendaState.consultation_total_pages),
+                    spacing="3",
+                ),
+                justify="between", align="center", gap="3", flex_wrap="wrap", width="100%",
+            ),
+            reception_agenda_dialogs(),
+            spacing="5", align="stretch", width="100%",
+        ),
+    )
+
+
+def reception_booking_panel() -> rx.Component:
+    """One task per screen: patient lookup, doctor/date filtering and slot booking."""
+    return section_panel(
+        rx.vstack(
+            rx.heading("Dados do agendamento", size="4"),
+            rx.text("Selecione um paciente e um horário realmente disponível.",
+                    color="var(--vitta-text-muted)", size="2"),
+            rx.grid(
+                rx.box(
+                    field_label("Profissional", "reception-filter-professional"),
+                    rx.box(
+                        _professional_select(
+                            control_id="reception-filter-professional",
+                            value=ReceptionAgendaState.filter_professional,
+                            on_change=ReceptionAgendaState.update_filter_professional,
+                            include_all=True,
+                            disabled=ReceptionAgendaState.is_loading,
+                        ),
+                        margin_top="0.4rem",
+                    ),
+                ),
+                rx.box(
+                    field_label("Data inicial", "reception-filter-start"),
+                    rx.el.input(
+                        id="reception-filter-start",
+                        type="date",
+                        value=ReceptionAgendaState.filter_start_date,
+                        on_change=ReceptionAgendaState.update_filter_start_date,
+                        class_name="vitta-input",
+                        margin_top="0.4rem",
+                    ),
+                ),
+                rx.box(
+                    field_label("Data final", "reception-filter-end"),
+                    rx.el.input(
+                        id="reception-filter-end",
+                        type="date",
+                        value=ReceptionAgendaState.filter_end_date,
+                        on_change=ReceptionAgendaState.update_filter_end_date,
+                        class_name="vitta-input",
+                        margin_top="0.4rem",
+                    ),
+                ),
+                rx.button(
+                    "Aplicar filtros",
+                    type="button",
+                    variant="outline",
+                    color_scheme="teal",
+                    min_height="3rem",
+                    align_self="end",
+                    on_click=ReceptionAgendaState.refresh,
+                    disabled=ReceptionAgendaState.is_loading,
+                ),
+                columns=rx.breakpoints(initial="1", lg="minmax(14rem, 1fr) 10rem 10rem auto"),
+                gap="0.65rem",
+                align_items="end",
+                width="100%",
+                class_name="vitta-filter-strip",
+            ),
                     rx.el.form(
                         rx.flex(
                             rx.box(
@@ -1066,16 +1113,7 @@ def reception_agenda_panel() -> rx.Component:
                             spacing="3", align="stretch", width="100%",
                         ),
                     ),
-                    value="booking",
-                    padding_top="1.25rem",
-                ),
-                value=ReceptionAgendaState.active_tab,
-                on_change=ReceptionAgendaState.change_active_tab,
-                width="100%",
-            ),
-            reception_agenda_dialogs(),
-            spacing="4",
-            align="stretch",
-            width="100%",
-        )
+
+            spacing="5", align="stretch", width="100%",
+        ),
     )
