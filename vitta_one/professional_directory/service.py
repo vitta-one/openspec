@@ -518,6 +518,7 @@ def register_medical_professional(
             temporary_password = secrets.token_urlsafe(32)
         user = User(
             email=normalized_email,
+            display_name=display_name,
             role=Role.MEDICO.value,
             password_hash=hash_password(local_qa_password or temporary_password),
             must_change_password=local_qa_password is None,
