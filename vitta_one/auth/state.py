@@ -47,6 +47,8 @@ _ROLE_BY_ROUTE = {
     "/recepcao/pacientes": Role.RECEPCIONISTA,
     "/recepcao/pacientes/novo": Role.RECEPCIONISTA,
     "/recepcao/pacientes/[patient_id]": Role.RECEPCIONISTA,
+    "/recepcao/pacientes/[patient_id]/editar": Role.RECEPCIONISTA,
+    "/recepcao/fila/nova": Role.RECEPCIONISTA,
     "/recepcao/fila": Role.RECEPCIONISTA,
     "/medico/agenda": Role.MEDICO,
     "/medico/prontuarios": Role.MEDICO,
