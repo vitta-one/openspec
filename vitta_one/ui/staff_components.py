@@ -79,7 +79,6 @@ def _password_field(*, qa: bool) -> rx.Component:
                 min_length=12, max_length=128, auto_complete="new-password",
                 class_name="vitta-input vitta-password-input",
                 placeholder="Digite a senha inicial",
-                on_change=AdminStaffState.mark_password_touched,
                 aria_invalid=AdminStaffState.password_error != "",
                 aria_describedby=rx.cond(
                     AdminStaffState.password_error != "",
@@ -175,8 +174,8 @@ def _profile_change_dialog() -> rx.Component:
         rx.dialog.content(
             rx.dialog.title("Alterar perfil do funcionário?"),
             rx.dialog.description(
-                "Os dados comuns serão mantidos. A senha digitada ou as especialidades "
-                "selecionadas no perfil anterior serão descartadas.",
+                "Nome e e-mail serão preservados. As credenciais digitadas e as "
+                "especialidades selecionadas no perfil anterior serão descartadas.",
             ),
             rx.flex(
                 rx.button(
