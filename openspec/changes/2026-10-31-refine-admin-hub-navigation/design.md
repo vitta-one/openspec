@@ -18,3 +18,5 @@ O submenu real e o hub convergem para URLs existentes; páginas de profissionais
 - Verificar que o modo QA não é habilitado fora de ambiente autorizado, além da flag atual.
 - Testar em 320, 390, 768, 1024 e 1440px e verificar rotas, RBAC e contrastes.
 - Não declarar os testes de browser concluídos sem evidência.
+
+O recurso móvel recebe aprimoramento progressivo sem dependência externa: script local aplica foco inicial ao botão de fechar, contém Tab no drawer aberto, aciona o fechamento via botão Reflex em Escape e devolve foco ao hamburger quando disponível.

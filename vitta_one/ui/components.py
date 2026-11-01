@@ -707,6 +707,7 @@ def empty_state(
 def _product_shell(role: Role, active: str, *children: rx.Component) -> rx.Component:
     return rx.box(
         rx.script(src="/input-masks.js"),
+        rx.script(src="/sidebar-accessibility.js"),
         authenticated_sidebar(role, active),
         rx.cond(SidebarState.mobile_open,
                 rx.box(class_name="vitta-sidebar-scrim", on_click=SidebarState.close_mobile,

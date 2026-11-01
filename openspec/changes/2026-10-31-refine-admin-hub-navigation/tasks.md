@@ -7,7 +7,8 @@
 ## Validação
 - [ ] Executar OpenSpec strict.
 - [ ] Executar Pytest e `reflex compile --dry` em ambiente com Python 3.12 e dependências.
-- [ ] Homologar navegação por teclado, Escape e gerenciamento de foco do menu móvel.
+- [x] Implementar suporte a Escape, contenção do Tab e restauração de foco no drawer móvel.
+- [ ] Homologar no Chromium a navegação por teclado, Escape e o gerenciamento de foco do menu móvel.
 - [ ] Testar visualmente viewports 320, 390, 768, 1024 e 1440px e ausência de overflow.
 - [ ] Validar ambiente de habilitação QA além da flag explícita.
 - [ ] Revisar a PR e arquivar esta change somente após todos os gates.
