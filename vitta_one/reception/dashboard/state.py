@@ -1,7 +1,7 @@
 """State for the receptionist's daily appointments workspace."""
 
 from datetime import date, datetime, timedelta
-from typing import TypedDict
+from typing import Any, TypedDict
 
 import reflex as rx
 
@@ -291,7 +291,7 @@ class ReceptionDashboardState(rx.State):
         self.search_query = str(value or "")[:100]
 
     @rx.event
-    async def apply_search(self, form_data: dict[str, str]):
+    async def apply_search(self, form_data: dict[str, Any]):
         self.search_query = str(form_data.get("query", self.search_query) or "")[:100]
         self.current_page = 1
         async for event in self._reload():
