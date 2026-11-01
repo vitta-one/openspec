@@ -2223,14 +2223,48 @@ button:disabled,
 }
 .vitta-form-panel { display: flex; flex-direction: column; gap: 1.25rem; }
 .vitta-form-panel :is(.rt-Text, p) { line-height: 1.5; }
-.vitta-staff-directory { display: flex; flex-direction: column; gap: 0.75rem; }
-.vitta-staff-row {
-  display: flex; justify-content: space-between; align-items: center; gap: 1rem;
-  padding: 1rem 1.1rem;
-  border: 1px solid var(--vitta-border);
-  border-radius: 0.8rem;
-  background: var(--vitta-surface);
+/* The employee directory is tabular on desktop and linear on small screens. */
+.vitta-staff-table { width: 100%; table-layout: fixed; }
+.vitta-staff-table :is(.rt-TableColumnHeaderCell, .rt-TableCell, .rt-TableRowHeaderCell) {
+  padding-block: 0.85rem;
+  padding-inline: 0.75rem;
+  vertical-align: middle;
   overflow-wrap: anywhere;
+}
+.vitta-staff-table :is(.rt-TableColumnHeaderCell, .rt-TableCell, .rt-TableRowHeaderCell):first-child {
+  padding-left: 0.35rem;
+}
+.vitta-staff-table :is(.rt-TableColumnHeaderCell, .rt-TableCell):last-child {
+  text-align: right;
+}
+.vitta-staff-table .vitta-staff-table-row:hover { background: var(--vitta-surface-subtle); }
+.vitta-staff-toolbar { padding-bottom: 0.4rem; }
+.vitta-staff-details-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  border-radius: var(--vitta-radius-control);
+  white-space: nowrap;
+  font-weight: 650;
+}
+.vitta-staff-details-link:focus-visible {
+  outline: 3px solid var(--vitta-focus);
+  outline-offset: 2px;
+}
+.vitta-staff-mobile { display: none; }
+.vitta-staff-mobile-row {
+  border-bottom: 1px solid var(--vitta-border);
+  padding: 0.85rem 0;
+  min-width: 0;
+}
+.vitta-staff-mobile-row:last-child { border-bottom: 0; }
+@media (max-width: 700px) {
+  .vitta-staff-table { display: none; }
+  .vitta-staff-mobile { display: flex; }
+  .vitta-staff-create-action { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vitta-staff-details-link { transition: none; }
 }
 @media (max-width: 1050px) {
   .vitta-shell, .vitta-shell.is-sidebar-closed { grid-template-columns: minmax(0, 1fr); }
@@ -2333,10 +2367,8 @@ button:disabled,
 .vitta-agenda-event:nth-child(3n + 2) { border-left-color: #0369a1; }
 .vitta-agenda-event:nth-child(3n + 3) { border-left-color: #92400e; }
 .vitta-patient-workspace-actions > a { margin-bottom: 0.25rem; }
-.vitta-dialog-content:has(.vitta-staff-row) { overflow-y: auto; }
 @media (max-width: 640px) {
   .vitta-overview-card { min-height: 7.5rem; padding: 1rem; }
-  .vitta-staff-row { padding: 0.85rem; }
 }
 @media (prefers-reduced-motion: reduce) {
   .vitta-overview-card { transition: none; transform: none !important; }
