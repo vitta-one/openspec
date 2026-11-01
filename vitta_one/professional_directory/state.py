@@ -2,6 +2,7 @@
 
 from typing import Any, TypedDict
 import asyncio
+import unicodedata
 
 import reflex as rx
 from vitta_one.auth.local_qa import (
@@ -106,6 +107,26 @@ def _professional_row(item) -> ProfessionalRow:
     }
 
 
+def _specialty_search_key(value: str) -> str:
+    """Case/accent insensitive search without changing the domain uniqueness key."""
+    return "".join(
+        char for char in unicodedata.normalize("NFKD", value.casefold())
+        if not unicodedata.combining(char)
+    )
+
+
+def filter_specialty_rows(
+    rows: list[SpecialtyRow], search: str, status: str
+) -> list[SpecialtyRow]:
+    """Combine search and status against records actually loaded from the server."""
+    term = _specialty_search_key(search.strip())
+    return [
+        item for item in rows
+        if (not term or term in _specialty_search_key(item["name"]))
+        and (status == "all" or item["is_active"] == (status == "active"))
+    ]
+
+
 class AdminDirectoryState(rx.State):
     """Administrator-only operational state for professionals and specialties."""
 
@@ -132,6 +153,10 @@ class AdminDirectoryState(rx.State):
     qa_local_enabled: bool = False
 
     specialty_dialog_open: bool = False
+    specialty_status_dialog_open: bool = False
+    pending_specialty_id: int = 0
+    pending_specialty_name: str = ""
+    pending_specialty_is_active: bool = False
     professional_dialog_open: bool = False
     reissue_dialog_open: bool = False
     reissue_professional_id: int = 0
@@ -164,15 +189,17 @@ class AdminDirectoryState(rx.State):
 
     @rx.var
     def filtered_specialties(self) -> list[SpecialtyRow]:
-        term = self.specialty_search.strip().casefold()
-        return [
-            item for item in self.specialties
-            if (not term or term in item["name"].casefold())
-            and (
-                self.specialty_status == "all"
-                or item["is_active"] == (self.specialty_status == "active")
-            )
-        ]
+        return filter_specialty_rows(
+            self.specialties, self.specialty_search, self.specialty_status
+        )
+
+    @rx.var
+    def has_active_specialty_filters(self) -> bool:
+        return bool(self.specialty_search.strip()) or self.specialty_status != "all"
+
+    @rx.var
+    def specialty_result_count(self) -> int:
+        return len(self.filtered_specialties)
 
     @rx.var
     def professional_specialty_filter_options(self) -> list[DirectorySpecialtyFilterRow]:
@@ -258,6 +285,7 @@ class AdminDirectoryState(rx.State):
         self.medical_accounts = []
         self.specialty_options = []
         self.specialty_dialog_open = False
+        self._reset_specialty_status_change()
         self.professional_dialog_open = False
         self.reissue_dialog_open = False
         self.reissue_professional_id = 0
@@ -268,6 +296,12 @@ class AdminDirectoryState(rx.State):
     def _reset_specialty_edit(self) -> None:
         self.editing_specialty_id = 0
         self.editing_specialty_name = ""
+
+    def _reset_specialty_status_change(self) -> None:
+        self.specialty_status_dialog_open = False
+        self.pending_specialty_id = 0
+        self.pending_specialty_name = ""
+        self.pending_specialty_is_active = False
 
     def _reset_professional_form(self) -> None:
         self.editing_professional_id = 0
@@ -361,6 +395,12 @@ class AdminDirectoryState(rx.State):
         if value in {"all", "active", "inactive"}:
             self.specialty_status = value
             self.specialty_page = 1
+
+    @rx.event
+    def clear_specialty_filters(self) -> None:
+        self.specialty_search = ""
+        self.specialty_status = "all"
+        self.specialty_page = 1
 
     @rx.event
     def move_specialty_page(self, delta: int) -> None:
@@ -509,6 +549,8 @@ class AdminDirectoryState(rx.State):
 
     @rx.event
     async def create_specialty(self, _form_data: dict[str, Any]):
+        if self.is_submitting:
+            return
         self.is_submitting = True
         self._clear_feedback()
         yield
@@ -523,6 +565,7 @@ class AdminDirectoryState(rx.State):
             self.new_specialty_name = ""
             self.specialty_dialog_open = False
             self._load_with_token(token)
+            self.specialty_page = 1
             self.success_message = "Especialidade cadastrada."
         except (DirectoryValidationError, DirectoryConflictError) as exc:
             self.error_message = str(exc)
@@ -536,10 +579,19 @@ class AdminDirectoryState(rx.State):
             yield
 
     @rx.event
-    def begin_specialty_edit(self, specialty_id: int, name: str) -> None:
+    def begin_specialty_edit(self, specialty_id: int) -> None:
+        if self.is_submitting:
+            return
+        row = next(
+            (item for item in self.specialties + self.recent_specialties
+             if item["id"] == specialty_id),
+            None,
+        )
+        if row is None:
+            return
         self._clear_feedback()
-        self.editing_specialty_id = specialty_id
-        self.editing_specialty_name = name
+        self.editing_specialty_id = row["id"]
+        self.editing_specialty_name = row["name"]
         self.specialty_dialog_open = True
 
     @rx.event
@@ -548,11 +600,15 @@ class AdminDirectoryState(rx.State):
 
     @rx.event
     def cancel_specialty_edit(self) -> None:
+        if self.is_submitting:
+            return
         self._reset_specialty_edit()
         self.specialty_dialog_open = False
 
     @rx.event
     async def save_specialty_edit(self, _form_data: dict[str, Any]):
+        if self.is_submitting:
+            return
         self.is_submitting = True
         self._clear_feedback()
         yield
@@ -570,6 +626,7 @@ class AdminDirectoryState(rx.State):
             self._reset_specialty_edit()
             self.specialty_dialog_open = False
             self._load_with_token(token)
+            self.specialty_page = 1
             self.success_message = "Especialidade atualizada."
         except (
             DirectoryValidationError,
@@ -587,7 +644,38 @@ class AdminDirectoryState(rx.State):
             yield
 
     @rx.event
-    async def toggle_specialty_active(self, specialty_id: int, current_active: bool):
+    def begin_specialty_status_change(self, specialty_id: int) -> None:
+        if self.is_submitting:
+            return
+        row = next(
+            (item for item in self.specialties + self.recent_specialties
+             if item["id"] == specialty_id),
+            None,
+        )
+        if row is None:
+            return
+        self._clear_feedback()
+        self.pending_specialty_id = row["id"]
+        self.pending_specialty_name = row["name"]
+        self.pending_specialty_is_active = row["is_active"]
+        self.specialty_status_dialog_open = True
+
+    @rx.event
+    def set_specialty_status_dialog_open(self, is_open: bool) -> None:
+        if self.is_submitting and not is_open:
+            return
+        if not is_open:
+            self._reset_specialty_status_change()
+
+    @rx.event
+    def cancel_specialty_status_change(self) -> None:
+        if not self.is_submitting:
+            self._reset_specialty_status_change()
+
+    @rx.event
+    async def confirm_specialty_status_change(self):
+        if self.is_submitting or not self.specialty_status_dialog_open or not self.pending_specialty_id:
+            return
         self.is_submitting = True
         self._clear_feedback()
         yield
@@ -597,16 +685,20 @@ class AdminDirectoryState(rx.State):
                 admin_set_specialty_active(
                     db,
                     token=token,
-                    specialty_id=specialty_id,
-                    is_active=not current_active,
+                    specialty_id=self.pending_specialty_id,
+                    is_active=not self.pending_specialty_is_active,
                 )
+            was_active = self.pending_specialty_is_active
+            self._reset_specialty_status_change()
             self._load_with_token(token)
+            self.specialty_page = 1
             self.success_message = (
                 "Especialidade desativada."
-                if current_active
-                else "Especialidade reativada."
+                if was_active else "Especialidade reativada."
             )
-        except DirectoryNotFoundError as exc:
+        except (
+            DirectoryValidationError, DirectoryConflictError, DirectoryNotFoundError
+        ) as exc:
             self.error_message = str(exc)
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
