@@ -88,6 +88,29 @@ def create_patient_invitation(
         raise PatientPortalError("O cadastro do paciente não está disponível.")
     if patient.user_id is not None:
         raise PatientPortalError("Este cadastro já possui acesso ao portal.")
+    # Recuse emails already owned by another account before issuing a token.
+    if db.exec(select(User.id).where(User.email == normalized_email)).first() is not None:
+        raise PatientPortalError("O e-mail informado já está vinculado a uma conta.")
+    other_invitation = db.exec(
+        select(PatientPortalInvitation)
+        .where(
+            PatientPortalInvitation.email == normalized_email,
+            PatientPortalInvitation.patient_id != patient_id,
+            PatientPortalInvitation.consumed_at.is_(None),
+            PatientPortalInvitation.revoked_at.is_(None),
+            PatientPortalInvitation.expires_at > timestamp,
+        )
+    ).first()
+    if other_invitation is not None:
+        raise PatientPortalError("Este e-mail já possui um convite de ativação em andamento.")
+
+    latest = db.exec(
+        select(PatientPortalInvitation)
+        .where(PatientPortalInvitation.patient_id == patient_id)
+        .order_by(PatientPortalInvitation.created_at.desc(), PatientPortalInvitation.id.desc())
+    ).first()
+    if latest is not None and timestamp < _as_utc(latest.created_at) + timedelta(minutes=2):
+        raise PatientPortalError("Aguarde 2 minutos antes de enviar outro convite.")
 
     active = db.exec(
         select(PatientPortalInvitation)
