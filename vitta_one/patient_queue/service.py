@@ -298,9 +298,23 @@ def create_queue_entry(
     now: datetime | None = None,
 ) -> QueueEntry:
     """Place an existing patient in the operational queue as a walk-in."""
-    patient = db.get(Patient, patient_id)
+    # Lock the patient row across duplicate check and insertion. PostgreSQL
+    # serializes competing walk-in requests for the same patient.
+    patient = db.exec(
+        select(Patient).where(Patient.id == patient_id).with_for_update()
+    ).first()
     if patient is None:
         raise QueueValidationError("Selecione um paciente válido.")
+    active = db.exec(
+        select(QueueEntry.id).where(
+            QueueEntry.patient_id == patient_id,
+            QueueEntry.status.in_(
+                (QueueStatus.AGUARDANDO.value, QueueStatus.EM_ATENDIMENTO.value)
+            ),
+        ).limit(1)
+    ).first()
+    if active is not None:
+        raise QueueValidationError("O paciente já possui uma entrada ativa na fila.")
 
     clean_symptoms = _validated_symptoms(symptoms)
     parsed_priority = _validated_priority(priority)
