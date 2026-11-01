@@ -393,10 +393,7 @@ def _reception_day_header() -> rx.Component:
         ),
         rx.vstack(
             rx.text(S.clinic_date_label, font_weight="650", class_name="vitta-reception-day-date"),
-            rx.text(
-                "Última atualização: ", S.last_updated, size="1",
-                color="var(--vitta-text-subtle)", class_name="vitta-reception-day-updated",
-            ),
+
             align="start", spacing="1", role="status", aria_live="polite",
             class_name="vitta-reception-day-date-group",
         ),
@@ -513,9 +510,9 @@ def reception_overview_cards() -> rx.Component:
         _reception_metric("Chegadas pendentes", S.overview_pending,
                           "Horários anteriores ainda sem check-in", "clock", "/recepcao/agenda"),
         _reception_metric("Concluídos hoje", S.overview_completed,
-                          "Atendimentos finalizados", "check_circle", "/recepcao/fila"),
+                          "Atendimentos finalizados", "circle_check", "/recepcao/fila"),
         columns=rx.breakpoints(initial="1", sm="2", lg="3", xl="5"),
-        gap="3", width="100%",
+        gap="5", width="100%",
     )
 
 
@@ -559,7 +556,7 @@ def reception_week_calendar() -> rx.Component:
                     spacing="2", align="start",
                 ),
                 rx.link(rx.icon("plus", size=17), "Agendar consulta",
-                        href="/recepcao/agenda", class_name="vitta-context-link"),
+                        href="/recepcao/agenda/nova", class_name="vitta-context-link"),
                 justify="between", align="center", flex_wrap="wrap", gap="3", width="100%",
             ),
             rx.box(
@@ -577,62 +574,53 @@ def reception_week_calendar() -> rx.Component:
 
 
 def reception_dashboard() -> rx.Component:
+    """Quiet overview: real indicators and upcoming calendar, no operational forms."""
     return rx.vstack(
         rx.box(
-            _reception_day_header(),
-            _reception_day_toolbar(),
-            class_name="vitta-reception-day-top",
-        ),
-        reception_overview_cards(),
-        rx.flex(
-            rx.link(rx.icon("user_plus", size=17), "Novo paciente",
-                    href="/recepcao/pacientes/novo", class_name="vitta-context-link"),
-            rx.link(rx.icon("list_ordered", size=17), "Fila de espera",
-                    href="/recepcao/fila", class_name="vitta-context-link"),
-            rx.link(rx.icon("calendar_days", size=17), "Ver agenda semanal",
-                    href="/recepcao/agenda", class_name="vitta-context-link"),
-            flex_wrap="wrap", gap="3", width="100%",
-            class_name="vitta-patient-workspace-actions",
+            rx.text("VISÃO GERAL", class_name="vitta-section-kicker"),
+            rx.heading("Painel da recepção", size="7", margin_top="0.4rem"),
+            rx.text(
+                "Resumo da operação da clínica em ",
+                S.clinic_date_label,
+                ". Para realizar ações, use a navegação lateral.",
+                size="2", color="var(--vitta-text-muted)", margin_top="0.65rem",
+            ),
+            class_name="vitta-reception-dashboard-heading",
         ),
         rx.cond(
             S.error_message != "",
-            rx.callout(
-                S.error_message, icon="triangle_alert", color_scheme="red", role="alert",
-            ),
+            rx.box(S.error_message, role="status", class_name="vitta-sr-only"),
             rx.fragment(),
         ),
-        feedback_region(
-            ReceptionAgendaState.error_message,
-            ReceptionAgendaState.success_message,
-            "daily-appointment-action-feedback",
-        ),
-        rx.cond(
-            S.is_loading & S.has_loaded,
-            rx.callout(
-                "Atualizando as consultas de hoje…", icon="refresh_cw",
-                color_scheme="teal", role="status", aria_live="polite",
-            ),
-            rx.fragment(),
-        ),
-        rx.cond(
-            S.has_loaded,
-            section_panel(
-                _appointments_table(), padding="0",
-                class_name="vitta-reception-day-panel",
-            ),
-            rx.cond(
-                S.is_loading,
+        reception_overview_cards(),
+        section_panel(
+            rx.vstack(
                 rx.hstack(
-                    rx.spinner(size="2"),
-                    rx.text("Carregando consultas de hoje…", role="status", aria_live="polite"),
-                    align="center", width="100%", padding="1.25rem",
-                    class_name="vitta-reception-day-loading",
+                    rx.icon("calendar_days", size=20, color="var(--vitta-primary)"),
+                    rx.heading("Próximos sete dias", size="4"),
+                    spacing="2", align="center",
                 ),
-                rx.fragment(),
+                rx.text(
+                    "Consultas já cadastradas, agrupadas por data e horário.",
+                    color="var(--vitta-text-muted)", size="2",
+                ),
+                rx.cond(
+                    S.is_loading & ~S.has_loaded,
+                    rx.center(rx.spinner(size="3"), min_height="9rem", width="100%"),
+                    rx.box(
+                        rx.grid(
+                            rx.foreach(S.calendar_week, _agenda_day_card),
+                            columns="7", gap="3",
+                            class_name="vitta-agenda-week-grid",
+                        ),
+                        overflow_x="auto", width="100%",
+                        class_name="vitta-agenda-week-scroll",
+                    ),
+                ),
+                spacing="4", align="stretch", width="100%",
             ),
         ),
-        reception_agenda_dialogs(),
-        _appointment_details_dialog(),
-        align="stretch", width="100%", spacing="4",
-        class_name="vitta-reception-day-workspace",
+        rx.moment(interval=60000, on_change=S.tick, display="none"),
+        align="stretch", width="100%", spacing="6",
+        class_name="vitta-reception-overview",
     )

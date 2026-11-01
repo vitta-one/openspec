@@ -168,55 +168,82 @@ def patient_create_workspace() -> rx.Component:
 
 
 def patient_detail_workspace() -> rx.Component:
+    """Read-only patient summary; editing and booking use dedicated routes."""
     return rx.vstack(
         breadcrumb(("Recepção", "/recepcao"), ("Pacientes", "/recepcao/pacientes"),
                    ("Ficha do paciente", None)),
-        page_header("Pacientes", "Ficha do paciente",
-                    "Cadastro, agenda, fila e acesso ao portal em um único lugar."),
+        page_header(
+            "Pacientes", "Ficha do paciente",
+            "Dados de identificação e atalhos para as operações deste cadastro.",
+        ),
         section_panel(
             rx.vstack(
-                rx.hstack(
-                    rx.box(rx.icon("user_round", size=22), class_name="vitta-admin-action-icon"),
+                rx.flex(
+                    rx.box(
+                        rx.icon("user_round", size=28, color="var(--vitta-primary)"),
+                        class_name="vitta-patient-profile-mark",
+                    ),
                     rx.vstack(
-                        rx.heading(S.selected_patient_name, size="5"),
+                        rx.text("PACIENTE", class_name="vitta-section-kicker"),
+                        rx.heading(S.selected_patient_name, size="6"),
                         rx.text("Cadastro #", S.selected_patient_id,
                                 color="var(--vitta-text-muted)", size="2"),
-                        spacing="1", align="start",
+                        spacing="2", align="start", flex="1", min_width="0",
                     ),
-                    gap="3", align="center",
+                    align="center", gap="4", width="100%",
                 ),
-                rx.text("Telefone: ", S.selected_patient_phone, size="2",
-                        color="var(--vitta-text-muted)"),
+                rx.separator(),
+                rx.box(
+                    rx.text("Contato", font_weight="700", color="var(--vitta-text)", size="2"),
+                    rx.hstack(
+                        rx.icon("phone", size=16, color="var(--vitta-primary)"),
+                        rx.text(S.selected_patient_phone, size="3"),
+                        align="center", spacing="2", margin_top="0.4rem",
+                    ),
+                ),
+                rx.separator(),
+                rx.text(
+                    "Escolha uma operação",
+                    font_weight="700", color="var(--vitta-text)", size="3",
+                ),
                 rx.flex(
                     rx.button(
                         rx.icon("calendar_plus", size=17), "Agendar consulta",
                         color_scheme="teal", high_contrast=True,
                         on_click=S.open_selected_patient_agenda,
                     ),
-                    rx.link(rx.icon("list_ordered", size=17), "Fila de espera",
-                            href="/recepcao/fila", class_name="vitta-context-link"),
-                    rx.dialog.root(
-                        rx.dialog.trigger(
-                            rx.button(rx.icon("settings_2", size=17), "Editar cadastro e acesso",
-                                      variant="outline", color_scheme="teal"),
-                        ),
-                        rx.dialog.content(
-                            rx.dialog.title("Gerenciar cadastro e portal"),
-                            rx.dialog.description(
-                                "Atualize os dados operacionais ou gerencie o acesso ao portal.",
-                                margin_bottom="1rem",
-                            ),
-                            selected_patient_operations(),
-                            rx.dialog.close(rx.button("Fechar", variant="outline",
-                                                      color_scheme="gray")),
-                            class_name="vitta-dialog-content vitta-dialog-content-wide",
-                            max_width="48rem", max_height="86vh", overflow_y="auto",
-                        ),
+                    rx.link(
+                        rx.hstack(rx.icon("list_ordered", size=17),
+                                  rx.text("Adicionar à fila"), spacing="2", align="center"),
+                        href="/recepcao/fila/nova", class_name="vitta-context-link",
                     ),
-                    gap="3", flex_wrap="wrap", align="center", width="100%",
+                    rx.link(
+                        rx.hstack(rx.icon("settings_2", size=17),
+                                  rx.text("Editar dados e acesso"), spacing="2", align="center"),
+                        href="/recepcao/pacientes/" + S.selected_patient_id.to(str) + "/editar",
+                        class_name="vitta-context-link",
+                    ),
+                    gap="3", flex_wrap="wrap", align="center",
+                    width="100%", class_name="vitta-patient-profile-actions",
                 ),
-                spacing="4", width="100%", align="stretch",
+                spacing="5", align="stretch", width="100%",
+                class_name="vitta-patient-profile",
             ),
         ),
-        spacing="4", width="100%", align="stretch",
+        align="stretch", spacing="5", width="100%",
+    )
+
+
+def patient_edit_workspace() -> rx.Component:
+    """Separate editable patient and portal configuration, never buried in a modal."""
+    return rx.vstack(
+        breadcrumb(("Recepção", "/recepcao"), ("Pacientes", "/recepcao/pacientes"),
+                   ("Editar cadastro", None)),
+        page_header("Pacientes", "Editar cadastro e acesso",
+                    "Atualize a identificação e gerencie o portal com consentimento."),
+        rx.link("Voltar à ficha",
+                href="/recepcao/pacientes/" + S.selected_patient_id.to(str),
+                class_name="vitta-context-link"),
+        selected_patient_operations(),
+        spacing="5", width="100%", align="stretch",
     )

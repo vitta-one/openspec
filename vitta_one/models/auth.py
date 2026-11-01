@@ -28,6 +28,7 @@ class User(rx.Model, table=True):
     email: str = Field(
         sa_column=Column(String(320), nullable=False, unique=True, index=True)
     )
+    display_name: str | None = Field(default=None, sa_column=Column(String(160), nullable=True))
     password_hash: str = Field(sa_column=Column(String(512), nullable=False))
     role: str = Field(sa_column=Column(String(32), nullable=False))
     must_change_password: bool = Field(

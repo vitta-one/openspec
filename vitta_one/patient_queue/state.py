@@ -270,6 +270,22 @@ class ReceptionQueueState(rx.State):
     def has_queue(self) -> bool:
         return bool(self.queue_rows)
 
+    @rx.var
+    def queue_count(self) -> int:
+        return len(self.queue_rows)
+
+    @rx.var
+    def red_waiting_count(self) -> int:
+        return sum(row["priority"] == "VERMELHO" for row in self.queue_rows)
+
+    @rx.var
+    def yellow_waiting_count(self) -> int:
+        return sum(row["priority"] == "AMARELO" for row in self.queue_rows)
+
+    @rx.var
+    def green_waiting_count(self) -> int:
+        return sum(row["priority"] == "VERDE" for row in self.queue_rows)
+
     async def _token(self) -> str:
         auth = await self.get_state(AuthState)
         return auth.session_token
@@ -723,7 +739,7 @@ class ReceptionQueueState(rx.State):
             agenda.selected_patient_name = patient.name
             agenda.patient_cpf = ""
             agenda.focus_booking_on_next_load = True
-            return rx.redirect("/recepcao/agenda")
+            return rx.redirect("/recepcao/agenda/nova")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             if isinstance(exc, AuthenticationRequiredError):
                 return rx.redirect("/login")
@@ -751,10 +767,13 @@ class ReceptionQueueState(rx.State):
                 )
             self._load_queue_with_token(token)
             self.success_message = "Paciente incluído na fila."
+            yield rx.toast.success(self.success_message, position="top-right")
+            yield rx.redirect("/recepcao/fila")
             self.selected_patient_id = 0
             self.selected_patient_name = ""
         except QueueValidationError as exc:
             self.error_message = str(exc)
+            yield rx.toast.error(self.error_message, position="top-right")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
@@ -762,6 +781,7 @@ class ReceptionQueueState(rx.State):
             self.error_message = (
                 "Não foi possível incluir o paciente na fila agora. Tente novamente."
             )
+            yield rx.toast.error(self.error_message, position="top-right")
         finally:
             self.is_submitting = False
             yield

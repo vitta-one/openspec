@@ -62,9 +62,12 @@ from vitta_one.ui.pages import (
     prescription_print_page,
     reception_page,
     reception_agenda_page,
+    reception_booking_page,
     reception_patients_page,
     reception_patient_create_page,
     reception_patient_detail_page,
+    reception_patient_edit_page,
+    reception_queue_new_page,
     reception_queue_page,
     root_page,
 )
@@ -228,6 +231,12 @@ app.add_page(
     on_load=[AuthState.load_protected, ReceptionAgendaState.load, ReceptionDashboardState.load],
 )
 app.add_page(
+    reception_booking_page,
+    route="/recepcao/agenda/nova",
+    title="Agendar consulta | Vitta-One",
+    on_load=[AuthState.load_protected, ReceptionAgendaState.load],
+)
+app.add_page(
     reception_patients_page,
     route="/recepcao/pacientes",
     title="Pacientes | Vitta-One",
@@ -244,6 +253,18 @@ app.add_page(
     route="/recepcao/pacientes/[patient_id]",
     title="Ficha do paciente | Vitta-One",
     on_load=[AuthState.load_protected, ReceptionQueueState.load_patient_detail],
+)
+app.add_page(
+    reception_patient_edit_page,
+    route="/recepcao/pacientes/[patient_id]/editar",
+    title="Editar paciente | Vitta-One",
+    on_load=[AuthState.load_protected, ReceptionQueueState.load_patient_detail],
+)
+app.add_page(
+    reception_queue_new_page,
+    route="/recepcao/fila/nova",
+    title="Adicionar à fila | Vitta-One",
+    on_load=[AuthState.load_protected, ReceptionQueueState.load],
 )
 app.add_page(
     reception_queue_page,

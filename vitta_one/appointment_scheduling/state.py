@@ -1,6 +1,8 @@
 """Reflex state for Administrator availability and Reception appointment agenda."""
 
 from typing import Any, TypedDict
+import calendar
+from datetime import date
 
 import reflex as rx
 
@@ -19,6 +21,7 @@ from vitta_one.appointment_scheduling.application import (
     reception_schedule_consultation,
 )
 from vitta_one.appointment_scheduling.domain import AvailabilitySlotStatus, ConsultationStatus
+from vitta_one.appointment_scheduling.ical_export import build_consultation_ics
 from vitta_one.appointment_scheduling.service import (
     SchedulingConflictError,
     SchedulingNotFoundError,
@@ -136,6 +139,16 @@ def _consultation_rows(items) -> list[ConsultationRow]:
     ]
 
 
+class AdminCalendarCell(TypedDict):
+    date_label: str
+    day: str
+    is_current_month: bool
+    is_selected: bool
+    has_slots: bool
+    slot_count: int
+    aria_label: str
+
+
 class AdminAvailabilityState(rx.State):
     """Administrator-only availability management with server-side RBAC."""
 
@@ -155,6 +168,8 @@ class AdminAvailabilityState(rx.State):
     filter_professional: str = "__all__"
     filter_start_date: str = ""
     filter_end_date: str = ""
+    calendar_month: str = ""
+    selected_calendar_day: str = ""
 
     is_loading: bool = False
     is_submitting: bool = False
@@ -173,6 +188,80 @@ class AdminAvailabilityState(rx.State):
     def slots_by_day(self) -> list[SlotDayGroup]:
         return group_slots_by_day(self.slots)
 
+    @rx.var
+    def calendar_month_title(self) -> str:
+        """Mês visível da clínica, sem depender do idioma do sistema."""
+        try:
+            year, month = map(int, self.calendar_month.split("-"))
+            return f"{('Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro')[month - 1]} {year}"
+        except (ValueError, IndexError):
+            return ""
+
+    @rx.var
+    def calendar_days(self) -> list[AdminCalendarCell]:
+        """Dias sem horários persistidos permanecem desabilitados."""
+        try:
+            year, month = map(int, self.calendar_month.split("-"))
+            first_day = date(year, month, 1)
+        except (ValueError, IndexError):
+            return []
+        by_day: dict[str, int] = {}
+        for slot in self.slots:
+            label = slot["date_label"]
+            by_day[label] = by_day.get(label, 0) + 1
+        days: list[AdminCalendarCell] = []
+        for day in calendar.Calendar(firstweekday=6).itermonthdates(year, month):
+            label = day.strftime("%d/%m/%Y")
+            count = by_day.get(label, 0)
+            days.append({
+                "date_label": label,
+                "day": str(day.day),
+                "is_current_month": day.month == month,
+                "is_selected": label == self.selected_calendar_day,
+                "has_slots": count > 0 and day.month == month,
+                "slot_count": count,
+                "aria_label": f"{label}: {count} horário(s) configurado(s)" if count else f"{label}: sem horários",
+            })
+        return days
+
+    @rx.var
+    def selected_day_slots(self) -> list[SlotRow]:
+        return [slot for slot in self.slots if slot["date_label"] == self.selected_calendar_day]
+
+    @rx.event
+    def select_calendar_day(self, label: str) -> None:
+        """Seleção só pode usar datas com horários retornados pelo servidor."""
+        if any(slot["date_label"] == label for slot in self.slots):
+            self.selected_calendar_day = label
+
+    @rx.event
+    async def move_calendar_month(self, delta: int):
+        if delta not in (-1, 1):
+            return
+        try:
+            year, month = map(int, self.calendar_month.split("-"))
+            ordinal = year * 12 + month - 1 + delta
+            new_year, month_index = divmod(ordinal, 12)
+            if new_year < 2000 or new_year > 2100:
+                return
+            month = month_index + 1
+            self.calendar_month = f"{new_year:04d}-{month:02d}"
+            self.filter_start_date = f"{new_year:04d}-{month:02d}-01"
+            self.filter_end_date = f"{new_year:04d}-{month:02d}-{calendar.monthrange(new_year, month)[1]:02d}"
+            self.selected_calendar_day = ""
+            self.is_loading = True
+            yield
+            token = await self._token()
+            self._load_with_token(token)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            yield rx.toast.error("Não foi possível carregar os horários do mês.", position="top-right")
+        finally:
+            self.is_loading = False
+            yield
+
     async def _token(self) -> str:
         auth = await self.get_state(AuthState)
         return auth.session_token
@@ -185,6 +274,7 @@ class AdminAvailabilityState(rx.State):
         self.professionals = []
         self.slots = []
         self.selected_professional = "__none__"
+        self.selected_calendar_day = ""
 
     def _apply_weekly_rule(self, rule) -> None:
         self.weekly_existing = rule is not None
@@ -198,10 +288,12 @@ class AdminAvailabilityState(rx.State):
         return None if self.filter_professional == "__all__" else int(self.filter_professional)
 
     def _ensure_default_period(self) -> None:
-        if not self.filter_start_date:
-            self.filter_start_date = clinic_today_iso()
-        if not self.filter_end_date:
-            self.filter_end_date = clinic_date_after_iso(14)
+        if not self.calendar_month:
+            self.calendar_month = clinic_today_iso()[:7]
+        if not self.filter_start_date or not self.filter_end_date:
+            year, month = map(int, self.calendar_month.split("-"))
+            self.filter_start_date = f"{year:04d}-{month:02d}-01"
+            self.filter_end_date = f"{year:04d}-{month:02d}-{calendar.monthrange(year, month)[1]:02d}"
 
     def _load_with_token(self, token: str) -> None:
         self._ensure_default_period()
@@ -216,6 +308,10 @@ class AdminAvailabilityState(rx.State):
             )
         self.professionals = _professional_rows(professional_items)
         self.slots = _slot_rows(slot_items)
+        if self.selected_calendar_day and not any(
+            row["date_label"] == self.selected_calendar_day for row in self.slots
+        ):
+            self.selected_calendar_day = ""
         if self.selected_professional == "__none__" and self.professionals:
             self.selected_professional = self.professionals[0]["value"]
         with rx.session() as db:
@@ -244,6 +340,7 @@ class AdminAvailabilityState(rx.State):
                 yield event
         except (ClinicTimezoneConfigurationError, SchedulingTimeValidationError) as exc:
             self.error_message = str(exc)
+            yield rx.toast.error(self.error_message, position="top-right")
             self.slots = []
         except Exception:
             self.error_message = "Não foi possível carregar a disponibilidade agora."
@@ -309,11 +406,14 @@ class AdminAvailabilityState(rx.State):
                     slot_minutes=int(self.weekly_slot_minutes),
                 )
             self._load_with_token(token)
-            self.success_message = (f"Expediente salvo. {count} novo(s) horário(s) publicado(s) "
-                                    "para agendamento nos próximos 45 dias.")
+            yield rx.toast.success(
+                f"Expediente salvo. {count} horário(s) novo(s) nos próximos 45 dias.",
+                position="top-right",
+            )
         except (SchedulingValidationError, SchedulingConflictError,
                 SchedulingTimeValidationError, ClinicTimezoneConfigurationError, ValueError) as exc:
             self.error_message = str(exc)
+            yield rx.toast.error(self.error_message, position="top-right")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
@@ -336,8 +436,24 @@ class AdminAvailabilityState(rx.State):
         self.slot_time_local = value
 
     @rx.event
-    def update_filter_professional(self, value: str) -> None:
+    @rx.event
+    async def update_filter_professional(self, value: str):
+        """The month calendar immediately reflects the chosen physician."""
         self.filter_professional = value
+        self.selected_calendar_day = ""
+        self.is_loading = True
+        yield
+        try:
+            token = await self._token()
+            self._load_with_token(token)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            yield rx.toast.error("Não foi possível filtrar a agenda.", position="top-right")
+        finally:
+            self.is_loading = False
+            yield
 
     @rx.event
     def update_filter_start_date(self, value: str) -> None:
@@ -357,6 +473,7 @@ class AdminAvailabilityState(rx.State):
             self._load_with_token(token)
         except (SchedulingTimeValidationError, ClinicTimezoneConfigurationError) as exc:
             self.error_message = str(exc)
+            yield rx.toast.error(self.error_message, position="top-right")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
@@ -396,7 +513,7 @@ class AdminAvailabilityState(rx.State):
             self.slot_date_local = ""
             self.slot_time_local = ""
             self._load_with_token(token)
-            self.success_message = "Horário disponibilizado."
+            yield rx.toast.success("Horário disponibilizado.", position="top-right")
         except (
             SchedulingValidationError,
             SchedulingConflictError,
@@ -404,11 +521,13 @@ class AdminAvailabilityState(rx.State):
             ClinicTimezoneConfigurationError,
         ) as exc:
             self.error_message = str(exc)
+            yield rx.toast.error(self.error_message, position="top-right")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
             self.error_message = "Não foi possível criar o horário agora."
+            yield rx.toast.error(self.error_message, position="top-right")
         finally:
             self.is_submitting = False
             yield
@@ -433,7 +552,7 @@ class AdminAvailabilityState(rx.State):
                     is_active=activate,
                 )
             self._load_with_token(token)
-            self.success_message = "Horário reativado." if activate else "Horário desativado."
+            yield rx.toast.success("Horário reativado." if activate else "Horário desativado.", position="top-right")
         except (
             SchedulingTransitionError,
             SchedulingNotFoundError,
@@ -441,11 +560,13 @@ class AdminAvailabilityState(rx.State):
             ClinicTimezoneConfigurationError,
         ) as exc:
             self.error_message = str(exc)
+            yield rx.toast.error(self.error_message, position="top-right")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
             self.error_message = "Não foi possível alterar o horário agora."
+            yield rx.toast.error(self.error_message, position="top-right")
         finally:
             self.is_submitting = False
             yield
@@ -469,6 +590,8 @@ class ReceptionAgendaState(rx.State):
     # Navigation from patient selection can activate booking exactly once;
     # otherwise the Agenda opens with its existing consultations.
     active_tab: str = "consultations"
+    consultation_page: int = 1
+    consultation_page_size: int = 10
     focus_booking_on_next_load: bool = False
 
     arrival_dialog_open: bool = False
@@ -493,6 +616,21 @@ class ReceptionAgendaState(rx.State):
     is_submitting: bool = False
     error_message: str = ""
     success_message: str = ""
+
+    @rx.var
+    def consultation_total_pages(self) -> int:
+        return max(1, (len(self.consultations) + self.consultation_page_size - 1) // self.consultation_page_size)
+
+    @rx.var
+    def paged_consultations(self) -> list[ConsultationRow]:
+        start = (self.consultation_page - 1) * self.consultation_page_size
+        return self.consultations[start:start + self.consultation_page_size]
+
+    @rx.event
+    def move_consultation_page(self, delta: int) -> None:
+        self.consultation_page = max(1, min(
+            self.consultation_page + delta, self.consultation_total_pages
+        ))
 
     @rx.var
     def available_slots(self) -> list[SlotRow]:
@@ -670,14 +808,21 @@ class ReceptionAgendaState(rx.State):
     @rx.event
     def update_filter_professional(self, value: str) -> None:
         self.filter_professional = value
+        self.consultation_page = 1
 
     @rx.event
     def update_filter_start_date(self, value: str) -> None:
         self.filter_start_date = value
+        self.consultation_page = 1
 
     @rx.event
     def update_filter_end_date(self, value: str) -> None:
         self.filter_end_date = value
+        self.consultation_page = 1
+
+    @rx.event
+    def reset_consultation_page(self) -> None:
+        self.consultation_page = 1
 
     @rx.event
     async def refresh(self):
@@ -719,6 +864,7 @@ class ReceptionAgendaState(rx.State):
                 self.selected_patient_id = patient.id
                 self.selected_patient_name = patient.name
                 self.success_message = "Paciente selecionado para agendamento."
+            yield rx.toast.success(self.success_message, position="top-right")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
@@ -734,6 +880,31 @@ class ReceptionAgendaState(rx.State):
         self.selected_patient_id = 0
         self.selected_patient_name = ""
         self._clear_feedback()
+
+    @rx.event
+    async def download_appointment_calendar(self, consultation_id: int):
+        """Download an .ics file only after authorized re-read of the appointment."""
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                item = reception_get_consultation_by_id(
+                    db, token=token, consultation_id=consultation_id
+                )
+            calendar_data = build_consultation_ics(item)
+            yield rx.download(
+                data=calendar_data,
+                filename=f"vitta-one-consulta-{item.id}.ics",
+            )
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except (SchedulingNotFoundError, ValueError) as exc:
+            yield rx.toast.error(str(exc), position="top-right")
+        except Exception:
+            yield rx.toast.error(
+                "Não foi possível preparar o calendário da consulta.",
+                position="top-right",
+            )
 
     @rx.event
     async def schedule(self, slot_id: int):
@@ -755,17 +926,21 @@ class ReceptionAgendaState(rx.State):
                 )
             self._load_with_token(token)
             self.success_message = "Consulta agendada."
+            yield rx.toast.success(self.success_message, position="top-right")
+            yield rx.redirect("/recepcao/agenda")
         except (
             SchedulingValidationError,
             SchedulingConflictError,
             SchedulingNotFoundError,
         ) as exc:
             self.error_message = str(exc)
+            yield rx.toast.error(self.error_message, position="top-right")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
             self.error_message = "Não foi possível agendar a consulta agora."
+            yield rx.toast.error(self.error_message, position="top-right")
         finally:
             self.is_submitting = False
             yield
@@ -816,6 +991,7 @@ class ReceptionAgendaState(rx.State):
                 yield event
         except (SchedulingNotFoundError, SchedulingTransitionError) as exc:
             self.error_message = str(exc)
+            yield rx.toast.error(self.error_message, position="top-right")
         except Exception:
             self.error_message = "Não foi possível abrir a confirmação de chegada."
         finally:
@@ -860,6 +1036,7 @@ class ReceptionAgendaState(rx.State):
             queue_state = await self.get_state(ReceptionQueueState)
             queue_state._load_queue_with_token(token)
             self.success_message = "Chegada confirmada e paciente incluído na fila."
+            yield rx.toast.success(self.success_message, position="top-right")
             async for event in self._refresh_daily_dashboard_if_loaded():
                 yield event
         except (
@@ -868,11 +1045,13 @@ class ReceptionAgendaState(rx.State):
             CareLifecycleConflictError,
         ) as exc:
             self.error_message = str(exc)
+            yield rx.toast.error(self.error_message, position="top-right")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
             self.error_message = "Não foi possível confirmar a chegada agora."
+            yield rx.toast.error(self.error_message, position="top-right")
         finally:
             self.is_submitting = False
             yield
@@ -926,6 +1105,7 @@ class ReceptionAgendaState(rx.State):
                 yield event
         except (SchedulingNotFoundError, SchedulingTransitionError) as exc:
             self.error_message = str(exc)
+            yield rx.toast.error(self.error_message, position="top-right")
         except Exception:
             self.error_message = "Não foi possível abrir o reagendamento agora."
         finally:
@@ -963,6 +1143,7 @@ class ReceptionAgendaState(rx.State):
             self._reset_reschedule()
             self._load_with_token(token)
             self.success_message = "Consulta reagendada."
+            yield rx.toast.success(self.success_message, position="top-right")
             async for event in self._refresh_daily_dashboard_if_loaded():
                 yield event
         except (
@@ -972,11 +1153,13 @@ class ReceptionAgendaState(rx.State):
             SchedulingTransitionError,
         ) as exc:
             self.error_message = str(exc)
+            yield rx.toast.error(self.error_message, position="top-right")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
             self.error_message = "Não foi possível reagendar a consulta agora."
+            yield rx.toast.error(self.error_message, position="top-right")
         finally:
             self.is_submitting = False
             yield
@@ -1026,6 +1209,7 @@ class ReceptionAgendaState(rx.State):
                 yield event
         except (SchedulingNotFoundError, SchedulingTransitionError) as exc:
             self.error_message = str(exc)
+            yield rx.toast.error(self.error_message, position="top-right")
         except Exception:
             self.error_message = "Não foi possível abrir o cancelamento agora."
         finally:
@@ -1066,11 +1250,13 @@ class ReceptionAgendaState(rx.State):
             SchedulingTransitionError,
         ) as exc:
             self.error_message = str(exc)
+            yield rx.toast.error(self.error_message, position="top-right")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
             self.error_message = "Não foi possível cancelar a consulta agora."
+            yield rx.toast.error(self.error_message, position="top-right")
         finally:
             self.is_submitting = False
             yield

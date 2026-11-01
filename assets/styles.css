@@ -2341,3 +2341,281 @@ button:disabled,
 @media (prefers-reduced-motion: reduce) {
   .vitta-overview-card { transition: none; transform: none !important; }
 }
+
+/* 2026-10-30 — Focused administration/reception UX.
+   Keep the canonical design tokens above as the single source of color. */
+.vitta-sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.vitta-staff-create-action,
+.vitta-shell a.vitta-primary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .65rem;
+  min-height: 2.8rem;
+  padding: .65rem 1.1rem;
+  border-radius: var(--vitta-radius-control);
+  border: 1px solid var(--vitta-primary);
+  background: var(--vitta-primary);
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  text-decoration: none;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.vitta-shell a.vitta-primary-action :is(svg, span) {
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  vertical-align: middle;
+}
+.vitta-shell a.vitta-primary-action:is(:hover, :focus-visible) {
+  background: var(--vitta-primary-hover);
+  color: #fff !important;
+}
+.vitta-shell a.vitta-primary-action:focus-visible {
+  outline: 3px solid var(--vitta-focus);
+  outline-offset: 3px;
+}
+
+/* Radix checkboxes are buttons; generic button-height rules must not stretch them. */
+.vitta-page .vitta-specialty-choice button[role="checkbox"],
+.vitta-page .vitta-specialty-choice .rt-CheckboxRoot,
+.vitta-page .vitta-specialty-choice [data-radix-collection-item][role="checkbox"] {
+  flex: 0 0 1.25rem;
+  box-sizing: border-box;
+  width: 1.25rem !important;
+  min-width: 1.25rem !important;
+  height: 1.25rem !important;
+  min-height: 1.25rem !important;
+  padding: 0 !important;
+  border-radius: 0.3rem !important;
+  box-shadow: none;
+}
+.vitta-specialty-choice {
+  padding: .8rem 1rem;
+  min-height: 3.4rem;
+  border-color: var(--vitta-border);
+}
+.vitta-specialty-choice .rt-Checkbox {
+  gap: .8rem;
+  align-items: center;
+  width: 100%;
+}
+.vitta-specialty-choice:has([data-state="checked"]) {
+  border-color: var(--vitta-primary);
+  background: var(--vitta-primary-soft);
+}
+.vitta-specialty-choice:focus-within {
+  outline: 3px solid var(--vitta-focus);
+  outline-offset: 2px;
+}
+
+/* The password reveal is absolutely positioned and must not inherit wide button sizing. */
+.vitta-login-form .vitta-password-toggle {
+  position: absolute !important;
+  inset: 50% .45rem auto auto;
+  transform: translateY(-50%);
+  display: grid !important;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  min-height: 2.5rem;
+  padding: 0;
+  margin: 0;
+  z-index: 1;
+}
+.vitta-login-form .vitta-password-toggle svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  margin: 0 auto;
+}
+
+/* Calendar mirrors the month/day interaction while retaining Vitta-One identity. */
+.vitta-availability-calendar {
+  width: min(100%, 42rem);
+  overflow: hidden;
+  border: 1px solid var(--vitta-border-strong);
+  border-radius: var(--vitta-radius-panel);
+  box-shadow: var(--vitta-shadow-xs);
+  background: var(--vitta-surface);
+}
+.vitta-calendar-header {
+  min-height: 4.25rem;
+  padding: .85rem 1.1rem;
+  background: #123f3a;
+  color: #fff;
+}
+.vitta-calendar-header .rt-Heading,
+.vitta-calendar-header button,
+.vitta-calendar-header svg { color: #fff !important; }
+.vitta-calendar-header button:hover { background: rgba(255,255,255,.15); }
+.vitta-calendar-weekdays {
+  background: #123f3a;
+  color: #fff;
+  padding: .4rem .65rem .8rem;
+}
+.vitta-calendar-grid {
+  padding: .65rem;
+  gap: .25rem;
+}
+.vitta-page .vitta-calendar-date {
+  min-width: 0;
+  min-height: 4.5rem;
+  border: 1px solid transparent;
+  border-radius: .55rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--vitta-text);
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+.vitta-page .vitta-calendar-date.has-slots {
+  border-color: #99f6e4;
+  background: var(--vitta-primary-soft);
+  color: #115e59;
+}
+.vitta-page .vitta-calendar-date.has-slots:is(:hover, :focus-visible) {
+  border-color: var(--vitta-primary);
+  background: #ccfbf1;
+}
+.vitta-page .vitta-calendar-date.is-selected {
+  border-color: var(--vitta-primary);
+  background: var(--vitta-primary);
+  color: #fff !important;
+}
+.vitta-page .vitta-calendar-date.is-unavailable:disabled {
+  background: #e9edf2 !important;
+  border-color: #fff !important;
+  color: #64748b !important;
+  opacity: 1 !important;
+}
+.vitta-calendar-day-count {
+  font-size: .65rem;
+  color: inherit;
+  line-height: 1.2;
+}
+.vitta-calendar-day-details {
+  border: 1px solid var(--vitta-border);
+  padding: clamp(1rem, 2vw, 1.5rem);
+  border-radius: var(--vitta-radius-panel);
+  background: var(--vitta-surface-subtle);
+}
+.vitta-calendar-empty {
+  padding: 1.5rem;
+  text-align: center;
+  border: 1px dashed var(--vitta-border-strong);
+  border-radius: var(--vitta-radius-control);
+}
+
+/* Navigation motion: mobile drawer and desktop collapse, no sudden jump. */
+.vitta-shell {
+  transition: grid-template-columns 180ms ease;
+}
+.vitta-shell .vitta-sidebar {
+  transition: transform 180ms ease, opacity 180ms ease, visibility 180ms;
+}
+.vitta-shell.is-sidebar-closed .vitta-sidebar {
+  transform: translateX(-.7rem);
+  opacity: 0;
+}
+.vitta-topbar {
+  gap: .85rem;
+}
+
+/* Dashboard rhythm, readable KPI spacing, no dense or touching edges. */
+.vitta-reception-overview {
+  gap: clamp(1.25rem, 2vw, 2rem);
+  max-width: 100%;
+}
+.vitta-reception-overview .vitta-overview-card {
+  padding: clamp(1.1rem, 1.6vw, 1.5rem);
+  min-height: 10rem;
+}
+.vitta-reception-overview .vitta-agenda-day {
+  min-height: 12rem;
+}
+.vitta-reception-dashboard-heading {
+  padding-block: .5rem .8rem;
+}
+.vitta-reception-overview .vitta-agenda-week-grid {
+  gap: .85rem;
+  padding: .5rem .15rem .9rem;
+}
+
+@media (max-width: 640px) {
+  .vitta-page .vitta-calendar-date { min-height: 3.8rem; }
+  .vitta-calendar-grid { padding: .3rem; gap: .15rem; }
+  .vitta-calendar-weekdays { padding-inline: .3rem; }
+  .vitta-reception-overview .vitta-overview-card { min-height: 8.5rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vitta-shell, .vitta-shell .vitta-sidebar,
+  .vitta-page .vitta-calendar-date { transition: none !important; }
+}
+
+/* Toast notifications must remain above Radix dialog/overlay layers. */
+[data-sonner-toaster] {
+  z-index: 10000 !important;
+}
+.vitta-sidebar-logout {
+  margin-top: auto;
+  background: transparent;
+  padding: .45rem;
+  border: 0;
+}
+.vitta-sidebar-logout .rt-Button {
+  min-height: 2.75rem;
+  padding: .6rem .85rem;
+}
+.vitta-patient-profile {
+  max-width: 56rem;
+}
+.vitta-patient-profile-mark {
+  width: 4.25rem;
+  height: 4.25rem;
+  display: grid;
+  place-items: center;
+  border-radius: 1rem;
+  background: var(--vitta-primary-soft);
+  flex: none;
+}
+.vitta-patient-profile-actions {
+  padding-block: .25rem;
+  gap: 1rem !important;
+}
+.vitta-queue-summary {
+  background: var(--vitta-surface);
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-panel);
+  min-height: 6rem;
+  padding: 1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: .5rem;
+}
+.vitta-queue-summary.is-urgent {
+  border-color: #fecdd3;
+  background: #fff1f2;
+}
+.vitta-queue-summary.is-attention {
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+.vitta-queue-patient-row {
+  padding: 1.25rem !important;
+  border-radius: var(--vitta-radius-panel) !important;
+  box-shadow: var(--vitta-shadow-xs);
+}
+.vitta-queue-patient-row > div { gap: 1rem; }
