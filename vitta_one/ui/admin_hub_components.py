@@ -6,7 +6,6 @@ from vitta_one.ui.components import breadcrumb, page_header, section_panel
 from vitta_one.auth.staff_state import AdminStaffState
 from vitta_one.professional_directory.state import AdminDirectoryState
 from vitta_one.ui.staff_components import admin_staff_panel
-from vitta_one.ui.admin_directory_components import medical_registration_form_panel
 
 
 def _admin_destination(title: str, description: str, href: str, icon: str) -> rx.Component:
@@ -124,7 +123,7 @@ def admin_staff_type_workspace() -> rx.Component:
                     ),
                     rx.box(
                         rx.el.input(
-                            type="search", placeholder="Buscar por e-mail ou perfil",
+                            type="search", placeholder="Buscar por nome, e-mail ou perfil",
                             aria_label="Pesquisar funcionários", class_name="vitta-input",
                             value=AdminStaffState.employee_search,
                             on_change=AdminStaffState.update_employee_search,
@@ -174,54 +173,16 @@ def admin_staff_type_workspace() -> rx.Component:
 
 
 def admin_staff_create_workspace() -> rx.Component:
-    """One employee entry point; selecting a role reveals only its valid form."""
+    """Página única: identidade compartilhada e campos condicionais por role."""
     return rx.vstack(
         breadcrumb(("Administração", "/admin"), ("Funcionários", "/admin/funcionarios"),
                    ("Novo funcionário", None)),
         page_header(
             "Equipe",
             "Novo funcionário",
-            "Escolha o perfil de acesso. Os campos serão adaptados automaticamente.",
+            "Identifique o colaborador e defina o acesso de acordo com o perfil.",
         ),
-        section_panel(
-            rx.vstack(
-                rx.box(
-                    rx.heading("Perfil do funcionário", size="4"),
-                    rx.text("Essa escolha define as permissões e os dados obrigatórios da conta.",
-                            size="2", color="var(--vitta-text-muted)", margin_top="0.35rem"),
-                    width="100%",
-                ),
-                rx.box(
-                    rx.select.root(
-                        rx.select.trigger(id="staff-create-role", width="100%",
-                                          placeholder="Selecione um perfil",
-                                          class_name="vitta-select-trigger",
-                                          aria_label="Perfil do funcionário"),
-                        rx.select.content(
-                            rx.select.item("Médico", value="medico"),
-                            rx.select.item("Recepcionista", value="recepcionista"),
-                            position="popper",
-                        ),
-                        value=AdminStaffState.creation_profile,
-                        on_change=AdminStaffState.select_creation_profile,
-                        size="3",
-                    ),
-                    width="100%", max_width="32rem",
-                ),
-                spacing="4", width="100%", align="stretch",
-            )
-        ),
-        rx.cond(
-            AdminStaffState.creation_profile == "medico",
-            rx.cond(
-                AdminDirectoryState.is_loading,
-                rx.center(rx.spinner(size="3"), min_height="10rem", width="100%"),
-                medical_registration_form_panel(),
-            ),
-            rx.cond(AdminStaffState.creation_profile == "recepcionista",
-                    admin_staff_panel(),
-                    rx.fragment()),
-        ),
+        admin_staff_panel(),
         spacing="4", align="stretch", width="100%",
     )
 
@@ -233,6 +194,11 @@ def admin_staff_detail_workspace() -> rx.Component:
                    ("Ficha do funcionário", None)),
         page_header("Equipe", "Ficha do funcionário",
                     "Cadastro concluído. Consulte o perfil e a identificação do acesso."),
+        rx.cond(
+            AdminStaffState.success != "",
+            rx.callout(AdminStaffState.success, role="status", color_scheme="teal"),
+            rx.fragment(),
+        ),
         section_panel(
             rx.vstack(
                 rx.hstack(
