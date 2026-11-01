@@ -500,7 +500,7 @@ def _available_slot_row(row) -> rx.Component:
                 color_scheme="teal",
                 high_contrast=True,
                 size="2",
-                on_click=ReceptionAgendaState.schedule(row["id"]),
+                on_click=ReceptionAgendaState.begin_booking_review(row["id"]),
                 disabled=(ReceptionAgendaState.selected_patient_id == 0) | ReceptionAgendaState.is_submitting,
             ),
             direction=rx.breakpoints(initial="column", sm="row"),
@@ -969,8 +969,8 @@ def reception_agenda_panel() -> rx.Component:
     )
 
 
-def reception_booking_panel() -> rx.Component:
-    """Canonical booking form shared by the route and all Reception dialogs."""
+def _reception_booking_selection_panel() -> rx.Component:
+    """Shared slot and patient selection stage before confirmation."""
     return section_panel(
         rx.vstack(
             rx.heading("Dados do agendamento", size="4"),
@@ -1151,6 +1151,77 @@ def reception_booking_panel() -> rx.Component:
             spacing="5", align="stretch", width="100%",
         ),
     )
+
+def _reception_booking_review_panel() -> rx.Component:
+    """Final read-only review; authoritative slot validation runs on confirmation."""
+    return section_panel(
+        rx.vstack(
+            rx.heading("Revise o agendamento", size="4"),
+            rx.text(
+                "Confira os dados antes de confirmar. O horário será validado novamente.",
+                size="2", color="var(--vitta-text-muted)",
+            ),
+            rx.grid(
+                rx.vstack(
+                    rx.text("Paciente", size="1", color="var(--vitta-text-muted)"),
+                    rx.text(ReceptionAgendaState.booking_review_patient_name,
+                            font_weight="700", overflow_wrap="anywhere"),
+                    spacing="1", align="start",
+                ),
+                rx.vstack(
+                    rx.text("Profissional", size="1", color="var(--vitta-text-muted)"),
+                    rx.text(ReceptionAgendaState.booking_review_professional_name,
+                            font_weight="700", overflow_wrap="anywhere"),
+                    spacing="1", align="start",
+                ),
+                rx.vstack(
+                    rx.text("Data e horário", size="1", color="var(--vitta-text-muted)"),
+                    rx.text(ReceptionAgendaState.booking_review_datetime,
+                            font_weight="700", class_name="vitta-tabular"),
+                    spacing="1", align="start",
+                ),
+                columns=rx.breakpoints(initial="1", sm="3"),
+                gap="4", width="100%",
+                class_name="vitta-info-strip",
+            ),
+            rx.cond(
+                ReceptionAgendaState.error_message != "",
+                rx.text(ReceptionAgendaState.error_message, role="alert",
+                        color="var(--vitta-danger)"),
+                rx.fragment(),
+            ),
+            rx.flex(
+                rx.button(
+                    "Voltar aos horários",
+                    type="button", variant="outline", color_scheme="teal",
+                    on_click=ReceptionAgendaState.cancel_booking_review,
+                    disabled=ReceptionAgendaState.is_submitting,
+                ),
+                rx.button(
+                    "Confirmar reserva", type="button", color_scheme="teal",
+                    high_contrast=True,
+                    on_click=ReceptionAgendaState.confirm_booking_review,
+                    disabled=ReceptionAgendaState.is_submitting,
+                    loading=ReceptionAgendaState.is_submitting,
+                ),
+                gap="3", flex_wrap="wrap",
+                direction=rx.breakpoints(initial="column-reverse", sm="row"),
+                justify="end", align=rx.breakpoints(initial="stretch", sm="center"),
+                width="100%",
+            ),
+            spacing="4", align="stretch", width="100%",
+        )
+    )
+
+
+def reception_booking_panel() -> rx.Component:
+    """Two-stage shared booking form; a fixed patient cannot be changed on review."""
+    return rx.cond(
+        ReceptionAgendaState.booking_review_slot_id > 0,
+        _reception_booking_review_panel(),
+        _reception_booking_selection_panel(),
+    )
+
 
 def reception_booking_dialog() -> rx.Component:
     """One accessible booking dialog reused by profile, agenda and dashboard."""
