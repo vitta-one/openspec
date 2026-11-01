@@ -6,6 +6,7 @@ from sqlalchemy import func, or_
 from vitta_one.auth.authorization import require_role
 from vitta_one.auth.roles import Role
 from vitta_one.models.patient_queue import Patient, QueueEntry
+from vitta_one.patient_queue.profile import get_patient_operational_summary
 from vitta_one.patient_queue.service import (
     PatientSearchResult,
     QueueItem,
@@ -39,6 +40,16 @@ def reception_get_patient_identity(
 ) -> PatientSearchResult | None:
     require_role(db, token, Role.RECEPCIONISTA)
     return get_patient_identity(db, patient_id=patient_id)
+
+
+def reception_get_patient_operational_summary(
+    db: Session, *, token: str, patient_id: int, history_page: int = 1,
+):
+    """Keep patient identity, appointments and queue metadata behind Reception RBAC."""
+    require_role(db, token, Role.RECEPCIONISTA)
+    return get_patient_operational_summary(
+        db, patient_id=patient_id, history_page=history_page,
+    )
 
 
 def reception_find_patient(db: Session, *, token: str, cpf: str) -> Patient | None:
