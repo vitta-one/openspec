@@ -98,7 +98,7 @@ def _professional_row(item) -> ProfessionalRow:
         "FAILED": "Falha no envio",
         "UNKNOWN": "Envio não confirmado",
         "NOT_CONFIGURED": "Não enviado",
-        "NOT_REQUIRED": "Acesso já existente",
+        "NOT_REQUIRED": "Conta vinculada",
     }
     access_label = (
         "Sem conta vinculada" if item.user_id is None
@@ -167,6 +167,7 @@ class AdminDirectoryState(rx.State):
     professional_dialog_open: bool = False
     reissue_dialog_open: bool = False
     reissue_professional_id: int = 0
+    reissue_is_unsent: bool = False
     status_dialog_open: bool = False
     status_professional_id: int = 0
     status_professional_name: str = ""
@@ -309,6 +310,7 @@ class AdminDirectoryState(rx.State):
         self.professional_dialog_open = False
         self.reissue_dialog_open = False
         self.reissue_professional_id = 0
+        self.reissue_is_unsent = False
         self.status_dialog_open = False
         self.status_professional_id = 0
         self.status_professional_name = ""
@@ -501,11 +503,14 @@ class AdminDirectoryState(rx.State):
             self.reissue_professional_id = 0
 
     @rx.event
-    def begin_medical_reissue(self, professional_id: int) -> None:
+    def begin_medical_reissue(
+        self, professional_id: int, onboarding_status: str = ""
+    ) -> None:
         if self.is_submitting:
             return
         self._clear_feedback()
         self.reissue_professional_id = professional_id
+        self.reissue_is_unsent = onboarding_status == "NOT_CONFIGURED"
         self.reissue_dialog_open = True
 
     @rx.event
@@ -955,7 +960,11 @@ class AdminDirectoryState(rx.State):
 
     @rx.event
     def cancel_professional_status_change(self) -> None:
-        self.set_professional_status_dialog_open(False)
+        if self.is_submitting:
+            return
+        self.status_dialog_open = False
+        self.status_professional_id = 0
+        self.status_professional_name = ""
 
     @rx.event
     async def confirm_professional_status_change(self):
