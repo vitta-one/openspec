@@ -205,10 +205,9 @@ def _validate_specialty_ids(
     existing_ids: set[int] | None = None,
 ) -> list[int]:
     unique_ids = list(dict.fromkeys(int(value) for value in specialty_ids))
+    # Uma especialidade pode ser vinculada depois do cadastro.
     if not unique_ids:
-        raise DirectoryValidationError(
-            "Selecione ao menos uma especialidade para o profissional."
-        )
+        return []
 
     rows = db.exec(
         select(Specialty).where(Specialty.id.in_(unique_ids))
@@ -378,11 +377,21 @@ def update_professional(
 
 
 def set_professional_active(
-    db: Session, *, professional_id: int, is_active: bool
+    db: Session, *, professional_id: int, is_active: bool,
+    expected_active: bool | None = None,
 ) -> Professional:
-    professional = db.get(Professional, professional_id)
+    """Change status atomically, rejecting stale administrative confirmations."""
+    professional = db.exec(
+        select(Professional)
+        .where(Professional.id == professional_id)
+        .with_for_update()
+    ).first()
     if professional is None:
         raise DirectoryNotFoundError("O profissional não está disponível.")
+    if expected_active is not None and professional.is_active != expected_active:
+        raise DirectoryConflictError(
+            "A situação do profissional mudou. Atualize a listagem e tente novamente."
+        )
     professional.is_active = bool(is_active)
     professional.updated_at = utc_now()
     db.add(professional)
