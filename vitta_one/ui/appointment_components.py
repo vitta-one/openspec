@@ -495,7 +495,7 @@ def _available_slot_row(row) -> rx.Component:
                 rx.text(row["professional_name"], size="1", color="var(--vitta-text-muted)", margin_top="0.15rem"),
             ),
             rx.button(
-                "Agendar",
+                "Revisar horário",
                 type="button",
                 color_scheme="teal",
                 high_contrast=True,
