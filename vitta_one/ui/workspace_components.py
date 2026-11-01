@@ -380,7 +380,7 @@ def admin_clinic_configuration() -> rx.Component:
                                             AdminClinicConfigurationState.address_error != "",
                                             "clinic-configuration-address-error", "",
                                         ),
-                                        rows="3", resize="vertical",
+                                        rows=3, resize="vertical",
                                         margin_top="0.4rem", width="100%",
                                     ),
                                     rx.cond(
