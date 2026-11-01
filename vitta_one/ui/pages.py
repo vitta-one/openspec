@@ -26,7 +26,7 @@ from vitta_one.ui.admin_directory_components import (
     specialties_management_workspace,
     professionals_management_workspace,
 )
-from vitta_one.ui.appointment_components import admin_availability_panel, reception_agenda_panel, reception_booking_panel
+from vitta_one.ui.appointment_components import admin_availability_panel, reception_agenda_panel, reception_booking_panel, reception_booking_dialog
 from vitta_one.ui.admin_preview_components import (
     agenda_preview,
     clinical_preview,
@@ -487,6 +487,7 @@ def reception_page() -> rx.Component:
     return protected_workspace(
         Role.RECEPCIONISTA,
         reception_dashboard(),
+        reception_booking_dialog(),
         active="recepcao",
     )
 
@@ -502,6 +503,7 @@ def reception_agenda_page() -> rx.Component:
         ),
         reception_week_calendar(),
         reception_agenda_panel(),
+        reception_booking_dialog(),
         active="agenda",
         verified_path="/recepcao/agenda",
     )
@@ -553,6 +555,7 @@ def reception_patient_edit_page() -> rx.Component:
     return protected_workspace(
         Role.RECEPCIONISTA,
         patient_edit_workspace(),
+        reception_booking_dialog(),
         active="pacientes",
         verified_path="/recepcao/pacientes/[patient_id]/editar",
     )
