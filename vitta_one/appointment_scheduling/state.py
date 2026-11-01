@@ -950,6 +950,8 @@ class ReceptionAgendaState(rx.State):
 
     @rx.event
     async def schedule(self, slot_id: int):
+        if self.is_submitting:
+            return
         self.is_submitting = True
         self._clear_feedback()
         yield
@@ -958,22 +960,35 @@ class ReceptionAgendaState(rx.State):
                 raise SchedulingValidationError(
                     "Localize um paciente antes de escolher o horário."
                 )
+            if (
+                self.booking_locked_patient_id > 0
+                and self.selected_patient_id != self.booking_locked_patient_id
+            ):
+                raise SchedulingValidationError(
+                    "O paciente da ficha não pode ser substituído neste agendamento."
+                )
             token = await self._token()
             with rx.session() as db:
                 reception_schedule_consultation(
-                    db,
-                    token=token,
-                    patient_id=self.selected_patient_id,
+                    db, token=token, patient_id=self.selected_patient_id,
                     slot_id=slot_id,
                 )
             self._load_with_token(token)
+            origin = self.booking_origin if self.booking_dialog_open else ""
+            self.booking_dialog_open = False
+            self.booking_locked_patient_id = 0
+            self.booking_origin = ""
             self.success_message = "Consulta agendada."
             yield rx.toast.success(self.success_message, position="top-right")
-            yield rx.redirect("/recepcao/agenda")
+            if origin == "patient":
+                yield ReceptionQueueState.load_patient_detail
+            elif origin == "dashboard":
+                async for event in self._refresh_daily_dashboard_if_loaded():
+                    yield event
+            elif not origin:
+                yield rx.redirect("/recepcao/agenda")
         except (
-            SchedulingValidationError,
-            SchedulingConflictError,
-            SchedulingNotFoundError,
+            SchedulingValidationError, SchedulingConflictError, SchedulingNotFoundError,
         ) as exc:
             self.error_message = str(exc)
             yield rx.toast.error(self.error_message, position="top-right")
