@@ -970,7 +970,7 @@ def reception_agenda_panel() -> rx.Component:
 
 
 def reception_booking_panel() -> rx.Component:
-    """One task per screen: patient lookup, doctor/date filtering and slot booking."""
+    """Canonical booking form shared by the route and all Reception dialogs."""
     return section_panel(
         rx.vstack(
             rx.heading("Dados do agendamento", size="4"),
@@ -978,10 +978,10 @@ def reception_booking_panel() -> rx.Component:
                     color="var(--vitta-text-muted)", size="2"),
             rx.grid(
                 rx.box(
-                    field_label("Profissional", "reception-filter-professional"),
+                    field_label("Profissional", "reception-booking-professional"),
                     rx.box(
                         _professional_select(
-                            control_id="reception-filter-professional",
+                            control_id="reception-booking-professional",
                             value=ReceptionAgendaState.filter_professional,
                             on_change=ReceptionAgendaState.update_filter_professional,
                             include_all=True,
@@ -991,9 +991,9 @@ def reception_booking_panel() -> rx.Component:
                     ),
                 ),
                 rx.box(
-                    field_label("Data inicial", "reception-filter-start"),
+                    field_label("Data inicial", "reception-booking-start"),
                     rx.el.input(
-                        id="reception-filter-start",
+                        id="reception-booking-start",
                         type="date",
                         value=ReceptionAgendaState.filter_start_date,
                         on_change=ReceptionAgendaState.update_filter_start_date,
@@ -1002,9 +1002,9 @@ def reception_booking_panel() -> rx.Component:
                     ),
                 ),
                 rx.box(
-                    field_label("Data final", "reception-filter-end"),
+                    field_label("Data final", "reception-booking-end"),
                     rx.el.input(
-                        id="reception-filter-end",
+                        id="reception-booking-end",
                         type="date",
                         value=ReceptionAgendaState.filter_end_date,
                         on_change=ReceptionAgendaState.update_filter_end_date,
@@ -1028,6 +1028,21 @@ def reception_booking_panel() -> rx.Component:
                 width="100%",
                 class_name="vitta-filter-strip",
             ),
+                    rx.cond(
+                        ReceptionAgendaState.booking_locked_patient_id > 0,
+                        rx.box(
+                            rx.text("Paciente desta ficha", font_weight="650", size="2"),
+                            rx.text(
+                                ReceptionAgendaState.selected_patient_name,
+                                font_weight="750", margin_top="0.3rem",
+                            ),
+                            rx.text(
+                                "O paciente é mantido durante esta reserva.",
+                                color="var(--vitta-text-muted)", size="2",
+                                margin_top="0.2rem",
+                            ),
+                            class_name="vitta-info-strip", width="100%",
+                        ),
                     rx.el.form(
                         rx.flex(
                             rx.box(
@@ -1068,6 +1083,7 @@ def reception_booking_panel() -> rx.Component:
                         on_submit=ReceptionAgendaState.find_patient,
                         width="100%",
                     ),
+                    ),
                     rx.cond(
                         ReceptionAgendaState.selected_patient_id > 0,
                         rx.flex(
@@ -1077,12 +1093,14 @@ def reception_booking_panel() -> rx.Component:
                                 spacing="2",
                                 align="center",
                             ),
-                            rx.button(
-                                "Trocar paciente",
-                                type="button",
-                                variant="ghost",
-                                size="2",
-                                on_click=ReceptionAgendaState.clear_patient,
+                            rx.cond(
+                                ReceptionAgendaState.booking_locked_patient_id > 0,
+                                rx.fragment(),
+                                rx.button(
+                                    "Trocar paciente", type="button",
+                                    variant="ghost", size="2",
+                                    on_click=ReceptionAgendaState.clear_patient,
+                                ),
                             ),
                             direction=rx.breakpoints(initial="column", sm="row"),
                             justify="between",
@@ -1132,4 +1150,34 @@ def reception_booking_panel() -> rx.Component:
 
             spacing="5", align="stretch", width="100%",
         ),
+    )
+
+def reception_booking_dialog() -> rx.Component:
+    """One accessible booking dialog reused by profile, agenda and dashboard."""
+    return rx.dialog.root(
+        rx.dialog.content(
+            rx.dialog.title("Agendar consulta"),
+            rx.dialog.description(
+                "Confirme o paciente e escolha um horário disponível para a consulta.",
+                margin_top="0.35rem",
+                margin_bottom="1rem",
+            ),
+            reception_booking_panel(),
+            rx.flex(
+                rx.button(
+                    "Fechar", type="button", variant="outline",
+                    color_scheme="teal",
+                    on_click=ReceptionAgendaState.set_booking_dialog_open(False),
+                    disabled=ReceptionAgendaState.is_submitting,
+                ),
+                justify="end", width="100%", margin_top="1rem",
+            ),
+            class_name="vitta-dialog-content",
+            max_width="56rem",
+            width="calc(100vw - 1.5rem)",
+            max_height="90vh",
+            overflow_y="auto",
+        ),
+        open=ReceptionAgendaState.booking_dialog_open,
+        on_open_change=ReceptionAgendaState.set_booking_dialog_open,
     )
