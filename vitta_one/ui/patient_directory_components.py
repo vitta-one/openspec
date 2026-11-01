@@ -9,22 +9,91 @@ from vitta_one.ui.queue_components import (
 
 
 def _patient_row(row) -> rx.Component:
-    return rx.link(
-        rx.flex(
-            rx.hstack(
-                rx.box(rx.icon("user_round", size=20), class_name="vitta-admin-action-icon"),
-                rx.vstack(
-                    rx.text(row["name"], font_weight="750", color="var(--vitta-text)"),
-                    rx.text(row["phone"], color="var(--vitta-text-muted)", size="2"),
-                    spacing="1", align="start",
-                ),
-                gap="3", align="center",
+    """One semantic table row, with an explicit patient-detail action."""
+    return rx.el.tr(
+        rx.el.td(
+            rx.text(
+                row["name"], font_weight="700", color="var(--vitta-text)",
+                overflow_wrap="anywhere",
             ),
-            rx.icon("chevron_right", size=18, color="var(--vitta-text-muted)"),
-            gap="3", align="center", justify="between", width="100%",
+            rx.text(
+                row["phone"], size="1", color="var(--vitta-text-muted)",
+                class_name="vitta-patient-directory-mobile-phone",
+                overflow_wrap="anywhere",
+            ),
+            data_label="Paciente",
         ),
-        href=row["href"].to(str),
-        class_name="vitta-staff-row",
+        rx.el.td(
+            rx.text(row["phone"], size="2", overflow_wrap="anywhere"),
+            data_label="Telefone",
+            class_name="vitta-patient-directory-phone-column",
+        ),
+        rx.el.td(
+            rx.link(
+                "Ver detalhes",
+                href=row["href"].to(str),
+                aria_label="Ver detalhes de " + row["name"],
+                class_name="vitta-context-link vitta-patient-directory-detail",
+            ),
+            data_label="Ações",
+            class_name="vitta-patient-directory-action-column",
+        ),
+        class_name="vitta-patient-directory-row",
+    )
+
+
+def _patient_directory_table() -> rx.Component:
+    return rx.el.table(
+        rx.el.thead(
+            rx.el.tr(
+                rx.el.th("Paciente", scope="col"),
+                rx.el.th(
+                    "Telefone", scope="col",
+                    class_name="vitta-patient-directory-phone-column",
+                ),
+                rx.el.th("Ações", scope="col", class_name="vitta-patient-directory-action-column"),
+            )
+        ),
+        rx.el.tbody(rx.foreach(S.patient_directory, _patient_row)),
+        class_name="vitta-patient-directory-table",
+    )
+
+
+def _patient_directory_empty() -> rx.Component:
+    return rx.center(
+        rx.vstack(
+            rx.icon("users", color="var(--vitta-primary)", size=24),
+            rx.heading(
+                rx.cond(
+                    S.patient_directory_applied_query != "",
+                    "Nenhum paciente corresponde à pesquisa.",
+                    "Nenhum paciente cadastrado.",
+                ),
+                size="4",
+            ),
+            rx.text(
+                rx.cond(
+                    S.patient_directory_applied_query != "",
+                    "Revise os termos ou limpe a pesquisa.",
+                    "Cadastre um paciente para começar.",
+                ),
+                size="2", color="var(--vitta-text-muted)",
+            ),
+            rx.cond(
+                S.patient_directory_applied_query != "",
+                rx.button(
+                    "Limpar pesquisa", type="button",
+                    variant="outline", color_scheme="teal",
+                    on_click=S.clear_patient_directory_search,
+                ),
+                rx.link(
+                    "Novo paciente", href="/recepcao/pacientes/novo",
+                    class_name="vitta-context-link",
+                ),
+            ),
+            spacing="3", align="center", text_align="center",
+        ),
+        min_height="10rem", width="100%",
     )
 
 
@@ -33,9 +102,16 @@ def patient_directory_workspace() -> rx.Component:
         breadcrumb(("Recepção", "/recepcao"), ("Pacientes", None)),
         page_header(
             "Pacientes", "Lista de pacientes",
-            "Pesquise os registros da clínica. Cadastros novos têm uma tela própria.",
-            rx.link(rx.icon("user_plus", size=17), "Novo paciente",
-                    href="/recepcao/pacientes/novo", class_name="vitta-primary-action"),
+            "Localize pacientes cadastrados e consulte suas informações.",
+            rx.link(
+                rx.hstack(
+                    rx.icon("user_plus", size=17, flex_shrink="0"),
+                    rx.text("Novo paciente"),
+                    spacing="2", align="center",
+                ),
+                href="/recepcao/pacientes/novo",
+                class_name="vitta-primary-action vitta-patient-directory-new",
+            ),
         ),
         section_panel(
             rx.vstack(
@@ -45,58 +121,119 @@ def patient_directory_workspace() -> rx.Component:
                             field_label("Pesquisar pacientes", "patient-directory-search"),
                             rx.el.input(
                                 id="patient-directory-search", type="search",
-                                name="query", placeholder="Nome ou CPF",
+                                name="query", placeholder="Nome, CPF ou telefone",
                                 auto_complete="off", max_length=100,
                                 class_name="vitta-input",
+                                margin_top="0.4rem",
                                 value=S.patient_directory_query,
                                 on_change=S.update_patient_directory_query,
+                                aria_describedby="patient-directory-search-help",
                             ),
-                            width="100%", flex="1",
+                            rx.text(
+                                "A pesquisa considera nome, CPF e telefone dos cadastros autorizados.",
+                                id="patient-directory-search-help",
+                                size="1", margin_top="0.4rem",
+                                color="var(--vitta-text-muted)",
+                            ),
+                            width="100%", flex="1", min_width="0",
                         ),
-                        rx.button(rx.icon("search", size=17), "Buscar",
-                                  type="submit", color_scheme="teal", high_contrast=True,
-                                  disabled=S.patient_directory_loading),
-                        align="end", gap="3", width="100%", flex_wrap="wrap",
+                        rx.hstack(
+                            rx.button(
+                                rx.icon("search", size=17), "Buscar",
+                                type="submit", color_scheme="teal",
+                                high_contrast=True,
+                                disabled=S.patient_directory_loading,
+                            ),
+                            rx.button(
+                                "Limpar", type="button",
+                                variant="outline", color_scheme="teal",
+                                on_click=S.clear_patient_directory_search,
+                                disabled=S.patient_directory_loading | (S.patient_directory_query == ""),
+                            ),
+                            spacing="2", align="center", flex_wrap="wrap",
+                        ),
+                        align="end", gap="3", width="100%",
+                        direction=rx.breakpoints(initial="column", sm="row"),
                     ),
-                    on_submit=S.search_patient_directory, width="100%",
+                    on_submit=S.search_patient_directory,
+                    width="100%",
                 ),
                 rx.cond(
                     S.patient_directory_loading,
-                    rx.center(rx.spinner(size="3"), min_height="9rem", width="100%"),
+                    rx.center(
+                        rx.hstack(
+                            rx.spinner(size="3"),
+                            rx.text("Carregando pacientes…", size="2"),
+                            spacing="3", align="center",
+                        ),
+                        min_height="8rem", width="100%",
+                        role="status", aria_live="polite",
+                    ),
                     rx.cond(
-                        S.patient_directory.length() > 0,
-                        rx.vstack(rx.foreach(S.patient_directory, _patient_row),
-                                  spacing="2", width="100%", align="stretch"),
-                        rx.center(rx.vstack(
-                            rx.icon("users", color="var(--vitta-primary)", size=26),
-                            rx.heading("Nenhum paciente encontrado", size="4"),
-                            rx.text("Tente outra busca ou registre o primeiro paciente.",
-                                    color="var(--vitta-text-muted)", size="2"),
-                            rx.link("Novo paciente", href="/recepcao/pacientes/novo",
-                                    class_name="vitta-context-link"),
-                            align="center", spacing="3"),
-                            min_height="13rem", width="100%"),
+                        S.patient_directory_error != "",
+                        rx.vstack(
+                            rx.text(
+                                S.patient_directory_error,
+                                role="alert", color="var(--vitta-danger)",
+                            ),
+                            rx.button(
+                                "Tentar novamente", type="button",
+                                variant="outline", color_scheme="teal",
+                                on_click=S.load_patient_list,
+                            ),
+                            align="start", spacing="3",
+                            width="100%", padding="1rem 0",
+                        ),
+                        rx.cond(
+                            S.patient_directory.length() > 0,
+                            _patient_directory_table(),
+                            _patient_directory_empty(),
+                        ),
                     ),
                 ),
-                rx.flex(
-                    rx.text(S.patient_directory_total, " pacientes",
-                            size="2", color="var(--vitta-text-muted)"),
-                    rx.hstack(
-                        rx.button("Anterior", variant="outline", color_scheme="teal",
-                                  on_click=S.move_patient_directory_page(-1),
-                                  disabled=S.patient_directory_page <= 1),
-                        rx.text(S.patient_directory_page_label,
-                                font_weight="650", size="2"),
-                        rx.button("Próxima", variant="outline", color_scheme="teal",
-                                  on_click=S.move_patient_directory_page(1),
-                                  disabled=S.patient_directory_page >= S.patient_directory_pages),
-                        gap="3", align="center",
+                rx.cond(
+                    (S.patient_directory_error == "") & ~S.patient_directory_loading,
+                    rx.flex(
+                        rx.text(
+                            S.patient_directory_total,
+                            rx.cond(
+                                S.patient_directory_total == 1,
+                                " paciente encontrado",
+                                " pacientes encontrados",
+                            ),
+                            size="2", color="var(--vitta-text-muted)",
+                            role="status", aria_live="polite",
+                        ),
+                        rx.cond(
+                            S.patient_directory_pages > 1,
+                            rx.hstack(
+                                rx.button(
+                                    "Anterior", type="button",
+                                    variant="outline", color_scheme="teal",
+                                    on_click=S.move_patient_directory_page(-1),
+                                    disabled=S.patient_directory_page <= 1,
+                                ),
+                                rx.text(
+                                    S.patient_directory_page_label,
+                                    font_weight="650", size="2",
+                                ),
+                                rx.button(
+                                    "Próxima", type="button",
+                                    variant="outline", color_scheme="teal",
+                                    on_click=S.move_patient_directory_page(1),
+                                    disabled=S.patient_directory_page >= S.patient_directory_pages,
+                                ),
+                                gap="2", align="center",
+                            ),
+                            rx.fragment(),
+                        ),
+                        justify="between", gap="3", align="center",
+                        flex_wrap="wrap", width="100%",
                     ),
-                    justify="between", gap="3", align="center", flex_wrap="wrap",
-                    width="100%",
+                    rx.fragment(),
                 ),
-                spacing="5", width="100%", align="stretch",
-            )
+                spacing="4", width="100%", align="stretch",
+            ),
         ),
         spacing="4", align="stretch", width="100%",
     )
