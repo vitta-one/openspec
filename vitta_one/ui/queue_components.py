@@ -3,7 +3,7 @@
 import reflex as rx
 
 from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
-from vitta_one.ui.components import empty_state, feedback_region, field_label, section_panel
+from vitta_one.ui.components import empty_state, error_banner, feedback_region, field_label, section_panel
 
 
 def priority_select(
@@ -463,6 +463,108 @@ def patient_identity_panel() -> rx.Component:
     )
 
 
+def _queue_patient_result(row) -> rx.Component:
+    return rx.button(
+        rx.hstack(
+            rx.icon("user-round", size=17),
+            rx.text(row["name"], font_weight="650"),
+            spacing="2",
+            align="center",
+        ),
+        type="button",
+        variant="outline",
+        color_scheme="teal",
+        width="100%",
+        justify_content="flex-start",
+        disabled=ReceptionQueueState.is_submitting,
+        on_click=ReceptionQueueState.select_queue_patient(row["id"]),
+    )
+
+
+def queue_patient_picker() -> rx.Component:
+    """Reuse authorized patient search and the existing single enqueue service."""
+    return section_panel(
+        rx.vstack(
+            rx.heading("Localizar paciente", size="4"),
+            rx.text(
+                "Busque pelo nome ou CPF para iniciar a entrada de pronto atendimento.",
+                size="2",
+                color="var(--vitta-text-muted)",
+            ),
+            rx.el.form(
+                rx.flex(
+                    rx.box(
+                        field_label("Nome ou CPF", "queue-patient-query"),
+                        rx.el.input(
+                            id="queue-patient-query",
+                            name="query",
+                            type="search",
+                            placeholder="Digite ao menos 2 caracteres",
+                            max_length=100,
+                            auto_complete="off",
+                            class_name="vitta-input",
+                            value=ReceptionQueueState.quick_search_query,
+                            on_change=ReceptionQueueState.update_quick_search_query,
+                            margin_top="0.35rem",
+                        ),
+                        flex="1",
+                        min_width="0",
+                    ),
+                    rx.button(
+                        rx.icon("search", size=16),
+                        "Buscar",
+                        type="submit",
+                        color_scheme="teal",
+                        high_contrast=True,
+                        disabled=ReceptionQueueState.is_quick_searching,
+                        loading=ReceptionQueueState.is_quick_searching,
+                    ),
+                    direction=rx.breakpoints(initial="column", sm="row"),
+                    align=rx.breakpoints(initial="stretch", sm="end"),
+                    gap="3",
+                    width="100%",
+                ),
+                no_validate=True,
+                on_submit=ReceptionQueueState.quick_search_patients,
+                width="100%",
+            ),
+            rx.cond(
+                ReceptionQueueState.quick_search_error != "",
+                rx.text(
+                    ReceptionQueueState.quick_search_error,
+                    role="status",
+                    aria_live="polite",
+                    color="var(--vitta-danger)",
+                    size="2",
+                ),
+                rx.fragment(),
+            ),
+            rx.cond(
+                ReceptionQueueState.quick_search_results.length() > 0,
+                rx.vstack(
+                    rx.text("Selecione o cadastro correto", size="2", font_weight="700"),
+                    rx.foreach(
+                        ReceptionQueueState.quick_search_results,
+                        _queue_patient_result,
+                    ),
+                    spacing="2",
+                    align="stretch",
+                    width="100%",
+                ),
+                rx.fragment(),
+            ),
+            rx.link(
+                "Paciente ainda não cadastrado? Abrir cadastro",
+                href="/recepcao/pacientes/novo",
+                class_name="vitta-context-link",
+            ),
+            spacing="4",
+            align="stretch",
+            width="100%",
+        )
+    )
+
+
 def enqueue_panel() -> rx.Component:
     return section_panel(
         rx.vstack(
@@ -530,6 +632,14 @@ def enqueue_panel() -> rx.Component:
                     width="100%",
                 ),
                 patient_selection_summary(),
+                rx.button(
+                    "Trocar paciente",
+                    type="button",
+                    variant="outline",
+                    color_scheme="teal",
+                    on_click=ReceptionQueueState.clear_patient_selection,
+                    disabled=ReceptionQueueState.is_submitting,
+                ),
             ),
             spacing="5",
             width="100%",
@@ -538,119 +648,96 @@ def enqueue_panel() -> rx.Component:
     )
 
 
+def _queue_row_actions(row, *, compact: bool = False) -> rx.Component:
+    return rx.flex(
+        rx.button(
+            "Reavaliar",
+            type="button",
+            variant="outline",
+            color_scheme="teal",
+            size="1" if compact else "2",
+            on_click=ReceptionQueueState.begin_reassess(
+                row["id"], row["patient_name"], row["symptoms"], row["priority"]
+            ),
+            disabled=ReceptionQueueState.is_submitting,
+        ),
+        rx.button(
+            "Retirar",
+            type="button",
+            variant="ghost",
+            color_scheme="red",
+            size="1" if compact else "2",
+            on_click=ReceptionQueueState.begin_withdraw(
+                row["id"], row["patient_name"], row["is_scheduled"]
+            ),
+            disabled=ReceptionQueueState.is_submitting,
+        ),
+        gap="2",
+        direction=rx.breakpoints(initial="column", sm="row"),
+        align="stretch",
+        width="100%",
+    )
+
+
+def reception_queue_table_row(row) -> rx.Component:
+    """Semantic desktop row: the server order is never replaced by table sorting."""
+    return rx.table.row(
+        rx.table.cell(priority_badge(row["priority"], row["priority_label"])),
+        rx.table.cell(
+            rx.vstack(
+                rx.text(row["patient_name"], font_weight="700"),
+                rx.text(
+                    rx.cond(row["is_scheduled"], "Consulta agendada", "Atendimento avulso"),
+                    color="var(--vitta-text-muted)",
+                    size="1",
+                ),
+                spacing="1",
+                align="start",
+            )
+        ),
+        rx.table.cell(rx.text(row["entered_at"], size="2", class_name="vitta-tabular")),
+        rx.table.cell(rx.text(row["wait_label"], size="2", class_name="vitta-tabular")),
+        rx.table.cell(rx.badge(row["status_label"], color_scheme="gray", variant="soft")),
+        rx.table.cell(_queue_row_actions(row, compact=True)),
+        vertical_align="middle",
+    )
+
+
 def reception_queue_row(row) -> rx.Component:
+    """Condensed touch-friendly representation below the desktop breakpoint."""
     return rx.box(
         rx.vstack(
             rx.flex(
                 rx.vstack(
-                    rx.hstack(
-                        rx.text(row["patient_name"], font_weight="750", size="3"),
-                        rx.cond(
-                            row["is_scheduled"],
-                            rx.badge(
-                                "Consulta agendada",
-                                color_scheme="teal",
-                                variant="soft",
-                                high_contrast=True,
-                            ),
-                            rx.badge(
-                                "Atendimento avulso",
-                                color_scheme="gray",
-                                variant="soft",
-                            ),
-                        ),
-                        spacing="2",
-                        align="center",
-                        flex_wrap="wrap",
-                    ),
+                    rx.text(row["patient_name"], font_weight="700"),
                     rx.text(
-                        "Entrada: ",
-                        row["entered_at"],
-                        size="1",
-                        color="var(--vitta-text-muted)",
+                        rx.cond(row["is_scheduled"], "Consulta agendada", "Atendimento avulso"),
+                        size="1", color="var(--vitta-text-muted)",
                     ),
-                    rx.cond(
-                        row["is_scheduled"],
-                        rx.text(
-                            row["professional_name"],
-                            " · ",
-                            row["scheduled_at"],
-                            size="1",
-                            color="var(--vitta-text-subtle)",
-                            class_name="vitta-tabular",
-                        ),
-                        rx.fragment(),
-                    ),
-                    spacing="1",
-                    align="start",
+                    spacing="1", align="start", min_width="0",
                 ),
                 priority_badge(row["priority"], row["priority_label"]),
-                justify="between",
-                align="start",
-                width="100%",
-                gap="0.75rem",
-            ),
-            rx.box(
-                rx.text(
-                    "Relato",
-                    size="1",
-                    font_weight="700",
-                    color="var(--vitta-text-muted)",
-                ),
-                rx.text(
-                    row["symptoms"],
-                    size="2",
-                    line_height="1.55",
-                    overflow_wrap="anywhere",
-                    margin_top="0.45rem",
-                ),
-                width="100%",
+                justify="between", align="start", width="100%", gap="3",
             ),
             rx.flex(
-                rx.button(
-                    "Reavaliar",
-                    type="button",
-                    variant="outline",
-                    color_scheme="teal",
-                    on_click=ReceptionQueueState.begin_reassess(
-                        row["id"],
-                        row["patient_name"],
-                        row["symptoms"],
-                        row["priority"],
-                    ),
-                    disabled=ReceptionQueueState.is_submitting,
-                ),
-                rx.button(
-                    "Retirar da fila",
-                    type="button",
-                    variant="ghost",
-                    color_scheme="red",
-                    on_click=ReceptionQueueState.begin_withdraw(
-                        row["id"],
-                        row["patient_name"],
-                        row["is_scheduled"],
-                    ),
-                    disabled=ReceptionQueueState.is_submitting,
-                ),
-                direction=rx.breakpoints(initial="column", sm="row"),
-                gap="0.5rem",
-                width="100%",
+                rx.text("Entrada: ", row["entered_at"], size="2", class_name="vitta-tabular"),
+                rx.text("Espera: ", row["wait_label"], size="2", class_name="vitta-tabular"),
+                gap="3", wrap="wrap", width="100%",
+                color="var(--vitta-text-muted)",
             ),
-            spacing="3",
-            width="100%",
-            align="stretch",
+            rx.text(
+                row["symptoms"],
+                size="2", color="var(--vitta-text-muted)",
+                overflow_wrap="anywhere", line_height="1.45",
+            ),
+            _queue_row_actions(row),
+            spacing="3", width="100%", align="stretch",
         ),
-        width="100%",
-        padding="1rem",
         border="1px solid var(--vitta-border)",
         border_radius="var(--vitta-radius-control)",
-        background="var(--vitta-surface)",
-        role="listitem",
+        padding="0.85rem",
+        width="100%",
         class_name="vitta-queue-patient-row",
-        border_left=rx.cond(
-            row["priority"] == "VERMELHO", "4px solid #be123c",
-            rx.cond(row["priority"] == "AMARELO", "4px solid #b45309", "4px solid #0f766e"),
-        ),
     )
 
 def reassess_panel() -> rx.Component:
@@ -822,6 +909,153 @@ def withdraw_panel() -> rx.Component:
     )
 
 
+def _queue_filters() -> rx.Component:
+    return rx.flex(
+        rx.box(
+            field_label("Buscar na fila", "queue-list-search"),
+            rx.el.input(
+                id="queue-list-search",
+                type="search",
+                placeholder="Nome do paciente",
+                max_length=100,
+                class_name="vitta-input",
+                value=ReceptionQueueState.queue_search_query,
+                on_change=ReceptionQueueState.set_queue_search,
+                margin_top="0.35rem",
+            ),
+            min_width="0",
+            flex="2",
+        ),
+        rx.box(
+            field_label("Prioridade", "queue-list-priority"),
+            rx.select.root(
+                rx.select.trigger(
+                    id="queue-list-priority",
+                    width="100%",
+                    class_name="vitta-select-trigger",
+                ),
+                rx.select.content(
+                    rx.select.item("Todas", value="TODAS"),
+                    rx.select.item("Vermelho", value="VERMELHO"),
+                    rx.select.item("Amarelo", value="AMARELO"),
+                    rx.select.item("Verde", value="VERDE"),
+                    position="popper",
+                ),
+                value=ReceptionQueueState.queue_priority_filter,
+                on_change=ReceptionQueueState.set_queue_priority,
+                size="2",
+            ),
+            min_width="0",
+            flex="1",
+        ),
+        rx.button(
+            "Limpar filtros",
+            type="button",
+            variant="outline",
+            color_scheme="teal",
+            disabled=~ReceptionQueueState.queue_filters_active,
+            on_click=ReceptionQueueState.clear_queue_filters,
+        ),
+        align=rx.breakpoints(initial="stretch", md="end"),
+        direction=rx.breakpoints(initial="column", md="row"),
+        gap="3",
+        width="100%",
+    )
+
+
+def _queue_summary() -> rx.Component:
+    return rx.flex(
+        rx.hstack(
+            rx.text("Aguardando", color="var(--vitta-text-muted)"),
+            rx.text(ReceptionQueueState.queue_count, font_weight="750"),
+            gap="2",
+        ),
+        rx.hstack(
+            rx.text("Vermelho", color="var(--vitta-text-muted)"),
+            rx.text(ReceptionQueueState.red_waiting_count, font_weight="750"),
+            gap="2",
+        ),
+        rx.hstack(
+            rx.text("Amarelo", color="var(--vitta-text-muted)"),
+            rx.text(ReceptionQueueState.yellow_waiting_count, font_weight="750"),
+            gap="2",
+        ),
+        rx.hstack(
+            rx.text("Verde", color="var(--vitta-text-muted)"),
+            rx.text(ReceptionQueueState.green_waiting_count, font_weight="750"),
+            gap="2",
+        ),
+        rx.hstack(
+            rx.text("Maior espera", color="var(--vitta-text-muted)"),
+            rx.text(ReceptionQueueState.queue_longest_wait, font_weight="750", class_name="vitta-tabular"),
+            gap="2",
+        ),
+        flex_wrap="wrap",
+        gap="3",
+        class_name="vitta-queue-operational-summary",
+        width="100%",
+        role="status",
+        aria_live="polite",
+    )
+
+
+def _queue_results() -> rx.Component:
+    return rx.cond(
+        ReceptionQueueState.has_visible_queue,
+        rx.fragment(
+            rx.box(
+                rx.table.root(
+                    rx.table.header(
+                        rx.table.row(
+                            rx.table.column_header_cell("Prioridade"),
+                            rx.table.column_header_cell("Paciente"),
+                            rx.table.column_header_cell("Entrada"),
+                            rx.table.column_header_cell("Espera"),
+                            rx.table.column_header_cell("Situação"),
+                            rx.table.column_header_cell("Ações"),
+                        )
+                    ),
+                    rx.table.body(
+                        rx.foreach(
+                            ReceptionQueueState.visible_queue_rows,
+                            reception_queue_table_row,
+                        )
+                    ),
+                    variant="surface",
+                    size="2",
+                    width="100%",
+                    class_name="vitta-queue-operational-table",
+                ),
+                display=rx.breakpoints(initial="none", lg="block"),
+                width="100%",
+            ),
+            rx.vstack(
+                rx.foreach(
+                    ReceptionQueueState.visible_queue_rows,
+                    reception_queue_row,
+                ),
+                width="100%",
+                align="stretch",
+                spacing="2",
+                display=rx.breakpoints(initial="flex", lg="none"),
+            ),
+        ),
+        empty_state(
+            "search",
+            "Nenhum resultado",
+            "Nenhum paciente corresponde aos filtros selecionados.",
+            rx.button(
+                "Limpar filtros",
+                type="button",
+                on_click=ReceptionQueueState.clear_queue_filters,
+                color_scheme="teal",
+                variant="outline",
+            ),
+            min_height="8rem",
+        ),
+    )
+
+
 def active_queue_panel() -> rx.Component:
     return section_panel(
         rx.vstack(
@@ -829,15 +1063,24 @@ def active_queue_panel() -> rx.Component:
                 rx.box(
                     rx.heading("Fila ativa", size="5"),
                     rx.text(
-                        "Prioridades definidas na triagem. Dentro de cada prioridade, quem chegou primeiro é atendido primeiro.",
-                        color="var(--vitta-text-muted)",
-                        size="2",
-                        line_height="1.55",
-                        margin_top="0.35rem",
+                        "Ordenação por prioridade clínica: Vermelho, Amarelo e Verde; em cada grupo, primeiro quem chegou antes.",
+                        color="var(--vitta-text-muted)", size="2",
+                        line_height="1.5", margin_top="0.25rem",
                     ),
-                    width="100%",
+                    rx.cond(
+                        ReceptionQueueState.queue_last_updated_at != "",
+                        rx.text(
+                            "Última atualização: ",
+                            ReceptionQueueState.queue_last_updated_at,
+                            color="var(--vitta-text-subtle)", size="1",
+                            margin_top="0.35rem", role="status", aria_live="polite",
+                        ),
+                        rx.fragment(),
+                    ),
+                    min_width="0",
                 ),
                 rx.button(
+                    rx.icon("refresh-cw", size=16),
                     "Atualizar fila",
                     type="button",
                     variant="outline",
@@ -850,85 +1093,62 @@ def active_queue_panel() -> rx.Component:
                 direction=rx.breakpoints(initial="column", sm="row"),
                 justify="between",
                 align=rx.breakpoints(initial="stretch", sm="center"),
-                gap="1rem",
+                gap="3",
                 width="100%",
             ),
-            rx.grid(
-                rx.box(
-                    rx.text("Aguardando", size="2", color="var(--vitta-text-muted)"),
-                    rx.heading(ReceptionQueueState.queue_count, size="6"),
-                    class_name="vitta-queue-summary",
+            rx.cond(
+                ReceptionQueueState.queue_load_error != "",
+                error_banner(ReceptionQueueState.queue_load_error),
+                rx.fragment(),
+            ),
+            rx.cond(
+                ReceptionQueueState.queue_load_error == "",
+                feedback_region(
+                    ReceptionQueueState.error_message,
+                    ReceptionQueueState.success_message,
+                    element_id="queue-feedback",
                 ),
-                rx.box(
-                    rx.text("Urgentes", size="2", color="var(--vitta-text-muted)"),
-                    rx.heading(ReceptionQueueState.red_waiting_count, size="6"),
-                    class_name="vitta-queue-summary is-urgent",
-                ),
-                rx.box(
-                    rx.text("Atenção", size="2", color="var(--vitta-text-muted)"),
-                    rx.heading(ReceptionQueueState.yellow_waiting_count, size="6"),
-                    class_name="vitta-queue-summary is-attention",
-                ),
-                rx.box(
-                    rx.text("Baixa prioridade", size="2", color="var(--vitta-text-muted)"),
-                    rx.heading(ReceptionQueueState.green_waiting_count, size="6"),
-                    class_name="vitta-queue-summary",
-                ),
-                columns=rx.breakpoints(initial="2", md="4"),
-                gap="4", width="100%",
+                rx.fragment(),
             ),
             rx.cond(
                 ReceptionQueueState.is_loading_queue,
                 rx.center(
                     rx.vstack(
                         rx.spinner(size="3"),
-                        rx.text(
-                            "Carregando fila…",
-                            size="2",
-                            color="var(--vitta-text-muted)",
-                        ),
-                        spacing="2",
-                        align="center",
+                        rx.text("Carregando fila…", size="2", color="var(--vitta-text-muted)"),
+                        spacing="2", align="center",
                     ),
-                    min_height="8rem",
-                    width="100%",
-                    role="status",
-                    aria_live="polite",
+                    min_height="7rem", width="100%", role="status", aria_live="polite",
                 ),
                 rx.cond(
                     ReceptionQueueState.has_queue,
                     rx.vstack(
-                        rx.foreach(
-                            ReceptionQueueState.queue_rows,
-                            reception_queue_row,
-                        ),
-                        spacing="3",
-                        width="100%",
-                        role="list",
+                        _queue_summary(),
+                        _queue_filters(),
+                        _queue_results(),
+                        spacing="4", width="100%", align="stretch",
                     ),
-                    rx.center(
+                    rx.cond(
+                        ReceptionQueueState.queue_load_error != "",
+                        rx.fragment(),
                         rx.vstack(
-                            rx.heading("Fila vazia", size="4"),
-                            rx.text(
-                                "Nenhum paciente está aguardando atendimento.",
-                                color="var(--vitta-text-muted)",
-                                size="2",
-                                text_align="center",
+                            _queue_summary(),
+                            empty_state(
+                                "users",
+                                "Nenhum paciente aguardando",
+                                "A fila de espera está vazia no momento.",
+                                min_height="7rem",
                             ),
-                            spacing="2",
-                            align="center",
+                            spacing="3", width="100%", align="stretch",
                         ),
-                        min_height="8rem",
-                        width="100%",
                     ),
                 ),
             ),
-            spacing="5",
+            spacing="4",
             width="100%",
             align="stretch",
         )
     )
-
 
 def doctor_waiting_summary() -> rx.Component:
     return section_panel(
