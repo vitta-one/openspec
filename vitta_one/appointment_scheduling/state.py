@@ -2,7 +2,7 @@
 
 from typing import Any, TypedDict
 import calendar
-from datetime import date
+from datetime import date, datetime, timedelta
 
 import reflex as rx
 
@@ -22,6 +22,12 @@ from vitta_one.appointment_scheduling.application import (
 )
 from vitta_one.appointment_scheduling.domain import AvailabilitySlotStatus, ConsultationStatus
 from vitta_one.appointment_scheduling.ical_export import build_consultation_ics
+from vitta_one.appointment_scheduling.reception_calendar import (
+    AgendaWeekDay,
+    build_week_days,
+    filter_consultations_for_day,
+    week_bounds,
+)
 from vitta_one.appointment_scheduling.service import (
     SchedulingConflictError,
     SchedulingNotFoundError,
@@ -582,6 +588,8 @@ class ReceptionAgendaState(rx.State):
     filter_professional: str = "__all__"
     filter_start_date: str = ""
     filter_end_date: str = ""
+    agenda_date_input: str = ""
+    selected_agenda_date: str = ""
 
     patient_cpf: str = ""
     selected_patient_id: int = 0
@@ -618,13 +626,37 @@ class ReceptionAgendaState(rx.State):
     success_message: str = ""
 
     @rx.var
+    def visible_consultations(self) -> list[ConsultationRow]:
+        return filter_consultations_for_day(self.consultations, self.selected_agenda_date)
+
+    @rx.var
+    def agenda_week_days(self) -> list[AgendaWeekDay]:
+        return build_week_days(
+            self.consultations,
+            self.filter_start_date or clinic_today_iso(),
+            self.selected_agenda_date,
+            clinic_today_iso(),
+        )
+
+    @rx.var
+    def agenda_period_label(self) -> str:
+        start, end = week_bounds(self.filter_start_date or clinic_today_iso())
+        return f"{date.fromisoformat(start):%d/%m/%Y} a {date.fromisoformat(end):%d/%m/%Y}"
+
+    @rx.var
+    def selected_agenda_day_label(self) -> str:
+        if not self.selected_agenda_date:
+            return ""
+        return date.fromisoformat(self.selected_agenda_date).strftime("%d/%m/%Y")
+
+    @rx.var
     def consultation_total_pages(self) -> int:
-        return max(1, (len(self.consultations) + self.consultation_page_size - 1) // self.consultation_page_size)
+        return max(1, (len(self.visible_consultations) + self.consultation_page_size - 1) // self.consultation_page_size)
 
     @rx.var
     def paged_consultations(self) -> list[ConsultationRow]:
         start = (self.consultation_page - 1) * self.consultation_page_size
-        return self.consultations[start:start + self.consultation_page_size]
+        return self.visible_consultations[start:start + self.consultation_page_size]
 
     @rx.event
     def move_consultation_page(self, delta: int) -> None:
@@ -667,6 +699,7 @@ class ReceptionAgendaState(rx.State):
         self.professionals = []
         self.slots = []
         self.consultations = []
+        self.selected_agenda_date = ""
         self.selected_patient_id = 0
         self.selected_patient_name = ""
         self.active_tab = "consultations"
@@ -698,6 +731,13 @@ class ReceptionAgendaState(rx.State):
         self.professionals = _professional_rows(professional_items)
         self.slots = _slot_rows(snapshot.slots)
         self.consultations = _consultation_rows(snapshot.consultations)
+        self.consultation_page = min(self.consultation_page, self.consultation_total_pages)
+
+    def _set_agenda_week(self, first_day: str) -> None:
+        self.filter_start_date, self.filter_end_date = week_bounds(first_day)
+        self.agenda_date_input = self.filter_start_date
+        self.selected_agenda_date = ""
+        self.consultation_page = 1
 
     def _reset_arrival(self) -> None:
         self.arrival_dialog_open = False
@@ -804,6 +844,74 @@ class ReceptionAgendaState(rx.State):
         finally:
             self.is_loading = False
             yield
+
+    @rx.event
+    async def load_agenda(self):
+        """Load a single seven-day clinic-local window for both views."""
+        try:
+            start = self.filter_start_date or clinic_today_iso()
+            self._set_agenda_week(start)
+        except (ValueError, OverflowError):
+            self._set_agenda_week(clinic_today_iso())
+        async for event in self.load():
+            yield event
+
+    @rx.event
+    def update_agenda_date_input(self, value: str) -> None:
+        self.agenda_date_input = value
+
+    @rx.event
+    async def apply_agenda_date(self):
+        try:
+            self._set_agenda_week(self.agenda_date_input)
+        except (ValueError, OverflowError):
+            self.error_message = "Informe uma data inicial válida."
+            return
+        async for event in self.refresh():
+            yield event
+
+    @rx.event
+    async def move_agenda_week(self, delta: int):
+        if delta not in (-1, 1):
+            return
+        try:
+            first = date.fromisoformat(self.filter_start_date or clinic_today_iso())
+            self._set_agenda_week((first + timedelta(days=7 * delta)).isoformat())
+        except (ValueError, OverflowError):
+            self.error_message = "Não foi possível navegar para esse período."
+            return
+        async for event in self.refresh():
+            yield event
+
+    @rx.event
+    async def go_to_agenda_today(self):
+        self._set_agenda_week(clinic_today_iso())
+        async for event in self.refresh():
+            yield event
+
+    @rx.event
+    async def clear_agenda_filters(self):
+        self.filter_professional = "__all__"
+        self._set_agenda_week(clinic_today_iso())
+        async for event in self.refresh():
+            yield event
+
+    @rx.event
+    def select_agenda_day(self, day_iso: str) -> None:
+        try:
+            day = date.fromisoformat(day_iso)
+            start = date.fromisoformat(self.filter_start_date)
+            if not start <= day <= start + timedelta(days=6):
+                return
+        except ValueError:
+            return
+        self.selected_agenda_date = "" if self.selected_agenda_date == day_iso else day_iso
+        self.consultation_page = 1
+
+    @rx.event
+    def clear_agenda_day(self) -> None:
+        self.selected_agenda_date = ""
+        self.consultation_page = 1
 
     @rx.event
     def update_filter_professional(self, value: str) -> None:
@@ -924,6 +1032,12 @@ class ReceptionAgendaState(rx.State):
                     patient_id=self.selected_patient_id,
                     slot_id=slot_id,
                 )
+            booked_slot = next((item for item in self.slots if item["id"] == slot_id), None)
+            if booked_slot is not None:
+                booked_day = datetime.strptime(
+                    booked_slot["starts_at"], "%d/%m/%Y às %H:%M"
+                ).date().isoformat()
+                self._set_agenda_week(booked_day)
             self._load_with_token(token)
             self.success_message = "Consulta agendada."
             yield rx.toast.success(self.success_message, position="top-right")
