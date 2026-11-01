@@ -281,3 +281,31 @@ def test_update_replaces_specialties_atomically_after_validation(db: Session) ->
     assert item.name == "Dra. Transação"
     assert item.registration_identifier == "REG-T"
     assert [specialty.id for specialty in item.specialties] == [first.id]
+
+
+def test_edit_professional_can_remove_all_specialty_links(db: Session) -> None:
+    specialty = create_specialty(db, name="Clínica geral")
+    doctor = create_professional(
+        db,
+        name="Dra. Disponível",
+        registration_identifier="REG-SEM-VINCULO",
+        specialty_ids=[specialty.id],
+    )
+
+    updated = update_professional(
+        db,
+        professional_id=doctor.id,
+        name="Dra. Disponível",
+        registration_identifier="REG-SEM-VINCULO",
+        specialty_ids=[],
+    )
+
+    assert updated.id == doctor.id
+    item = next(row for row in list_professionals(db) if row.id == doctor.id)
+    assert item.specialties == ()
+    links = db.exec(
+        __import__("sqlmodel").select(ProfessionalSpecialty).where(
+            ProfessionalSpecialty.professional_id == doctor.id
+        )
+    ).all()
+    assert links == []
