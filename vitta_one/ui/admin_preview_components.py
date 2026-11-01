@@ -331,6 +331,34 @@ def _agenda_summary() -> rx.Component:
     )
 
 
+def _agenda_pagination(*, page, total, on_previous, on_next) -> rx.Component:
+    return rx.cond(
+        total > 1,
+        rx.flex(
+            rx.text("Página ", page, " de ", total, size="2",
+                    color="var(--vitta-text-muted)", class_name="vitta-tabular"),
+            rx.hstack(
+                rx.button(
+                    rx.icon("chevron_left", size=16),
+                    type="button", size="2", variant="outline",
+                    aria_label="Página anterior",
+                    disabled=page <= 1, on_click=on_previous,
+                ),
+                rx.button(
+                    rx.icon("chevron_right", size=16),
+                    type="button", size="2", variant="outline",
+                    aria_label="Próxima página",
+                    disabled=page >= total, on_click=on_next,
+                ),
+                spacing="2",
+            ),
+            align="center", justify="between", gap="3", width="100%",
+            margin_top="0.6rem",
+        ),
+        rx.fragment(),
+    )
+
+
 def agenda_preview() -> rx.Component:
     """Visualização administrativa de QA, sem ações da Recepção e sem dados clínicos."""
     return rx.vstack(
@@ -419,7 +447,11 @@ def agenda_preview() -> rx.Component:
                             size="2", color="var(--vitta-text-muted)",
                             margin_top="0.3rem", margin_bottom="0.75rem",
                         ),
-                        _agenda_summary(),
+                        rx.cond(
+                            AdminAgendaPreviewState.is_loading,
+                            rx.text("Atualizando indicadores…", size="2", color="var(--vitta-text-muted)"),
+                            _agenda_summary(),
+                        ),
                         rx.cond(
                             AdminAgendaPreviewState.is_loading,
                             rx.center(rx.spinner(size="3"), min_height="8rem"),
@@ -427,8 +459,14 @@ def agenda_preview() -> rx.Component:
                                 AdminAgendaPreviewState.day_slots.length() > 0,
                                 rx.vstack(
                                     rx.foreach(
-                                        AdminAgendaPreviewState.day_slots,
+                                        AdminAgendaPreviewState.paginated_day_slots,
                                         _agenda_slot_row,
+                                    ),
+                                    _agenda_pagination(
+                                        page=AdminAgendaPreviewState.slot_page,
+                                        total=AdminAgendaPreviewState.slot_total_pages,
+                                        on_previous=AdminAgendaPreviewState.previous_slot_page,
+                                        on_next=AdminAgendaPreviewState.next_slot_page,
                                     ),
                                     role="list", spacing="2", align="stretch",
                                     width="100%", margin_top="1rem",
@@ -461,8 +499,14 @@ def agenda_preview() -> rx.Component:
                             AdminAgendaPreviewState.day_consultations.length() > 0,
                             rx.vstack(
                                 rx.foreach(
-                                    AdminAgendaPreviewState.day_consultations,
+                                    AdminAgendaPreviewState.paginated_day_consultations,
                                     _agenda_consultation_row,
+                                ),
+                                _agenda_pagination(
+                                    page=AdminAgendaPreviewState.consultation_page,
+                                    total=AdminAgendaPreviewState.consultation_total_pages,
+                                    on_previous=AdminAgendaPreviewState.previous_consultation_page,
+                                    on_next=AdminAgendaPreviewState.next_consultation_page,
                                 ),
                                 role="list", spacing="2", align="stretch",
                                 width="100%", margin_top="0.8rem",

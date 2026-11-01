@@ -107,6 +107,9 @@ class AdminAgendaPreviewState(rx.State):
     selected_day: str = ""
     is_loading: bool = False
     error_message: str = ""
+    slot_page: int = 1
+    consultation_page: int = 1
+    page_size: int = 20
 
     @rx.var
     def month_title(self) -> str:
@@ -122,6 +125,24 @@ class AdminAgendaPreviewState(rx.State):
             return date.fromisoformat(self.selected_day).strftime("%d/%m/%Y")
         except ValueError:
             return ""
+
+    @rx.var
+    def slot_total_pages(self) -> int:
+        return max(1, (len(self.day_slots) + self.page_size - 1) // self.page_size)
+
+    @rx.var
+    def consultation_total_pages(self) -> int:
+        return max(1, (len(self.day_consultations) + self.page_size - 1) // self.page_size)
+
+    @rx.var
+    def paginated_day_slots(self) -> list[PreviewAgendaSlot]:
+        start = (self.slot_page - 1) * self.page_size
+        return self.day_slots[start : start + self.page_size]
+
+    @rx.var
+    def paginated_day_consultations(self) -> list[PreviewAgendaConsultation]:
+        start = (self.consultation_page - 1) * self.page_size
+        return self.day_consultations[start : start + self.page_size]
 
     @rx.var
     def available_count(self) -> int:
@@ -140,6 +161,8 @@ class AdminAgendaPreviewState(rx.State):
         return sum(row["status"] == ConsultationStatus.CANCELADA.value for row in self.day_consultations)
 
     def _clear_results(self) -> None:
+        self.slot_page = 1
+        self.consultation_page = 1
         self.calendar_days = []
         self.day_slots = []
         self.day_consultations = []
@@ -289,6 +312,26 @@ class AdminAgendaPreviewState(rx.State):
         self.selected_day = value
         async for event in self._reload():
             yield event
+
+    @rx.event
+    def previous_slot_page(self):
+        if self.slot_page > 1:
+            self.slot_page -= 1
+
+    @rx.event
+    def next_slot_page(self):
+        if self.slot_page < self.slot_total_pages:
+            self.slot_page += 1
+
+    @rx.event
+    def previous_consultation_page(self):
+        if self.consultation_page > 1:
+            self.consultation_page -= 1
+
+    @rx.event
+    def next_consultation_page(self):
+        if self.consultation_page < self.consultation_total_pages:
+            self.consultation_page += 1
 
     @rx.event
     async def clear_filters(self):
