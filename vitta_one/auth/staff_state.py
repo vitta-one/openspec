@@ -354,9 +354,18 @@ class AdminStaffState(rx.State):
             yield rx.redirect(f"/admin/funcionarios/{created_id}")
         except (ValueError, DirectoryValidationError, DirectoryConflictError,
                 DirectoryNotFoundError) as exc:
-            self.error = str(exc)
-            if "e-mail" in self.error.lower() or "conta" in self.error.lower():
-                self.email_error = self.error
+            if created_id:
+                # O cadastro já foi persistido. Falha posterior no status do
+                # provedor não deve incentivar nova criação do mesmo usuário.
+                self.success = (
+                    "Funcionário cadastrado, mas não foi possível confirmar o status "
+                    "do primeiro acesso. Confira a ficha antes de tentar novamente."
+                )
+                yield rx.redirect(f"/admin/funcionarios/{created_id}")
+            else:
+                self.error = str(exc)
+                if "e-mail" in self.error.lower() or "conta" in self.error.lower():
+                    self.email_error = self.error
         except AuthenticationRequiredError:
             yield rx.redirect("/login")
         except RoleForbiddenError:
