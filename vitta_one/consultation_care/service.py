@@ -102,9 +102,23 @@ def confirm_arrival(
             "Somente consultas agendadas podem ter a chegada confirmada."
         )
 
-    patient = db.get(Patient, consultation.patient_id)
+    # Use the same patient lock as walk-in enqueue, so scheduled arrivals
+    # cannot create a second active passage for this patient concurrently.
+    patient = db.exec(
+        select(Patient).where(Patient.id == consultation.patient_id).with_for_update()
+    ).first()
     if patient is None:
         raise CareLifecycleValidationError("O paciente desta consulta não está disponível.")
+    active = db.exec(
+        select(QueueEntry.id).where(
+            QueueEntry.patient_id == patient.id,
+            QueueEntry.status.in_(
+                (QueueStatus.AGUARDANDO.value, QueueStatus.EM_ATENDIMENTO.value)
+            ),
+        ).limit(1)
+    ).first()
+    if active is not None:
+        raise CareLifecycleConflictError("O paciente já possui uma entrada ativa na fila.")
     _validate_arrival_professional(db, consultation)
 
     existing = db.exec(
