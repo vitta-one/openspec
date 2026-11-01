@@ -3,6 +3,9 @@
 import reflex as rx
 
 from vitta_one.admin_preview.state import AdminPreviewState
+from vitta_one.admin_preview.agenda_state import AdminAgendaPreviewState
+from vitta_one.ui.calendar_components import month_calendar
+from vitta_one.ui.components import field_label
 from vitta_one.ui.components import (
     empty_state,
     error_banner,
@@ -229,203 +232,256 @@ def _professional_chip(row) -> rx.Component:
     )
 
 
-def _preview_slot_row(row) -> rx.Component:
-    return rx.box(
-        rx.flex(
-            rx.box(
-                rx.text(row["starts_at"], font_weight="750", size="2", class_name="vitta-tabular"),
-                rx.text(row["professional_name"], size="1", color="var(--vitta-text-muted)", margin_top="0.15rem"),
-            ),
-            rx.badge(
-                row["status_label"],
-                color_scheme=rx.cond(
-                    row["status"] == "AVAILABLE",
-                    "green",
-                    rx.cond(row["status"] == "BOOKED", "blue", "gray"),
-                ),
-                variant="soft",
-            ),
-            direction=rx.breakpoints(initial="column", sm="row"),
-            justify="between",
-            align=rx.breakpoints(initial="stretch", sm="center"),
-            gap="0.6rem",
-            width="100%",
+def _agenda_slot_row(row) -> rx.Component:
+    return rx.flex(
+        rx.box(
+            rx.text(row["time_label"], font_weight="750", size="3", class_name="vitta-tabular"),
+            rx.text(row["professional_name"], size="2", color="var(--vitta-text-muted)"),
+            min_width="0",
         ),
+        rx.badge(
+            row["status_label"],
+            color_scheme=rx.match(
+                row["status"],
+                ("AVAILABLE", "green"),
+                ("BOOKED", "blue"),
+                "gray",
+            ),
+            high_contrast=True,
+            variant="soft",
+        ),
+        justify="between", align="center", gap="3", width="100%",
         class_name="vitta-schedule-row",
         role="listitem",
     )
 
 
-def _preview_lifecycle_meta(row) -> rx.Component:
-    return rx.vstack(
-        rx.cond(
-            row["confirmed_at"] != "",
-            rx.text(
-                "Chegada confirmada: ",
-                row["confirmed_at"],
-                size="1",
-                color="var(--vitta-text-subtle)",
-                class_name="vitta-tabular",
-            ),
-            rx.fragment(),
+def _agenda_consultation_row(row) -> rx.Component:
+    return rx.flex(
+        rx.box(
+            rx.text(row["time_label"], font_weight="750", size="3", class_name="vitta-tabular"),
+            rx.text(row["professional_name"], size="2", color="var(--vitta-text-muted)"),
+            min_width="0",
         ),
-        rx.cond(
-            row["started_at"] != "",
-            rx.text(
-                "Atendimento iniciado: ",
-                row["started_at"],
-                size="1",
-                color="var(--vitta-text-subtle)",
-                class_name="vitta-tabular",
+        rx.badge(
+            row["status_label"],
+            color_scheme=rx.match(
+                row["status"],
+                ("CANCELADA", "red"),
+                ("CONCLUIDA", "green"),
+                ("EM_ANDAMENTO", "amber"),
+                ("CONFIRMADA", "teal"),
+                "blue",
             ),
-            rx.fragment(),
+            variant="soft",
+            high_contrast=True,
         ),
-        rx.cond(
-            row["completed_at"] != "",
-            rx.text(
-                "Concluída: ",
-                row["completed_at"],
-                size="1",
-                color="var(--vitta-text-subtle)",
-                class_name="vitta-tabular",
-            ),
-            rx.fragment(),
-        ),
-        rx.cond(
-            row["cancelled_at"] != "",
-            rx.text(
-                "Cancelada: ",
-                row["cancelled_at"],
-                size="1",
-                color="var(--vitta-text-subtle)",
-                class_name="vitta-tabular",
-            ),
-            rx.fragment(),
-        ),
-        spacing="1",
-        align="start",
-        margin_top="0.4rem",
-    )
-
-
-def _preview_consultation_row(row) -> rx.Component:
-    return rx.box(
-        rx.flex(
-            rx.box(
-                rx.text(
-                    row["scheduled_at"],
-                    font_weight="750",
-                    size="2",
-                    class_name="vitta-tabular",
-                ),
-                rx.text(row["patient_name"], size="2", margin_top="0.2rem"),
-                rx.text(
-                    row["professional_name"],
-                    size="1",
-                    color="var(--vitta-text-muted)",
-                    margin_top="0.1rem",
-                ),
-                _preview_lifecycle_meta(row),
-            ),
-            rx.badge(
-                row["status_label"],
-                color_scheme=rx.match(
-                    row["status"],
-                    ("CANCELADA", "red"),
-                    ("CONCLUIDA", "green"),
-                    ("EM_ANDAMENTO", "amber"),
-                    ("CONFIRMADA", "teal"),
-                    "blue",
-                ),
-                variant="soft",
-            ),
-            direction=rx.breakpoints(initial="column", sm="row"),
-            justify="between",
-            align=rx.breakpoints(initial="stretch", sm="start"),
-            gap="0.6rem",
-            width="100%",
-        ),
+        justify="between", align="center", gap="3", width="100%",
         class_name="vitta-schedule-row",
         role="listitem",
     )
+
+
+def _agenda_professional_filter() -> rx.Component:
+    return rx.box(
+        field_label("Profissional", "qa-agenda-professional"),
+        rx.select.root(
+            rx.select.trigger(
+                id="qa-agenda-professional",
+                width="100%",
+                class_name="vitta-select-trigger",
+            ),
+            rx.select.content(
+                rx.select.item("Todos os profissionais", value="__all__"),
+                rx.foreach(
+                    AdminAgendaPreviewState.professionals,
+                    lambda item: rx.select.item(item["label"], value=item["value"]),
+                ),
+                position="popper",
+            ),
+            value=AdminAgendaPreviewState.filter_professional,
+            on_change=AdminAgendaPreviewState.filter_by_professional,
+            disabled=AdminAgendaPreviewState.is_loading,
+            size="3",
+        ),
+        width=rx.breakpoints(initial="100%", sm="min(24rem, 100%)"),
+    )
+
+
+def _agenda_summary() -> rx.Component:
+    return rx.flex(
+        rx.badge(
+            "Disponíveis: ", AdminAgendaPreviewState.available_count,
+            color_scheme="green", variant="soft",
+        ),
+        rx.badge(
+            "Reservados: ", AdminAgendaPreviewState.booked_count,
+            color_scheme="blue", variant="soft",
+        ),
+        rx.badge(
+            "Agendadas: ", AdminAgendaPreviewState.scheduled_count,
+            color_scheme="teal", variant="soft",
+        ),
+        rx.badge(
+            "Canceladas: ", AdminAgendaPreviewState.cancelled_count,
+            color_scheme="red", variant="soft",
+        ),
+        wrap="wrap", gap="2", width="100%",
+        aria_label="Resumo da data selecionada",
+    )
+
 
 def agenda_preview() -> rx.Component:
-    """Read-only local QA projection of persisted scheduling data."""
+    """Visualização administrativa de QA, sem ações da Recepção e sem dados clínicos."""
     return rx.vstack(
         page_header(
             "Agenda",
             "Agenda clínica",
-            "Confira slots e Consultas persistidos sem conceder à sessão Administrador as mutações exclusivas da Recepção.",
+            "Consulte a disponibilidade e a situação das consultas por profissional e data.",
         ),
-        _preview_notice(),
+        rx.flex(
+            rx.badge(
+                "QA · somente leitura",
+                color_scheme="gray", variant="soft", high_contrast=True,
+            ),
+            rx.text(
+                "A gestão de horários permanece em Administração / Horários.",
+                size="2", color="var(--vitta-text-muted)",
+            ),
+            gap="3", align="center", wrap="wrap", width="100%",
+        ),
         rx.cond(
-            AdminPreviewState.error_message != "",
-            error_banner(AdminPreviewState.error_message),
+            AdminAgendaPreviewState.error_message != "",
+            section_panel(
+                error_banner(AdminAgendaPreviewState.error_message),
+                rx.button(
+                    "Tentar novamente", type="button", variant="outline",
+                    on_click=AdminAgendaPreviewState.reload_agenda,
+                ),
+            ),
             rx.fragment(),
         ),
-        rx.grid(
-            section_panel(
-                rx.heading("Disponibilidade", size="5"),
-                rx.text(
-                    "Slots reais cadastrados pela Administração.",
-                    size="2",
-                    color="var(--vitta-text-muted)",
-                    margin_top="0.25rem",
-                ),
-                rx.cond(
-                    AdminPreviewState.agenda_slots.length() > 0,
-                    rx.vstack(
-                        rx.foreach(AdminPreviewState.agenda_slots, _preview_slot_row),
-                        spacing="2",
-                        align="stretch",
-                        width="100%",
-                        role="list",
-                        margin_top="1rem",
+        section_panel(
+            rx.flex(
+                _agenda_professional_filter(),
+                rx.hstack(
+                    rx.button(
+                        rx.icon("x", size=15), "Limpar filtros",
+                        type="button", variant="outline", color_scheme="gray",
+                        on_click=AdminAgendaPreviewState.clear_filters,
+                        disabled=AdminAgendaPreviewState.is_loading,
                     ),
-                    empty_state(
-                        "calendar",
-                        "Nenhum horário persistido",
-                        "Cadastre disponibilidade em Administração para vê-la neste preview.",
+                    rx.button(
+                        rx.icon("refresh_cw", size=15), "Atualizar",
+                        type="button", variant="outline", color_scheme="teal",
+                        on_click=AdminAgendaPreviewState.reload_agenda,
+                        disabled=AdminAgendaPreviewState.is_loading,
                     ),
+                    spacing="2", align="center", flex_wrap="wrap",
                 ),
+                direction=rx.breakpoints(initial="column", md="row"),
+                align=rx.breakpoints(initial="stretch", md="end"),
+                justify="between", gap="3", width="100%",
             ),
-            section_panel(
-                rx.heading("Consultas", size="5"),
-                rx.text(
-                    "Agendamentos e cancelamentos reais do período persistido.",
-                    size="2",
-                    color="var(--vitta-text-muted)",
-                    margin_top="0.25rem",
-                ),
-                rx.cond(
-                    AdminPreviewState.agenda_consultations.length() > 0,
-                    rx.vstack(
-                        rx.foreach(
-                            AdminPreviewState.agenda_consultations,
-                            _preview_consultation_row,
-                        ),
-                        spacing="2",
-                        align="stretch",
-                        width="100%",
-                        role="list",
-                        margin_top="1rem",
-                    ),
-                    empty_state(
-                        "calendar",
-                        "Nenhuma consulta persistida",
-                        "Quando a Recepção fizer um agendamento, ele aparecerá aqui em modo somente leitura.",
-                    ),
-                ),
+            rx.text(
+                "Período consultado: ", AdminAgendaPreviewState.month_title,
+                size="2", color="var(--vitta-text-muted)",
+                margin_top="0.75rem",
             ),
-            columns=rx.breakpoints(initial="1", xl="1fr 1fr"),
-            gap="1rem",
-            width="100%",
-            align_items="start",
         ),
-        spacing="5",
-        align="stretch",
-        width="100%",
+        rx.cond(
+            AdminAgendaPreviewState.error_message == "",
+            rx.vstack(
+                rx.grid(
+                    section_panel(
+                        rx.heading("Calendário", size="4"),
+                        rx.text(
+                            "Selecione um dia para ver os horários persistidos.",
+                            size="2", color="var(--vitta-text-muted)",
+                            margin_top="0.3rem", margin_bottom="0.9rem",
+                        ),
+                        month_calendar(
+                            month_title=AdminAgendaPreviewState.month_title,
+                            days=AdminAgendaPreviewState.calendar_days,
+                            is_loading=AdminAgendaPreviewState.is_loading,
+                            on_previous=AdminAgendaPreviewState.move_month(-1),
+                            on_next=AdminAgendaPreviewState.move_month(1),
+                            on_select_day=AdminAgendaPreviewState.select_day,
+                            allow_empty=True,
+                            show_consultations=True,
+                            show_today=True,
+                        ),
+                    ),
+                    section_panel(
+                        rx.heading("Disponibilidade do dia", size="4"),
+                        rx.text(
+                            AdminAgendaPreviewState.selected_day_label,
+                            size="2", color="var(--vitta-text-muted)",
+                            margin_top="0.3rem", margin_bottom="0.75rem",
+                        ),
+                        _agenda_summary(),
+                        rx.cond(
+                            AdminAgendaPreviewState.is_loading,
+                            rx.center(rx.spinner(size="3"), min_height="8rem"),
+                            rx.cond(
+                                AdminAgendaPreviewState.day_slots.length() > 0,
+                                rx.vstack(
+                                    rx.foreach(
+                                        AdminAgendaPreviewState.day_slots,
+                                        _agenda_slot_row,
+                                    ),
+                                    role="list", spacing="2", align="stretch",
+                                    width="100%", margin_top="1rem",
+                                ),
+                                rx.text(
+                                    "Nenhum horário cadastrado para este dia e profissional.",
+                                    size="2", color="var(--vitta-text-muted)",
+                                    padding="1.2rem 0",
+                                ),
+                            ),
+                        ),
+                    ),
+                    columns=rx.breakpoints(initial="1", lg="1.05fr 1fr"),
+                    gap="1rem", width="100%", align_items="start",
+                ),
+                section_panel(
+                    rx.flex(
+                        rx.heading("Consultas do dia", size="4"),
+                        rx.badge(
+                            AdminAgendaPreviewState.day_consultations.length(),
+                            " consultas",
+                            color_scheme="gray", variant="soft",
+                        ),
+                        justify="between", align="center", gap="3", width="100%",
+                    ),
+                    rx.cond(
+                        AdminAgendaPreviewState.is_loading,
+                        rx.center(rx.spinner(size="3"), min_height="5rem"),
+                        rx.cond(
+                            AdminAgendaPreviewState.day_consultations.length() > 0,
+                            rx.vstack(
+                                rx.foreach(
+                                    AdminAgendaPreviewState.day_consultations,
+                                    _agenda_consultation_row,
+                                ),
+                                role="list", spacing="2", align="stretch",
+                                width="100%", margin_top="0.8rem",
+                            ),
+                            rx.text(
+                                "Nenhuma consulta encontrada neste período.",
+                                size="2", color="var(--vitta-text-muted)",
+                                padding="0.9rem 0",
+                            ),
+                        ),
+                    ),
+                ),
+                spacing="4", width="100%", align="stretch",
+            ),
+            rx.fragment(),
+        ),
+        spacing="4", align="stretch", width="100%",
     )
+
 
 def _patient_list_row(row) -> rx.Component:
     is_selected = AdminPreviewState.selected_patient_id == row["id"]
