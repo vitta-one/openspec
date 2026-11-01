@@ -266,15 +266,16 @@ def _appointments_table() -> rx.Component:
                 empty_state(
                     "calendar",
                     "Nenhuma consulta agendada hoje",
-                    "Sua operação está livre por enquanto. Cadastre um paciente ou crie a primeira consulta.",
-                    rx.link("Agendar primeira consulta", href="/recepcao/agenda",
-                            class_name="vitta-context-link"),
+                    "A agenda do dia está vazia. Outras atividades da fila podem continuar em andamento.",
+                    
                     min_height="10rem",
                     padding="1.25rem",
                 ),
             ),
         ),
-        rx.flex(
+        rx.cond(
+            S.total_count > 0,
+            rx.flex(
             rx.text(
                 "Exibindo ",
                 S.showing_start,
@@ -288,7 +289,9 @@ def _appointments_table() -> rx.Component:
                 role="status",
                 aria_live="polite",
             ),
-            rx.hstack(
+            rx.cond(
+                S.total_pages > 1,
+                rx.hstack(
                 rx.button(
                     "‹ Anterior",
                     type="button",
@@ -317,6 +320,8 @@ def _appointments_table() -> rx.Component:
                 align="center",
                 spacing="2",
                 flex_wrap="wrap",
+                ),
+                rx.fragment(),
             ),
             direction=rx.breakpoints(initial="column", sm="row"),
             justify="between",
@@ -324,6 +329,8 @@ def _appointments_table() -> rx.Component:
             gap="0.85rem",
             width="100%",
             class_name="vitta-reception-day-pagination",
+            ),
+            rx.fragment(),
         ),
         class_name="vitta-reception-day-table-area",
     )
@@ -380,62 +387,95 @@ def _appointment_details_dialog() -> rx.Component:
 
 
 def _reception_day_header() -> rx.Component:
-    return rx.box(
-        rx.text("OPERAÇÃO DO DIA", class_name="vitta-section-kicker"),
-        rx.heading(
-            "Recepção — Operação do Dia",
-            size="7",
-            line_height="1.12",
-            letter_spacing="-0.035em",
-            font_family="var(--vitta-font-display)",
-            margin_top="0.35rem",
-            class_name="vitta-reception-day-title",
+    """Compact reception heading with one primary action."""
+    return rx.flex(
+        rx.vstack(
+            rx.text("OPERAÇÃO DO DIA", class_name="vitta-section-kicker"),
+            rx.heading(
+                "Recepção", size="7",
+                font_family="var(--vitta-font-display)",
+                class_name="vitta-reception-day-title",
+            ),
+            rx.text(
+                "Acompanhe as consultas, chegadas e atendimentos do dia.",
+                color="var(--vitta-text-muted)", size="2",
+            ),
+            rx.text(
+                S.clinic_date_label, font_weight="650",
+                class_name="vitta-reception-day-date",
+            ),
+            align="start", spacing="2", min_width="0",
         ),
         rx.vstack(
-            rx.text(S.clinic_date_label, font_weight="650", class_name="vitta-reception-day-date"),
-
-            align="start", spacing="1", role="status", aria_live="polite",
-            class_name="vitta-reception-day-date-group",
+            rx.hstack(
+                rx.link(
+                    rx.icon("plus", size=16), "Nova consulta",
+                    href="/recepcao/agenda/nova", class_name="vitta-primary-action",
+                ),
+                rx.button(
+                    rx.icon("refresh_cw", size=16), "Atualizar dados",
+                    type="button", on_click=S.refresh, variant="outline",
+                    size="3", disabled=S.is_loading,
+                    aria_label="Atualizar dados da Recepção",
+                ),
+                align="center", spacing="2", flex_wrap="wrap",
+            ),
+            rx.cond(
+                S.has_loaded,
+                rx.text(
+                    "Última atualização: ", S.last_updated, size="1",
+                    color="var(--vitta-text-muted)",
+                    class_name="vitta-reception-day-updated",
+                    role="status", aria_live="polite",
+                ),
+                rx.fragment(),
+            ),
+            align=rx.breakpoints(initial="start", md="end"), spacing="2",
         ),
+        direction=rx.breakpoints(initial="column", md="row"),
+        align=rx.breakpoints(initial="start", md="center"),
+        justify="between", gap="4", width="100%",
         class_name="vitta-reception-day-header",
     )
 
 
 def _reception_day_toolbar() -> rx.Component:
-    return rx.box(
+    """Search and professional filter only the daily appointment list."""
+    return rx.grid(
         rx.el.form(
+            field_label("Buscar nas consultas de hoje", "reception-day-search"),
             rx.flex(
                 rx.box(
                     rx.box(
                         rx.icon("search", size=17, aria_hidden="true"),
                         position="absolute", left="0.8rem", top="50%",
-                        transform="translateY(-50%)", color="var(--vitta-text-subtle)",
-                        pointer_events="none",
+                        transform="translateY(-50%)",
+                        color="var(--vitta-text-subtle)", pointer_events="none",
                     ),
                     rx.el.input(
                         id="reception-day-search", name="query", type="search",
                         value=S.search_query, on_change=S.update_search_query,
-                        placeholder="Nome, tel. ou CPF", auto_complete="off", max_length=100,
-                        class_name="vitta-reception-day-search-input",
-                        aria_label="Localizar paciente nas consultas de hoje por nome, telefone ou CPF",
+                        placeholder="Nome, telefone ou CPF", auto_complete="off",
+                        max_length=100, class_name="vitta-reception-day-search-input",
+                        aria_label="Buscar paciente nas consultas de hoje",
                     ),
                     position="relative", min_width="0",
                     class_name="vitta-reception-day-search-control",
                 ),
                 rx.button(
-                    "Buscar", type="submit", color_scheme="teal", variant="outline",
+                    "Buscar", type="submit", variant="outline", color_scheme="teal",
                     size="3", disabled=S.is_loading,
                     class_name="vitta-reception-day-search-button",
                 ),
                 direction=rx.breakpoints(initial="column", sm="row"),
                 align=rx.breakpoints(initial="stretch", sm="center"),
-                gap="0.55rem", width="100%",
+                gap="2", width="100%", margin_top="0.4rem",
             ),
             on_submit=S.apply_search, no_validate=True,
             class_name="vitta-reception-day-search-form",
         ),
         rx.box(
-            field_label("Profissional", "reception-day-professional"),
+            field_label("Filtrar profissional", "reception-day-professional"),
             rx.select.root(
                 rx.select.trigger(
                     id="reception-day-professional", width="100%",
@@ -454,28 +494,8 @@ def _reception_day_toolbar() -> rx.Component:
             ),
             class_name="vitta-reception-day-professional-filter",
         ),
-        rx.hstack(
-            rx.link(
-                rx.icon("calendar_days", size=16), "Ir para Agenda",
-                href="/recepcao/agenda", class_name="vitta-reception-day-secondary-action",
-            ),
-            rx.button(
-                rx.icon("plus", size=16), "Nova consulta", type="button",
-                on_click=rx.redirect("/recepcao/agenda"), color_scheme="teal",
-                high_contrast=True, size="3",
-                class_name="vitta-reception-day-primary-action",
-            ),
-            rx.button(
-                rx.icon("refresh_cw", size=16),
-                rx.text("Atualizar", class_name="vitta-reception-day-refresh-label"),
-                type="button", on_click=S.refresh, variant="ghost", size="2",
-                disabled=S.is_loading, aria_label="Atualizar consultas de hoje",
-                title="Atualizar consultas de hoje", class_name="vitta-reception-day-refresh",
-            ),
-            direction=rx.breakpoints(initial="column", md="row"),
-            align=rx.breakpoints(initial="stretch", md="center"),
-            flex_wrap="wrap", gap="0.5rem", class_name="vitta-reception-day-actions",
-        ),
+        columns=rx.breakpoints(initial="1", md="minmax(0, 1fr) minmax(13rem, 18rem)"),
+        gap="3", width="100%", align="end",
         class_name="vitta-reception-day-toolbar",
     )
 
@@ -502,7 +522,7 @@ def reception_overview_cards() -> rx.Component:
     """Real operational KPIs from the authorized receptionist overview service."""
     return rx.grid(
         _reception_metric("Consultas hoje", S.overview_scheduled,
-                          "Agendadas e confirmadas", "calendar_days", "/recepcao/agenda"),
+                          "Exceto canceladas", "calendar_days", "/recepcao/agenda"),
         _reception_metric("Na espera", S.overview_waiting,
                           "Pacientes na fila", "users", "/recepcao/fila"),
         _reception_metric("Em atendimento", S.overview_attending,
@@ -512,7 +532,7 @@ def reception_overview_cards() -> rx.Component:
         _reception_metric("Concluídos hoje", S.overview_completed,
                           "Atendimentos finalizados", "circle_check", "/recepcao/fila"),
         columns=rx.breakpoints(initial="1", sm="2", lg="3", xl="5"),
-        gap="5", width="100%",
+        gap="3", width="100%",
     )
 
 
@@ -574,53 +594,84 @@ def reception_week_calendar() -> rx.Component:
 
 
 def reception_dashboard() -> rx.Component:
-    """Quiet overview: real indicators and upcoming calendar, no operational forms."""
+    """Operational reception home with real daily appointments and metrics."""
     return rx.vstack(
-        rx.box(
-            rx.text("VISÃO GERAL", class_name="vitta-section-kicker"),
-            rx.heading("Painel da recepção", size="7", margin_top="0.4rem"),
-            rx.text(
-                "Resumo da operação da clínica em ",
-                S.clinic_date_label,
-                ". Para realizar ações, use a navegação lateral.",
-                size="2", color="var(--vitta-text-muted)", margin_top="0.65rem",
-            ),
-            class_name="vitta-reception-dashboard-heading",
-        ),
+        _reception_day_header(),
         rx.cond(
             S.error_message != "",
-            rx.box(S.error_message, role="status", class_name="vitta-sr-only"),
-            rx.fragment(),
-        ),
-        reception_overview_cards(),
-        section_panel(
-            rx.vstack(
+            rx.box(
                 rx.hstack(
-                    rx.icon("calendar_days", size=20, color="var(--vitta-primary)"),
-                    rx.heading("Próximos sete dias", size="4"),
+                    rx.icon("triangle_alert", size=18), rx.text(S.error_message),
                     spacing="2", align="center",
                 ),
-                rx.text(
-                    "Consultas já cadastradas, agrupadas por data e horário.",
-                    color="var(--vitta-text-muted)", size="2",
-                ),
-                rx.cond(
-                    S.is_loading & ~S.has_loaded,
-                    rx.center(rx.spinner(size="3"), min_height="9rem", width="100%"),
+                role="alert", padding="0.9rem 1rem",
+                border="1px solid var(--vitta-danger-border)",
+                border_radius="var(--vitta-radius-control)",
+                background="var(--vitta-danger-soft)",
+                color="var(--vitta-danger)", width="100%",
+            ),
+            rx.fragment(),
+        ),
+        rx.cond(
+            S.is_loading & ~S.has_loaded,
+            rx.center(
+                rx.spinner(size="3"),
+                rx.text("Carregando operação do dia...", size="2"),
+                gap="3", min_height="12rem", width="100%",
+                role="status", aria_live="polite",
+            ),
+            rx.cond(
+                S.has_loaded,
+                rx.fragment(
                     rx.box(
-                        rx.grid(
-                            rx.foreach(S.calendar_week, _agenda_day_card),
-                            columns="7", gap="3",
-                            class_name="vitta-agenda-week-grid",
+                        rx.text(
+                            "Indicadores gerais da clínica: consultas e conclusões "
+                            "consideram hoje; espera e atendimento mostram a fila atual. "
+                            "Os filtros abaixo alteram apenas a tabela.",
+                            size="2", color="var(--vitta-text-muted)",
+                            margin_bottom="0.75rem",
                         ),
-                        overflow_x="auto", width="100%",
-                        class_name="vitta-agenda-week-scroll",
+                        reception_overview_cards(), width="100%",
+                    ),
+                    section_panel(
+                        rx.vstack(
+                            rx.flex(
+                                rx.vstack(
+                                    rx.heading("Consultas do dia", size="5"),
+                                    rx.text(
+                                        "Agendamentos do dia, com situação e ações disponíveis.",
+                                        size="2", color="var(--vitta-text-muted)",
+                                    ),
+                                    align="start", spacing="1",
+                                ),
+                                rx.hstack(
+                                    rx.link(
+                                        "Novo paciente", href="/recepcao/pacientes/novo",
+                                        class_name="vitta-context-link",
+                                    ),
+                                    rx.link(
+                                        "Ver fila de espera", href="/recepcao/fila",
+                                        class_name="vitta-context-link",
+                                    ),
+                                    spacing="2", flex_wrap="wrap",
+                                ),
+                                direction=rx.breakpoints(initial="column", md="row"),
+                                justify="between",
+                                align=rx.breakpoints(initial="start", md="center"),
+                                gap="3", width="100%",
+                            ),
+                            _reception_day_toolbar(),
+                            _appointments_table(),
+                            spacing="4", align="stretch", width="100%",
+                        ),
                     ),
                 ),
-                spacing="4", align="stretch", width="100%",
+                rx.fragment(),
             ),
         ),
+        _appointment_details_dialog(),
+        reception_agenda_dialogs(),
         rx.moment(interval=60000, on_change=S.tick, display="none"),
-        align="stretch", width="100%", spacing="6",
-        class_name="vitta-reception-overview",
+        align="stretch", width="100%", spacing="4",
+        class_name="vitta-reception-overview vitta-reception-operations",
     )
