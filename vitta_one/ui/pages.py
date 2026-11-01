@@ -491,7 +491,7 @@ def reception_page() -> rx.Component:
     )
 
 
-def reception_agenda_page() -> rx.Component:
+def reception_agenda_page(verified_path: str = "/recepcao/agenda") -> rx.Component:
     """Scheduling, rescheduling, cancellation and check-in; preserved services."""
     return protected_workspace(
         Role.RECEPCIONISTA,
@@ -503,13 +503,13 @@ def reception_agenda_page() -> rx.Component:
         reception_week_calendar(),
         reception_agenda_panel(),
         active="agenda",
-        verified_path="/recepcao/agenda",
+        verified_path=verified_path,
     )
 
 
 def reception_booking_page() -> rx.Component:
     """Compatibility route: show the canonical Agenda with its booking modal."""
-    return reception_agenda_page()
+    return reception_agenda_page(verified_path="/recepcao/agenda/nova")
 
 
 def reception_patients_page() -> rx.Component:
