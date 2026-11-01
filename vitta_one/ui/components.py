@@ -180,7 +180,7 @@ def field_label(text: str, control_id: str) -> rx.Component:
 
 
 def login_form() -> rx.Component:
-    """Render the public login form with an accessible icon-only password reveal."""
+    """Accessible login using the shared field, feedback and action primitives."""
     return rx.el.form(
         rx.vstack(
             rx.box(
@@ -196,10 +196,22 @@ def login_form() -> rx.Component:
                     class_name="vitta-input",
                     placeholder="seu.email@clinica.com",
                     margin_top="0.45rem",
-                    aria_invalid=AuthState.login_error != "",
+                    aria_invalid=AuthState.login_email_error != "",
                     aria_describedby=rx.cond(
-                        AuthState.login_error != "", "login-error", ""
+                        AuthState.login_email_error != "", "login-email-error", ""
                     ),
+                ),
+                rx.cond(
+                    AuthState.login_email_error != "",
+                    rx.text(
+                        AuthState.login_email_error,
+                        id="login-email-error",
+                        role="alert",
+                        color="var(--vitta-danger)",
+                        font_size="0.82rem",
+                        margin_top="0.4rem",
+                    ),
+                    rx.fragment(),
                 ),
                 width="100%",
             ),
@@ -214,9 +226,9 @@ def login_form() -> rx.Component:
                         auto_complete="current-password",
                         class_name="vitta-input vitta-password-input",
                         placeholder="Digite sua senha",
-                        aria_invalid=AuthState.login_error != "",
+                        aria_invalid=AuthState.login_password_error != "",
                         aria_describedby=rx.cond(
-                            AuthState.login_error != "", "login-error", ""
+                            AuthState.login_password_error != "", "login-password-error", ""
                         ),
                     ),
                     rx.button(
@@ -240,14 +252,24 @@ def login_form() -> rx.Component:
                     position="relative",
                     margin_top="0.45rem",
                 ),
+                rx.cond(
+                    AuthState.login_password_error != "",
+                    rx.text(
+                        AuthState.login_password_error,
+                        id="login-password-error",
+                        role="alert",
+                        color="var(--vitta-danger)",
+                        font_size="0.82rem",
+                        margin_top="0.4rem",
+                    ),
+                    rx.fragment(),
+                ),
                 width="100%",
             ),
-            rx.box(
-                AuthState.login_error,
-                id="login-error",
-                role="status",
-                aria_live="polite",
-                class_name="vitta-sr-only",
+            rx.cond(
+                AuthState.login_error != "",
+                error_banner(AuthState.login_error, "login-error"),
+                rx.fragment(),
             ),
             rx.button(
                 rx.hstack(
@@ -256,7 +278,11 @@ def login_form() -> rx.Component:
                         rx.spinner(size="2"),
                         rx.icon("log_in", size=18),
                     ),
-                    rx.text("Entrar"),
+                    rx.cond(
+                        AuthState.is_submitting,
+                        rx.text("Entrando…"),
+                        rx.text("Entrar"),
+                    ),
                     spacing="2",
                     align="center",
                     justify="center",
@@ -268,6 +294,7 @@ def login_form() -> rx.Component:
                 color_scheme="teal",
                 high_contrast=True,
                 disabled=AuthState.is_submitting,
+                aria_busy=AuthState.is_submitting,
                 class_name="vitta-primary-action",
             ),
             spacing="4",
@@ -275,8 +302,10 @@ def login_form() -> rx.Component:
         ),
         on_submit=AuthState.login,
         no_validate=True,
+        reset_on_submit=False,
         width="100%",
         class_name="vitta-login-form",
+        aria_busy=AuthState.is_submitting,
     )
 
 
