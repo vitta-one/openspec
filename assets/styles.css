@@ -2218,11 +2218,17 @@ button:disabled,
   outline-offset: 3px;
 }
 .vitta-specialty-choice .rt-CheckboxLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
   margin: 0 !important;
   line-height: 1.4;
   cursor: pointer;
   color: #0f172a;
   font-weight: 650;
+}
+.vitta-specialty-choice:has([data-disabled]):hover {
+  background: transparent;
 }
 .vitta-admin-action + .vitta-admin-action { border-top-color: transparent; }
 .vitta-admin-action { border: 1px solid var(--vitta-border); margin-bottom: 0.7rem; }
