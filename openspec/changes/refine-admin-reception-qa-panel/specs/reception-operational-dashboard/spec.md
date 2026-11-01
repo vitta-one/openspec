@@ -14,7 +14,7 @@ O sistema MUST disponibilizar `/admin/recepcao` apenas quando a flag local de QA
 - **THEN** a leitura é negada antes de retornar qualquer dado operacional protegido
 
 ### Requirement: Estado atual, histórico e agenda mantêm critérios temporais verificáveis
-O preview MUST distinguir `AGUARDANDO` e `EM_ATENDIMENTO` atuais de `FINALIZADO` e `RETIRADO` por seus respectivos momentos de transição. As consultas MUST refletir registros agendados persistidos, com filtro de período em datas locais da clínica, profissional e situação registrada, sem inferir mudanças ou inventar horários. O preview MUST preservar a ordenação clínica já implementada para a fila aguardando e não pode alterar prioridade.
+O preview MUST distinguir `AGUARDANDO` e `EM_ATENDIMENTO` atuais de `FINALIZADO` e `RETIRADO` por seus respectivos momentos de transição. As consultas MUST refletir registros agendados persistidos, com filtro de período em datas locais da clínica e de profissional, exibindo a situação persistida, sem inferir mudanças ou inventar horários. O preview MUST preservar a ordenação clínica já implementada para a fila aguardando e não pode alterar prioridade.
 
 #### Scenario: Fila ativa e histórico coexistem
 - **WHEN** há entradas aguardando e retiradas no banco
