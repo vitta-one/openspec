@@ -11,6 +11,7 @@ from vitta_one.appointment_scheduling.application import (
     admin_list_active_professionals,
     reception_get_agenda,
     reception_list_active_professionals,
+    reception_list_booking_professionals,
     reception_schedule_consultation,
 )
 from vitta_one.auth.authorization import AuthenticationRequiredError, RoleForbiddenError
@@ -127,3 +128,24 @@ def test_expired_session_is_rejected_before_schedule_data(db: Session) -> None:
     with pytest.raises(AuthenticationRequiredError):
         reception_get_agenda(db, token=expired)
 
+
+def test_booking_professional_options_are_authorized_and_specialty_optional(db: Session) -> None:
+    _professional(db)
+    create_professional(
+        db,
+        name="Dr. Sem Especialidade",
+        registration_identifier="REG-SEM-VINCULO",
+        specialty_ids=[],
+    )
+    receptionist = _token(db, Role.RECEPCIONISTA, "reception-booking@example.com")
+    administrator = _token(db, Role.ADMINISTRADOR, "admin-booking@example.com")
+
+    rows = reception_list_booking_professionals(db, token=receptionist)
+    assert [(professional.name, specialties) for professional, specialties in rows] == [
+        ("Dr. Sem Especialidade", ""),
+        ("Dra. Agenda", "Clínica Agenda"),
+    ]
+    with pytest.raises(RoleForbiddenError):
+        reception_list_booking_professionals(db, token=administrator)
+    with pytest.raises(AuthenticationRequiredError):
+        reception_list_booking_professionals(db, token="")
