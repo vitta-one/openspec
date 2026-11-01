@@ -364,7 +364,7 @@ def specialty_dialog() -> rx.Component:
 def _professional_form_fields() -> rx.Component:
     return rx.vstack(
         rx.box(
-            field_label("Nome do profissional", "professional-name"),
+            field_label("Nome completo *", "professional-name"),
             rx.el.input(
                 id="professional-name",
                 name="name",
@@ -381,7 +381,7 @@ def _professional_form_fields() -> rx.Component:
             width="100%",
         ),
         rx.box(
-            field_label("E-mail profissional", "professional-email"),
+            field_label("E-mail de acesso *", "professional-email"),
             rx.el.input(
                 id="professional-email",
                 name="email",
@@ -434,16 +434,21 @@ def _professional_form_fields() -> rx.Component:
         ),
         rx.el.fieldset(
             rx.el.legend(
-                "Especialidades",
+                "Especialidades (opcional)",
                 font_weight="650",
                 font_size="0.9rem",
                 color="var(--vitta-text)",
                 margin_bottom="0.55rem",
             ),
             rx.vstack(
-                rx.foreach(AdminDirectoryState.specialty_options, specialty_option),
+                rx.cond(
+                    AdminDirectoryState.specialty_options.length() > 0,
+                    rx.foreach(AdminDirectoryState.specialty_options, specialty_option),
+                    rx.text("Nenhuma especialidade disponível. Cadastre o médico e associe depois.",
+                            size="2", color="var(--vitta-text-muted)"),
+                ),
                 rx.text(
-                    "Selecione uma ou mais áreas em que o profissional atende.",
+                    "Associe uma ou mais especialidades ao médico. Você também poderá fazer isso posteriormente.",
                     size="1",
                     color="var(--vitta-text-muted)",
                     line_height="1.45",
@@ -1150,6 +1155,11 @@ def medical_registration_form_panel() -> rx.Component:
                 rx.heading("Dados profissionais", size="4"),
                 rx.text("Informe os dados de identificação, o acesso e as especialidades do médico.",
                         color="var(--vitta-text-muted)", size="2", line_height="1.6"),
+                rx.cond(
+                    AdminDirectoryState.error_message != "",
+                    error_banner(AdminDirectoryState.error_message, "medical-registration-error"),
+                    rx.fragment(),
+                ),
                 _professional_form_fields(),
                 rx.flex(
                     rx.link("Cancelar", href="/admin/funcionarios", class_name="vitta-context-link"),
@@ -1164,6 +1174,6 @@ def medical_registration_form_panel() -> rx.Component:
                 class_name="vitta-form-panel",
             ),
             on_submit=AdminDirectoryState.save_professional,
-            width="100%",
+            no_validate=True, width="100%",
         )
     )
