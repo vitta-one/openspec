@@ -459,32 +459,45 @@ class ReceptionQueueState(rx.State):
 
     @rx.event
     async def load_patient_detail(self):
-        """Resolve patient ID under server-side RBAC on every request."""
+        """Load authorized operational fields; never include clinical history."""
+        self.patient_detail_loading = True
+        self.patient_detail_loaded = False
+        self.patient_detail_error = ""
+        yield
         try:
-            raw_id = self.router.page.params.get("patient_id", "")
-            if not str(raw_id).isdigit():
-                yield rx.redirect("/recepcao/pacientes")
+            raw_id = str(self.router.page.params.get("patient_id", ""))
+            if not raw_id.isdigit() or len(raw_id) > 18 or int(raw_id) <= 0:
+                self._clear_sensitive_view()
+                self.patient_detail_error = "Paciente não encontrado."
                 return
+            patient_id = int(raw_id)
+            if self.selected_patient_id != patient_id:
+                self.patient_history_page = 1
+            self.selected_patient_id = 0
+            self.selected_patient_name = ""
+            self.selected_patient_phone = ""
             token = await self._token()
-            with rx.session() as db:
-                patient = reception_get_patient_identity(db, token=token, patient_id=int(raw_id))
-                if patient is None:
-                    yield rx.redirect("/recepcao/pacientes")
-                    return
-                status = reception_get_patient_portal_status(
-                    db, token=token, patient_id=patient.id,
-                )
-            self.selected_patient_id = patient.id
-            self.selected_patient_name = patient.name
-            self.selected_patient_phone = format_patient_phone_input(patient.phone)
-            self.selected_patient_portal_status = status.label
-            self.qa_local_enabled = local_qa_enabled()
+            if not self._load_patient_profile_with_token(token, patient_id):
+                self._clear_sensitive_view()
+                self.patient_detail_error = "Paciente não encontrado."
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
-            yield rx.toast.error("Não foi possível abrir a ficha do paciente.")
-            yield rx.redirect("/recepcao/pacientes")
+            self._clear_sensitive_view()
+            self.patient_detail_error = "Não foi possível carregar a ficha do paciente."
+        finally:
+            self.patient_detail_loading = False
+            yield
+
+    @rx.event
+    def change_patient_history_page(self, delta: int):
+        if not self.patient_detail_loaded or self.selected_patient_id <= 0:
+            return
+        self.patient_history_page = max(
+            1, min(self.patient_history_page + delta, self.patient_history_pages)
+        )
+        return ReceptionQueueState.load_patient_detail
 
     @rx.event
     async def load(self):
