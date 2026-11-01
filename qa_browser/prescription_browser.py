@@ -1025,3 +1025,58 @@ def test_admin_directory_and_modal_text_have_explicit_light_contrast(page: Page)
         "el => getComputedStyle(el).color"
     ) == "rgb(15, 23, 42)"
     page.screenshot(path="qa-artifacts/admin-contrast-professional.png", full_page=True)
+
+
+
+def test_admin_qa_patient_directory_and_dossier_are_separate(page: Page) -> None:
+    """Verify real QA-only patient navigation, lazy clinical history and narrow widths."""
+    login_as_admin(page)
+    page.goto(BASE + "/admin/pacientes", wait_until="domcontentloaded")
+    expect(page.get_by_role("heading", name="Pacientes", exact=True)).to_be_visible(timeout=30000)
+    directory = page.get_by_role("table")
+    expect(directory).to_be_visible(timeout=30000)
+    expect(directory.get_by_role("columnheader", name="Paciente")).to_be_visible()
+    expect(directory.get_by_role("columnheader", name="CPF mascarado")).to_be_visible()
+    assert directory.get_by_role("checkbox").count() == 0
+    assert page.get_by_role("heading", name="Histórico operacional").count() == 0
+    assert page.get_by_role("heading", name="Histórico clínico").count() == 0
+
+    for width in (320, 390, 768, 1024, 1440):
+        page.set_viewport_size({"width": width, "height": 850})
+        assert page.evaluate(
+            "document.documentElement.scrollWidth <= window.innerWidth + 2"
+        ), f"patient directory overflow at {width}px: {overflowing_elements(page)}"
+
+    details = directory.get_by_role("link", name=re.compile(r"^Ver detalhes")).first
+    details.focus()
+    details.press("Enter")
+    expect(page).to_have_url(re.compile(r"/admin/pacientes/\\d+/?$"), timeout=30000)
+    expect(page.get_by_role("heading", name="Ficha do paciente")).to_be_visible(timeout=30000)
+    expect(page.get_by_role("heading", name="Histórico operacional")).to_be_visible()
+
+    for width in (320, 390, 768, 1024, 1440):
+        page.set_viewport_size({"width": width, "height": 850})
+        assert page.evaluate(
+            "document.documentElement.scrollWidth <= window.innerWidth + 2"
+        ), f"patient dossier overflow at {width}px: {overflowing_elements(page)}"
+
+    clinical = page.get_by_role("button", name="Histórico clínico")
+    clinical.focus()
+    clinical.press("Enter")
+    expect(clinical).to_have_attribute("aria-pressed", "true", timeout=15000)
+    expect(page.get_by_role("heading", name="Histórico clínico")).to_be_visible()
+    expect(page.get_by_role("button", name="Histórico operacional")).to_be_visible()
+
+    page.get_by_role("button", name="Histórico operacional").click()
+    expect(page.get_by_role("heading", name="Histórico operacional")).to_be_visible()
+    breadcrumb = page.locator(".vitta-breadcrumb")
+    breadcrumb.get_by_role("link", name="Pacientes").click()
+    expect(page).to_have_url(re.compile(r"/admin/pacientes/?$"), timeout=30000)
+    expect(page.get_by_role("table")).to_be_visible(timeout=30000)
+
+
+def test_unauthenticated_admin_patient_detail_cannot_expose_identity(page: Page) -> None:
+    """Direct object URLs require an authenticated QA Administrator."""
+    page.goto(BASE + "/admin/pacientes/1", wait_until="domcontentloaded")
+    expect(page).to_have_url(re.compile(r"/login/?$"), timeout=30000)
+    assert page.get_by_role("heading", name="Ficha do paciente").count() == 0
