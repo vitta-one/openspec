@@ -78,17 +78,22 @@ def test_specialty_create_rename_uniqueness_and_activation(db: Session) -> None:
     ]
 
 
-def test_professional_requires_specialty_and_deduplicates_associations(db: Session) -> None:
+def test_professional_allows_optional_specialty_and_deduplicates_associations(db: Session) -> None:
     cardiology = create_specialty(db, name="Cardiologia")
     pediatrics = create_specialty(db, name="Pediatria")
 
-    with pytest.raises(DirectoryValidationError):
-        create_professional(
-            db,
-            name="Dra. Sem Especialidade",
-            registration_identifier="REG-0",
-            specialty_ids=[],
+    without_specialty = create_professional(
+        db,
+        name="Dra. Sem Especialidade",
+        registration_identifier="REG-0",
+        specialty_ids=[],
+    )
+    assert without_specialty.id is not None
+    assert db.exec(
+        __import__("sqlmodel").select(ProfessionalSpecialty).where(
+            ProfessionalSpecialty.professional_id == without_specialty.id
         )
+    ).all() == []
 
     professional = create_professional(
         db,
