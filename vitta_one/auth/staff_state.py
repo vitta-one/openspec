@@ -152,6 +152,12 @@ class AdminStaffState(rx.State):
         self.profile_change_dialog_open = False
 
     @rx.event
+    def set_profile_change_dialog_open(self, is_open: bool) -> None:
+        self.profile_change_dialog_open = is_open
+        if not is_open:
+            self.pending_profile = ""
+
+    @rx.event
     def dismiss_profile_change(self) -> None:
         self.pending_profile = ""
         self.profile_change_dialog_open = False
@@ -162,6 +168,10 @@ class AdminStaffState(rx.State):
             self.cancel_dialog_open = True
         else:
             return rx.redirect("/admin/funcionarios")
+
+    @rx.event
+    def set_cancel_dialog_open(self, is_open: bool) -> None:
+        self.cancel_dialog_open = is_open
 
     @rx.event
     def dismiss_cancel(self) -> None:
