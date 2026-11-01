@@ -2690,6 +2690,13 @@ button:disabled,
 .vitta-sidebar-head { min-width: 0; }
 .vitta-sidebar-close { display: none !important; }
 @media (max-width: 1050px) {
+  /* Desktop collapse must not strip the mobile drawer of padding or scrolling. */
+  .vitta-shell.is-sidebar-closed.is-mobile-nav-open .vitta-sidebar {
+    padding: 1rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+    border-right: 1px solid var(--vitta-border);
+  }
   .vitta-shell.is-mobile-nav-open .vitta-sidebar-close {
     display: inline-flex !important;
     flex: 0 0 auto;
