@@ -225,7 +225,7 @@ def _admin_calendar_day(day) -> rx.Component:
             rx.text(day["day"], font_weight="700", size="3"),
             rx.cond(
                 day["has_slots"],
-                rx.text(day["slot_count"], " horários", size="1",
+                rx.text(day["slot_count"], size="1",
                         class_name="vitta-calendar-day-count"),
                 rx.fragment(),
             ),
@@ -238,7 +238,11 @@ def _admin_calendar_day(day) -> rx.Component:
             rx.cond(
                 day["has_slots"],
                 "vitta-calendar-date has-slots",
-                "vitta-calendar-date is-empty",
+                rx.cond(
+                    day["is_current_month"],
+                    "vitta-calendar-date is-empty",
+                    "vitta-calendar-date is-unavailable",
+                ),
             ),
         ),
         disabled=~day["is_current_month"],
@@ -346,8 +350,11 @@ def admin_availability_panel() -> rx.Component:
             feedback_region(AdminAvailabilityState.error_message, AdminAvailabilityState.success_message,
                             "admin-hours-feedback"),
             rx.cond(
-                AdminAvailabilityState.has_professionals,
-                rx.tabs.root(
+                AdminAvailabilityState.is_loading & ~AdminAvailabilityState.has_professionals,
+                rx.center(rx.spinner(size="3"), min_height="10rem", width="100%"),
+                rx.cond(
+                    AdminAvailabilityState.has_professionals,
+                    rx.tabs.root(
                 rx.tabs.list(
                     rx.tabs.trigger("Consultar disponibilidade", value="search"),
                     rx.tabs.trigger("Expediente semanal", value="weekly"),
@@ -364,14 +371,8 @@ def admin_availability_panel() -> rx.Component:
                             rx.box(
                                 rx.text("Expediente atualmente configurado", size="2", font_weight="700"),
                                 rx.hstack(
-                                    rx.text("Dias", font_weight="700", size="2"),
-                                    rx.text(AdminAvailabilityState.weekly_start_day, " a ",
-                                            AdminAvailabilityState.weekly_end_day, size="2"),
-                                    rx.text("·", color="var(--vitta-text-subtle)"),
-                                    rx.text(AdminAvailabilityState.weekly_start_time, "–",
-                                            AdminAvailabilityState.weekly_end_time, size="2"),
-                                    rx.text("·", color="var(--vitta-text-subtle)"),
-                                    rx.text(AdminAvailabilityState.weekly_slot_minutes, " min", size="2"),
+                                    rx.text(AdminAvailabilityState.weekly_saved_summary,
+                                            size="2", color="var(--vitta-text-muted)"),
                                     spacing="2", flex_wrap="wrap",
                                 ),
                                 class_name="vitta-info-strip",
@@ -509,6 +510,7 @@ def admin_availability_panel() -> rx.Component:
                 ),
                 empty_state("stethoscope", "Nenhum médico ativo",
                             "Cadastre um profissional ativo antes de configurar horários."),
+                ),
             ),
             spacing="4",
             align="stretch",
