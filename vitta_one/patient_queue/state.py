@@ -427,6 +427,16 @@ class ReceptionQueueState(rx.State):
             self.selected_patient_name = patient.name
             self.selected_patient_phone = format_patient_phone_input(patient.phone)
             self.selected_patient_portal_status = status.label
+            # Never carry one patient's modal draft or invitation email to another route.
+            self.edit_patient_dialog_open = False
+            self.edit_patient_dialog_loading = False
+            self.edit_patient_name = ""
+            self.edit_patient_phone = ""
+            self.edit_discard_pending = False
+            self.portal_dialog_open = False
+            self.portal_dialog_loading = False
+            self.portal_access_email = ""
+            self.portal_access_state = ""
             self.qa_local_enabled = local_qa_enabled()
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
@@ -676,6 +686,11 @@ class ReceptionQueueState(rx.State):
     def change_patient_edit_dialog(self, is_open: bool):
         if self.is_submitting:
             return
+        if is_open:
+            if not self.edit_patient_dialog_open:
+                self.edit_patient_dialog_loading = True
+            self.edit_patient_dialog_open = True
+            return
         if not is_open and (
             self.edit_patient_name != self.selected_patient_name
             or self.edit_patient_phone != self.selected_patient_phone
@@ -747,6 +762,11 @@ class ReceptionQueueState(rx.State):
     @rx.event
     def change_patient_portal_dialog(self, is_open: bool):
         if self.is_submitting:
+            return
+        if is_open:
+            if not self.portal_dialog_open:
+                self.portal_dialog_loading = True
+            self.portal_dialog_open = True
             return
         self.portal_dialog_open = is_open
         if not is_open:
