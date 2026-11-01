@@ -27,12 +27,12 @@ def test_only_admin_can_create_receptionist(db):
     admin = token(db, Role.ADMINISTRADOR.value)
     reception = token(db, Role.RECEPCIONISTA.value)
     with pytest.raises(PermissionError):
-        create_receptionist(db, token=reception, email="other@example.invalid", password="testing_password_123")
-    user = create_receptionist(db, token=admin, email="  ReCepCAO@example.invalid ",
+        create_receptionist(db, token=reception, name="Outra Pessoa", email="other@example.invalid", password="testing_password_123")
+    user = create_receptionist(db, token=admin, name="Recepção Clínica", email="  ReCepCAO@example.invalid ",
                               password="testing_password_123")
     assert user.email == "recepcao@example.invalid"
     assert verify_password(user.password_hash, "testing_password_123")
     with pytest.raises(ValueError, match="já está cadastrado"):
-        create_receptionist(db, token=admin, email=user.email, password="testing_password_123")
+        create_receptionist(db, token=admin, name="Recepção Clínica", email=user.email, password="testing_password_123")
     with pytest.raises(ValueError, match="12"):
-        create_receptionist(db, token=admin, email="new@example.invalid", password="short")
+        create_receptionist(db, token=admin, name="Recepção Clínica", email="new@example.invalid", password="short")
