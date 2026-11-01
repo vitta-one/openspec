@@ -9,6 +9,7 @@ A Recepção SHALL reutilizar o mesmo formulário, State e serviço transacional
 - **WHEN** a recepcionista abre o modal pela ficha de um paciente autorizado
 - **THEN** o paciente da ficha aparece selecionado e não pode ser substituído no modal
 - **AND** os horários disponíveis vêm da Agenda persistida
+- **AND** a recepcionista revisa paciente, profissional, data e horário antes de confirmar
 - **WHEN** a recepcionista confirma uma reserva disponível
 - **THEN** a consulta é persistida pelo serviço de agendamento existente
 - **AND** o modal fecha e as próximas consultas da ficha são atualizadas
