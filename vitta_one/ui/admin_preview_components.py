@@ -816,7 +816,7 @@ def _admin_clinical_history_panel() -> rx.Component:
     return rx.box(
         rx.flex(
             rx.box(
-                rx.text("Histórico clínico", font_weight="750", size="2"),
+                rx.heading("Histórico clínico", size="4"),
                 rx.text(
                     "Projeção local de QA · somente atendimentos concluídos",
                     size="1",
