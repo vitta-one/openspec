@@ -56,13 +56,24 @@ def _field_error(message, control_id: str) -> rx.Component:
 def patient_edit_dialog() -> rx.Component:
     """Edit only the allowed patient fields; preserve the profile until commit."""
     return rx.dialog.root(
+        rx.dialog.trigger(
+            rx.button(
+                rx.icon("pencil", size=17), "Editar cadastro",
+                type="button", variant="outline", color_scheme="teal",
+                on_click=S.open_patient_edit_dialog,
+                disabled=S.is_submitting | (S.selected_patient_id <= 0),
+            )
+        ),
         rx.dialog.content(
             rx.vstack(
                 _dialog_header(
                     "Editar cadastro",
                     "Atualize as informações cadastrais do paciente.",
                 ),
-                rx.el.form(
+                rx.cond(
+                    S.edit_patient_dialog_loading,
+                    rx.center(rx.spinner(size="3"), min_height="9rem", width="100%"),
+                    rx.el.form(
                     rx.vstack(
                         rx.box(
                             field_label("Nome completo *", "patient-edit-name"),
@@ -171,6 +182,7 @@ def patient_edit_dialog() -> rx.Component:
                     on_submit=S.update_selected_patient,
                     width="100%",
                     no_validate=True,
+                    ),
                 ),
                 spacing="5",
                 align="stretch",
@@ -190,6 +202,14 @@ def patient_edit_dialog() -> rx.Component:
 def patient_portal_dialog() -> rx.Component:
     """Display persisted portal state and use the existing consented invitation flow."""
     return rx.dialog.root(
+        rx.dialog.trigger(
+            rx.button(
+                rx.icon("shield_check", size=17), "Acesso ao portal",
+                type="button", variant="outline", color_scheme="teal",
+                on_click=S.open_patient_portal_dialog,
+                disabled=S.is_submitting | (S.selected_patient_id <= 0),
+            )
+        ),
         rx.dialog.content(
             rx.vstack(
                 _dialog_header(
