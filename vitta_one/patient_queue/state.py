@@ -825,16 +825,14 @@ class ReceptionQueueState(rx.State):
                 return
             from vitta_one.appointment_scheduling.state import ReceptionAgendaState
             agenda = await self.get_state(ReceptionAgendaState)
-            agenda.booking_dialog_open = True
             agenda.booking_origin = "patient"
             agenda.booking_locked_patient_id = patient.id
             agenda.selected_patient_id = patient.id
             agenda.selected_patient_name = patient.name
             agenda.patient_cpf = ""
-            agenda.is_loading = True
             agenda._clear_feedback()
             agenda._load_with_token(token)
-            agenda.is_loading = False
+            agenda.booking_dialog_open = True
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             if isinstance(exc, AuthenticationRequiredError):
                 return rx.redirect("/login")
