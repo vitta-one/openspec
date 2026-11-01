@@ -326,6 +326,8 @@ class ReceptionDashboardState(rx.State):
 
     @rx.event
     async def refresh(self):
+        if self.is_loading:
+            return
         async for event in self._reload():
             yield event
 
