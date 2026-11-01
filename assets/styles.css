@@ -2191,25 +2191,39 @@ button:disabled,
   line-height: 1.5;
 }
 .vitta-shell fieldset { min-width: 0; }
+/* A escolha é uma linha clicável; apenas o checkbox tem borda.
+ * Evita o segundo retângulo visual e alinha controle/label em qualquer viewport. */
 .vitta-specialty-choice {
-  border: 1px solid var(--vitta-border-strong);
-  border-radius: 0.8rem;
-  background: #fff;
-  min-height: 3.25rem;
-  padding: 0.9rem 1rem;
-  transition: border-color 130ms ease, background-color 130ms ease;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.5rem;
+  transition: background-color 130ms ease;
 }
-.vitta-specialty-choice:has([data-state="checked"]) {
-  background: #ecfdf5;
-  border-color: #0f766e;
-}
-.vitta-specialty-choice:hover { border-color: #0f766e; background: #f0fdfa; }
+.vitta-specialty-choice:has([data-state="checked"]) { background: #ecfdf5; }
+.vitta-specialty-choice:hover { background: #f0fdfa; }
 .vitta-specialty-choice .rt-CheckboxRoot {
-  min-width: 1.3rem;
-  min-height: 1.3rem;
+  box-sizing: border-box;
+  width: 1.25rem;
+  height: 1.25rem;
+  min-width: 1.25rem;
+  min-height: 1.25rem;
+  flex-shrink: 0;
   border: 1.5px solid #64748b !important;
+  vertical-align: middle;
 }
-.vitta-specialty-choice :is(label, span) { font-weight: 650; color: #0f172a; }
+.vitta-specialty-choice .rt-CheckboxRoot:focus-visible {
+  outline: 3px solid var(--vitta-focus);
+  outline-offset: 3px;
+}
+.vitta-specialty-choice .rt-CheckboxLabel {
+  margin: 0 !important;
+  line-height: 1.4;
+  cursor: pointer;
+  color: #0f172a;
+  font-weight: 650;
+}
 .vitta-admin-action + .vitta-admin-action { border-top-color: transparent; }
 .vitta-admin-action { border: 1px solid var(--vitta-border); margin-bottom: 0.7rem; }
 .vitta-admin-action:hover { border-color: #0f766e; }
