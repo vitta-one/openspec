@@ -55,6 +55,7 @@ from vitta_one.ui.queue_components import (
     doctor_waiting_summary,
     clinical_history_panel,
     enqueue_panel,
+    queue_patient_picker,
     patient_identity_panel,
     reassess_panel,
     withdraw_panel,
@@ -561,23 +562,18 @@ def reception_patient_edit_page() -> rx.Component:
 def reception_queue_new_page() -> rx.Component:
     return protected_workspace(
         Role.RECEPCIONISTA,
-        breadcrumb(("Recepção", "/recepcao"), ("Fila de espera", "/recepcao/fila"),
-                   ("Adicionar à fila", None)),
-        page_header("Fila", "Adicionar à fila",
-                    "Selecione um paciente cadastrado e registre sua prioridade."),
+        breadcrumb(
+            ("Recepção", "/recepcao"), ("Fila de espera", "/recepcao/fila"),
+            ("Adicionar à fila", None),
+        ),
+        page_header(
+            "Fila", "Adicionar à fila",
+            "Selecione um paciente cadastrado e registre a prioridade informada.",
+        ),
         rx.cond(
             ReceptionQueueState.selected_patient_id > 0,
             enqueue_panel(),
-            section_panel(
-                rx.vstack(
-                    rx.heading("Selecione um paciente", size="4"),
-                    rx.text("Localize ou cadastre um paciente antes de iniciar a entrada.",
-                            color="var(--vitta-text-muted)"),
-                    rx.link("Ir aos pacientes", href="/recepcao/pacientes",
-                            class_name="vitta-context-link"),
-                    spacing="3", align="stretch",
-                ),
-            ),
+            queue_patient_picker(),
         ),
         active="fila",
         verified_path="/recepcao/fila/nova",
@@ -585,24 +581,20 @@ def reception_queue_new_page() -> rx.Component:
 
 
 def reception_queue_page() -> rx.Component:
-    """Independent queue board; registration lives exclusively under Patients."""
+    """An authorized, clinically ordered waiting queue for Reception."""
     return protected_workspace(
         Role.RECEPCIONISTA,
         breadcrumb(("Recepção", "/recepcao"), ("Fila de espera", None)),
         page_header(
             "Fila",
             "Fila de espera",
-            "Acompanhe prioridades, reavaliações e entradas de pronto-socorro.",
-        ),
-        rx.flex(
+            "Acompanhe pacientes aguardando, prioridades e tempos de espera.",
             rx.link(
-                rx.hstack(rx.icon("plus", size=17), rx.text("Adicionar à fila"),
-                          spacing="2", align="center"),
+                rx.icon("plus", size=17),
+                "Adicionar à fila",
                 href="/recepcao/fila/nova",
                 class_name="vitta-primary-action",
             ),
-            rx.link("Pacientes", href="/recepcao/pacientes", class_name="vitta-context-link"),
-            gap="3", align="center", flex_wrap="wrap", width="100%",
         ),
         active_queue_panel(),
         rx.cond(
@@ -632,6 +624,7 @@ def reception_queue_page() -> rx.Component:
         active="fila",
         verified_path="/recepcao/fila",
     )
+
 
 
 def doctor_page() -> rx.Component:
