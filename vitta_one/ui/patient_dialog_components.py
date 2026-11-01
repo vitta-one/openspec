@@ -245,7 +245,14 @@ def patient_portal_dialog() -> rx.Component:
                         rx.cond(
                             S.portal_access_email != "",
                             rx.box(
-                                rx.text("E-mail associado", size="2", color="var(--vitta-text-muted)"),
+                                rx.text(
+                                    rx.cond(
+                                        S.portal_access_state == "ATIVO",
+                                        "E-mail de login",
+                                        "E-mail do convite",
+                                    ),
+                                    size="2", color="var(--vitta-text-muted)",
+                                ),
                                 rx.text(S.portal_access_email, overflow_wrap="anywhere", font_weight="550"),
                                 width="100%",
                             ),
