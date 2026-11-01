@@ -830,6 +830,7 @@ class ReceptionQueueState(rx.State):
             agenda.selected_patient_id = patient.id
             agenda.selected_patient_name = patient.name
             agenda.patient_cpf = ""
+            agenda._clear_booking_review()
             agenda._clear_feedback()
             agenda._load_with_token(token)
             agenda.booking_dialog_open = True
