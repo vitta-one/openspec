@@ -221,18 +221,8 @@ def patient_detail_workspace() -> rx.Component:
                                   rx.text("Adicionar à fila"), spacing="2", align="center"),
                         href="/recepcao/fila/nova", class_name="vitta-context-link",
                     ),
-                    rx.button(
-                        rx.icon("pencil", size=17), "Editar cadastro",
-                        type="button", variant="outline", color_scheme="teal",
-                        on_click=S.open_patient_edit_dialog,
-                        disabled=S.is_submitting,
-                    ),
-                    rx.button(
-                        rx.icon("shield_check", size=17), "Acesso ao portal",
-                        type="button", variant="outline", color_scheme="teal",
-                        on_click=S.open_patient_portal_dialog,
-                        disabled=S.is_submitting,
-                    ),
+                    patient_edit_dialog(),
+                    patient_portal_dialog(),
                     gap="3", flex_wrap="wrap", align="center",
                     width="100%", class_name="vitta-patient-profile-actions",
                 ),
@@ -240,8 +230,6 @@ def patient_detail_workspace() -> rx.Component:
                 class_name="vitta-patient-profile",
             ),
         ),
-        patient_edit_dialog(),
-        patient_portal_dialog(),
         align="stretch", spacing="5", width="100%",
     )
 
