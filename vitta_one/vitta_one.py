@@ -228,7 +228,7 @@ app.add_page(
     reception_agenda_page,
     route="/recepcao/agenda",
     title="Agenda e check-in | Vitta-One",
-    on_load=[AuthState.load_protected, ReceptionAgendaState.load, ReceptionDashboardState.load],
+    on_load=[AuthState.load_protected, ReceptionAgendaState.load_agenda],
 )
 app.add_page(
     reception_booking_page,

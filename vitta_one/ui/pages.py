@@ -19,7 +19,7 @@ from vitta_one.ui.patient_directory_components import (
     patient_edit_workspace,
 )
 from vitta_one.professional_directory.state import AdminDirectoryState
-from vitta_one.reception.dashboard.components import reception_dashboard, reception_week_calendar
+from vitta_one.reception.dashboard.components import reception_dashboard
 from vitta_one.ui.admin_directory_components import (
     admin_directory_workspace,
     professional_registration_workspace,
@@ -498,9 +498,14 @@ def reception_agenda_page() -> rx.Component:
         page_header(
             "Agenda",
             "Agenda e check-in",
-            "Consulte horários por profissional, agende, reagende e confirme a chegada.",
+            "Consulte a semana, localize consultas e confirme a chegada.",
+            rx.link(
+                rx.hstack(rx.icon("calendar_plus", size=17),
+                          rx.text("Agendar consulta"), spacing="2", align="center"),
+                href="/recepcao/agenda/nova",
+                class_name="vitta-primary-action",
+            ),
         ),
-        reception_week_calendar(),
         reception_agenda_panel(),
         active="agenda",
         verified_path="/recepcao/agenda",

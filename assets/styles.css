@@ -2619,3 +2619,77 @@ button:disabled,
   box-shadow: var(--vitta-shadow-xs);
 }
 .vitta-queue-patient-row > div { gap: 1rem; }
+
+
+/* Recepção / Agenda: seven-day operational scope; dashboard retains its own compact read-only calendar. */
+.vitta-reception-week-grid {
+  min-width: 0;
+  align-items: stretch;
+}
+.vitta-reception-week-day {
+  display: block;
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  min-height: 9rem;
+  height: 100%;
+  padding: .75rem;
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-control);
+  background: var(--vitta-surface-subtle);
+  color: var(--vitta-text);
+  text-align: left;
+  white-space: normal;
+  font-weight: 400;
+  box-shadow: none;
+  cursor: pointer;
+}
+.vitta-reception-week-day:hover:not(:disabled) {
+  border-color: var(--vitta-primary);
+  background: var(--vitta-primary-soft);
+}
+.vitta-reception-week-day.is-selected {
+  border: 2px solid var(--vitta-primary);
+  padding: calc(.75rem - 1px);
+  background: var(--vitta-primary-soft);
+}
+.vitta-reception-week-day:focus-visible {
+  outline: 3px solid var(--vitta-focus);
+  outline-offset: 3px;
+}
+.vitta-reception-week-entry {
+  padding: .4rem .45rem;
+  border-radius: .35rem;
+  border: 1px solid var(--vitta-border);
+  background: var(--vitta-surface);
+  min-width: 0;
+}
+.vitta-reception-week-patient {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  display: block;
+}
+.vitta-reception-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: var(--vitta-radius-control);
+}
+.vitta-reception-consultation-table { min-width: 63rem; }
+.vitta-reception-consultation-table td {
+  vertical-align: middle;
+}
+@media (max-width: 959px) {
+  .vitta-reception-week-day { min-height: 5.8rem; }
+  .vitta-reception-week-entry { display: none; }
+  .vitta-reception-week-empty { margin-top: .2rem; }
+}
+@media (max-width: 480px) {
+  .vitta-reception-week-day { min-height: 5.4rem; padding: .6rem; }
+  .vitta-reception-week-day.is-selected { padding: calc(.6rem - 1px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vitta-reception-week-day { transition: none; }
+}
