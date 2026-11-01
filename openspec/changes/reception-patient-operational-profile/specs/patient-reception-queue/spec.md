@@ -38,6 +38,12 @@ A ficha SHALL distinguir entradas ativas de entradas encerradas, sem alterar pri
 - **THEN** o serviço impede a duplicação sob serialização transacional no PostgreSQL
 - **AND** não altera a prioridade da entrada existente
 
+#### Scenario: Check-in agendado com fila ativa
+
+- **WHEN** uma consulta agendada tenta confirmar chegada enquanto o mesmo paciente possui entrada ativa na fila
+- **THEN** o serviço recusa criar outra entrada, preservando o estado da consulta e a prioridade existente
+- **AND** uma nova confirmação poderá ser realizada após encerramento legítimo da entrada anterior
+
 #### Scenario: Paciente com somente entradas encerradas
 
 - **WHEN** um paciente possui apenas entradas FINALIZADO ou RETIRADO
