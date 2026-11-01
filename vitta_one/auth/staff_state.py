@@ -53,7 +53,6 @@ class AdminStaffState(rx.State):
     new_name: str = ""
     new_email: str = ""
     show_password: bool = False
-    password_touched: bool = False
     pending_profile: str = ""
     profile_change_dialog_open: bool = False
     cancel_dialog_open: bool = False
@@ -117,11 +116,6 @@ class AdminStaffState(rx.State):
         self.email_error = ""
 
     @rx.event
-    def mark_password_touched(self, _value: str) -> None:
-        self.password_touched = True
-        self.password_error = ""
-
-    @rx.event
     def toggle_password_visibility(self) -> None:
         self.show_password = not self.show_password
 
@@ -135,7 +129,6 @@ class AdminStaffState(rx.State):
             ]
         self.creation_profile = value
         self.pending_profile = ""
-        self.password_touched = False
         self.show_password = False
         self._clear_errors()
 
@@ -146,11 +139,7 @@ class AdminStaffState(rx.State):
         next_profile = value if value in ("medico", "recepcionista") else ""
         if next_profile == self.creation_profile:
             return
-        directory = await self.get_state(AdminDirectoryState)
-        has_specific_data = self.password_touched or (
-            self.creation_profile == "medico"
-            and any(option["selected"] for option in directory.specialty_options)
-        )
+        has_specific_data = self.creation_profile in ("medico", "recepcionista")
         if has_specific_data:
             self.pending_profile = next_profile
             self.profile_change_dialog_open = True
@@ -169,7 +158,7 @@ class AdminStaffState(rx.State):
 
     @rx.event
     def request_cancel(self):
-        if self.new_name.strip() or self.new_email.strip() or self.password_touched:
+        if self.new_name.strip() or self.new_email.strip() or self.creation_profile:
             self.cancel_dialog_open = True
         else:
             return rx.redirect("/admin/funcionarios")
@@ -183,7 +172,6 @@ class AdminStaffState(rx.State):
         self.cancel_dialog_open = False
         self.new_name = ""
         self.new_email = ""
-        self.password_touched = False
         self.creation_profile = ""
         return rx.redirect("/admin/funcionarios")
 
@@ -197,7 +185,6 @@ class AdminStaffState(rx.State):
         self.new_name = ""
         self.new_email = ""
         self.show_password = False
-        self.password_touched = False
         self.pending_profile = ""
         self.profile_change_dialog_open = False
         self.cancel_dialog_open = False
@@ -288,8 +275,11 @@ class AdminStaffState(rx.State):
                 if not 12 <= len(password) <= 128:
                     self.password_error = "A senha precisa ter entre 12 e 128 caracteres."
             elif self.creation_profile == "medico":
+                directory = await self.get_state(AdminDirectoryState)
                 qa_password = str(form_data.get("qa_password", ""))
-                if qa_password and not 12 <= len(qa_password) <= 128:
+                if directory.qa_local_enabled and not 12 <= len(qa_password) <= 128:
+                    self.password_error = "No QA local, informe uma senha de 12 a 128 caracteres."
+                elif qa_password and not 12 <= len(qa_password) <= 128:
                     self.password_error = "A senha de QA precisa ter entre 12 e 128 caracteres."
             if any((self.name_error, self.email_error, self.profile_error, self.password_error)):
                 self.error = "Revise os campos indicados para concluir o cadastro."
@@ -350,7 +340,6 @@ class AdminStaffState(rx.State):
             self.success = message
             self.new_name = ""
             self.new_email = ""
-            self.password_touched = False
             yield rx.toast.success(message, position="top-right")
             yield rx.redirect(f"/admin/funcionarios/{created_id}")
         except (ValueError, DirectoryValidationError, DirectoryConflictError,
