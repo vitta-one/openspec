@@ -2442,7 +2442,7 @@ button:disabled,
 
 /* Calendar mirrors the month/day interaction while retaining Vitta-One identity. */
 .vitta-availability-calendar {
-  width: min(100%, 42rem);
+  width: min(100%, 48rem);
   overflow: hidden;
   border: 1px solid var(--vitta-border-strong);
   border-radius: var(--vitta-radius-panel);
@@ -2494,6 +2494,14 @@ button:disabled,
   background: var(--vitta-primary);
   color: #fff !important;
 }
+.vitta-page .vitta-calendar-date.is-empty:is(:hover, :focus-visible) {
+  background: var(--vitta-surface-subtle);
+  border-color: var(--vitta-border-strong);
+}
+.vitta-page .vitta-calendar-date:focus-visible {
+  outline: 3px solid var(--vitta-focus);
+  outline-offset: 1px;
+}
 .vitta-page .vitta-calendar-date.is-unavailable:disabled {
   background: #e9edf2 !important;
   border-color: #fff !important;
@@ -2501,9 +2509,26 @@ button:disabled,
   opacity: 1 !important;
 }
 .vitta-calendar-day-count {
-  font-size: .65rem;
+  display: inline-block;
+  min-width: 1rem;
+  padding: 0 .2rem;
+  border-radius: .35rem;
+  font-size: .7rem;
   color: inherit;
-  line-height: 1.2;
+  line-height: 1.45;
+}
+.vitta-calendar-slot-row {
+  min-width: 0;
+  min-height: 3.5rem;
+  padding: .65rem .25rem;
+  border-bottom: 1px solid var(--vitta-border);
+  background: transparent;
+}
+.vitta-calendar-slot-row:last-child {
+  border-bottom: none;
+}
+.vitta-calendar-slot-row .rt-Button {
+  min-height: 2.5rem;
 }
 .vitta-calendar-day-details {
   border: 1px solid var(--vitta-border);
@@ -2554,7 +2579,10 @@ button:disabled,
 }
 
 @media (max-width: 640px) {
-  .vitta-page .vitta-calendar-date { min-height: 3.8rem; }
+  .vitta-page .vitta-calendar-date { min-height: 3.5rem; padding: .12rem; }
+  .vitta-calendar-day-count { font-size: .62rem; }
+  .vitta-calendar-slot-row { padding-inline: 0; }
+  .vitta-calendar-day-details { padding: .75rem; }
   .vitta-calendar-grid { padding: .3rem; gap: .15rem; }
   .vitta-calendar-weekdays { padding-inline: .3rem; }
   .vitta-reception-overview .vitta-overview-card { min-height: 8.5rem; }
