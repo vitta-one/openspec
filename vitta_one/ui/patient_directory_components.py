@@ -3,9 +3,7 @@ import reflex as rx
 
 from vitta_one.patient_queue.state import ReceptionQueueState as S
 from vitta_one.ui.components import breadcrumb, field_label, page_header, section_panel
-from vitta_one.ui.queue_components import (
-    selected_patient_operations, patient_selection_summary,
-)
+from vitta_one.ui.patient_dialog_components import patient_edit_dialog, patient_portal_dialog
 
 
 def _patient_row(row) -> rx.Component:
@@ -201,6 +199,10 @@ def patient_detail_workspace() -> rx.Component:
                         align="center", spacing="2", margin_top="0.4rem",
                     ),
                 ),
+                rx.text(
+                    "Acesso ao portal: ", S.selected_patient_portal_status,
+                    color="var(--vitta-text-muted)", size="2", role="status",
+                ),
                 rx.separator(),
                 rx.text(
                     "Escolha uma operação",
@@ -217,11 +219,17 @@ def patient_detail_workspace() -> rx.Component:
                                   rx.text("Adicionar à fila"), spacing="2", align="center"),
                         href="/recepcao/fila/nova", class_name="vitta-context-link",
                     ),
-                    rx.link(
-                        rx.hstack(rx.icon("settings_2", size=17),
-                                  rx.text("Editar dados e acesso"), spacing="2", align="center"),
-                        href="/recepcao/pacientes/" + S.selected_patient_id.to(str) + "/editar",
-                        class_name="vitta-context-link",
+                    rx.button(
+                        rx.icon("pencil", size=17), "Editar cadastro",
+                        type="button", variant="outline", color_scheme="teal",
+                        on_click=S.open_patient_edit_dialog,
+                        disabled=S.is_submitting,
+                    ),
+                    rx.button(
+                        rx.icon("shield_check", size=17), "Acesso ao portal",
+                        type="button", variant="outline", color_scheme="teal",
+                        on_click=S.open_patient_portal_dialog,
+                        disabled=S.is_submitting,
                     ),
                     gap="3", flex_wrap="wrap", align="center",
                     width="100%", class_name="vitta-patient-profile-actions",
@@ -230,20 +238,25 @@ def patient_detail_workspace() -> rx.Component:
                 class_name="vitta-patient-profile",
             ),
         ),
+        patient_edit_dialog(),
+        patient_portal_dialog(),
         align="stretch", spacing="5", width="100%",
     )
 
 
 def patient_edit_workspace() -> rx.Component:
-    """Separate editable patient and portal configuration, never buried in a modal."""
+    """Preserve old deep links without duplicating patient-management forms."""
     return rx.vstack(
         breadcrumb(("Recepção", "/recepcao"), ("Pacientes", "/recepcao/pacientes"),
-                   ("Editar cadastro", None)),
-        page_header("Pacientes", "Editar cadastro e acesso",
-                    "Atualize a identificação e gerencie o portal com consentimento."),
-        rx.link("Voltar à ficha",
-                href="/recepcao/pacientes/" + S.selected_patient_id.to(str),
-                class_name="vitta-context-link"),
-        selected_patient_operations(),
-        spacing="5", width="100%", align="stretch",
+                   ("Ficha do paciente", None)),
+        page_header(
+            "Pacientes", "Gerenciar paciente",
+            "A edição do cadastro e o acesso ao portal agora são operações independentes na ficha.",
+        ),
+        rx.link(
+            "Voltar à ficha do paciente",
+            href="/recepcao/pacientes/" + S.selected_patient_id.to(str),
+            class_name="vitta-context-link",
+        ),
+        spacing="4", width="100%", align="stretch",
     )
