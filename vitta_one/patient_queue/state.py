@@ -248,6 +248,7 @@ class ReceptionQueueState(rx.State):
     selected_patient_phone: str = ""
     selected_patient_portal_status: str = ""
     edit_patient_dialog_open: bool = False
+    edit_patient_dialog_loading: bool = False
     edit_patient_name: str = ""
     edit_patient_phone: str = ""
     edit_patient_name_error: str = ""
@@ -325,6 +326,7 @@ class ReceptionQueueState(rx.State):
         self.selected_patient_phone = ""
         self.selected_patient_portal_status = ""
         self.edit_patient_dialog_open = False
+        self.edit_patient_dialog_loading = False
         self.edit_patient_name = ""
         self.edit_patient_phone = ""
         self.edit_patient_name_error = ""
@@ -644,7 +646,10 @@ class ReceptionQueueState(rx.State):
         self.edit_discard_pending = False
         if not self._matches_patient_detail_route():
             self.error_message = "Reabra a ficha do paciente para editar."
+            self.edit_patient_dialog_open = False
             return
+        self.edit_patient_dialog_loading = True
+        yield
         try:
             token = await self._token()
             with rx.session() as db:
@@ -661,7 +666,11 @@ class ReceptionQueueState(rx.State):
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
+            self.edit_patient_dialog_open = False
             self.error_message = "Não foi possível carregar o cadastro agora."
+        finally:
+            self.edit_patient_dialog_loading = False
+            yield
 
     @rx.event
     def change_patient_edit_dialog(self, is_open: bool):
