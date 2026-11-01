@@ -504,6 +504,71 @@ def test_reception_routes_and_responsive_daily_table(page: Page) -> None:
     ).to_be_visible(timeout=30000)
 
 
+def test_reception_booking_modal_is_shared_and_keyboard_responsive(page: Page) -> None:
+    """Exercise the five selection steps against persisted QA data without reserving it."""
+    login_as_reception(page)
+    page.get_by_role("button", name="Nova consulta").click()
+    dialog = page.get_by_role("dialog", name="Agendar consulta")
+    expect(dialog).to_be_visible(timeout=30000)
+    expect(page).to_have_url(re.compile(r"/recepcao/?$"))
+    expect(dialog.get_by_text("Etapa 1 de 5")).to_be_visible()
+
+    patient_input = dialog.locator("#booking-patient-query")
+    patient_input.fill(FIXTURE["booking_patient_name"])
+    dialog.get_by_role("button", name="Buscar", exact=True).click()
+    patient_result = dialog.get_by_role(
+        "button", name=re.compile(re.escape(FIXTURE["booking_patient_name"]))
+    ).first
+    expect(patient_result).to_be_visible(timeout=30000)
+    patient_result.click()
+    expect(dialog.get_by_text(FIXTURE["booking_patient_name"], exact=True)).to_be_visible()
+    dialog.get_by_role("button", name="Continuar").click()
+
+    expect(dialog.get_by_text("Etapa 2 de 5")).to_be_visible()
+    dialog.locator("#booking-professional").click()
+    page.get_by_role("option", name=FIXTURE["booking_doctor_name"]).click()
+    dialog.get_by_role("button", name="Continuar").click()
+    expect(dialog.get_by_text("Etapa 3 de 5")).to_be_visible()
+    days = dialog.locator(".vitta-booking-calendar .vitta-calendar-date.has-slots")
+    if days.count() == 0:
+        dialog.get_by_role("button", name="Próximo mês").click()
+    expect(days.first).to_be_visible(timeout=30000)
+
+    for width in (320, 390, 768, 1024, 1440):
+        page.set_viewport_size({"width": width, "height": 760})
+        assert page.evaluate(
+            "document.documentElement.scrollWidth <= window.innerWidth + 2"
+        ), overflowing_elements(page)
+        page.screenshot(path=f"qa-artifacts/agendamento-modal-{width}px.png")
+
+    days.first.click()
+    dialog.get_by_role("button", name="Continuar").click()
+    expect(dialog.get_by_text("Etapa 4 de 5")).to_be_visible()
+    options = dialog.locator(".vitta-booking-time")
+    expect(options.first).to_be_visible(timeout=30000)
+    options.first.click()
+    dialog.get_by_role("button", name="Continuar").click()
+    expect(dialog.get_by_text("Etapa 5 de 5")).to_be_visible()
+    expect(dialog.get_by_role("button", name="Confirmar agendamento")).to_be_visible()
+
+    # Escape must request explicit discard and allow restoring the filled state.
+    page.keyboard.press("Escape")
+    confirm = page.get_by_role("alertdialog", name="Descartar agendamento?")
+    expect(confirm).to_be_visible(timeout=15000)
+    confirm.get_by_role("button", name="Continuar preenchendo").click()
+    expect(dialog.get_by_text("Etapa 5 de 5")).to_be_visible()
+    dialog.get_by_role("button", name="Cancelar", exact=True).click()
+    confirm.get_by_role("button", name="Descartar", exact=True).click()
+    expect(dialog).to_be_hidden(timeout=15000)
+
+    # The Agenda provides the same modal without a second booking screen.
+    page.goto(BASE + "/recepcao/agenda", wait_until="domcontentloaded")
+    page.get_by_role("button", name="+ Agendar consulta").click()
+    expect(page.get_by_role("dialog", name="Agendar consulta")).to_be_visible(
+        timeout=30000
+    )
+
+
 def test_reception_global_patient_search_uses_identity_only(page: Page) -> None:
     login_as_reception(page)
     search = page.locator("#topbar-patient-search")
