@@ -12,8 +12,17 @@ class EmployeeRow(TypedDict):
     href: str
 
 
-_EMPTY_EMPLOYEE: EmployeeRow = {
+class EmployeeDetail(EmployeeRow):
+    has_name: bool
+    professional_identifier: str
+    professional_status: str
+    specialties: str
+
+
+_EMPTY_EMPLOYEE_DETAIL: EmployeeDetail = {
     "id": 0, "email": "", "name": "", "role": "", "role_label": "", "href": "",
+    "has_name": False, "professional_identifier": "", "professional_status": "",
+    "specialties": "",
 }
 
 from vitta_one.auth.state import AuthState
@@ -29,7 +38,8 @@ from vitta_one.auth.staff_service import (
 class AdminStaffState(rx.State):
     emails: list[str] = []
     employees: list[EmployeeRow] = []
-    employee_detail: EmployeeRow = _EMPTY_EMPLOYEE
+    employee_detail: EmployeeDetail = _EMPTY_EMPLOYEE_DETAIL
+    detail_status: str = "loading"
     employee_search: str = ""
     current_page: int = 1
     page_size: int = 10
@@ -42,8 +52,18 @@ class AdminStaffState(rx.State):
     def filtered_employees(self) -> list[EmployeeRow]:
         search = self.employee_search.strip().casefold()
         return [employee for employee in self.employees
-                if not search or search in str(employee["email"]).casefold()
+                if not search or search in str(employee["name"]).casefold()
+                or search in str(employee["email"]).casefold()
                 or search in str(employee["role_label"]).casefold()]
+
+    @rx.var
+    def detail_matches_route(self) -> bool:
+        """Prevent displaying a prior employee while navigating between detail routes."""
+        return (
+            self.detail_status == "ready"
+            and str(self.employee_detail["id"])
+            == str(self.router.page.params.get("employee_id", ""))
+        )
 
     @rx.var
     def total_pages(self) -> int:
@@ -99,26 +119,29 @@ class AdminStaffState(rx.State):
 
     @rx.event
     async def load_detail(self):
-        self.employee_detail = _EMPTY_EMPLOYEE
+        self.employee_detail = _EMPTY_EMPLOYEE_DETAIL.copy()
+        self.detail_status = "loading"
         try:
             raw_id = self.router.page.params.get("employee_id", "")
-            if not str(raw_id).isdigit():
-                yield rx.redirect("/admin/funcionarios")
+            if not str(raw_id).isdigit() or int(raw_id) <= 0:
+                self.detail_status = "not_found"
                 return
             token = await self._token()
             with rx.session() as db:
                 record = get_employee_detail(db, token=token, employee_id=int(raw_id))
             if record is None:
-                yield rx.redirect("/admin/funcionarios")
+                self.detail_status = "not_found"
                 return
             self.employee_detail = record
+            self.detail_status = "ready"
         except AuthenticationRequiredError:
+            self.detail_status = "denied"
             yield rx.redirect("/login")
         except RoleForbiddenError:
+            self.detail_status = "denied"
             yield rx.redirect("/acesso-negado")
         except Exception:
-            yield rx.toast.error("Não foi possível carregar a ficha do funcionário.")
-            yield rx.redirect("/admin/funcionarios")
+            self.detail_status = "error"
 
     @rx.event
     async def create(self, form_data: dict):
