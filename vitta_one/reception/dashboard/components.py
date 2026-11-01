@@ -267,7 +267,6 @@ def _appointments_table() -> rx.Component:
                     "calendar",
                     "Nenhuma consulta agendada hoje",
                     "A agenda do dia está vazia. Outras atividades da fila podem continuar em andamento.",
-                    
                     min_height="10rem",
                     padding="1.25rem",
                 ),
@@ -413,7 +412,12 @@ def _reception_day_header() -> rx.Component:
                     href="/recepcao/agenda/nova", class_name="vitta-primary-action",
                 ),
                 rx.button(
-                    rx.icon("refresh_cw", size=16), "Atualizar dados",
+                    rx.cond(
+                        S.is_loading,
+                        rx.spinner(size="1"),
+                        rx.icon("refresh_cw", size=16),
+                    ),
+                    rx.cond(S.is_loading, "Atualizando...", "Atualizar dados"),
                     type="button", on_click=S.refresh, variant="outline",
                     size="3", disabled=S.is_loading,
                     aria_label="Atualizar dados da Recepção",
@@ -514,7 +518,6 @@ def _reception_metric(label: str, value, description: str, icon_name: str, href:
         ),
         href=href,
         class_name="vitta-overview-card",
-        aria_label=label,
     )
 
 
