@@ -281,6 +281,7 @@ class AdminPreviewState(rx.State):
         self.detail_status = "idle"
         self.active_patient_tab = "operacional"
         self.selected_clinical_history = []
+        self.is_loading_clinical_history = False
         self.clinical_history_page = 1
         self.clinical_history_total_pages = 1
         self.clinical_history_total_count = 0
@@ -365,6 +366,7 @@ class AdminPreviewState(rx.State):
         self.detail_status = "idle"
         self.active_patient_tab = "operacional"
         self._clear_clinical_history()
+        self.is_loading_clinical_history = False
 
     def _load_selected_clinical_history_with_token(
         self,
@@ -416,6 +418,7 @@ class AdminPreviewState(rx.State):
         """Lazy-load completed records only after a fresh server authorization."""
         if self.detail_status != "ready" or self.selected_patient_id < 1:
             return
+        requested_patient_id = self.selected_patient_id
         self.active_patient_tab = "clinico"
         self.is_loading_clinical_history = True
         self.error_message = ""
@@ -423,6 +426,12 @@ class AdminPreviewState(rx.State):
         yield
         try:
             token = await self._token()
+            if (
+                self.detail_status != "ready"
+                or self.active_patient_tab != "clinico"
+                or self.selected_patient_id != requested_patient_id
+            ):
+                return
             self._load_selected_clinical_history_with_token(token, page=1)
         except LocalAdminPreviewDisabledError:
             self._clear_patient_selection()
@@ -568,7 +577,9 @@ class AdminPreviewState(rx.State):
     @rx.event
     async def load_patient_detail(self):
         """Resolve a route identifier under QA RBAC, scoped to one persisted patient."""
-        self._clear_patient_selection()
+        query, page = self.patient_query, self.patient_page
+        self._clear()
+        self.patient_query, self.patient_page = query, page
         self.error_message = ""
         self.detail_status = "loading"
         yield
