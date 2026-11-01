@@ -32,6 +32,7 @@ from vitta_one.ui.admin_preview_components import (
     clinical_preview,
     finance_preview,
     patients_preview,
+    patient_detail_preview,
     reception_preview,
 )
 from vitta_one.ui.components import (
@@ -853,6 +854,14 @@ def admin_patients_preview_page() -> rx.Component:
         "/admin/pacientes",
         "pacientes",
         patients_preview(),
+    )
+
+
+def admin_patient_detail_preview_page() -> rx.Component:
+    return admin_preview_workspace(
+        "/admin/pacientes/[patient_id]",
+        "pacientes",
+        patient_detail_preview(),
     )
 
 
