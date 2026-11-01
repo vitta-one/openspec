@@ -61,6 +61,7 @@ _ADMIN_PREVIEW_ROUTES = frozenset(
         "/admin/agenda",
         "/admin/atendimento",
         "/admin/pacientes",
+        "/admin/pacientes/[patient_id]",
         "/admin/financeiro",
     }
 )
