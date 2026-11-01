@@ -367,6 +367,9 @@ class AdminDirectoryState(rx.State):
         self.professionals = [_professional_row(item) for item in professional_items]
         self.recent_specialties = [_specialty_row(item) for item in recent_specialty_items]
         self.recent_professionals = [_professional_row(item) for item in recent_professional_items]
+        # Uma mutação pode remover o último resultado da página filtrada.
+        self.professional_page = min(self.professional_page, self.professional_page_count)
+        self.specialty_page = min(self.specialty_page, self.specialty_page_count)
         self.medical_accounts = []
         self.directory_load_failed = False
         if not self.editing_professional_id:
