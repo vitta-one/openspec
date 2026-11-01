@@ -12,6 +12,7 @@ from vitta_one.auth.authorization import (
 )
 from vitta_one.auth.roles import Role
 from vitta_one.models.patient_queue import Patient, PatientPortalInvitation
+from vitta_one.models.auth import User
 from vitta_one.patient_portal.service import (
     PatientPortalError,
     create_patient_invitation,
@@ -23,6 +24,7 @@ from vitta_one.professional_directory.email_sender import EmailDelivery
 class PatientPortalStatus:
     state: str
     label: str
+    email: str = ""
 
 
 def _require_reception_or_admin(db: Session, token: str):
@@ -42,7 +44,10 @@ def reception_get_patient_portal_status(
     if patient is None:
         raise PatientPortalError("O cadastro do paciente não está disponível.")
     if patient.user_id is not None:
-        return PatientPortalStatus("ATIVO", "Acesso ao portal ativo")
+        linked_user = db.get(User, patient.user_id)
+        return PatientPortalStatus(
+            "ATIVO", "Acesso ao portal ativo", linked_user.email if linked_user else ""
+        )
     latest = db.exec(
         select(PatientPortalInvitation)
         .where(PatientPortalInvitation.patient_id == patient_id)
@@ -51,13 +56,19 @@ def reception_get_patient_portal_status(
     expiration = latest.expires_at if latest is not None else None
     if expiration is not None and expiration.tzinfo is None:
         expiration = expiration.replace(tzinfo=timezone.utc)
-    if latest is None or latest.revoked_at is not None or expiration <= datetime.now(timezone.utc):
+    if latest is None:
         return PatientPortalStatus("SEM_PORTAL", "Sem acesso ao portal")
+    if latest.delivery_status in {"FAILED", "NOT_CONFIGURED"}:
+        return PatientPortalStatus("FALHA_ENVIO", "Falha no envio do convite", latest.email)
+    if latest.revoked_at is not None:
+        return PatientPortalStatus("SEM_PORTAL", "Sem acesso ao portal")
+    if expiration <= datetime.now(timezone.utc):
+        return PatientPortalStatus("CONVITE_EXPIRADO", "Convite expirado", latest.email)
     if latest.delivery_status == "ACCEPTED":
-        return PatientPortalStatus("CONVITE_ENVIADO", "Convite enviado; aguardando ativação")
+        return PatientPortalStatus("CONVITE_ENVIADO", "Convite enviado; aguardando ativação", latest.email)
     if latest.delivery_status == "UNKNOWN":
-        return PatientPortalStatus("ENVIO_INDETERMINADO", "Envio sem confirmação; solicite novo convite se necessário")
-    return PatientPortalStatus("PENDENTE", "Convite pendente de envio")
+        return PatientPortalStatus("ENVIO_INDETERMINADO", "Envio sem confirmação; solicite novo convite se necessário", latest.email)
+    return PatientPortalStatus("PENDENTE", "Convite pendente de envio", latest.email)
 
 
 def reception_issue_patient_invitation(
