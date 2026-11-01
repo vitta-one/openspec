@@ -253,6 +253,7 @@ class ReceptionQueueState(rx.State):
     edit_patient_name_error: str = ""
     edit_patient_phone_error: str = ""
     edit_patient_form_error: str = ""
+    edit_discard_pending: bool = False
     portal_dialog_open: bool = False
     portal_dialog_loading: bool = False
     portal_access_state: str = ""
@@ -329,6 +330,7 @@ class ReceptionQueueState(rx.State):
         self.edit_patient_name_error = ""
         self.edit_patient_phone_error = ""
         self.edit_patient_form_error = ""
+        self.edit_discard_pending = False
         self.portal_dialog_open = False
         self.portal_dialog_loading = False
         self.portal_access_state = ""
@@ -639,6 +641,7 @@ class ReceptionQueueState(rx.State):
         self.edit_patient_name_error = ""
         self.edit_patient_phone_error = ""
         self.edit_patient_form_error = ""
+        self.edit_discard_pending = False
         if not self._matches_patient_detail_route():
             self.error_message = "Reabra a ficha do paciente para editar."
             return
@@ -664,11 +667,32 @@ class ReceptionQueueState(rx.State):
     def change_patient_edit_dialog(self, is_open: bool):
         if self.is_submitting:
             return
+        if not is_open and (
+            self.edit_patient_name != self.selected_patient_name
+            or self.edit_patient_phone != self.selected_patient_phone
+        ):
+            self.edit_discard_pending = True
+            return
         self.edit_patient_dialog_open = is_open
         if not is_open:
+            self.edit_discard_pending = False
             self.edit_patient_name_error = ""
             self.edit_patient_phone_error = ""
             self.edit_patient_form_error = ""
+
+    @rx.event
+    def keep_patient_edit_dialog(self):
+        self.edit_discard_pending = False
+
+    @rx.event
+    def discard_patient_edit_dialog(self):
+        if self.is_submitting:
+            return
+        self.edit_patient_dialog_open = False
+        self.edit_discard_pending = False
+        self.edit_patient_name_error = ""
+        self.edit_patient_phone_error = ""
+        self.edit_patient_form_error = ""
 
     @rx.event
     def update_edit_patient_name(self, value: str):
@@ -749,6 +773,7 @@ class ReceptionQueueState(rx.State):
             self.selected_patient_name = patient.name
             self.selected_patient_phone = format_patient_phone_input(patient.phone)
             self.edit_patient_dialog_open = False
+            self.edit_discard_pending = False
             self.success_message = "Cadastro atualizado com sucesso."
             yield rx.toast.success("Cadastro atualizado com sucesso.")
         except PatientValidationError as exc:
@@ -770,8 +795,8 @@ class ReceptionQueueState(rx.State):
 
     @rx.event
     async def activate_local_qa_patient(self, form_data: dict[str, Any]):
-        if not self.selected_patient_id:
-            self.error_message = "Cadastre ou localize o paciente primeiro."
+        if not self._matches_patient_detail_route():
+            self.error_message = "Reabra a ficha do paciente para configurar o QA."
             return
         if self.is_submitting:
             return
