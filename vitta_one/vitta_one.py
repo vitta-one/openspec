@@ -12,6 +12,8 @@ from vitta_one.clinical_prescription.state import PrintPrescriptionState
 from vitta_one.models import (
     AuthSession,
     ClinicalCareRecord,
+    ClinicConfiguration,
+    ClinicConfigurationChange,
     Consultation,
     ConsultationScheduleChange,
     Patient,
@@ -86,6 +88,8 @@ _PERSISTENT_MODELS = (
     ProfessionalSpecialty,
     Consultation,
     ClinicalCareRecord,
+    ClinicConfiguration,
+    ClinicConfigurationChange,
     Prescription,
     PrescriptionItem,
     ConsultationScheduleChange,

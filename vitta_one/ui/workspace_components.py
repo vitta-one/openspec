@@ -4,7 +4,7 @@ import reflex as rx
 
 from vitta_one.doctor_workspace.state import DoctorWorkspaceState
 from vitta_one.patient_portal.state import AdminClinicConfigurationState, PatientPortalState
-from vitta_one.ui.components import empty_state, section_panel
+from vitta_one.ui.components import empty_state, section_panel, field_label, feedback_region
 
 _WEEKDAYS = ("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")
 
@@ -299,38 +299,121 @@ def patient_clinic_location() -> rx.Component:
 
 
 def admin_clinic_configuration() -> rx.Component:
-    return section_panel(
-        rx.vstack(
-            rx.flex(
-                rx.heading("Local da clínica no portal", size="4"),
-                rx.badge(
-                    rx.cond(AdminClinicConfigurationState.configured, "Configurado", "Pendente"),
-                    color_scheme=rx.cond(AdminClinicConfigurationState.configured, "green", "amber"),
-                    variant="soft",
-                ),
-                justify="between",
-                align="center",
-                gap="2",
-                flex_wrap="wrap",
-                width="100%",
-            ),
-            rx.cond(
-                AdminClinicConfigurationState.configured,
-                rx.vstack(
-                    rx.text(AdminClinicConfigurationState.clinic_name, font_weight="750"),
-                    rx.text(AdminClinicConfigurationState.clinic_address, size="2", color="var(--vitta-text-muted)"),
-                    spacing="1",
-                    align="start",
+    """Compact, accessible administrator form; Vitta One branding is unchanged."""
+    return rx.box(
+        section_panel(
+            rx.vstack(
+                rx.flex(
+                    rx.heading("Informações da clínica", size="4"),
+                    rx.badge(
+                        rx.cond(AdminClinicConfigurationState.configured, "Configurado", "Não configurado"),
+                        color_scheme=rx.cond(AdminClinicConfigurationState.configured, "green", "gray"),
+                        variant="soft",
+                    ),
+                    justify="between", align="center", gap="2",
+                    flex_wrap="wrap", width="100%",
                 ),
                 rx.text(
-                    "Endereço ainda não configurado pela Administração. Defina VITTA_ONE_CLINIC_NAME e VITTA_ONE_CLINIC_ADDRESS no ambiente da implantação.",
-                    size="2",
-                    color="var(--vitta-text-muted)",
-                    line_height="1.5",
+                    "Nome e endereço exibidos nas informações de atendimento do portal do paciente.",
+                    size="2", color="var(--vitta-text-muted)",
                 ),
+                feedback_region(
+                    AdminClinicConfigurationState.error_message,
+                    AdminClinicConfigurationState.success_message,
+                    element_id="clinic-configuration-feedback",
+                ),
+                rx.cond(
+                    AdminClinicConfigurationState.is_loading,
+                    rx.center(
+                        rx.hstack(
+                            rx.spinner(size="2"),
+                            rx.text("Carregando configurações…", size="2"),
+                            spacing="2", align="center",
+                        ),
+                        min_height="9rem", role="status", aria_live="polite",
+                    ),
+                    rx.cond(
+                        AdminClinicConfigurationState.load_failed,
+                        rx.button(
+                            "Tentar novamente", type="button", variant="outline",
+                            on_click=AdminClinicConfigurationState.load,
+                        ),
+                        rx.form(
+                            rx.vstack(
+                                rx.box(
+                                    field_label("Nome da clínica *", "clinic-configuration-name"),
+                                    rx.input(
+                                        id="clinic-configuration-name", name="name",
+                                        value=AdminClinicConfigurationState.clinic_name,
+                                        on_change=AdminClinicConfigurationState.set_clinic_name,
+                                        class_name="vitta-input",
+                                        max_length=160, aria_required=True,
+                                        aria_invalid=AdminClinicConfigurationState.name_error != "",
+                                        aria_describedby=rx.cond(
+                                            AdminClinicConfigurationState.name_error != "",
+                                            "clinic-configuration-name-error", "",
+                                        ),
+                                        margin_top="0.4rem", width="100%",
+                                    ),
+                                    rx.cond(
+                                        AdminClinicConfigurationState.name_error != "",
+                                        rx.text(
+                                            AdminClinicConfigurationState.name_error,
+                                            id="clinic-configuration-name-error",
+                                            role="alert", size="2", color="var(--vitta-danger)",
+                                            margin_top="0.4rem",
+                                        ),
+                                        rx.fragment(),
+                                    ),
+                                    width="100%",
+                                ),
+                                rx.box(
+                                    field_label("Endereço da clínica *", "clinic-configuration-address"),
+                                    rx.text_area(
+                                        id="clinic-configuration-address", name="address",
+                                        value=AdminClinicConfigurationState.clinic_address,
+                                        on_change=AdminClinicConfigurationState.set_clinic_address,
+                                        class_name="vitta-textarea",
+                                        max_length=500, aria_required=True,
+                                        aria_invalid=AdminClinicConfigurationState.address_error != "",
+                                        aria_describedby=rx.cond(
+                                            AdminClinicConfigurationState.address_error != "",
+                                            "clinic-configuration-address-error", "",
+                                        ),
+                                        rows="3", resize="vertical",
+                                        margin_top="0.4rem", width="100%",
+                                    ),
+                                    rx.cond(
+                                        AdminClinicConfigurationState.address_error != "",
+                                        rx.text(
+                                            AdminClinicConfigurationState.address_error,
+                                            id="clinic-configuration-address-error",
+                                            role="alert", size="2", color="var(--vitta-danger)",
+                                            margin_top="0.4rem",
+                                        ),
+                                        rx.fragment(),
+                                    ),
+                                    width="100%",
+                                ),
+                                rx.button(
+                                    rx.cond(
+                                        AdminClinicConfigurationState.is_saving,
+                                        "Salvando alterações…", "Salvar alterações",
+                                    ),
+                                    type="submit", class_name="vitta-primary-action",
+                                    disabled=AdminClinicConfigurationState.is_saving,
+                                    loading=AdminClinicConfigurationState.is_saving,
+                                ),
+                                spacing="4", align="stretch", width="100%",
+                            ),
+                            on_submit=AdminClinicConfigurationState.save,
+                            reset_on_submit=False,
+                            width="100%",
+                        ),
+                    ),
+                ),
+                spacing="4", align="stretch", width="100%",
             ),
-            spacing="2",
-            width="100%",
-            align="stretch",
-        )
+        ),
+        width="100%", max_width="42rem",
     )
