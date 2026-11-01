@@ -158,6 +158,35 @@ class AdminCalendarCell(TypedDict):
     aria_label: str
 
 
+def build_admin_calendar_cells(
+    slots: list[SlotRow], month_value: str, selected: str,
+) -> list[AdminCalendarCell]:
+    """Build a calendar from persisted data, without fabricating availability."""
+    try:
+        year, month = map(int, month_value.split("-"))
+        date(year, month, 1)
+    except (ValueError, IndexError):
+        return []
+    by_day: dict[str, int] = {}
+    for slot in slots:
+        label = slot["date_label"]
+        by_day[label] = by_day.get(label, 0) + 1
+    days: list[AdminCalendarCell] = []
+    for day in calendar.Calendar(firstweekday=6).itermonthdates(year, month):
+        label = day.strftime("%d/%m/%Y")
+        count = by_day.get(label, 0)
+        days.append({
+            "date_label": label,
+            "day": str(day.day),
+            "is_current_month": day.month == month,
+            "is_selected": label == selected,
+            "has_slots": count > 0 and day.month == month,
+            "slot_count": count if day.month == month else 0,
+            "aria_label": f"{label}: {count} horário(s) configurado(s)" if count and day.month == month else f"{label}: sem horários",
+        })
+    return days
+
+
 class AdminAvailabilityState(rx.State):
     """Administrator-only availability management with server-side RBAC."""
 
@@ -210,30 +239,9 @@ class AdminAvailabilityState(rx.State):
 
     @rx.var
     def calendar_days(self) -> list[AdminCalendarCell]:
-        """Offer every current-month date; counts are persisted slot counts."""
-        try:
-            year, month = map(int, self.calendar_month.split("-"))
-            date(year, month, 1)
-        except (ValueError, IndexError):
-            return []
-        by_day: dict[str, int] = {}
-        for slot in self.slots:
-            label = slot["date_label"]
-            by_day[label] = by_day.get(label, 0) + 1
-        days: list[AdminCalendarCell] = []
-        for day in calendar.Calendar(firstweekday=6).itermonthdates(year, month):
-            label = day.strftime("%d/%m/%Y")
-            count = by_day.get(label, 0)
-            days.append({
-                "date_label": label,
-                "day": str(day.day),
-                "is_current_month": day.month == month,
-                "is_selected": label == self.selected_calendar_day,
-                "has_slots": count > 0,
-                "slot_count": count,
-                "aria_label": f"{label}: {count} horário(s) configurado(s)" if count else f"{label}: sem horários",
-            })
-        return days
+        return build_admin_calendar_cells(
+            self.slots, self.calendar_month, self.selected_calendar_day
+        )
 
     @rx.var
     def selected_day_slots(self) -> list[SlotRow]:
