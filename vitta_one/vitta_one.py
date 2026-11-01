@@ -246,7 +246,7 @@ app.add_page(
     reception_patient_create_page,
     route="/recepcao/pacientes/novo",
     title="Novo paciente | Vitta-One",
-    on_load=[AuthState.load_protected, ReceptionQueueState.load],
+    on_load=[AuthState.load_protected, ReceptionQueueState.prepare_new_patient],
 )
 app.add_page(
     reception_patient_detail_page,
