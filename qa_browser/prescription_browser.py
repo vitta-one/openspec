@@ -1050,7 +1050,7 @@ def test_admin_qa_patient_directory_and_dossier_are_separate(page: Page) -> None
     details = directory.get_by_role("link", name=re.compile(r"^Ver detalhes")).first
     details.focus()
     details.press("Enter")
-    expect(page).to_have_url(re.compile(r"/admin/pacientes/\\d+/?$"), timeout=30000)
+    expect(page).to_have_url(re.compile(r"/admin/pacientes/\d+/?$"), timeout=30000)
     expect(page.get_by_role("heading", name="Ficha do paciente")).to_be_visible(timeout=30000)
     expect(page.get_by_role("heading", name="Histórico operacional")).to_be_visible()
 
@@ -1073,6 +1073,9 @@ def test_admin_qa_patient_directory_and_dossier_are_separate(page: Page) -> None
     breadcrumb.get_by_role("link", name="Pacientes").click()
     expect(page).to_have_url(re.compile(r"/admin/pacientes/?$"), timeout=30000)
     expect(page.get_by_role("table")).to_be_visible(timeout=30000)
+    page.goto(BASE + "/admin/pacientes/999999999", wait_until="domcontentloaded")
+    expect(page.get_by_text("Paciente não encontrado.")).to_be_visible(timeout=30000)
+    assert page.get_by_role("heading", name="Histórico operacional").count() == 0
 
 
 def test_unauthenticated_admin_patient_detail_cannot_expose_identity(page: Page) -> None:
