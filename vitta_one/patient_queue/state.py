@@ -395,7 +395,7 @@ class ReceptionQueueState(rx.State):
             yield
 
     @rx.event
-    async def search_patient_directory(self, form_data: dict[str, str]):
+    async def search_patient_directory(self, form_data: dict[str, Any]):
         if self.patient_directory_loading:
             return
         query = str(form_data.get("query", self.patient_directory_query) or "").strip()[:100]
