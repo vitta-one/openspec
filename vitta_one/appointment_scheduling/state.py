@@ -869,6 +869,10 @@ class ReceptionAgendaState(rx.State):
             "booking" if self.focus_booking_on_next_load else "consultations"
         )
         self.focus_booking_on_next_load = False
+        self.booking_dialog_open = False
+        self.booking_locked_patient_id = 0
+        self.booking_origin = ""
+        self._clear_booking_review()
         self.is_loading = True
         self._clear_feedback()
         yield
