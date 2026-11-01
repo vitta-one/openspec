@@ -810,7 +810,7 @@ class ReceptionQueueState(rx.State):
 
     @rx.event
     async def open_selected_patient_agenda(self):
-        """Keep the selected patient when Reception switches from registration to booking."""
+        """Open the shared modal with server-validated patient context."""
         if self.selected_patient_id <= 0:
             self.error_message = "Localize um paciente antes de agendar."
             return
@@ -825,15 +825,23 @@ class ReceptionQueueState(rx.State):
                 return
             from vitta_one.appointment_scheduling.state import ReceptionAgendaState
             agenda = await self.get_state(ReceptionAgendaState)
-            agenda.selected_patient_id = self.selected_patient_id
+            agenda.booking_dialog_open = True
+            agenda.booking_origin = "patient"
+            agenda.booking_locked_patient_id = patient.id
+            agenda.selected_patient_id = patient.id
             agenda.selected_patient_name = patient.name
             agenda.patient_cpf = ""
-            agenda.focus_booking_on_next_load = True
-            return rx.redirect("/recepcao/agenda/nova")
+            agenda.is_loading = True
+            agenda._clear_feedback()
+            agenda._load_with_token(token)
+            agenda.is_loading = False
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             if isinstance(exc, AuthenticationRequiredError):
                 return rx.redirect("/login")
             return rx.redirect("/acesso-negado")
+        except Exception:
+            self.error_message = "Não foi possível abrir o agendamento agora."
+            return rx.toast.error(self.error_message, position="top-right")
 
     @rx.event
     async def enqueue(self, form_data: QueueFormData):
