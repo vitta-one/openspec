@@ -461,7 +461,7 @@ def _reception_day_toolbar() -> rx.Component:
             ),
             rx.button(
                 rx.icon("plus", size=16), "Nova consulta", type="button",
-                on_click=rx.redirect("/recepcao/agenda"), color_scheme="teal",
+                on_click=ReceptionAgendaState.open_booking_dialog("dashboard"), color_scheme="teal",
                 high_contrast=True, size="3",
                 class_name="vitta-reception-day-primary-action",
             ),
@@ -555,8 +555,11 @@ def reception_week_calendar() -> rx.Component:
                             size="2", color="var(--vitta-text-muted)"),
                     spacing="2", align="start",
                 ),
-                rx.link(rx.icon("plus", size=17), "Agendar consulta",
-                        href="/recepcao/agenda/nova", class_name="vitta-context-link"),
+                rx.button(
+                    rx.icon("plus", size=17), "Agendar consulta",
+                    type="button", variant="outline", color_scheme="teal",
+                    on_click=ReceptionAgendaState.open_booking_dialog("agenda"),
+                ),
                 justify="between", align="center", flex_wrap="wrap", gap="3", width="100%",
             ),
             rx.box(
