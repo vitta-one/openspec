@@ -44,6 +44,7 @@ from vitta_one.patient_queue.application import (
     doctor_waiting_count,
     reception_create_patient,
     reception_get_patient_identity,
+    reception_get_patient_operational_summary,
     reception_search_patients,
     reception_list_patient_directory,
     reception_enqueue,
@@ -100,6 +101,21 @@ class PatientDirectoryRow(TypedDict):
     name: str
     phone: str
     href: str
+
+
+class PatientOperationalConsultationRow(TypedDict):
+    id: int
+    scheduled_at: str
+    professional_name: str
+    status: str
+    status_label: str
+
+
+class PatientOperationalQueueRow(TypedDict):
+    id: int
+    priority_label: str
+    status_label: str
+    entered_at: str
 
 
 class QueueFormData(TypedDict):
@@ -247,6 +263,20 @@ class ReceptionQueueState(rx.State):
     selected_patient_name: str = ""
     selected_patient_phone: str = ""
     selected_patient_portal_status: str = ""
+    selected_patient_cpf_masked: str = ""
+    patient_upcoming_consultations: list[PatientOperationalConsultationRow] = []
+    patient_history_consultations: list[PatientOperationalConsultationRow] = []
+    patient_history_page: int = 1
+    patient_history_pages: int = 1
+    patient_history_total: int = 0
+    patient_has_active_entry: bool = False
+    patient_active_entry: PatientOperationalQueueRow = {
+        "id": 0, "priority_label": "", "status_label": "", "entered_at": "",
+    }
+    patient_queue_history: list[PatientOperationalQueueRow] = []
+    patient_detail_loading: bool = False
+    patient_detail_loaded: bool = False
+    patient_detail_error: str = ""
     qa_local_enabled: bool = False
     is_loading_queue: bool = False
     is_submitting: bool = False
