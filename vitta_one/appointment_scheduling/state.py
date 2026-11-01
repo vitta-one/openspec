@@ -2,7 +2,7 @@
 
 from typing import Any, TypedDict
 import calendar
-from datetime import date
+from datetime import date, datetime, timezone
 
 import reflex as rx
 
@@ -17,6 +17,7 @@ from vitta_one.appointment_scheduling.application import (
     reception_get_agenda,
     reception_get_consultation_by_id,
     reception_list_active_professionals,
+    reception_list_booking_professionals,
     reception_reschedule_consultation,
     reception_schedule_consultation,
 )
@@ -43,7 +44,11 @@ from vitta_one.consultation_care.service import (
     CareLifecycleTransitionError,
     CareLifecycleValidationError,
 )
-from vitta_one.patient_queue.application import reception_find_patient
+from vitta_one.patient_queue.application import (
+    reception_find_patient,
+    reception_get_patient_identity,
+    reception_search_patients,
+)
 from vitta_one.patient_queue.state import ReceptionQueueState
 
 
@@ -147,6 +152,59 @@ class AdminCalendarCell(TypedDict):
     has_slots: bool
     slot_count: int
     aria_label: str
+
+
+class BookingProfessionalRow(TypedDict):
+    id: int
+    value: str
+    label: str
+    specialties: str
+
+
+class BookingPatientRow(TypedDict):
+    id: int
+    name: str
+    contact_hint: str
+
+
+def _masked_booking_contact(value: str | None) -> str:
+    digits = "".join(char for char in (value or "") if char.isdigit())
+    return f"Telefone final {digits[-4:]}" if len(digits) >= 4 else "Telefone não informado"
+
+
+def booking_calendar_cells(
+    slots: list[SlotRow],
+    month_label: str,
+    selected_date: str,
+    today_iso: str,
+    end_iso: str,
+) -> list[AdminCalendarCell]:
+    """An accessible month built only from genuinely bookable persisted slots."""
+    try:
+        year, month = map(int, month_label.split("-"))
+        start = date.fromisoformat(today_iso)
+        end = date.fromisoformat(end_iso)
+        date(year, month, 1)
+    except (ValueError, IndexError):
+        return []
+    counts: dict[str, int] = {}
+    for slot in slots:
+        if slot["status"] == AvailabilitySlotStatus.AVAILABLE.value:
+            counts[slot["date_label"]] = counts.get(slot["date_label"], 0) + 1
+    cells: list[AdminCalendarCell] = []
+    for day in calendar.Calendar(firstweekday=6).itermonthdates(year, month):
+        label = day.strftime("%d/%m/%Y")
+        count = counts.get(label, 0) if start <= day <= end and day.month == month else 0
+        cells.append({
+            "date_label": label,
+            "day": str(day.day),
+            "is_current_month": day.month == month,
+            "is_selected": label == selected_date,
+            "has_slots": count > 0,
+            "slot_count": count,
+            "aria_label": f"{label}: {count} horário(s) disponível(is)" if count else f"{label}: sem horários disponíveis",
+        })
+    return cells
 
 
 class AdminAvailabilityState(rx.State):
@@ -253,6 +311,10 @@ class AdminAvailabilityState(rx.State):
             yield
             token = await self._token()
             self._load_with_token(token)
+            if open_from_patient:
+                self._reset_booking(preserve_patient=True)
+                self._load_booking_professionals_with_token(token)
+                self.booking_dialog_open = True
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
@@ -594,6 +656,20 @@ class ReceptionAgendaState(rx.State):
     consultation_page_size: int = 10
     focus_booking_on_next_load: bool = False
 
+    booking_dialog_open: bool = False
+    booking_discard_open: bool = False
+    booking_step: int = 1
+    booking_patient_query: str = ""
+    booking_patients: list[BookingPatientRow] = []
+    booking_professionals: list[BookingProfessionalRow] = []
+    booking_professional: str = "__none__"
+    booking_slots: list[SlotRow] = []
+    booking_month: str = ""
+    booking_date: str = ""
+    booking_slot_id: int = 0
+    booking_error_message: str = ""
+    is_booking_loading: bool = False
+
     arrival_dialog_open: bool = False
     arrival_consultation_id: int = 0
     arrival_patient_name: str = ""
@@ -671,6 +747,7 @@ class ReceptionAgendaState(rx.State):
         self.selected_patient_name = ""
         self.active_tab = "consultations"
         self.focus_booking_on_next_load = False
+        self._reset_booking()
         self._reset_arrival()
         self._reset_reschedule()
         self._reset_cancel()
@@ -779,14 +856,12 @@ class ReceptionAgendaState(rx.State):
 
     @rx.event
     def change_active_tab(self, value: str) -> None:
-        if value in {"consultations", "booking"}:
-            self.active_tab = value
+        self.active_tab = "consultations"
 
     @rx.event
     async def load(self):
-        self.active_tab = (
-            "booking" if self.focus_booking_on_next_load else "consultations"
-        )
+        open_from_patient = self.focus_booking_on_next_load
+        self.active_tab = "consultations"
         self.focus_booking_on_next_load = False
         self.is_loading = True
         self._clear_feedback()
@@ -880,6 +955,400 @@ class ReceptionAgendaState(rx.State):
         self.selected_patient_id = 0
         self.selected_patient_name = ""
         self._clear_feedback()
+
+    @rx.var
+    def booking_professional_name(self) -> str:
+        return next((row["label"] for row in self.booking_professionals
+                     if row["value"] == self.booking_professional), "")
+
+    @rx.var
+    def booking_specialties(self) -> str:
+        return next((row["specialties"] for row in self.booking_professionals
+                     if row["value"] == self.booking_professional), "")
+
+    @rx.var
+    def booking_month_title(self) -> str:
+        try:
+            year, month = map(int, self.booking_month.split("-"))
+            return f"{('Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro')[month - 1]} {year}"
+        except (ValueError, IndexError):
+            return ""
+
+    @rx.var
+    def booking_calendar_days(self) -> list[AdminCalendarCell]:
+        return booking_calendar_cells(
+            self.booking_slots, self.booking_month, self.booking_date,
+            clinic_today_iso(), clinic_date_after_iso(44),
+        )
+
+    @rx.var
+    def booking_can_move_previous_month(self) -> bool:
+        return bool(self.booking_month) and self.booking_month > clinic_today_iso()[:7]
+
+    @rx.var
+    def booking_can_move_next_month(self) -> bool:
+        return bool(self.booking_month) and self.booking_month < clinic_date_after_iso(44)[:7]
+
+    @rx.var
+    def booking_date_slots(self) -> list[SlotRow]:
+        return [slot for slot in self.booking_slots if
+                slot["date_label"] == self.booking_date
+                and slot["status"] == AvailabilitySlotStatus.AVAILABLE.value]
+
+    @rx.var
+    def booking_slot_label(self) -> str:
+        return next((slot["starts_at"] for slot in self.booking_slots
+                     if slot["id"] == self.booking_slot_id), "")
+
+    def _reset_booking(self, *, preserve_patient: bool = False) -> None:
+        if not preserve_patient:
+            self.selected_patient_id = 0
+            self.selected_patient_name = ""
+        self.booking_dialog_open = False
+        self.booking_discard_open = False
+        self.booking_step = 1
+        self.booking_patient_query = ""
+        self.booking_patients = []
+        self.booking_professionals = []
+        self.booking_professional = "__none__"
+        self.booking_slots = []
+        self.booking_month = clinic_today_iso()[:7]
+        self.booking_date = ""
+        self.booking_slot_id = 0
+        self.booking_error_message = ""
+        self.is_booking_loading = False
+
+    def _load_booking_professionals_with_token(self, token: str) -> None:
+        with rx.session() as db:
+            rows = reception_list_booking_professionals(db, token=token)
+        self.booking_professionals = [
+            {"id": professional.id, "value": str(professional.id),
+             "label": professional.name, "specialties": specialties}
+            for professional, specialties in rows
+        ]
+
+    def _load_booking_slots_with_token(self, token: str) -> None:
+        if not self.booking_professional.isdecimal():
+            self.booking_slots = []
+            return
+        with rx.session() as db:
+            snapshot = reception_get_agenda(
+                db, token=token,
+                professional_id=int(self.booking_professional),
+                start_date=clinic_today_iso(), end_date=clinic_date_after_iso(44),
+            )
+        now = datetime.now(timezone.utc)
+        self.booking_slots = _slot_rows([
+            slot for slot in snapshot.slots
+            if slot.status is AvailabilitySlotStatus.AVAILABLE and slot.starts_at > now
+        ])
+        if self.booking_date and not any(
+            slot["date_label"] == self.booking_date for slot in self.booking_slots
+        ):
+            self.booking_date = ""
+            self.booking_slot_id = 0
+        elif self.booking_slot_id and not any(
+            slot["id"] == self.booking_slot_id for slot in self.booking_slots
+        ):
+            self.booking_slot_id = 0
+
+    def _request_booking_close(self) -> None:
+        if self.is_submitting:
+            return
+        if (self.selected_patient_id or self.booking_patient_query.strip()
+                or self.booking_professional != "__none__"):
+            self.booking_discard_open = True
+        else:
+            self._reset_booking()
+
+    @rx.event
+    async def open_booking(self):
+        if self.is_submitting:
+            return
+        self._reset_booking()
+        self.is_booking_loading = True
+        yield
+        try:
+            token = await self._token()
+            self._load_booking_professionals_with_token(token)
+            self.booking_dialog_open = True
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            yield rx.toast.error(
+                "Não foi possível iniciar o agendamento. Tente novamente.",
+                position="top-right",
+            )
+        finally:
+            self.is_booking_loading = False
+            yield
+
+    @rx.event
+    def set_booking_dialog_open(self, is_open: bool) -> None:
+        if is_open:
+            self.booking_dialog_open = True
+        else:
+            self._request_booking_close()
+
+    @rx.event
+    def cancel_booking(self) -> None:
+        self._request_booking_close()
+
+    @rx.event
+    def set_booking_discard_open(self, is_open: bool) -> None:
+        self.booking_discard_open = is_open
+
+    @rx.event
+    def discard_booking(self) -> None:
+        self._reset_booking()
+
+    @rx.event
+    def update_booking_patient_query(self, value: str) -> None:
+        self.booking_patient_query = str(value or "")[:100]
+        self.booking_patients = []
+        self.booking_error_message = ""
+
+    @rx.event
+    async def search_booking_patients(self, form_data: dict[str, Any]):
+        self.booking_patient_query = str(
+            form_data.get("query", self.booking_patient_query) or ""
+        )[:100]
+        if len(self.booking_patient_query.strip()) < 2:
+            self.booking_error_message = "Digite ao menos 2 caracteres para buscar pacientes."
+            return
+        self.is_booking_loading = True
+        self.booking_error_message = ""
+        self.booking_patients = []
+        yield
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                results = reception_search_patients(
+                    db, token=token, query=self.booking_patient_query, limit=8
+                )
+            self.booking_patients = [
+                {"id": item.id, "name": item.name,
+                 "contact_hint": _masked_booking_contact(item.phone)}
+                for item in results
+            ]
+            if not results:
+                self.booking_error_message = "Nenhum paciente encontrado para esta busca."
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.booking_error_message = "Não foi possível buscar pacientes agora."
+        finally:
+            self.is_booking_loading = False
+            yield
+
+    @rx.event
+    async def select_booking_patient(self, patient_id: int):
+        self.booking_error_message = ""
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                patient = reception_get_patient_identity(
+                    db, token=token, patient_id=patient_id,
+                )
+            if patient is None:
+                raise SchedulingValidationError("Paciente não encontrado. Faça outra busca.")
+            self.selected_patient_id = patient.id
+            self.selected_patient_name = patient.name
+            self.booking_patients = []
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except SchedulingValidationError as exc:
+            self.booking_error_message = str(exc)
+        except Exception:
+            self.booking_error_message = "Não foi possível selecionar o paciente."
+
+    @rx.event
+    def clear_booking_patient(self) -> None:
+        self.selected_patient_id = 0
+        self.selected_patient_name = ""
+        self.booking_error_message = ""
+
+    @rx.event
+    async def choose_booking_professional(self, value: str):
+        self.booking_professional = value if any(
+            row["value"] == value for row in self.booking_professionals
+        ) else "__none__"
+        self.booking_date = ""
+        self.booking_slot_id = 0
+        self.booking_slots = []
+        self.booking_month = clinic_today_iso()[:7]
+        self.booking_error_message = ""
+        if self.booking_professional == "__none__":
+            return
+        self.is_booking_loading = True
+        yield
+        try:
+            token = await self._token()
+            self._load_booking_slots_with_token(token)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.booking_error_message = "Não foi possível consultar a disponibilidade."
+        finally:
+            self.is_booking_loading = False
+            yield
+
+    @rx.event
+    def move_booking_month(self, delta: int) -> None:
+        try:
+            year, month = map(int, self.booking_month.split("-"))
+            next_month = date(year + (month - 1 + delta) // 12,
+                              (month - 1 + delta) % 12 + 1, 1).strftime("%Y-%m")
+            if clinic_today_iso()[:7] <= next_month <= clinic_date_after_iso(44)[:7]:
+                self.booking_month = next_month
+                self.booking_date = ""
+                self.booking_slot_id = 0
+                self.booking_error_message = ""
+        except (ValueError, IndexError):
+            return
+
+    @rx.event
+    async def choose_booking_date(self, value: str):
+        if not any(day["date_label"] == value and day["has_slots"]
+                   for day in self.booking_calendar_days):
+            self.booking_error_message = "Selecione uma data com horários disponíveis."
+            return
+        self.booking_date = value
+        self.booking_slot_id = 0
+        self.booking_error_message = ""
+        self.is_booking_loading = True
+        yield
+        try:
+            token = await self._token()
+            self._load_booking_slots_with_token(token)
+            if not self.booking_date:
+                self.booking_error_message = (
+                    "A disponibilidade deste dia mudou. Escolha outra data."
+                )
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.booking_error_message = "Não foi possível atualizar os horários."
+        finally:
+            self.is_booking_loading = False
+            yield
+
+    @rx.event
+    def choose_booking_slot(self, slot_id: int) -> None:
+        if any(item["id"] == slot_id for item in self.booking_date_slots):
+            self.booking_slot_id = slot_id
+            self.booking_error_message = ""
+        else:
+            self.booking_slot_id = 0
+            self.booking_error_message = "Este horário deixou de estar disponível."
+
+    @rx.event
+    async def refresh_booking_availability(self):
+        if self.booking_professional == "__none__":
+            return
+        self.is_booking_loading = True
+        self.booking_error_message = ""
+        yield
+        try:
+            token = await self._token()
+            self._load_booking_slots_with_token(token)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.booking_error_message = "Não foi possível atualizar a disponibilidade."
+        finally:
+            self.is_booking_loading = False
+            yield
+
+    @rx.event
+    def booking_next(self) -> None:
+        if self.is_submitting or self.is_booking_loading:
+            return
+        messages = {
+            1: (self.selected_patient_id > 0, "Selecione um paciente para continuar."),
+            2: (self.booking_professional != "__none__", "Selecione um médico."),
+            3: (bool(self.booking_date and self.booking_date_slots), "Selecione um dia disponível."),
+            4: (self.booking_slot_id > 0 and bool(self.booking_slot_label),
+                "Selecione um horário disponível."),
+        }
+        valid, message = messages.get(self.booking_step, (False, "Etapa inválida."))
+        if not valid:
+            self.booking_error_message = message
+            return
+        self.booking_error_message = ""
+        self.booking_step = min(5, self.booking_step + 1)
+
+    @rx.event
+    def booking_back(self) -> None:
+        if not self.is_submitting:
+            self.booking_step = max(1, self.booking_step - 1)
+            self.booking_error_message = ""
+
+    @rx.event
+    async def confirm_booking(self):
+        if self.is_submitting:
+            return
+        self.is_submitting = True
+        self.booking_error_message = ""
+        yield
+        token = ""
+        try:
+            if self.booking_step != 5 or not self.selected_patient_id:
+                raise SchedulingValidationError("Revise o paciente antes de confirmar.")
+            slot = next(
+                (row for row in self.booking_date_slots
+                 if row["id"] == self.booking_slot_id), None
+            )
+            if (slot is None or str(slot["professional_id"]) != self.booking_professional):
+                raise SchedulingValidationError("Revise médico, data e horário antes de confirmar.")
+            token = await self._token()
+            with rx.session() as db:
+                reception_schedule_consultation(
+                    db, token=token,
+                    patient_id=self.selected_patient_id,
+                    slot_id=self.booking_slot_id,
+                )
+            booked_date_iso = datetime.strptime(self.booking_date, "%d/%m/%Y").date().isoformat()
+            if self.filter_professional not in ("__all__", self.booking_professional):
+                self.filter_professional = self.booking_professional
+            if not self.filter_start_date or booked_date_iso < self.filter_start_date:
+                self.filter_start_date = booked_date_iso
+            if not self.filter_end_date or booked_date_iso > self.filter_end_date:
+                self.filter_end_date = booked_date_iso
+            self.consultation_page = 1
+            self._load_with_token(token)
+            self._reset_booking()
+            self.success_message = "Consulta agendada com sucesso"
+            yield rx.toast.success(self.success_message, position="top-right")
+            async for event in self._refresh_daily_dashboard_if_loaded():
+                yield event
+        except (SchedulingConflictError, SchedulingNotFoundError) as exc:
+            self.booking_error_message = str(exc)
+            self.booking_slot_id = 0
+            if token:
+                try:
+                    self._load_booking_slots_with_token(token)
+                except Exception:
+                    self.booking_slots = []
+                    self.booking_date = ""
+            self.booking_step = 4 if self.booking_date and self.booking_date_slots else 3
+            yield rx.toast.error(self.booking_error_message, position="top-right")
+        except (SchedulingValidationError, SchedulingTimeValidationError) as exc:
+            self.booking_error_message = str(exc)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.booking_error_message = "Não foi possível agendar. Tente novamente."
+        finally:
+            self.is_submitting = False
+            yield
 
     @rx.event
     async def download_appointment_calendar(self, consultation_id: int):
