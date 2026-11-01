@@ -6,7 +6,7 @@ import reflex as rx
 
 from vitta_one.admin_preview.reception_service import load_reception_preview
 from vitta_one.admin_preview.service import LocalAdminPreviewDisabledError
-from vitta_one.appointment_scheduling.temporal import clinic_date_after_iso, clinic_today_iso
+from vitta_one.appointment_scheduling.temporal import clinic_date_after_iso
 from vitta_one.auth.authorization import (
     AuthenticationRequiredError,
     PasswordChangeRequiredError,
