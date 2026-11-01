@@ -238,6 +238,8 @@ class ReceptionQueueState(rx.State):
     queue_rows: list[QueueRow] = []
     patient_directory: list[PatientDirectoryRow] = []
     patient_directory_query: str = ""
+    patient_directory_applied_query: str = ""
+    patient_directory_error: str = ""
     patient_directory_total: int = 0
     patient_directory_page: int = 1
     patient_directory_pages: int = 1
@@ -308,6 +310,14 @@ class ReceptionQueueState(rx.State):
     def _clear_sensitive_view(self) -> None:
         self.qa_local_enabled = False
         self.queue_rows = []
+        self.patient_directory = []
+        self.patient_directory_query = ""
+        self.patient_directory_applied_query = ""
+        self.patient_directory_error = ""
+        self.patient_directory_total = 0
+        self.patient_directory_page = 1
+        self.patient_directory_pages = 1
+        self.patient_directory_loading = False
         self.selected_patient_id = 0
         self.selected_patient_name = ""
         self.selected_patient_phone = ""
@@ -337,23 +347,35 @@ class ReceptionQueueState(rx.State):
 
     @rx.event
     def update_patient_directory_query(self, value: str):
+        """Update only the input; database queries run on explicit submission."""
         self.patient_directory_query = str(value or "")[:100]
 
     @rx.event
     async def load_patient_list(self):
+        """Fetch one authorized page, keeping the active search when returning."""
         self.patient_directory_loading = True
+        self.patient_directory_error = ""
         yield
         try:
             token = await self._token()
             with rx.session() as db:
                 items, total = reception_list_patient_directory(
-                    db, token=token, search=self.patient_directory_query,
+                    db, token=token, search=self.patient_directory_applied_query,
                     page=self.patient_directory_page, size=10,
                 )
+                pages = max(1, (total + 9) // 10)
+                if self.patient_directory_page > pages:
+                    self.patient_directory_page = pages
+                    items, total = reception_list_patient_directory(
+                        db, token=token, search=self.patient_directory_applied_query,
+                        page=pages, size=10,
+                    )
             self.patient_directory = [
-                {"id": item["id"], "name": item["name"],
-                 "phone": _format_patient_contact(item["phone"]),
-                 "href": item["href"]}
+                {
+                    "id": item["id"], "name": item["name"],
+                    "phone": _format_patient_contact(item["phone"]),
+                    "href": item["href"],
+                }
                 for item in items
             ]
             self.patient_directory_total = total
@@ -362,22 +384,49 @@ class ReceptionQueueState(rx.State):
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
-            self.error_message = "Não foi possível carregar os pacientes."
-            yield rx.toast.error(self.error_message, position="top-right")
+            self.patient_directory = []
+            self.patient_directory_total = 0
+            self.patient_directory_pages = 1
+            self.patient_directory_error = (
+                "Não foi possível carregar os pacientes. Tente novamente."
+            )
         finally:
             self.patient_directory_loading = False
             yield
 
     @rx.event
-    async def search_patient_directory(self, _form_data: dict):
+    async def search_patient_directory(self, form_data: dict[str, str]):
+        if self.patient_directory_loading:
+            return
+        query = str(form_data.get("query", self.patient_directory_query) or "").strip()[:100]
+        self.patient_directory_query = query
+        if query and len(query) < 2:
+            self.patient_directory_error = "Digite pelo menos 2 caracteres para pesquisar."
+            return
+        self.patient_directory_applied_query = query
         self.patient_directory_page = 1
         yield ReceptionQueueState.load_patient_list
 
     @rx.event
+    def clear_patient_directory_search(self):
+        if self.patient_directory_loading:
+            return
+        self.patient_directory_query = ""
+        self.patient_directory_applied_query = ""
+        self.patient_directory_error = ""
+        self.patient_directory_page = 1
+        return ReceptionQueueState.load_patient_list
+
+    @rx.event
     def move_patient_directory_page(self, delta: int):
-        self.patient_directory_page = max(
+        if self.patient_directory_loading:
+            return
+        next_page = max(
             1, min(self.patient_directory_page + delta, self.patient_directory_pages)
         )
+        if next_page == self.patient_directory_page:
+            return
+        self.patient_directory_page = next_page
         return ReceptionQueueState.load_patient_list
 
     @rx.event
