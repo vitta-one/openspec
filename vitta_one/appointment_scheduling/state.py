@@ -1333,8 +1333,16 @@ class ReceptionAgendaState(rx.State):
                     "Consulta salva. Não foi possível atualizar a lista agora.",
                     position="top-right",
                 )
-            async for event in self._refresh_daily_dashboard_if_loaded():
-                yield event
+            try:
+                async for event in self._refresh_daily_dashboard_if_loaded():
+                    yield event
+            except Exception:
+                # The booking is already committed; a read-only refresh must not
+                # turn success into an error that encourages a duplicate submit.
+                yield rx.toast.warning(
+                    "Consulta salva. Atualize o painel para visualizar os indicadores.",
+                    position="top-right",
+                )
         except (SchedulingConflictError, SchedulingNotFoundError) as exc:
             self.booking_error_message = str(exc)
             self.booking_slot_id = 0
