@@ -593,6 +593,9 @@ class ReceptionAgendaState(rx.State):
     consultation_page: int = 1
     consultation_page_size: int = 10
     focus_booking_on_next_load: bool = False
+    booking_dialog_open: bool = False
+    booking_locked_patient_id: int = 0
+    booking_origin: str = ""
 
     arrival_dialog_open: bool = False
     arrival_consultation_id: int = 0
@@ -671,6 +674,9 @@ class ReceptionAgendaState(rx.State):
         self.selected_patient_name = ""
         self.active_tab = "consultations"
         self.focus_booking_on_next_load = False
+        self.booking_dialog_open = False
+        self.booking_locked_patient_id = 0
+        self.booking_origin = ""
         self._reset_arrival()
         self._reset_reschedule()
         self._reset_cancel()
@@ -778,6 +784,38 @@ class ReceptionAgendaState(rx.State):
             yield rx.redirect("/acesso-negado")
 
     @rx.event
+    async def open_booking_dialog(self, origin: str = "agenda"):
+        """Use the same booking body from Reception dashboard and agenda."""
+        try:
+            token = await self._token()
+            self.selected_patient_id = 0
+            self.selected_patient_name = ""
+            self.patient_cpf = ""
+            self.booking_locked_patient_id = 0
+            self.booking_origin = origin if origin in {"agenda", "dashboard"} else "agenda"
+            self.is_loading = True
+            self._clear_feedback()
+            self._load_with_token(token)
+            self.booking_dialog_open = True
+            self.is_loading = False
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            self.is_loading = False
+            if isinstance(exc, AuthenticationRequiredError):
+                return rx.redirect("/login")
+            return rx.redirect("/acesso-negado")
+        except Exception:
+            self.booking_dialog_open = False
+            self.is_loading = False
+            return rx.toast.error("Não foi possível abrir o agendamento.", position="top-right")
+
+    @rx.event
+    def set_booking_dialog_open(self, is_open: bool) -> None:
+        if not is_open and not self.is_submitting:
+            self.booking_dialog_open = False
+            self.booking_origin = ""
+            self.booking_locked_patient_id = 0
+
+    @rx.event
     def change_active_tab(self, value: str) -> None:
         if value in {"consultations", "booking"}:
             self.active_tab = value
@@ -849,6 +887,8 @@ class ReceptionAgendaState(rx.State):
 
     @rx.event
     async def find_patient(self, _form_data: dict[str, Any]):
+        if self.booking_locked_patient_id or self.is_submitting:
+            return
         self.is_submitting = True
         self._clear_feedback()
         yield
@@ -876,6 +916,8 @@ class ReceptionAgendaState(rx.State):
 
     @rx.event
     def clear_patient(self) -> None:
+        if self.booking_locked_patient_id:
+            return
         self.patient_cpf = ""
         self.selected_patient_id = 0
         self.selected_patient_name = ""
