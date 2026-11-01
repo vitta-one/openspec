@@ -40,8 +40,10 @@ class AdminReceptionPreviewState(rx.State):
     updated_at: str = ""
     error_message: str = ""
     is_loading: bool = False
+    has_loaded: bool = False
 
     def _clear_data(self) -> None:
+        self.has_loaded = False
         self.active_rows = []
         self.history_rows = []
         self.consultation_rows = []
@@ -114,6 +116,7 @@ class AdminReceptionPreviewState(rx.State):
             self.history_total = snapshot.history_total
             self.consultation_total = snapshot.consultation_total
             self.updated_at = snapshot.updated_at
+            self.has_loaded = True
         except LocalAdminPreviewDisabledError:
             self._clear_data()
             yield rx.redirect(Role.ADMINISTRADOR.dashboard_path)
