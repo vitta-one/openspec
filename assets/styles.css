@@ -2619,3 +2619,55 @@ button:disabled,
   box-shadow: var(--vitta-shadow-xs);
 }
 .vitta-queue-patient-row > div { gap: 1rem; }
+
+/* Reception patient directory: native table semantics with compact mobile columns. */
+.vitta-patient-directory-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  color: var(--vitta-text);
+}
+.vitta-patient-directory-table :is(th, td) {
+  padding: 0.78rem 0.75rem;
+  text-align: left;
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--vitta-border);
+}
+.vitta-patient-directory-table th {
+  color: var(--vitta-text-muted);
+  font-size: 0.8rem;
+  font-weight: 750;
+  background: var(--vitta-surface-subtle);
+}
+.vitta-patient-directory-table th:first-child { width: 45%; }
+.vitta-patient-directory-table th:nth-child(2) { width: 30%; }
+.vitta-patient-directory-table th:last-child { width: 25%; }
+.vitta-patient-directory-table tbody tr:last-child td { border-bottom: 0; }
+.vitta-patient-directory-row:hover,
+.vitta-patient-directory-row:focus-within {
+  background: var(--vitta-primary-soft);
+}
+.vitta-patient-directory-action-column { text-align: right !important; }
+.vitta-patient-directory-detail {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.vitta-patient-directory-mobile-phone { display: none; }
+
+@media (max-width: 640px) {
+  .vitta-shell a.vitta-patient-directory-new { width: 100%; }
+  .vitta-patient-directory-table :is(th, td) {
+    padding: 0.7rem 0.35rem;
+  }
+  .vitta-patient-directory-phone-column { display: none; }
+  .vitta-patient-directory-mobile-phone {
+    display: block;
+    margin-top: 0.22rem;
+  }
+  .vitta-patient-directory-table th:first-child { width: 62%; }
+  .vitta-patient-directory-table th:last-child { width: 38%; }
+}
