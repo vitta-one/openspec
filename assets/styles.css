@@ -2619,3 +2619,22 @@ button:disabled,
   box-shadow: var(--vitta-shadow-xs);
 }
 .vitta-queue-patient-row > div { gap: 1rem; }
+
+/* Reception patient creation: compact field flow and reachable actions. */
+.vitta-patient-create-actions {
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--vitta-border);
+  gap: 0.875rem !important;
+}
+
+@media (max-width: 520px) {
+  .vitta-patient-create-actions {
+    flex-direction: column-reverse;
+    align-items: stretch !important;
+  }
+
+  .vitta-patient-create-actions > :is(a, button) {
+    width: 100%;
+    justify-content: center;
+  }
+}
