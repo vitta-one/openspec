@@ -105,7 +105,7 @@ def test_existing_unlinked_doctor_is_reused_without_password_change(db):
     assert db.get(Professional, result.professional_id).onboarding_email_status == "NOT_REQUIRED"
 
 
-def test_other_role_email_and_missing_specialty_are_rejected(db):
+def test_other_role_email_is_rejected_and_specialties_are_optional(db):
     specialty = _specialty(db)
     db.add(User(email="admin@example.invalid", role=Role.ADMINISTRADOR.value, password_hash="test"))
     db.commit()
@@ -113,11 +113,16 @@ def test_other_role_email_and_missing_specialty_are_rejected(db):
         register_medical_professional(
             db, name="Doctor", email="admin@example.invalid", specialty_ids=[specialty.id]
         )
-    with pytest.raises(DirectoryValidationError):
-        register_medical_professional(
-            db, name="Doctor", email="doc2@example.invalid", specialty_ids=[]
+    result = register_medical_professional(
+        db, name="Dr. Sem Especialidade", email="doc2@example.invalid", specialty_ids=[]
+    )
+    assert db.get(Professional, result.professional_id).user_id == result.user_id
+    assert db.exec(
+        select(ProfessionalSpecialty).where(
+            ProfessionalSpecialty.professional_id == result.professional_id
         )
-    assert len(db.exec(select(Professional)).all()) == 0
+    ).all() == []
+    assert len(db.exec(select(Professional)).all()) == 1
 
 
 def test_provisional_doctor_cannot_use_clinical_role_until_password_rotation(db):
