@@ -581,7 +581,8 @@ def enqueue_panel() -> rx.Component:
             ),
             rx.cond(
                 ReceptionQueueState.selected_patient_id > 0,
-                rx.el.form(
+                rx.vstack(
+                    rx.el.form(
                     rx.vstack(
                         rx.box(
                             field_label("Sintomas relatados", "queue-symptoms"),
@@ -630,16 +631,20 @@ def enqueue_panel() -> rx.Component:
                     no_validate=True,
                     on_submit=ReceptionQueueState.enqueue,
                     width="100%",
+                    ),
+                    rx.button(
+                        "Trocar paciente",
+                        type="button",
+                        variant="outline",
+                        color_scheme="teal",
+                        on_click=ReceptionQueueState.clear_patient_selection,
+                        disabled=ReceptionQueueState.is_submitting,
+                    ),
+                    spacing="3",
+                    align="stretch",
+                    width="100%",
                 ),
                 patient_selection_summary(),
-                rx.button(
-                    "Trocar paciente",
-                    type="button",
-                    variant="outline",
-                    color_scheme="teal",
-                    on_click=ReceptionQueueState.clear_patient_selection,
-                    disabled=ReceptionQueueState.is_submitting,
-                ),
             ),
             spacing="5",
             width="100%",
