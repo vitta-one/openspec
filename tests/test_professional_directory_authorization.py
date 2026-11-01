@@ -14,6 +14,7 @@ from vitta_one.models.auth import User
 from vitta_one.professional_directory.application import (
     admin_create_professional,
     admin_create_specialty,
+    admin_register_medical_professional,
     admin_list_available_medical_accounts,
     admin_list_professionals,
     admin_list_specialties,
@@ -81,6 +82,11 @@ def test_non_admin_roles_cannot_read_or_mutate_directory(
         admin_list_available_medical_accounts(db, token=token)
     with pytest.raises(RoleForbiddenError):
         admin_create_specialty(db, token=token, name="Não permitido")
+    with pytest.raises(RoleForbiddenError):
+        admin_register_medical_professional(
+            db, token=token, name="Dr. Sem Acesso",
+            email="medico-nao-autorizado@example.invalid", specialty_ids=[],
+        )
 
 
 def test_missing_and_expired_sessions_are_rejected_before_directory_access(
