@@ -170,8 +170,8 @@ def test_agenda_queries_real_consultations_and_professional_filter(db):
     filtered = load(db, auth, professional_filter=str(doctor1.id))
     assert filtered.consultation_total == 1
     assert [row["professional_name"] for row in filtered.consultation_rows] == ["Dra. Um"]
-    assert [row["value"] for row in result.professional_options] == [
-        str(doctor1.id), str(doctor2.id),
+    assert [(row["label"], row["value"]) for row in result.professional_options] == [
+        ("Dr. Dois", str(doctor2.id)), ("Dra. Um", str(doctor1.id)),
     ]
 
 
