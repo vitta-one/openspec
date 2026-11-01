@@ -260,7 +260,7 @@ def reception_preview() -> rx.Component:
             R.error_message != "",
             error_banner(R.error_message),
             rx.cond(
-                R.is_loading,
+                R.is_loading | ~R.has_loaded,
                 rx.center(
                     rx.vstack(
                         rx.spinner(size="3"),
