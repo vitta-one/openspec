@@ -311,10 +311,6 @@ class AdminAvailabilityState(rx.State):
             yield
             token = await self._token()
             self._load_with_token(token)
-            if open_from_patient:
-                self._reset_booking(preserve_patient=True)
-                self._load_booking_professionals_with_token(token)
-                self.booking_dialog_open = True
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
@@ -869,6 +865,10 @@ class ReceptionAgendaState(rx.State):
         try:
             token = await self._token()
             self._load_with_token(token)
+            if open_from_patient:
+                self._reset_booking(preserve_patient=True)
+                self._load_booking_professionals_with_token(token)
+                self.booking_dialog_open = True
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
@@ -1322,10 +1322,17 @@ class ReceptionAgendaState(rx.State):
             if not self.filter_end_date or booked_date_iso > self.filter_end_date:
                 self.filter_end_date = booked_date_iso
             self.consultation_page = 1
-            self._load_with_token(token)
             self._reset_booking()
             self.success_message = "Consulta agendada com sucesso"
             yield rx.toast.success(self.success_message, position="top-right")
+            try:
+                self._load_with_token(token)
+            except Exception:
+                # Reservation was already committed; never offer an unsafe retry.
+                yield rx.toast.warning(
+                    "Consulta salva. Não foi possível atualizar a lista agora.",
+                    position="top-right",
+                )
             async for event in self._refresh_daily_dashboard_if_loaded():
                 yield event
         except (SchedulingConflictError, SchedulingNotFoundError) as exc:
