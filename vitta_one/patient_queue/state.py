@@ -342,12 +342,59 @@ class ReceptionQueueState(rx.State):
         self.selected_patient_name = ""
         self.selected_patient_phone = ""
         self.selected_patient_portal_status = ""
+        self._clear_patient_operational_data()
         self.quick_search_query = ""
         self.quick_search_results = []
         self.quick_search_error = ""
         self.is_quick_searching = False
         self._reset_reassess()
         self._reset_withdraw()
+
+    def _clear_patient_operational_data(self) -> None:
+        self.selected_patient_cpf_masked = ""
+        self.patient_upcoming_consultations = []
+        self.patient_history_consultations = []
+        self.patient_history_page = 1
+        self.patient_history_pages = 1
+        self.patient_history_total = 0
+        self.patient_has_active_entry = False
+        self.patient_active_entry = {
+            "id": 0, "priority_label": "", "status_label": "", "entered_at": "",
+        }
+        self.patient_queue_history = []
+        self.patient_detail_loaded = False
+        self.patient_detail_error = ""
+
+    def _load_patient_profile_with_token(self, token: str, patient_id: int) -> bool:
+        with rx.session() as db:
+            profile = reception_get_patient_operational_summary(
+                db, token=token, patient_id=patient_id,
+                history_page=self.patient_history_page,
+            )
+            if profile is None:
+                return False
+            portal_status = reception_get_patient_portal_status(
+                db, token=token, patient_id=patient_id,
+            )
+        self.selected_patient_id = profile["id"]
+        self.selected_patient_name = profile["name"]
+        self.selected_patient_phone = format_patient_phone_input(profile["phone"])
+        self.selected_patient_cpf_masked = profile["cpf_masked"]
+        self.selected_patient_portal_status = portal_status.label
+        self.patient_upcoming_consultations = profile["upcoming"]
+        self.patient_history_consultations = profile["history"]
+        self.patient_history_page = profile["history_page"]
+        self.patient_history_pages = profile["history_pages"]
+        self.patient_history_total = profile["history_total"]
+        active = profile["active_queue"]
+        self.patient_has_active_entry = active is not None
+        self.patient_active_entry = active or {
+            "id": 0, "priority_label": "", "status_label": "", "entered_at": "",
+        }
+        self.patient_queue_history = profile["queue_history"]
+        self.qa_local_enabled = local_qa_enabled()
+        self.patient_detail_loaded = True
+        return True
 
     def _load_queue_with_token(self, token: str) -> None:
         with rx.session() as db:
