@@ -142,7 +142,7 @@ app.add_page(
     admin_staff_create_page,
     route="/admin/funcionarios/novo",
     title="Novo funcionário | Vitta-One",
-    on_load=[AuthState.load_protected, AdminStaffState.load,
+    on_load=[AuthState.load_protected, AdminStaffState.prepare_creation,
              AdminDirectoryState.prepare_new_professional_page],
 )
 app.add_page(
@@ -161,7 +161,8 @@ app.add_page(
     admin_receptionist_staff_page,
     route="/admin/funcionarios/recepcionista",
     title="Cadastrar recepcionista | Vitta-One",
-    on_load=[AuthState.load_protected, AdminStaffState.load],
+    on_load=[AuthState.load_protected, AdminStaffState.load,
+             AdminDirectoryState.prepare_new_professional_page],
 )
 app.add_page(
     admin_hours_page,
