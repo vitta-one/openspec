@@ -377,6 +377,20 @@ def _professional_form_fields() -> rx.Component:
                 class_name="vitta-input",
                 margin_top="0.4rem",
                 auto_focus=True,
+                aria_invalid=AdminDirectoryState.professional_name_error != "",
+                aria_describedby="professional-name-error",
+            ),
+            rx.cond(
+                AdminDirectoryState.professional_name_error != "",
+                rx.text(
+                    AdminDirectoryState.professional_name_error,
+                    id="professional-name-error",
+                    role="alert",
+                    size="1",
+                    color="var(--vitta-danger)",
+                    margin_top="0.3rem",
+                ),
+                rx.fragment(),
             ),
             width="100%",
         ),
@@ -395,6 +409,20 @@ def _professional_form_fields() -> rx.Component:
                 class_name="vitta-input",
                 margin_top="0.4rem",
                 placeholder="medico@clinica.com",
+                aria_invalid=AdminDirectoryState.professional_email_error != "",
+                aria_describedby="professional-email-error",
+            ),
+            rx.cond(
+                AdminDirectoryState.professional_email_error != "",
+                rx.text(
+                    AdminDirectoryState.professional_email_error,
+                    id="professional-email-error",
+                    role="alert",
+                    size="1",
+                    color="var(--vitta-danger)",
+                    margin_top="0.3rem",
+                ),
+                rx.fragment(),
             ),
             rx.text(
                 rx.cond(
@@ -434,16 +462,32 @@ def _professional_form_fields() -> rx.Component:
         ),
         rx.el.fieldset(
             rx.el.legend(
-                "Especialidades",
+                "Especialidades (opcional)",
                 font_weight="650",
                 font_size="0.9rem",
                 color="var(--vitta-text)",
                 margin_bottom="0.55rem",
             ),
             rx.vstack(
-                rx.foreach(AdminDirectoryState.specialty_options, specialty_option),
+                rx.cond(
+                    AdminDirectoryState.has_selectable_specialties,
+                    rx.vstack(
+                        rx.foreach(AdminDirectoryState.specialty_options, specialty_option),
+                        spacing="2",
+                        align="stretch",
+                        width="100%",
+                    ),
+                    rx.text(
+                        "Nenhuma especialidade ativa disponível. "
+                        "Você poderá vincular especialidades depois do cadastro.",
+                        size="2",
+                        color="var(--vitta-text-muted)",
+                        line_height="1.5",
+                        role="status",
+                    ),
+                ),
                 rx.text(
-                    "Selecione uma ou mais áreas em que o profissional atende.",
+                    "Você pode vincular especialidades agora ou posteriormente.",
                     size="1",
                     color="var(--vitta-text-muted)",
                     line_height="1.45",
@@ -466,9 +510,25 @@ def _professional_form_fields() -> rx.Component:
 def professional_dialog() -> rx.Component:
     return rx.dialog.root(
         rx.dialog.content(
-            rx.dialog.title(AdminDirectoryState.professional_form_title),
+            rx.flex(
+                rx.dialog.title(AdminDirectoryState.professional_form_title),
+                rx.button(
+                    rx.icon("x", size=18),
+                    type="button",
+                    variant="soft",
+                    color_scheme="gray",
+                    aria_label="Fechar formulário de profissional",
+                    title="Fechar formulário",
+                    on_click=AdminDirectoryState.cancel_professional_dialog,
+                    disabled=AdminDirectoryState.is_submitting,
+                ),
+                justify="between",
+                align="center",
+                gap="3",
+                width="100%",
+            ),
             rx.dialog.description(
-                "Informe nome, e-mail e especialidades. O sistema prepara o acesso do médico.",
+                "Informe os dados do médico. As especialidades podem ser vinculadas agora ou depois.",
                 margin_top="0.35rem",
                 margin_bottom="1rem",
             ),
@@ -487,7 +547,9 @@ def professional_dialog() -> rx.Component:
                         rx.button(
                             "Cancelar",
                             type="button",
-                            variant="ghost",
+                            variant="outline",
+                            color_scheme="gray",
+                            min_height="2.75rem",
                             on_click=AdminDirectoryState.cancel_professional_dialog,
                             disabled=AdminDirectoryState.is_submitting,
                         ),
@@ -544,7 +606,11 @@ def professional_row(row) -> rx.Component:
                     color="var(--vitta-text-muted)",
                 ),
                 rx.text(
-                    row["specialty_names"],
+                    rx.cond(
+                        row["specialty_names"] != "",
+                        row["specialty_names"],
+                        "Sem especialidades vinculadas",
+                    ),
                     size="2",
                     line_height="1.5",
                     margin_top="0.2rem",
@@ -645,7 +711,12 @@ def professional_summary_row(row) -> rx.Component:
             rx.box(
                 rx.text(row["name"], font_weight="700", size="3"),
                 rx.text(
-                    row["specialty_names"], size="2",
+                    rx.cond(
+                        row["specialty_names"] != "",
+                        row["specialty_names"],
+                        "Sem especialidades vinculadas",
+                    ),
+                    size="2",
                     color="var(--vitta-text-muted)", margin_top="0.3rem",
                     overflow_wrap="anywhere",
                 ),
