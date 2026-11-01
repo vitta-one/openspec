@@ -14,7 +14,7 @@ def _calendar_day(
     markers = [
         rx.cond(
             day["has_slots"],
-            rx.text(day["slot_count"], " horários", size="1", class_name="vitta-calendar-day-count"),
+            rx.text(day["slot_count"], " hor.", size="1", class_name="vitta-calendar-day-count"),
             rx.fragment(),
         )
     ]
@@ -22,7 +22,7 @@ def _calendar_day(
         markers.append(
             rx.cond(
                 day["consultation_count"] > 0,
-                rx.text(day["consultation_count"], " consultas", size="1", class_name="vitta-calendar-day-count"),
+                rx.text(day["consultation_count"], " cons.", size="1", class_name="vitta-calendar-day-count"),
                 rx.fragment(),
             )
         )

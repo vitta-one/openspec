@@ -1,7 +1,18 @@
 """Authorization boundary for the explicit local Administrator QA preview."""
 
-from sqlmodel import Session
+from dataclasses import dataclass
+from datetime import datetime
 
+from sqlmodel import Session, select
+
+from vitta_one.appointment_scheduling.service import (
+    AvailabilitySlotItem,
+    ProfessionalOption,
+    list_availability_slots,
+)
+from vitta_one.appointment_scheduling.temporal import clinic_date_range_to_utc
+from vitta_one.models.appointment import Consultation
+from vitta_one.models.professional import Professional
 from vitta_one.auth.authorization import require_role
 from vitta_one.auth.roles import Role
 from vitta_one.auth.service import AuthenticatedUser
@@ -23,20 +34,6 @@ def require_local_admin_preview(db: Session, token: str) -> AuthenticatedUser:
 
 # O preview de agenda tem uma projeção própria: nenhuma identidade de paciente
 # ou dado clínico precisa atravessar esse limite de autorização.
-from dataclasses import dataclass
-from datetime import datetime
-
-from vitta_one.appointment_scheduling.service import (
-    AvailabilitySlotItem,
-    ProfessionalOption,
-    list_availability_slots,
-)
-from vitta_one.appointment_scheduling.temporal import clinic_date_range_to_utc
-from vitta_one.models.appointment import Consultation
-from vitta_one.models.professional import Professional
-from sqlmodel import select
-
-
 @dataclass(frozen=True, slots=True)
 class AdminAgendaConsultation:
     id: int

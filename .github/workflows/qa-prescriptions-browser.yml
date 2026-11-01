@@ -94,6 +94,8 @@ jobs:
           exit 1
       - name: Browser QA — security, keyboard and responsive
         run: python -m pytest qa_browser/prescription_browser.py -q
+      - name: Admin agenda QA — 320, 390, 768, 1024, 1440 px
+        run: python -m pytest qa_browser/admin_agenda_browser.py -q
       - name: Capture all protected and public screens in Chromium
         if: success()
         run: python -m qa_browser.capture_all_screens
