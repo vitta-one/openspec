@@ -579,7 +579,12 @@ class AdminDirectoryState(rx.State):
 
     @rx.event
     def cancel_specialty_edit(self) -> None:
-        self.cancel_specialty_dialog()
+        if self.is_submitting:
+            return
+        self.new_specialty_name = ""
+        self.specialty_form_error = ""
+        self._reset_specialty_edit()
+        self.specialty_dialog_open = False
 
     @rx.event
     async def save_specialty_edit(self, _form_data: dict[str, Any]):
@@ -647,13 +652,11 @@ class AdminDirectoryState(rx.State):
             )
         except (DirectoryNotFoundError, DirectoryConflictError) as exc:
             self.error_message = str(exc)
-            yield rx.toast.error(self.error_message, position="top-right")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
             self.error_message = "Não foi possível alterar a especialidade agora."
-            yield rx.toast.error(self.error_message, position="top-right")
         finally:
             self.is_submitting = False
             yield
