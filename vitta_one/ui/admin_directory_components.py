@@ -165,11 +165,6 @@ def specialty_option(option) -> rx.Component:
             ),
             width="100%",
             class_name="vitta-specialty-choice",
-            background=rx.cond(
-                option["locked"],
-                "var(--vitta-surface-muted)",
-                "var(--vitta-surface)",
-            ),
         ),
         rx.fragment(),
     )
@@ -476,6 +471,9 @@ def _professional_form_fields() -> rx.Component:
                         spacing="2",
                         align="stretch",
                         width="100%",
+                        max_height="12rem",
+                        overflow_y="auto",
+                        padding_right="0.25rem",
                     ),
                     rx.text(
                         "Nenhuma especialidade ativa disponível. "
