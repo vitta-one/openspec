@@ -609,7 +609,9 @@ def _professional_actions(row) -> rx.Component:
                     row["can_reissue_access"],
                     rx.dropdown_menu.item(
                         row["reissue_action_label"],
-                        on_select=AdminDirectoryState.begin_medical_reissue(row["id"]),
+                        on_select=AdminDirectoryState.begin_medical_reissue(
+                            row["id"], row["onboarding_email_status"]
+                        ),
                     ),
                     rx.fragment(),
                 ),
@@ -928,10 +930,16 @@ def medical_reissue_dialog() -> rx.Component:
     """Explicitly confirm rotation before reissuing a failed/unknown credential."""
     return rx.dialog.root(
         rx.dialog.content(
-            rx.dialog.title("Reenviar acesso médico"),
+            rx.dialog.title(
+                rx.cond(
+                    AdminDirectoryState.reissue_is_unsent,
+                    "Enviar instruções de acesso",
+                    "Reemitir acesso médico",
+                )
+            ),
             rx.dialog.description(
-                "Uma nova senha temporária substituirá a anterior, inclusive se outro e-mail "
-                "tiver sido entregue. Confirme somente depois de verificar a situação do envio.",
+                "Uma nova senha temporária substituirá a anterior, mesmo que alguma mensagem "
+                "anterior tenha chegado. A ação requer Resend configurado e não garante entrega.",
                 margin_top="0.5rem",
             ),
             rx.cond(
@@ -946,7 +954,12 @@ def medical_reissue_dialog() -> rx.Component:
                     disabled=AdminDirectoryState.is_submitting,
                 ),
                 rx.button(
-                    "Confirmar reenvio", type="button", color_scheme="teal",
+                    rx.cond(
+                        AdminDirectoryState.reissue_is_unsent,
+                        "Gerar acesso e enviar",
+                        "Confirmar reemissão",
+                    ),
+                    type="button", color_scheme="teal",
                     loading=AdminDirectoryState.is_submitting,
                     disabled=AdminDirectoryState.is_submitting,
                     on_click=AdminDirectoryState.confirm_medical_reissue,
