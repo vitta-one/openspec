@@ -2,7 +2,7 @@
 
 from typing import Any, TypedDict
 import calendar
-from datetime import date
+from datetime import date, datetime
 
 import reflex as rx
 
@@ -171,6 +171,7 @@ class AdminAvailabilityState(rx.State):
     weekly_end_time: str = "17:00"
     weekly_slot_minutes: str = "30"
     weekly_existing: bool = False
+    weekly_saved_summary: str = ""
     slot_datetime_local: str = ""
     slot_date_local: str = ""
     slot_time_local: str = ""
@@ -254,13 +255,9 @@ class AdminAvailabilityState(rx.State):
     def select_calendar_day(self, label: str) -> None:
         """Allow inspection of an empty date, never of a different visible month."""
         try:
-            selected = date.strptime(label, "%d/%m/%Y")
-        except (ValueError, AttributeError):
-            try:
-                from datetime import datetime
-                selected = datetime.strptime(label, "%d/%m/%Y").date()
-            except ValueError:
-                return
+            selected = datetime.strptime(label, "%d/%m/%Y").date()
+        except ValueError:
+            return
         if selected.strftime("%Y-%m") == self.calendar_month:
             self.selected_calendar_day = label
 
@@ -318,6 +315,17 @@ class AdminAvailabilityState(rx.State):
         self.weekly_start_time = rule.time_start if rule is not None else "08:00"
         self.weekly_end_time = rule.time_end if rule is not None else "17:00"
         self.weekly_slot_minutes = str(rule.slot_minutes) if rule is not None else "30"
+        if rule is None:
+            self.weekly_saved_summary = ""
+        else:
+            weekdays = ("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")
+            day_label = weekdays[rule.weekday_start]
+            if rule.weekday_end != rule.weekday_start:
+                day_label += f"–{weekdays[rule.weekday_end]}"
+            self.weekly_saved_summary = (
+                f"{day_label} · {rule.time_start}–{rule.time_end} · "
+                f"{rule.slot_minutes} minutos por consulta"
+            )
 
     def _professional_filter_id(self) -> int | None:
         return None if self.filter_professional == "__all__" else int(self.filter_professional)
@@ -359,10 +367,14 @@ class AdminAvailabilityState(rx.State):
             )
         self.professionals = professionals
         self.slots = _slot_rows(slot_items)
-        if self.selected_calendar_day and not self.selected_calendar_day.endswith(
-            f"/{self.calendar_month[:4]}"
-        ):
-            self.selected_calendar_day = ""
+        if self.selected_calendar_day:
+            try:
+                day = datetime.strptime(self.selected_calendar_day, "%d/%m/%Y").date()
+            except ValueError:
+                self.selected_calendar_day = ""
+            else:
+                if day.strftime("%Y-%m") != self.calendar_month:
+                    self.selected_calendar_day = ""
         self._apply_weekly_rule(rule)
 
     async def _authorization_redirect(self, exc: Exception):
@@ -400,6 +412,8 @@ class AdminAvailabilityState(rx.State):
         if value not in {item["value"] for item in self.professionals}:
             self.error_message = "Selecione um médico ativo da lista."
             return
+        previous_professional = self.selected_professional
+        previous_filter = self.filter_professional
         self.selected_professional = value
         self.filter_professional = value
         self.selected_calendar_day = ""
@@ -412,6 +426,8 @@ class AdminAvailabilityState(rx.State):
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
+            self.selected_professional = previous_professional
+            self.filter_professional = previous_filter
             self.error_message = "Não foi possível consultar a agenda deste médico."
         finally:
             self.is_loading = False
@@ -488,12 +504,10 @@ class AdminAvailabilityState(rx.State):
         self.slot_time_local = value
 
     @rx.event
-    async def update_filter_professional(self, value: str):
-        """Backward-compatible entry point, with one shared physician selection."""
-        if value == "__all__":
-            return
-        async for event in self.update_selected_professional(value):
-            yield event
+    def update_filter_professional(self, value: str):
+        """Backward-compatible alias for legacy callers."""
+        if value != "__all__":
+            return AdminAvailabilityState.update_selected_professional(value)
 
     @rx.event
     def update_filter_start_date(self, value: str) -> None:
