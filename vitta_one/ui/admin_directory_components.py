@@ -40,7 +40,7 @@ def specialty_row(row) -> rx.Component:
                     variant="outline",
                     color_scheme="teal",
                     on_click=AdminDirectoryState.begin_specialty_edit(
-                        row["id"], row["name"]
+                        row["id"]
                     ),
                     disabled=AdminDirectoryState.is_submitting,
                 ),
@@ -201,100 +201,53 @@ def medical_account_select() -> rx.Component:
     )
 
 
-def _specialty_create_form() -> rx.Component:
-    return rx.el.form(
-        rx.vstack(
-            rx.cond(
-                AdminDirectoryState.error_message != "",
-                error_banner(
-                    AdminDirectoryState.error_message,
-                    "specialty-dialog-error",
-                ),
-                rx.fragment(),
-            ),
-            rx.box(
-                field_label("Nome da especialidade", "specialty-create-name"),
-                rx.el.input(
-                    id="specialty-create-name",
-                    name="name",
-                    type="text",
-                    value=AdminDirectoryState.new_specialty_name,
-                    on_change=AdminDirectoryState.update_new_specialty_name,
-                    required=True,
-                    max_length=120,
-                    class_name="vitta-input",
-                    aria_invalid=AdminDirectoryState.error_message != "",
-                    aria_describedby=rx.cond(
-                        AdminDirectoryState.error_message != "",
-                        "specialty-dialog-error",
-                        "",
-                    ),
-                    margin_top="0.4rem",
-                    auto_focus=True,
-                ),
-                width="100%",
-            ),
-            rx.flex(
-                rx.button(
-                    "Cancelar",
-                    type="button",
-                    variant="ghost",
-                    on_click=AdminDirectoryState.cancel_specialty_dialog,
-                    disabled=AdminDirectoryState.is_submitting,
-                ),
-                rx.button(
-                    "Cadastrar especialidade",
-                    type="submit",
-                    color_scheme="teal",
-                    high_contrast=True,
-                    disabled=AdminDirectoryState.is_submitting,
-                    loading=AdminDirectoryState.is_submitting,
-                ),
-                justify="end",
-                gap="0.5rem",
-                direction=rx.breakpoints(initial="column-reverse", sm="row"),
-                width="100%",
-            ),
-            spacing="4",
-            align="stretch",
-            width="100%",
-        ),
-        on_submit=AdminDirectoryState.create_specialty,
-        no_validate=True,
-        width="100%",
+def _specialty_form(*, editing: bool) -> rx.Component:
+    """One form layout, with the State selecting the create/edit action."""
+    input_id = "specialty-edit-name" if editing else "specialty-create-name"
+    field_value = (
+        AdminDirectoryState.editing_specialty_name
+        if editing else AdminDirectoryState.new_specialty_name
     )
-
-
-def _specialty_edit_form() -> rx.Component:
+    on_change = (
+        AdminDirectoryState.update_specialty_edit_name
+        if editing else AdminDirectoryState.update_new_specialty_name
+    )
+    on_submit = (
+        AdminDirectoryState.save_specialty_edit
+        if editing else AdminDirectoryState.create_specialty
+    )
     return rx.el.form(
         rx.vstack(
-            rx.cond(
-                AdminDirectoryState.error_message != "",
-                error_banner(
-                    AdminDirectoryState.error_message,
-                    "specialty-dialog-error",
-                ),
-                rx.fragment(),
-            ),
             rx.box(
-                field_label("Nome da especialidade", "specialty-edit-name"),
+                field_label("Nome da especialidade", input_id),
                 rx.el.input(
-                    id="specialty-edit-name",
+                    id=input_id,
                     name="name",
                     type="text",
-                    value=AdminDirectoryState.editing_specialty_name,
-                    on_change=AdminDirectoryState.update_specialty_edit_name,
+                    value=field_value,
+                    on_change=on_change,
                     required=True,
                     max_length=120,
                     class_name="vitta-input",
-                    aria_invalid=AdminDirectoryState.error_message != "",
+                    aria_invalid=AdminDirectoryState.specialty_form_error != "",
                     aria_describedby=rx.cond(
-                        AdminDirectoryState.error_message != "",
+                        AdminDirectoryState.specialty_form_error != "",
                         "specialty-dialog-error",
                         "",
                     ),
                     margin_top="0.4rem",
                     auto_focus=True,
+                ),
+                rx.cond(
+                    AdminDirectoryState.specialty_form_error != "",
+                    rx.box(
+                        error_banner(
+                            AdminDirectoryState.specialty_form_error,
+                            "specialty-dialog-error",
+                        ),
+                        margin_top="0.65rem",
+                    ),
+                    rx.fragment(),
                 ),
                 width="100%",
             ),
@@ -302,12 +255,13 @@ def _specialty_edit_form() -> rx.Component:
                 rx.button(
                     "Cancelar",
                     type="button",
-                    variant="ghost",
+                    variant="outline",
+                    color_scheme="teal",
                     on_click=AdminDirectoryState.cancel_specialty_dialog,
                     disabled=AdminDirectoryState.is_submitting,
                 ),
                 rx.button(
-                    "Salvar alterações",
+                    "Salvar alterações" if editing else "Cadastrar especialidade",
                     type="submit",
                     color_scheme="teal",
                     high_contrast=True,
@@ -315,7 +269,8 @@ def _specialty_edit_form() -> rx.Component:
                     loading=AdminDirectoryState.is_submitting,
                 ),
                 justify="end",
-                gap="0.5rem",
+                align="center",
+                gap="0.65rem",
                 direction=rx.breakpoints(initial="column-reverse", sm="row"),
                 width="100%",
             ),
@@ -323,7 +278,7 @@ def _specialty_edit_form() -> rx.Component:
             align="stretch",
             width="100%",
         ),
-        on_submit=AdminDirectoryState.save_specialty_edit,
+        on_submit=on_submit,
         no_validate=True,
         width="100%",
     )
@@ -350,8 +305,8 @@ def specialty_dialog() -> rx.Component:
             ),
             rx.cond(
                 AdminDirectoryState.editing_specialty_id > 0,
-                _specialty_edit_form(),
-                _specialty_create_form(),
+                _specialty_form(editing=True),
+                _specialty_form(editing=False),
             ),
             class_name="vitta-dialog-content",
             max_width="34rem",

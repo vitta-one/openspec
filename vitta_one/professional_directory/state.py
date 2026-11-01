@@ -13,6 +13,7 @@ from vitta_one.auth.state import AuthState
 from vitta_one.professional_directory.application import (
     admin_create_professional,
     admin_create_specialty,
+    admin_get_specialty,
     admin_register_medical_professional,
     admin_set_onboarding_email_status,
     admin_reissue_medical_access,
@@ -137,8 +138,10 @@ class AdminDirectoryState(rx.State):
     reissue_professional_id: int = 0
 
     new_specialty_name: str = ""
+    specialty_form_error: str = ""
     editing_specialty_id: int = 0
     editing_specialty_name: str = ""
+    editing_specialty_original_name: str = ""
 
     editing_professional_id: int = 0
     professional_name: str = ""
@@ -262,12 +265,14 @@ class AdminDirectoryState(rx.State):
         self.reissue_dialog_open = False
         self.reissue_professional_id = 0
         self.new_specialty_name = ""
+        self.specialty_form_error = ""
         self._reset_specialty_edit()
         self._reset_professional_form()
 
     def _reset_specialty_edit(self) -> None:
         self.editing_specialty_id = 0
         self.editing_specialty_name = ""
+        self.editing_specialty_original_name = ""
 
     def _reset_professional_form(self) -> None:
         self.editing_professional_id = 0
@@ -310,6 +315,7 @@ class AdminDirectoryState(rx.State):
                 recent_professional_items = []
 
         self.specialties = [_specialty_row(item) for item in specialty_items]
+        self.specialty_page = min(self.specialty_page, self.specialty_page_count)
         self.professionals = [_professional_row(item) for item in professional_items]
         self.recent_specialties = [_specialty_row(item) for item in recent_specialty_items]
         self.recent_professionals = [_professional_row(item) for item in recent_professional_items]
@@ -400,12 +406,16 @@ class AdminDirectoryState(rx.State):
         self.specialty_dialog_open = is_open
         if not is_open:
             self.new_specialty_name = ""
+            self.specialty_form_error = ""
             self._reset_specialty_edit()
 
     @rx.event
     def start_new_specialty(self) -> None:
+        if self.is_submitting:
+            return
         self._clear_feedback()
         self.new_specialty_name = ""
+        self.specialty_form_error = ""
         self._reset_specialty_edit()
         self.specialty_dialog_open = True
 
@@ -414,6 +424,7 @@ class AdminDirectoryState(rx.State):
         if self.is_submitting:
             return
         self.new_specialty_name = ""
+        self.specialty_form_error = ""
         self._reset_specialty_edit()
         self.specialty_dialog_open = False
 
@@ -506,55 +517,77 @@ class AdminDirectoryState(rx.State):
     @rx.event
     def update_new_specialty_name(self, value: str) -> None:
         self.new_specialty_name = value
+        self.specialty_form_error = ""
 
     @rx.event
     async def create_specialty(self, _form_data: dict[str, Any]):
+        if self.is_submitting:
+            return
         self.is_submitting = True
         self._clear_feedback()
+        self.specialty_form_error = ""
         yield
         try:
             token = await self._token()
             with rx.session() as db:
-                admin_create_specialty(
-                    db,
-                    token=token,
-                    name=self.new_specialty_name,
-                )
+                admin_create_specialty(db, token=token, name=self.new_specialty_name)
             self.new_specialty_name = ""
             self.specialty_dialog_open = False
             self._load_with_token(token)
-            self.success_message = "Especialidade cadastrada."
+            yield rx.toast.success(
+                "Especialidade cadastrada com sucesso.", position="top-right"
+            )
         except (DirectoryValidationError, DirectoryConflictError) as exc:
-            self.error_message = str(exc)
+            self.specialty_form_error = str(exc)
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
-            self.error_message = "Não foi possível cadastrar a especialidade agora."
+            self.specialty_form_error = "Não foi possível cadastrar a especialidade agora."
         finally:
             self.is_submitting = False
             yield
 
     @rx.event
-    def begin_specialty_edit(self, specialty_id: int, name: str) -> None:
+    async def begin_specialty_edit(self, specialty_id: int):
+        if self.is_submitting:
+            return
         self._clear_feedback()
-        self.editing_specialty_id = specialty_id
-        self.editing_specialty_name = name
-        self.specialty_dialog_open = True
+        self.specialty_form_error = ""
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                specialty = admin_get_specialty(
+                    db, token=token, specialty_id=specialty_id
+                )
+            self.editing_specialty_id = specialty.id
+            self.editing_specialty_name = specialty.name
+            self.editing_specialty_original_name = specialty.name
+            self.specialty_dialog_open = True
+        except DirectoryNotFoundError as exc:
+            self.error_message = str(exc)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.error_message = "Não foi possível carregar a especialidade para edição."
 
     @rx.event
     def update_specialty_edit_name(self, value: str) -> None:
         self.editing_specialty_name = value
+        self.specialty_form_error = ""
 
     @rx.event
     def cancel_specialty_edit(self) -> None:
-        self._reset_specialty_edit()
-        self.specialty_dialog_open = False
+        self.cancel_specialty_dialog()
 
     @rx.event
     async def save_specialty_edit(self, _form_data: dict[str, Any]):
+        if self.is_submitting:
+            return
         self.is_submitting = True
         self._clear_feedback()
+        self.specialty_form_error = ""
         yield
         try:
             if not self.editing_specialty_id:
@@ -566,28 +599,33 @@ class AdminDirectoryState(rx.State):
                     token=token,
                     specialty_id=self.editing_specialty_id,
                     name=self.editing_specialty_name,
+                    expected_name=self.editing_specialty_original_name,
                 )
             self._reset_specialty_edit()
             self.specialty_dialog_open = False
             self._load_with_token(token)
-            self.success_message = "Especialidade atualizada."
+            yield rx.toast.success(
+                "Especialidade atualizada com sucesso.", position="top-right"
+            )
         except (
             DirectoryValidationError,
             DirectoryConflictError,
             DirectoryNotFoundError,
         ) as exc:
-            self.error_message = str(exc)
+            self.specialty_form_error = str(exc)
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
-            self.error_message = "Não foi possível atualizar a especialidade agora."
+            self.specialty_form_error = "Não foi possível atualizar a especialidade agora."
         finally:
             self.is_submitting = False
             yield
 
     @rx.event
     async def toggle_specialty_active(self, specialty_id: int, current_active: bool):
+        if self.is_submitting:
+            return
         self.is_submitting = True
         self._clear_feedback()
         yield
@@ -599,20 +637,23 @@ class AdminDirectoryState(rx.State):
                     token=token,
                     specialty_id=specialty_id,
                     is_active=not current_active,
+                    expected_active=current_active,
                 )
             self._load_with_token(token)
-            self.success_message = (
-                "Especialidade desativada."
-                if current_active
-                else "Especialidade reativada."
+            yield rx.toast.success(
+                "Especialidade desativada." if current_active
+                else "Especialidade reativada.",
+                position="top-right",
             )
-        except DirectoryNotFoundError as exc:
+        except (DirectoryNotFoundError, DirectoryConflictError) as exc:
             self.error_message = str(exc)
+            yield rx.toast.error(self.error_message, position="top-right")
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
             self.error_message = "Não foi possível alterar a especialidade agora."
+            yield rx.toast.error(self.error_message, position="top-right")
         finally:
             self.is_submitting = False
             yield
