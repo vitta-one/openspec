@@ -105,6 +105,41 @@ def patient_edit_dialog() -> rx.Component:
                             width="100%",
                         ),
                         _field_error(S.edit_patient_form_error, "patient-edit-form-error"),
+                        rx.cond(
+                            S.edit_discard_pending,
+                            rx.box(
+                                rx.text(
+                                    "Descartar as alterações não salvas?",
+                                    role="alert",
+                                    font_weight="650",
+                                    size="2",
+                                    color="var(--vitta-text)",
+                                ),
+                                rx.flex(
+                                    rx.button(
+                                        "Continuar editando",
+                                        type="button",
+                                        variant="outline",
+                                        on_click=S.keep_patient_edit_dialog,
+                                    ),
+                                    rx.button(
+                                        "Descartar alterações",
+                                        type="button",
+                                        color_scheme="red",
+                                        on_click=S.discard_patient_edit_dialog,
+                                    ),
+                                    gap="2",
+                                    margin_top="0.6rem",
+                                    justify="end",
+                                    flex_wrap="wrap",
+                                ),
+                                padding="0.85rem",
+                                border="1px solid var(--vitta-border)",
+                                border_radius="var(--vitta-radius-control)",
+                                background="var(--vitta-surface-subtle)",
+                            ),
+                            rx.fragment(),
+                        ),
                         rx.flex(
                             rx.button(
                                 "Cancelar",
@@ -198,6 +233,16 @@ def patient_portal_dialog() -> rx.Component:
                         ),
                         rx.separator(),
                         _field_error(S.portal_invitation_error, "patient-portal-invite-error"),
+                        rx.cond(
+                            S.qa_local_enabled & (S.portal_access_state != "ATIVO"),
+                            rx.link(
+                                "Configurar conta de demonstração (somente QA local)",
+                                href="/recepcao/pacientes/" + S.selected_patient_id.to(str) + "/editar",
+                                class_name="vitta-context-link",
+                                size="2",
+                            ),
+                            rx.fragment(),
+                        ),
                         rx.cond(
                             S.portal_access_state == "ATIVO",
                             rx.text(
@@ -301,4 +346,72 @@ def patient_portal_dialog() -> rx.Component:
         ),
         open=S.portal_dialog_open,
         on_open_change=S.change_patient_portal_dialog,
+    )
+
+
+def qa_patient_activation_form() -> rx.Component:
+    """Keep the existing local-QA account bootstrap separate from public invitations."""
+    return rx.cond(
+        S.qa_local_enabled,
+        rx.box(
+            rx.heading("Conta de demonstração (QA local)", size="4"),
+            rx.text(
+                "Somente ambiente de desenvolvimento. A conta é criada após consentimento.",
+                size="2", color="var(--vitta-text-muted)", margin_top="0.4rem",
+            ),
+            rx.el.form(
+                rx.vstack(
+                    rx.box(
+                        field_label("E-mail do paciente", "patient-qa-email"),
+                        rx.el.input(
+                            id="patient-qa-email", name="email", type="email",
+                            required=True, max_length=320, auto_complete="off",
+                            placeholder="paciente@example.invalid",
+                            class_name="vitta-input", margin_top="0.45rem",
+                        ),
+                        width="100%",
+                    ),
+                    rx.box(
+                        field_label("Senha do paciente (mínimo de 12 caracteres)", "patient-qa-password"),
+                        rx.el.input(
+                            id="patient-qa-password", name="password",
+                            type="password", required=True, min_length=12,
+                            max_length=128, auto_complete="new-password",
+                            class_name="vitta-input", margin_top="0.45rem",
+                        ),
+                        width="100%",
+                    ),
+                    rx.el.label(
+                        rx.flex(
+                            rx.el.input(
+                                id="patient-qa-consent", name="consent_confirmed",
+                                type="checkbox", value="true", required=True,
+                                flex_shrink="0", margin_top="0.18rem",
+                            ),
+                            rx.text(
+                                "Confirmo que o paciente consentiu com a conta de demonstração.",
+                                size="2", line_height="1.5",
+                            ),
+                            align="start", gap="3", width="100%",
+                        ),
+                        html_for="patient-qa-consent",
+                        cursor="pointer", display="block",
+                    ),
+                    rx.button(
+                        "Habilitar login de demonstração", type="submit",
+                        color_scheme="teal", high_contrast=True,
+                        disabled=S.is_submitting, loading=S.is_submitting,
+                    ),
+                    spacing="4", align="stretch", width="100%",
+                ),
+                on_submit=S.activate_local_qa_patient,
+                width="100%",
+            ),
+            padding="1.25rem",
+            border="1px solid var(--vitta-border)",
+            border_radius="var(--vitta-radius-panel)",
+            width="100%",
+            max_width="34rem",
+        ),
+        rx.fragment(),
     )
