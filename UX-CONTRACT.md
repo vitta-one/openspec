@@ -208,7 +208,7 @@ Regras:
 - O telefone é opcional no cadastro do paciente. Os registros existentes permanecem válidos sem telefone e mostram “Telefone não informado”.
 - A busca rápida global do topo localiza pacientes por nome, telefone ou CPF e retorna somente identidade mínima para a rota Pacientes. A busca da tabela e o filtro por profissional operam somente sobre consultas do dia. A tabela é paginada no servidor em grupos de sete; aplicar busca ou trocar profissional reinicia a paginação.
 - Consultas canceladas permanecem na tabela e exibem o status persistido. A recepção não deduz falta, urgência, chegada, duração ou disponibilidade pelo horário.
-- “Ir para Agenda”, “Nova consulta” e ações da tabela encaminham para os fluxos de Agenda já existentes. A página não cria operações paralelas de agendamento ou check-in.
+- “Ir para Agenda” navega para a Agenda; “Nova consulta” abre o mesmo modal compartilhado com a Agenda, sem criar lógica paralela de reserva ou check-in.
 - A leitura inicial mostra carregamento; uma falha limpa dados protegidos e permite tentar novamente; a atualização é manual e exibe quando a última leitura terminou. Não há promessa de tempo real.
 - Os controles de busca, filtro, paginação e acesso à Agenda mantêm rótulos acessíveis, foco visível, operação por teclado e tabela horizontalmente contida em telas estreitas, sem ampliar o documento.
 - A tela não mostra conteúdo clínico, prontuário ou unidade não configurada.
@@ -223,7 +223,7 @@ Regras:
 - `/admin/profissionais` e `/admin/especialidades` continuam como diretórios para busca, filtro, edição e controle de situação.
 - `/admin/horarios` separa em abas semânticas o **expediente semanal**, os **horários avulsos** e a **consulta dos horários**. Cada operação preserva os serviços, timezone e validações já existentes.
 - `/admin/configuracoes` apresenta apenas as configurações da clínica existentes, sem expor um formulário paralelo no dashboard.
-- `/recepcao/agenda` preserva agendamento e check-in em abas: a entrada normal mostra **Consultas do período**, enquanto o encaminhamento explícito após selecionar um paciente abre **Agendar consulta**. O estado é controlado e não depende de aba invisível ou valor de rota sensível.
+- `/recepcao/agenda` mantém **Consultas do período** como conteúdo principal e abre **Agendar consulta** em modal, com paciente previamente selecionado quando originado da ficha. A rota legada `/recepcao/agenda/nova` mostra a mesma Agenda com o modal aberto. O estado é controlado e não depende de aba invisível ou valor de rota sensível.
 - Todas as novas subrotas exigem `AuthState.load_protected` e `protected_workspace` com `verified_path`; autorização de negócio permanece no servidor.
 - Campos, placeholders, selects, menus portaled, badges e mensagens devem manter texto legível com contraste normal de pelo menos 4,5:1 e controles com foco visível. Estados desabilitados permanecem distinguíveis sem depender exclusivamente da cor.
 - Tarefas são verificadas em 320, 375, 768 e 1280 px com foco, navegação por teclado, ausência de overflow e fluxos reais. Testes estáticos e `reflex compile --dry` não substituem QA visual.
