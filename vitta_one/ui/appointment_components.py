@@ -873,11 +873,11 @@ def reception_agenda_panel() -> rx.Component:
                             color="var(--vitta-text-muted)", size="2"),
                     spacing="2", align="start",
                 ),
-                rx.link(
-                    rx.hstack(rx.icon("calendar_plus", size=17),
-                              rx.text("Nova consulta"), spacing="2", align="center"),
-                    href="/recepcao/agenda/nova",
-                    class_name="vitta-primary-action",
+                rx.button(
+                    rx.icon("calendar_plus", size=17), "Nova consulta",
+                    type="button", color_scheme="teal", high_contrast=True,
+                    on_click=ReceptionAgendaState.open_booking_dialog("agenda"),
+                    disabled=ReceptionAgendaState.is_loading,
                 ),
                 justify="between", align="center", gap="4", flex_wrap="wrap", width="100%",
             ),
