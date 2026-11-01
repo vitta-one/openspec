@@ -596,6 +596,10 @@ class ReceptionAgendaState(rx.State):
     booking_dialog_open: bool = False
     booking_locked_patient_id: int = 0
     booking_origin: str = ""
+    booking_review_slot_id: int = 0
+    booking_review_datetime: str = ""
+    booking_review_professional_name: str = ""
+    booking_review_patient_name: str = ""
 
     arrival_dialog_open: bool = False
     arrival_consultation_id: int = 0
@@ -677,6 +681,7 @@ class ReceptionAgendaState(rx.State):
         self.booking_dialog_open = False
         self.booking_locked_patient_id = 0
         self.booking_origin = ""
+        self._clear_booking_review()
         self._reset_arrival()
         self._reset_reschedule()
         self._reset_cancel()
@@ -783,6 +788,42 @@ class ReceptionAgendaState(rx.State):
         else:
             yield rx.redirect("/acesso-negado")
 
+    def _clear_booking_review(self) -> None:
+        self.booking_review_slot_id = 0
+        self.booking_review_datetime = ""
+        self.booking_review_professional_name = ""
+        self.booking_review_patient_name = ""
+
+    @rx.event
+    def begin_booking_review(self, slot_id: int) -> None:
+        """Prepare the review from the current persisted availability projection."""
+        if self.is_submitting or not self.selected_patient_id:
+            self.error_message = "Selecione o paciente antes do horário."
+            return
+        slot = next(
+            (item for item in self.available_slots if item["id"] == slot_id),
+            None,
+        )
+        if slot is None:
+            self.error_message = "Este horário não está mais disponível. Atualize a agenda."
+            return
+        self._clear_feedback()
+        self.booking_review_slot_id = slot_id
+        self.booking_review_datetime = slot["starts_at"]
+        self.booking_review_professional_name = slot["professional_name"]
+        self.booking_review_patient_name = self.selected_patient_name
+
+    @rx.event
+    def cancel_booking_review(self) -> None:
+        if not self.is_submitting:
+            self._clear_booking_review()
+
+    @rx.event
+    def confirm_booking_review(self):
+        if self.is_submitting or self.booking_review_slot_id <= 0:
+            return
+        return ReceptionAgendaState.schedule(self.booking_review_slot_id)
+
     @rx.event
     async def open_booking_dialog(self, origin: str = "agenda"):
         """Use the same booking body from Reception dashboard and agenda."""
@@ -791,6 +832,7 @@ class ReceptionAgendaState(rx.State):
             self.selected_patient_id = 0
             self.selected_patient_name = ""
             self.patient_cpf = ""
+            self._clear_booking_review()
             self.booking_locked_patient_id = 0
             self.booking_origin = origin if origin in {"agenda", "dashboard"} else "agenda"
             self.is_loading = True
@@ -814,6 +856,7 @@ class ReceptionAgendaState(rx.State):
             self.booking_dialog_open = False
             self.booking_origin = ""
             self.booking_locked_patient_id = 0
+            self._clear_booking_review()
 
     @rx.event
     def change_active_tab(self, value: str) -> None:
@@ -978,6 +1021,7 @@ class ReceptionAgendaState(rx.State):
             self.booking_dialog_open = False
             self.booking_locked_patient_id = 0
             self.booking_origin = ""
+            self._clear_booking_review()
             self.success_message = "Consulta agendada."
             yield rx.toast.success(self.success_message, position="top-right")
             if origin == "patient":
