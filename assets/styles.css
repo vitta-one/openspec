@@ -2619,3 +2619,92 @@ button:disabled,
   box-shadow: var(--vitta-shadow-xs);
 }
 .vitta-queue-patient-row > div { gap: 1rem; }
+
+
+/* Administration: compact task hub, grouped links and distinct QA navigation. */
+.vitta-admin-hub {
+  max-width: 70rem;
+  margin-inline: auto;
+}
+.vitta-admin-hub-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: clamp(1rem, 1.8vw, 1.5rem);
+  width: 100%;
+}
+.vitta-admin-hub-group { min-width: 0; }
+.vitta-admin-hub-heading {
+  margin: 0 0 .7rem;
+  color: var(--vitta-text);
+}
+.vitta-admin-hub-list {
+  overflow: hidden;
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-panel);
+  background: var(--vitta-surface);
+  box-shadow: var(--vitta-shadow-xs);
+}
+.vitta-admin-hub-list .vitta-admin-action {
+  display: block;
+  min-height: 4.4rem;
+  margin: 0;
+  padding: .75rem .9rem;
+  border: 0;
+  border-radius: 0;
+}
+.vitta-admin-hub-list .vitta-admin-action + .vitta-admin-action {
+  border-top: 1px solid var(--vitta-border);
+}
+.vitta-admin-hub-list .vitta-admin-action:hover {
+  background: var(--vitta-primary-soft);
+}
+.vitta-admin-hub-list .vitta-admin-action:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 3px solid var(--vitta-focus);
+  outline-offset: -3px;
+}
+.vitta-admin-hub-list .vitta-admin-action-icon {
+  width: 2.4rem;
+  height: 2.4rem;
+}
+.vitta-sidebar-section-label {
+  padding: .75rem .75rem .2rem;
+  color: var(--vitta-text-subtle);
+  font-size: .69rem;
+  font-weight: 800;
+  letter-spacing: .075em;
+}
+.vitta-admin-preview-navigation {
+  margin-top: .65rem;
+  padding-top: .55rem;
+  border-top: 1px solid var(--vitta-border);
+}
+.vitta-sidebar-section-hint {
+  padding-inline: .75rem;
+  color: var(--vitta-text-muted);
+  font-size: .75rem;
+  line-height: 1.45;
+}
+.vitta-sidebar-head { min-width: 0; }
+.vitta-sidebar-close { display: none !important; }
+@media (max-width: 1050px) {
+  .vitta-shell.is-mobile-nav-open .vitta-sidebar-close {
+    display: inline-flex !important;
+    flex: 0 0 auto;
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+    color: var(--vitta-text);
+  }
+}
+@media (max-width: 800px) {
+  .vitta-admin-hub-groups { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 520px) {
+  .vitta-admin-hub-list .vitta-admin-action { padding: .8rem .7rem; }
+  .vitta-admin-hub-list .vitta-admin-action-icon { width: 2.25rem; height: 2.25rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vitta-admin-hub-list .vitta-admin-action { transition: none; }
+}

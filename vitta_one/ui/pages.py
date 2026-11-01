@@ -457,7 +457,7 @@ def admin_clinic_settings_page() -> rx.Component:
         ),
         breadcrumb(("Administração", "/admin"), ("Configurações", None)),
         admin_clinic_configuration(),
-        active="administracao",
+        active="configuracoes",
         verified_path="/admin/configuracoes",
     )
 
@@ -467,7 +467,7 @@ def admin_specialties_page() -> rx.Component:
     return protected_workspace(
         Role.ADMINISTRADOR,
         specialties_management_workspace(),
-        active="administracao",
+        active="especialidades",
         verified_path="/admin/especialidades",
     )
 
@@ -477,7 +477,7 @@ def admin_professionals_page() -> rx.Component:
     return protected_workspace(
         Role.ADMINISTRADOR,
         professionals_management_workspace(),
-        active="administracao",
+        active="profissionais",
         verified_path="/admin/profissionais",
     )
 
