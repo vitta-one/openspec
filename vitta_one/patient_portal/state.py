@@ -186,6 +186,18 @@ class AdminClinicConfigurationState(rx.State):
         self.revision = 0
 
     @rx.event
+    def set_clinic_name(self, value: str):
+        self.clinic_name = value
+        self.name_error = ""
+        self.success_message = ""
+
+    @rx.event
+    def set_clinic_address(self, value: str):
+        self.clinic_address = value
+        self.address_error = ""
+        self.success_message = ""
+
+    @rx.event
     async def load(self):
         self.is_loading = True
         self.load_failed = False
