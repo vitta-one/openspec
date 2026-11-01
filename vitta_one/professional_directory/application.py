@@ -111,13 +111,15 @@ def admin_update_professional(
 
 
 def admin_set_professional_active(
-    db: Session, *, token: str, professional_id: int, is_active: bool
+    db: Session, *, token: str, professional_id: int, is_active: bool,
+    expected_active: bool | None = None,
 ) -> Professional:
     require_role(db, token, Role.ADMINISTRADOR)
     return set_professional_active(
         db,
         professional_id=professional_id,
         is_active=is_active,
+        expected_active=expected_active,
     )
 
 
