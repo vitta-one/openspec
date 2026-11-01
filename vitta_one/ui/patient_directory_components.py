@@ -3,7 +3,9 @@ import reflex as rx
 
 from vitta_one.patient_queue.state import ReceptionQueueState as S
 from vitta_one.ui.components import breadcrumb, field_label, page_header, section_panel
-from vitta_one.ui.patient_dialog_components import patient_edit_dialog, patient_portal_dialog
+from vitta_one.ui.patient_dialog_components import (
+    patient_edit_dialog, patient_portal_dialog, qa_patient_activation_form,
+)
 
 
 def _patient_row(row) -> rx.Component:
@@ -258,5 +260,6 @@ def patient_edit_workspace() -> rx.Component:
             href="/recepcao/pacientes/" + S.selected_patient_id.to(str),
             class_name="vitta-context-link",
         ),
+        qa_patient_activation_form(),
         spacing="4", width="100%", align="stretch",
     )
