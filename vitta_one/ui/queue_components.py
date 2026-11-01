@@ -1031,7 +1031,9 @@ def _queue_results() -> rx.Component:
                     width="100%",
                     class_name="vitta-queue-operational-table",
                 ),
-                display=rx.breakpoints(initial="none", lg="block"),
+                display=rx.breakpoints(initial="none", xl="block"),
+                overflow_x="auto",
+                max_width="100%",
                 width="100%",
             ),
             rx.vstack(
@@ -1042,7 +1044,7 @@ def _queue_results() -> rx.Component:
                 width="100%",
                 align="stretch",
                 spacing="2",
-                display=rx.breakpoints(initial="flex", lg="none"),
+                display=rx.breakpoints(initial="flex", xl="none"),
             ),
         ),
         empty_state(
