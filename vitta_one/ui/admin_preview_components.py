@@ -6,6 +6,8 @@ from vitta_one.admin_preview.state import AdminPreviewState
 from vitta_one.ui.components import (
     empty_state,
     error_banner,
+    breadcrumb,
+    field_label,
     metric_card,
     page_header,
     section_panel,
@@ -428,74 +430,45 @@ def agenda_preview() -> rx.Component:
     )
 
 def _patient_list_row(row) -> rx.Component:
-    is_selected = AdminPreviewState.selected_patient_id == row["id"]
-    return rx.box(
-        rx.hstack(
-            rx.checkbox(
-                checked=is_selected,
-                on_change=lambda checked: AdminPreviewState.toggle_patient_selection(
-                    row["id"],
-                    row["name"],
-                    row["cpf_masked"],
-                    checked,
+    """Semantic, compact administrative table row with explicit navigation."""
+    return rx.table.row(
+        rx.table.row_header_cell(
+            rx.hstack(
+                rx.box(rx.icon("user", size=17), class_name="vitta-patient-avatar"),
+                rx.box(
+                    rx.text(
+                        row["name"], font_weight="700", size="2",
+                        overflow_wrap="anywhere",
+                    ),
+                    rx.text(
+                        row["cpf_masked"], size="1",
+                        class_name="vitta-tabular",
+                        color="var(--vitta-text-muted)",
+                        display=rx.breakpoints(initial="block", sm="none"),
+                    ),
+                    min_width="0",
                 ),
-                color_scheme="teal",
-                high_contrast=True,
-                size="2",
-                aria_label=row["name"],
-            ),
-            rx.box(
-                rx.icon("user", size=16),
-                class_name="vitta-patient-avatar",
-            ),
-            rx.box(
-                rx.text(
-                    row["name"],
-                    font_weight="720",
-                    size="2",
-                    overflow="hidden",
-                    text_overflow="ellipsis",
-                    white_space="nowrap",
-                ),
-                rx.text(
-                    row["cpf_masked"],
-                    font_size="0.74rem",
-                    color="var(--vitta-text-subtle)",
-                    class_name="vitta-tabular",
-                    margin_top="0.12rem",
-                ),
+                align="center",
+                spacing="2",
                 min_width="0",
-                flex="1",
             ),
-            rx.cond(
-                is_selected,
-                rx.badge(
-                    "Selecionado",
-                    color_scheme="teal",
-                    variant="soft",
-                    high_contrast=True,
-                ),
-                rx.fragment(),
+        ),
+        rx.table.cell(
+            rx.text(row["cpf_masked"], class_name="vitta-tabular", size="2"),
+            display=rx.breakpoints(initial="none", sm="table-cell"),
+        ),
+        rx.table.cell(
+            rx.link(
+                "Ver detalhes",
+                href="/admin/pacientes/" + row["id"].to(str),
+                class_name="vitta-context-link",
+                aria_label="Ver detalhes de " + row["name"],
+                white_space="nowrap",
             ),
-            spacing="3",
-            align="center",
-            width="100%",
+            justify="end",
         ),
-        class_name="vitta-patient-row",
-        border_color=rx.cond(
-            is_selected,
-            "var(--vitta-primary)",
-            "var(--vitta-border)",
-        ),
-        background=rx.cond(
-            is_selected,
-            "var(--vitta-primary-soft)",
-            "var(--vitta-surface)",
-        ),
-        role="listitem",
-        aria_selected=is_selected,
+        align="center",
     )
-
 
 def _history_row(row) -> rx.Component:
     return rx.box(
@@ -531,38 +504,45 @@ def _patient_search_bar() -> rx.Component:
     return section_panel(
         rx.flex(
             rx.box(
-                rx.icon(
-                    "search",
-                    size=17,
-                    position="absolute",
-                    left="0.8rem",
-                    top="50%",
-                    transform="translateY(-50%)",
-                    color="var(--vitta-text-subtle)",
-                    pointer_events="none",
-                ),
-                rx.el.input(
-                    type="search",
-                    value=AdminPreviewState.patient_query,
-                    on_change=AdminPreviewState.update_patient_query,
-                    placeholder="Buscar paciente por nome ou CPF mascarado",
-                    class_name="vitta-input vitta-search-input",
-                    aria_label="Buscar pacientes",
-                ),
-                rx.cond(
-                    AdminPreviewState.patient_query != "",
-                    rx.button(
-                        rx.icon("x", size=16),
-                        type="button",
-                        variant="ghost",
-                        size="1",
-                        class_name="vitta-search-clear",
-                        aria_label="Limpar busca",
-                        on_click=AdminPreviewState.clear_patient_query,
+                field_label("Pesquisar pacientes", "admin-patient-search"),
+                rx.box(
+                    rx.icon(
+                        "search",
+                        size=17,
+                        position="absolute",
+                        left="0.8rem",
+                        top="50%",
+                        transform="translateY(-50%)",
+                        color="var(--vitta-text-subtle)",
+                        pointer_events="none",
                     ),
-                    rx.fragment(),
+                    rx.el.input(
+                        id="admin-patient-search",
+                        type="search",
+                        value=AdminPreviewState.patient_query,
+                        on_change=AdminPreviewState.update_patient_query,
+                        placeholder="Nome ou CPF mascarado",
+                        class_name="vitta-input vitta-search-input",
+                        aria_label="Pesquisar pacientes",
+                        auto_complete="off",
+                    ),
+                    rx.cond(
+                        AdminPreviewState.patient_query != "",
+                        rx.button(
+                            rx.icon("x", size=16),
+                            type="button",
+                            variant="ghost",
+                            size="1",
+                            class_name="vitta-search-clear",
+                            aria_label="Limpar busca de pacientes",
+                            on_click=AdminPreviewState.clear_patient_query,
+                        ),
+                        rx.fragment(),
+                    ),
+                    position="relative",
+                    width="100%",
+                    margin_top="0.3rem",
                 ),
-                position="relative",
                 flex="1 1 28rem",
                 min_width="0",
             ),
@@ -580,21 +560,14 @@ def _patient_search_bar() -> rx.Component:
                 flex="0 0 auto",
             ),
             direction=rx.breakpoints(initial="column", sm="row"),
-            align=rx.breakpoints(initial="stretch", sm="center"),
+            align=rx.breakpoints(initial="stretch", sm="end"),
             gap="0.75rem",
             width="100%",
         ),
     )
 
-
 def _patient_pagination() -> rx.Component:
     return rx.flex(
-        rx.text(
-            AdminPreviewState.patient_range_label,
-            size="1",
-            color="var(--vitta-text-subtle)",
-            class_name="vitta-tabular",
-        ),
         rx.hstack(
             rx.button(
                 rx.icon("chevron_left", size=16),
@@ -614,8 +587,8 @@ def _patient_pagination() -> rx.Component:
                 size="2",
                 font_weight="650",
                 class_name="vitta-tabular",
-                min_width="7rem",
                 text_align="center",
+                min_width="6rem",
             ),
             rx.button(
                 rx.icon("chevron_right", size=16),
@@ -630,91 +603,14 @@ def _patient_pagination() -> rx.Component:
             spacing="2",
             align="center",
         ),
-        direction=rx.breakpoints(initial="column", sm="row"),
-        justify="between",
-        align=rx.breakpoints(initial="stretch", sm="center"),
-        gap="0.75rem",
+        justify="end",
         width="100%",
-        padding_top="0.9rem",
+        padding_top="0.85rem",
         border_top="1px solid var(--vitta-border)",
     )
 
 
-def _patient_selection_bar() -> rx.Component:
-    return rx.cond(
-        AdminPreviewState.selected_patient_id > 0,
-        rx.box(
-            rx.flex(
-                rx.hstack(
-                    rx.box(
-                        rx.icon("user", size=18),
-                        class_name="vitta-patient-avatar",
-                    ),
-                    rx.box(
-                        rx.text(
-                            AdminPreviewState.selected_patient_name,
-                            font_weight="750",
-                            size="2",
-                        ),
-                        rx.text(
-                            AdminPreviewState.selected_patient_cpf,
-                            font_size="0.72rem",
-                            color="var(--vitta-text-subtle)",
-                            class_name="vitta-tabular",
-                            margin_top="0.12rem",
-                        ),
-                    ),
-                    spacing="3",
-                    align="center",
-                    min_width="0",
-                ),
-                rx.hstack(
-                    rx.link(
-                        rx.hstack(
-                            rx.icon("history", size=16),
-                            rx.text("Ver histórico"),
-                            spacing="2",
-                            align="center",
-                        ),
-                        href="#patient-history",
-                        class_name="vitta-context-link",
-                    ),
-                    rx.button(
-                        "Limpar seleção",
-                        type="button",
-                        variant="ghost",
-                        color_scheme="gray",
-                        on_click=AdminPreviewState.clear_patient_selection,
-                    ),
-                    spacing="2",
-                    align="center",
-                    flex_wrap="wrap",
-                ),
-                direction=rx.breakpoints(initial="column", sm="row"),
-                align=rx.breakpoints(initial="stretch", sm="center"),
-                justify="between",
-                gap="0.75rem",
-                width="100%",
-            ),
-            class_name="vitta-selection-bar",
-            role="region",
-            aria_label="Ações do paciente selecionado",
-        ),
-        rx.box(
-            rx.hstack(
-                rx.icon("info", size=17),
-                rx.text(
-                    "Selecione um paciente pelo checkbox para consultar o histórico operacional e as ações disponíveis neste preview.",
-                    size="2",
-                    line_height="1.5",
-                ),
-                spacing="2",
-                align="start",
-            ),
-            class_name="vitta-info-strip",
-        ),
-    )
-
+# Patient selection was removed: the list links to a dedicated, guarded detail route.
 
 def _readonly_clinical_value(label: str, value) -> rx.Component:
     return rx.box(
@@ -1018,10 +914,14 @@ def _admin_clinical_history_panel() -> rx.Component:
                     width="100%",
                     margin_top="0.8rem",
                 ),
-                empty_state(
-                    "file_text",
-                    "Sem histórico clínico concluído",
-                    "Este paciente ainda não possui Atendimento clínico persistido em Consulta concluída.",
+                rx.box(
+                    rx.text(
+                        "Não há registros clínicos concluídos disponíveis para esta visualização.",
+                        color="var(--vitta-text-muted)",
+                        size="2",
+                    ),
+                    role="status",
+                    padding="1rem 0",
                 ),
             ),
         ),
@@ -1031,12 +931,12 @@ def _admin_clinical_history_panel() -> rx.Component:
 
 
 def patients_preview() -> rx.Component:
-    """Paginated read-only patient browser with operational and clinical history."""
+    """Find patients in a read-only table; no history is loaded on this route."""
     return rx.vstack(
         page_header(
-            "Cadastros",
+            "Administração",
             "Pacientes",
-            "Pesquise pacientes persistidos e consulte histórico operacional e clínico real em modo local de QA.",
+            "Localize um cadastro e abra sua ficha para consultar os históricos autorizados.",
         ),
         _preview_notice(),
         rx.cond(
@@ -1045,103 +945,158 @@ def patients_preview() -> rx.Component:
             rx.fragment(),
         ),
         _patient_search_bar(),
-        _patient_selection_bar(),
         section_panel(
-            rx.flex(
-                rx.box(
-                    rx.heading("Lista de pacientes", size="5"),
-                    rx.text(
-                        "A seleção é individual e somente leitura neste modo local de QA.",
-                        size="2",
-                        color="var(--vitta-text-muted)",
-                        margin_top="0.25rem",
-                    ),
-                ),
-                rx.badge(
-                    "1 paciente por vez",
-                    color_scheme="gray",
-                    variant="soft",
-                ),
-                direction=rx.breakpoints(initial="column", sm="row"),
-                justify="between",
-                align=rx.breakpoints(initial="stretch", sm="start"),
-                gap="0.75rem",
-                width="100%",
-            ),
             rx.cond(
-                AdminPreviewState.filtered_patients.length() > 0,
-                rx.vstack(
-                    rx.vstack(
-                        rx.foreach(
-                            AdminPreviewState.paginated_patients,
-                            _patient_list_row,
-                        ),
-                        spacing="2",
-                        align="stretch",
-                        width="100%",
-                        role="list",
-                        margin_top="1rem",
+                AdminPreviewState.is_loading,
+                rx.center(
+                    rx.hstack(
+                        rx.spinner(size="2"),
+                        rx.text("Carregando pacientes…", size="2"),
+                        spacing="3",
                     ),
-                    _patient_pagination(),
-                    spacing="3",
-                    align="stretch",
-                    width="100%",
+                    min_height="8rem",
+                    role="status",
+                    aria_live="polite",
                 ),
-                empty_state(
-                    "search",
-                    "Nenhum paciente encontrado",
-                    "Ajuste a busca. Esta lista usa somente pacientes persistidos e não cria dados de demonstração.",
+                rx.cond(
+                    AdminPreviewState.patient_result_count > 0,
+                    rx.vstack(
+                        rx.table.root(
+                            rx.table.header(
+                                rx.table.row(
+                                    rx.table.column_header_cell("Paciente"),
+                                    rx.table.column_header_cell(
+                                        "CPF mascarado",
+                                        display=rx.breakpoints(initial="none", sm="table-cell"),
+                                    ),
+                                    rx.table.column_header_cell("Ações", justify="end"),
+                                ),
+                            ),
+                            rx.table.body(
+                                rx.foreach(
+                                    AdminPreviewState.paginated_patients,
+                                    _patient_list_row,
+                                ),
+                            ),
+                            width="100%",
+                            size="1",
+                            variant="surface",
+                        ),
+                        rx.cond(
+                            AdminPreviewState.patient_total_pages > 1,
+                            _patient_pagination(),
+                            rx.fragment(),
+                        ),
+                        spacing="3",
+                        width="100%",
+                        align="stretch",
+                    ),
+                    rx.box(
+                        rx.text(
+                            rx.cond(
+                                AdminPreviewState.patient_query != "",
+                                "Nenhum paciente encontrado para os filtros selecionados.",
+                                "Nenhum paciente cadastrado.",
+                            ),
+                            size="2",
+                            color="var(--vitta-text-muted)",
+                        ),
+                        padding="1.25rem 0",
+                        role="status",
+                        aria_live="polite",
+                    ),
                 ),
             ),
         ),
+        spacing="4",
+        align="stretch",
+        width="100%",
+    )
+
+
+def patient_detail_preview() -> rx.Component:
+    """One read-only QA patient dossier with independently authorized histories."""
+    return rx.vstack(
+        breadcrumb(
+            ("Administração", "/admin"),
+            ("Pacientes", "/admin/pacientes"),
+            ("Ficha do paciente", None),
+        ),
         rx.cond(
-            AdminPreviewState.selected_patient_id > 0,
-            section_panel(
-                rx.vstack(
-                    rx.flex(
-                        rx.hstack(
-                            rx.box(
-                                rx.icon("user", size=22),
-                                class_name="vitta-profile-avatar",
-                            ),
-                            rx.box(
-                                rx.heading(
-                                    AdminPreviewState.selected_patient_name,
-                                    size="6",
-                                ),
-                                rx.text(
-                                    AdminPreviewState.selected_patient_cpf,
-                                    size="2",
-                                    color="var(--vitta-text-subtle)",
-                                    class_name="vitta-tabular",
-                                    margin_top="0.15rem",
-                                ),
-                            ),
-                            spacing="3",
-                            align="center",
+            AdminPreviewState.detail_status == "ready",
+            rx.vstack(
+                page_header(
+                    "Pacientes",
+                    "Ficha do paciente",
+                    "Identificação e histórico do cadastro, disponíveis apenas no modo QA.",
+                ),
+                _preview_notice(),
+                rx.cond(
+                    AdminPreviewState.error_message != "",
+                    error_banner(AdminPreviewState.error_message),
+                    rx.fragment(),
+                ),
+                section_panel(
+                    rx.hstack(
+                        rx.box(
+                            rx.icon("user", size=22),
+                            class_name="vitta-profile-avatar",
                         ),
-                        rx.badge("Paciente", color_scheme="teal", variant="soft"),
-                        justify="between",
+                        rx.box(
+                            rx.heading(
+                                AdminPreviewState.selected_patient_name,
+                                size="6",
+                                overflow_wrap="anywhere",
+                            ),
+                            rx.text(
+                                "CPF " + AdminPreviewState.selected_patient_cpf,
+                                size="2",
+                                color="var(--vitta-text-muted)",
+                                class_name="vitta-tabular",
+                                margin_top="0.2rem",
+                            ),
+                            min_width="0",
+                        ),
+                        spacing="3",
                         align="center",
                         width="100%",
-                        gap="1rem",
                     ),
-                    rx.box(
-                        rx.hstack(
-                            rx.text(
-                                "Histórico operacional",
-                                font_weight="750",
-                                size="2",
-                            ),
-                            rx.text(
-                                "Fila registrada",
-                                font_size="0.72rem",
-                                color="var(--vitta-text-subtle)",
-                            ),
-                            justify="between",
-                            align="center",
-                            width="100%",
+                ),
+                rx.flex(
+                    rx.button(
+                        "Histórico operacional",
+                        type="button",
+                        color_scheme="teal",
+                        variant=rx.cond(
+                            AdminPreviewState.active_patient_tab == "operacional",
+                            "solid",
+                            "outline",
                         ),
+                        aria_pressed=AdminPreviewState.active_patient_tab == "operacional",
+                        on_click=AdminPreviewState.show_operational_history,
+                    ),
+                    rx.button(
+                        "Histórico clínico",
+                        type="button",
+                        color_scheme="teal",
+                        variant=rx.cond(
+                            AdminPreviewState.active_patient_tab == "clinico",
+                            "solid",
+                            "outline",
+                        ),
+                        aria_pressed=AdminPreviewState.active_patient_tab == "clinico",
+                        on_click=AdminPreviewState.show_clinical_history,
+                        disabled=AdminPreviewState.is_loading_clinical_history,
+                    ),
+                    role="group",
+                    aria_label="Escolha o histórico do paciente",
+                    gap="0.65rem",
+                    flex_wrap="wrap",
+                ),
+                rx.cond(
+                    AdminPreviewState.active_patient_tab == "operacional",
+                    section_panel(
+                        rx.heading("Histórico operacional", size="4"),
                         rx.cond(
                             AdminPreviewState.selected_patient_history.length() > 0,
                             rx.vstack(
@@ -1154,23 +1109,68 @@ def patients_preview() -> rx.Component:
                                 width="100%",
                                 margin_top="0.8rem",
                             ),
-                            empty_state(
-                                "activity",
-                                "Sem passagens registradas",
-                                "Este paciente ainda não possui entradas persistidas na fila.",
+                            rx.box(
+                                rx.text(
+                                    "Nenhuma movimentação operacional encontrada para este paciente.",
+                                    size="2",
+                                    color="var(--vitta-text-muted)",
+                                ),
+                                role="status",
+                                padding_top="0.9rem",
                             ),
                         ),
                     ),
-                    _admin_clinical_history_panel(),
-                    spacing="4",
-                    align="stretch",
-                    width="100%",
+                    section_panel(_admin_clinical_history_panel()),
                 ),
-                id="patient-history",
+                spacing="4",
+                width="100%",
+                align="stretch",
             ),
-            rx.fragment(),
+            rx.cond(
+                AdminPreviewState.detail_status == "loading",
+                rx.center(
+                    rx.hstack(
+                        rx.spinner(size="2"),
+                        rx.text("Carregando ficha do paciente…", size="2"),
+                        spacing="3",
+                    ),
+                    min_height="8rem",
+                    width="100%",
+                    role="status",
+                    aria_live="polite",
+                ),
+                section_panel(
+                    rx.vstack(
+                        rx.heading(
+                            rx.cond(
+                                AdminPreviewState.detail_status == "not_found",
+                                "Paciente não encontrado.",
+                                "Não foi possível consultar a ficha.",
+                            ),
+                            size="4",
+                        ),
+                        rx.cond(
+                            AdminPreviewState.detail_status == "error",
+                            rx.button(
+                                "Tentar novamente",
+                                on_click=AdminPreviewState.load_patient_detail,
+                                variant="outline",
+                                color_scheme="teal",
+                            ),
+                            rx.fragment(),
+                        ),
+                        rx.link(
+                            "Voltar aos pacientes",
+                            href="/admin/pacientes",
+                            class_name="vitta-context-link",
+                        ),
+                        spacing="3",
+                        align="start",
+                    ),
+                ),
+            ),
         ),
-        spacing="5",
+        spacing="4",
         align="stretch",
         width="100%",
     )
