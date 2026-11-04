@@ -2,7 +2,7 @@
 
 import reflex as rx
 
-from vitta_one.ui.components import breadcrumb, page_header, section_panel
+from vitta_one.ui.components import breadcrumb, error_banner, field_label, page_header, section_panel
 from vitta_one.auth.staff_state import AdminStaffState
 from vitta_one.professional_directory.state import AdminDirectoryState
 from vitta_one.ui.staff_components import admin_staff_panel
@@ -92,29 +92,129 @@ def admin_hub_workspace() -> rx.Component:
     )
 
 
-def _employee_row(employee) -> rx.Component:
+def _employee_details_link(employee) -> rx.Component:
+    """Keep the action short visually but identify its target to screen readers."""
     return rx.link(
-        rx.flex(
-            rx.hstack(
-                rx.box(rx.icon("user_round", size=19), class_name="vitta-admin-action-icon"),
-                rx.vstack(
-                    rx.text(employee["name"], font_weight="700", overflow_wrap="anywhere"),
-                    rx.text(employee["email"], color="var(--vitta-text-muted)", size="2"),
-                    rx.text(employee["role_label"], color="var(--vitta-primary)", size="1"),
-                    spacing="1", align="start",
-                ),
-                gap="3", align="center",
-            ),
-            rx.icon("chevron_right", size=18, color="var(--vitta-text-muted)"),
-            justify="between", align="center", gap="3", width="100%",
-        ),
+        "Ver detalhes",
+        rx.text(" de ", employee["name"], class_name="vitta-sr-only"),
         href=employee["href"].to(str),
-        class_name="vitta-staff-row",
+        class_name="vitta-context-link vitta-staff-details-link",
+    )
+
+
+def _employee_table_row(employee) -> rx.Component:
+    return rx.table.row(
+        rx.table.row_header_cell(
+            rx.text(employee["name"], font_weight="700", overflow_wrap="anywhere")
+        ),
+        rx.table.cell(
+            rx.text(employee["email"], size="2", overflow_wrap="anywhere")
+        ),
+        rx.table.cell(
+            rx.badge(employee["role_label"], color_scheme="teal", variant="soft",
+                     high_contrast=True)
+        ),
+        rx.table.cell(_employee_details_link(employee)),
+        class_name="vitta-staff-table-row",
+    )
+
+
+def _employee_mobile_row(employee) -> rx.Component:
+    """A linear reading order keeps every field and action accessible on mobile."""
+    return rx.flex(
+        rx.vstack(
+            rx.text(employee["name"], font_weight="700", overflow_wrap="anywhere"),
+            rx.text(employee["email"], size="2", color="var(--vitta-text-muted)",
+                    overflow_wrap="anywhere"),
+            rx.badge(employee["role_label"], color_scheme="teal", variant="soft",
+                     high_contrast=True),
+            spacing="1", align="start", min_width="0",
+        ),
+        _employee_details_link(employee),
+        direction="column", align="start", gap="2",
+        class_name="vitta-staff-mobile-row",
+    )
+
+
+def _staff_directory_results() -> rx.Component:
+    return rx.cond(
+        AdminStaffState.is_loading,
+        rx.center(
+            rx.vstack(
+                rx.spinner(size="3", color="var(--vitta-primary)"),
+                rx.text("Carregando funcionários…", color="var(--vitta-text-muted)", size="2"),
+                align="center", spacing="3",
+            ),
+            role="status", aria_live="polite", min_height="12rem", width="100%",
+        ),
+        rx.cond(
+            AdminStaffState.error != "",
+            rx.vstack(
+                error_banner(AdminStaffState.error),
+                rx.button("Tentar novamente", type="button", variant="outline",
+                          color_scheme="teal", on_click=AdminStaffState.load),
+                align="start", spacing="3", width="100%",
+            ),
+            rx.cond(
+                AdminStaffState.paged_employees.length() > 0,
+                rx.box(
+                    rx.table.root(
+                        rx.table.header(
+                            rx.table.row(
+                                rx.table.column_header_cell("Funcionário"),
+                                rx.table.column_header_cell("E-mail"),
+                                rx.table.column_header_cell("Perfil"),
+                                rx.table.column_header_cell("Ações"),
+                            ),
+                        ),
+                        rx.table.body(
+                            rx.foreach(AdminStaffState.paged_employees, _employee_table_row),
+                        ),
+                        size="2", variant="ghost", width="100%",
+                        class_name="vitta-staff-table",
+                    ),
+                    rx.vstack(
+                        rx.foreach(AdminStaffState.paged_employees, _employee_mobile_row),
+                        spacing="0", align="stretch", width="100%",
+                        class_name="vitta-staff-mobile",
+                    ),
+                    width="100%",
+                ),
+                rx.center(
+                    rx.vstack(
+                        rx.icon("users", size=25, color="var(--vitta-primary)"),
+                        rx.heading(
+                            rx.cond(AdminStaffState.has_employee_filters,
+                                    "Nenhum resultado para os filtros",
+                                    "Nenhum funcionário cadastrado"),
+                            size="3",
+                        ),
+                        rx.text(
+                            rx.cond(AdminStaffState.has_employee_filters,
+                                    "Altere a busca ou limpe os filtros para ver a equipe.",
+                                    "Cadastre um funcionário para começar a gerenciar os acessos."),
+                            color="var(--vitta-text-muted)", size="2",
+                            text_align="center",
+                        ),
+                        rx.cond(
+                            AdminStaffState.has_employee_filters,
+                            rx.button("Limpar filtros", type="button", variant="outline",
+                                      color_scheme="teal",
+                                      on_click=AdminStaffState.clear_employee_filters),
+                            rx.link("Novo funcionário", href="/admin/funcionarios/novo",
+                                    class_name="vitta-primary-action"),
+                        ),
+                        align="center", spacing="3",
+                    ),
+                    padding="2rem 1rem", min_height="12rem", width="100%",
+                ),
+            ),
+        ),
     )
 
 
 def admin_staff_type_workspace() -> rx.Component:
-    """Paginated employee directory, separated from onboarding forms."""
+    """A task-first, read-only employee directory with real search and filtering."""
     return rx.vstack(
         breadcrumb(("Administração", "/admin"), ("Funcionários", None)),
         page_header(
@@ -134,60 +234,113 @@ def admin_staff_type_workspace() -> rx.Component:
         ),
         section_panel(
             rx.vstack(
+                rx.box(
+                    rx.heading("Equipe cadastrada", size="4"),
+                    rx.text(
+                        "Contas médicas e de recepção, com acesso por perfil.",
+                        color="var(--vitta-text-muted)", size="2", margin_top="0.35rem",
+                    ),
+                    width="100%",
+                ),
                 rx.flex(
                     rx.box(
-                        rx.heading("Equipe cadastrada", size="4"),
-                        rx.text("Contas médicas e de recepção, com acesso por perfil.",
-                                color="var(--vitta-text-muted)", size="2", margin_top="0.35rem"),
+                        field_label("Buscar funcionário", "staff-directory-search"),
+                        rx.flex(
+                            rx.el.input(
+                                id="staff-directory-search", type="search",
+                                placeholder="Nome, e-mail ou perfil",
+                                class_name="vitta-input",
+                                value=AdminStaffState.employee_search,
+                                on_change=AdminStaffState.update_employee_search,
+                                width="100%", min_width="0",
+                            ),
+                            rx.cond(
+                                AdminStaffState.employee_search != "",
+                                rx.button("Limpar busca", type="button", variant="ghost",
+                                          color_scheme="teal", size="2",
+                                          on_click=AdminStaffState.update_employee_search("")),
+                                rx.fragment(),
+                            ),
+                            gap="2", align="center", width="100%",
+                        ),
+                        flex="1 1 18rem", min_width="0",
                     ),
                     rx.box(
-                        rx.el.input(
-                            type="search", placeholder="Buscar por e-mail ou perfil",
-                            aria_label="Pesquisar funcionários", class_name="vitta-input",
-                            value=AdminStaffState.employee_search,
-                            on_change=AdminStaffState.update_employee_search,
+                        field_label("Filtrar por perfil", "staff-directory-role"),
+                        rx.select.root(
+                            rx.select.trigger(
+                                id="staff-directory-role", width="100%",
+                                class_name="vitta-select-trigger",
+                                aria_label="Filtrar funcionários por perfil",
+                            ),
+                            rx.select.content(
+                                rx.select.item("Todos os perfis", value="todos"),
+                                rx.select.item("Médico", value="MEDICO"),
+                                rx.select.item("Recepcionista", value="RECEPCIONISTA"),
+                                position="popper",
+                            ),
+                            value=AdminStaffState.employee_role,
+                            on_change=AdminStaffState.update_employee_role,
+                            size="3",
                         ),
-                        width=rx.breakpoints(initial="100%", md="min(20rem, 100%)"),
+                        width=rx.breakpoints(initial="100%", sm="14rem"),
                     ),
-                    gap="4", align="center", justify="between", flex_wrap="wrap", width="100%",
+                    rx.cond(
+                        AdminStaffState.has_employee_filters,
+                        rx.button("Limpar filtros", type="button", variant="outline",
+                                  color_scheme="teal", size="2",
+                                  on_click=AdminStaffState.clear_employee_filters),
+                        rx.fragment(),
+                    ),
+                    gap="3", align="end", flex_wrap="wrap", width="100%",
+                    class_name="vitta-staff-toolbar",
                 ),
+                _staff_directory_results(),
                 rx.cond(
-                    AdminStaffState.paged_employees.length() > 0,
-                    rx.vstack(
-                        rx.foreach(AdminStaffState.paged_employees, _employee_row),
-                        spacing="2", align="stretch", width="100%",
-                        class_name="vitta-staff-directory",
-                    ),
-                    rx.center(
-                        rx.vstack(
-                            rx.icon("users", size=24, color="var(--vitta-primary)"),
-                            rx.heading("Nenhum funcionário encontrado", size="3"),
-                            rx.text("Adicione um funcionário ou ajuste os termos da pesquisa.",
-                                    color="var(--vitta-text-muted)", size="2"),
-                            align="center", spacing="2",
+                    (AdminStaffState.error == "") & (~AdminStaffState.is_loading),
+                    rx.flex(
+                        rx.cond(
+                            AdminStaffState.has_employee_filters,
+                            rx.text(
+                                AdminStaffState.filtered_employees.length(), " de ",
+                                AdminStaffState.employees.length(), " funcionários",
+                                size="2", color="var(--vitta-text-muted)",
+                            ),
+                            rx.text(
+                                AdminStaffState.employees.length(), " funcionários cadastrados",
+                                size="2", color="var(--vitta-text-muted)",
+                            ),
                         ),
-                        padding="2rem", min_height="12rem", width="100%",
+                        rx.cond(
+                            AdminStaffState.total_pages > 1,
+                            rx.hstack(
+                                rx.button(
+                                    "Anterior", type="button", variant="outline",
+                                    color_scheme="teal",
+                                    on_click=AdminStaffState.move_employee_page(-1),
+                                    disabled=AdminStaffState.current_page <= 1,
+                                ),
+                                rx.text(AdminStaffState.page_label, size="2", font_weight="650"),
+                                rx.button(
+                                    "Próxima", type="button", variant="outline",
+                                    color_scheme="teal",
+                                    on_click=AdminStaffState.move_employee_page(1),
+                                    disabled=AdminStaffState.current_page >= AdminStaffState.total_pages,
+                                ),
+                                gap="3", align="center",
+                            ),
+                            rx.fragment(),
+                        ),
+                        justify="between", gap="3", align="center",
+                        flex_wrap="wrap", width="100%",
+                        class_name="vitta-staff-footer",
                     ),
+                    rx.fragment(),
                 ),
-                rx.flex(
-                    rx.text(AdminStaffState.employees.length(), " funcionários cadastrados",
-                            color="var(--vitta-text-muted)", size="2"),
-                    rx.hstack(
-                        rx.button("Anterior", type="button", variant="outline", color_scheme="teal",
-                                  on_click=AdminStaffState.move_employee_page(-1),
-                                  disabled=AdminStaffState.current_page <= 1),
-                        rx.text(AdminStaffState.page_label, size="2", font_weight="650"),
-                        rx.button("Próxima", type="button", variant="outline", color_scheme="teal",
-                                  on_click=AdminStaffState.move_employee_page(1),
-                                  disabled=AdminStaffState.current_page >= AdminStaffState.total_pages),
-                        gap="3", align="center",
-                    ),
-                    justify="between", gap="3", align="center", flex_wrap="wrap", width="100%",
-                ),
-                spacing="5", align="stretch", width="100%",
+                spacing="4", align="stretch", width="100%",
             )
         ),
-        spacing="5", align="stretch", width="100%",
+        spacing="4", align="stretch", width="100%",
     )
 
 
