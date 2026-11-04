@@ -71,6 +71,8 @@ _ADMIN_TASK_NAV = (
     ("Configurações", "/admin/configuracoes", "settings", "configuracoes"),
 )
 
+_ADMIN_MANAGEMENT_NAV = _ADMIN_TASK_NAV[1:]
+
 # These routes remain server-restricted to the explicit local QA preview.
 _ADMIN_PREVIEW_NAV = (
     ("Recepção", "/admin/recepcao", "users", "recepcao"),
@@ -322,38 +324,46 @@ def _nav_link(
     icon: str,
     *,
     active: bool,
+    child: bool = False,
+    ancestor: bool = False,
 ) -> rx.Component:
+    """One accessible navigation primitive for every role and QA preview."""
     aria_props = {"aria_current": "page"} if active else {}
+    classes = ["vitta-nav-link"]
+    if child:
+        classes.append("vitta-nav-link--child")
+    if ancestor:
+        classes.append("vitta-nav-link--ancestor")
     return rx.link(
         rx.hstack(
             rx.icon(icon, size=18, flex_shrink="0"),
-            rx.text(label, white_space="nowrap"),
+            rx.text(label, white_space="nowrap", class_name="vitta-nav-link-text"),
             spacing="3",
             align="center",
         ),
         href=href,
         on_click=SidebarState.close_mobile,
-        class_name="vitta-nav-link",
+        class_name=" ".join(classes),
+        aria_label=label,
+        title=label,
         background=("var(--vitta-primary)" if active else "transparent"),
         color=("#ffffff" if active else "var(--vitta-text-muted)"),
-        box_shadow=(
-            "0 8px 18px rgba(15, 118, 110, 0.14)" if active else "none"
-        ),
         **aria_props,
     )
 
 
-def _admin_navigation(active: str) -> rx.Component:
-    core_items = rx.vstack(
-        *[
-            _nav_link(label, href, icon, active=key == active)
-            for label, href, icon, key in _ADMIN_TASK_NAV
-        ],
-        spacing="1",
-        align="stretch",
-        width="100%",
+def _nav_group_heading(label: str) -> rx.Component:
+    return rx.text(
+        label.upper(),
+        class_name="vitta-nav-group-label",
+        aria_hidden="true",
     )
+
+
+def _admin_navigation(active: str) -> rx.Component:
     preview_items = rx.vstack(
+        _nav_group_heading("Inspeção local · QA"),
+        rx.text("Visualizações somente leitura", class_name="vitta-sidebar-section-hint"),
         *[
             _nav_link(label, href, icon, active=key == active)
             for label, href, icon, key in _ADMIN_PREVIEW_NAV
@@ -361,27 +371,38 @@ def _admin_navigation(active: str) -> rx.Component:
         spacing="1",
         align="stretch",
         width="100%",
+        class_name="vitta-nav-group vitta-nav-group--qa",
     )
-    return rx.vstack(
-        rx.text("ADMINISTRAÇÃO", class_name="vitta-sidebar-section-label"),
-        core_items,
-        rx.cond(
-            AuthState.local_admin_preview,
-            rx.vstack(
-                rx.text("INSPEÇÃO LOCAL · QA", class_name="vitta-sidebar-section-label"),
-                rx.text("Visualizações somente leitura", class_name="vitta-sidebar-section-hint"),
-                preview_items,
-                spacing="2",
-                align="stretch",
-                width="100%",
-                class_name="vitta-admin-preview-navigation",
-            ),
-            rx.fragment(),
+    management_items = rx.vstack(
+        _nav_group_heading("Administração"),
+        _nav_link(
+            "Visão geral",
+            "/admin",
+            "layout_dashboard",
+            active=active == "administracao",
+            ancestor=active in {item[3] for item in _ADMIN_MANAGEMENT_NAV},
         ),
-        spacing="2",
+        rx.vstack(
+            *[
+                _nav_link(label, href, icon, active=key == active, child=True)
+                for label, href, icon, key in _ADMIN_MANAGEMENT_NAV
+            ],
+            spacing="1",
+            align="stretch",
+            width="100%",
+            class_name="vitta-nav-children",
+        ),
+        spacing="1",
         align="stretch",
         width="100%",
-        class_name="vitta-admin-navigation",
+        class_name="vitta-nav-group",
+    )
+    return rx.vstack(
+        management_items,
+        rx.cond(AuthState.local_admin_preview, preview_items, rx.fragment()),
+        spacing="3",
+        align="stretch",
+        width="100%",
     )
 
 
@@ -402,15 +423,16 @@ def _role_navigation(role: Role, active: str) -> rx.Component:
 
 
 def authenticated_sidebar(role: Role, active: str) -> rx.Component:
-    """Render role-aware product navigation; local Admin preview is explicitly gated."""
+    """Render one role-specific navigation surface; QA routes remain server-gated."""
     return rx.el.aside(
-        rx.flex(
+        rx.hstack(
             rx.box(
                 brand_logo(width="8.75rem"),
-                class_name="vitta-sidebar-brand",
+                class_name="vitta-sidebar-logo",
             ),
+            rx.icon("heart_pulse", size=23, class_name="vitta-sidebar-compact-mark"),
             rx.button(
-                rx.icon("x", size=20),
+                rx.icon("x", size=19),
                 type="button",
                 variant="ghost",
                 color_scheme="gray",
@@ -418,10 +440,10 @@ def authenticated_sidebar(role: Role, active: str) -> rx.Component:
                 aria_label="Fechar navegação",
                 class_name="vitta-sidebar-close",
             ),
+            class_name="vitta-sidebar-brand",
             justify="between",
             align="center",
             width="100%",
-            class_name="vitta-sidebar-head",
         ),
         rx.cond(
             (AuthState.current_role == Role.ADMINISTRADOR.value)
@@ -439,22 +461,46 @@ def authenticated_sidebar(role: Role, active: str) -> rx.Component:
             _role_navigation(role, active),
             aria_label="Navegação principal",
             class_name="vitta-sidebar-nav",
+            id="vitta-sidebar-navigation",
         ),
         rx.box(
-            rx.button(
-                rx.hstack(
-                    rx.icon("log_out", size=16),
-                    rx.text("Sair"),
-                    spacing="2", align="center",
+            rx.hstack(
+                rx.box(
+                    rx.icon("circle_user_round", size=19),
+                    class_name="vitta-session-avatar",
                 ),
-                type="button", variant="ghost", color_scheme="gray",
-                width="100%", justify_content="flex-start",
+                rx.box(
+                    rx.text(AuthState.role_label, size="2", font_weight="700"),
+                    rx.text(
+                        AuthState.current_email,
+                        size="1",
+                        color="var(--vitta-text-muted)",
+                        class_name="vitta-session-email",
+                    ),
+                    min_width="0",
+                    class_name="vitta-session-details",
+                ),
+                spacing="2",
+                align="center",
+                class_name="vitta-session-identity",
+            ),
+            rx.button(
+                rx.icon("log_out", size=17),
+                rx.text("Sair", class_name="vitta-nav-link-text"),
+                type="button",
+                variant="ghost",
+                color_scheme="gray",
+                width="100%",
+                justify_content="flex-start",
                 on_click=AuthState.logout,
                 aria_label="Sair da conta",
+                title="Sair da conta",
+                class_name="vitta-sidebar-logout-button",
             ),
             class_name="vitta-sidebar-session vitta-sidebar-logout",
         ),
-        id="vitta-navigation-panel",
+        id="vitta-sidebar",
+        aria_label="Menu principal",
         class_name={
             Role.RECEPCIONISTA: "vitta-sidebar vitta-sidebar--reception",
             Role.MEDICO: "vitta-sidebar vitta-sidebar--doctor",
@@ -559,15 +605,22 @@ def _reception_topbar_search() -> rx.Component:
     )
 
 
-def authenticated_topbar() -> rx.Component:
-    """Compact shell bar: navigation only, without duplicate identity or global search."""
+def authenticated_topbar(role: Role) -> rx.Component:
+    """Compact header: navigation control and role context, without duplicate identity."""
+    area = {
+        Role.ADMINISTRADOR: "Administração",
+        Role.RECEPCIONISTA: "Recepção",
+        Role.MEDICO: "Consultório médico",
+        Role.PACIENTE: "Portal do paciente",
+        Role.FINANCEIRO: "Financeiro",
+    }[role]
     return rx.el.header(
         rx.button(
             rx.icon("menu", size=21),
             type="button", variant="ghost", color_scheme="gray",
             on_click=SidebarState.toggle_desktop,
             aria_label=rx.cond(SidebarState.desktop_open, "Recolher navegação", "Expandir navegação"),
-            aria_controls="vitta-navigation-panel",
+            aria_controls="vitta-sidebar",
             aria_expanded=SidebarState.desktop_open,
             class_name="vitta-hamburger-desktop",
         ),
@@ -576,10 +629,11 @@ def authenticated_topbar() -> rx.Component:
             type="button", variant="ghost", color_scheme="gray",
             on_click=SidebarState.toggle_mobile,
             aria_label=rx.cond(SidebarState.mobile_open, "Fechar navegação", "Abrir navegação"),
-            aria_controls="vitta-navigation-panel",
+            aria_controls="vitta-sidebar",
             aria_expanded=SidebarState.mobile_open,
             class_name="vitta-hamburger-mobile",
         ),
+        rx.text(area, class_name="vitta-topbar-context"),
         rx.box(flex="1"),
         class_name="vitta-topbar",
     )
@@ -736,13 +790,13 @@ def empty_state(
 def _product_shell(role: Role, active: str, *children: rx.Component) -> rx.Component:
     return rx.box(
         rx.script(src="/input-masks.js"),
-        rx.script(src="/sidebar-accessibility.js"),
+        rx.script(src="/shell-navigation.js"),
         authenticated_sidebar(role, active),
         rx.cond(SidebarState.mobile_open,
                 rx.box(class_name="vitta-sidebar-scrim", on_click=SidebarState.close_mobile,
                        role="presentation"), rx.fragment()),
         rx.box(
-            authenticated_topbar(),
+            authenticated_topbar(role),
             rx.el.main(
                 rx.vstack(
                     *children,

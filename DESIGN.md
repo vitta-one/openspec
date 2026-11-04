@@ -107,7 +107,7 @@ Horários, contadores e identificadores usam numerais tabulares quando o alinham
 ## Layout
 
 - Desktop: sidebar de `15.5rem`, topbar compacto e conteúdo de até `90rem`.
-- Tablet: sidebar vira faixa superior rolável; conteúdo mantém leitura em uma ou duas áreas.
+- Tablet/mobile: sidebar compartilhada vira drawer temporário com foco controlado; conteúdo mantém leitura sem overflow.
 - Mobile: login e fluxos operacionais retornam a uma coluna.
 - O documento permanece dono da rolagem principal. Tabelas/listas recebem overflow próprio somente quando necessário.
 - Cards agrupam comportamento real; não são usados para decorar espaço vazio.
@@ -145,11 +145,11 @@ A logo oficial fornecida ao projeto é a identidade principal do login e shell a
 
 ### Navegação
 
-A sidebar agrupa os módulos por função reconhecível: Recepção, Agenda, Atendimento clínico, Pacientes, Financeiro e Administração. Em produção, cada role continua vendo apenas o destino compatível. A navegação completa do Administrador existe somente no modo local de QA e é rotulada como tal.
+A sidebar usa destinos específicos por role, com identificação programática do item ativo e hierarquia distinta para os filhos da Administração. Funcionalidades administrativas reais permanecem disponíveis no contexto normal do Administrador; somente as projeções operacionais de outras roles são exclusivas do modo local de QA, claramente separadas e rotuladas. No desktop a sidebar pode recolher em trilho de ícones, com nomes acessíveis; no mobile abre em drawer temporário com Escape, gestão de foco e bloqueio de rolagem do fundo.
 
 ### Topbar
 
-Mostra estado do sistema, identidade atual e role. Não exibe busca global, unidade física, notificações ou métricas sem backend correspondente.
+Expõe o controle de navegação e o contexto operacional curto. Não replica a identidade da conta nem exibe indicador decorativo de sessão, busca global, unidade física, notificações ou métricas sem backend correspondente. A identidade e o logout permanecem no rodapé da sidebar expandida; quando recolhida, o logout conserva nome acessível.
 
 ### Forms
 
