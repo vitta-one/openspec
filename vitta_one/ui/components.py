@@ -62,15 +62,22 @@ _NAV_BY_ROLE = {
     ),
 }
 
+_ADMIN_TASK_NAV = (
+    ("Gestão da clínica", "/admin", "layout_dashboard", "administracao"),
+    ("Funcionários", "/admin/funcionarios", "users", "funcionarios"),
+    ("Profissionais", "/admin/profissionais", "stethoscope", "profissionais"),
+    ("Especialidades", "/admin/especialidades", "list_filter", "especialidades"),
+    ("Horários", "/admin/horarios", "calendar_clock", "horarios"),
+    ("Configurações", "/admin/configuracoes", "settings", "configuracoes"),
+)
+
+# These routes remain server-restricted to the explicit local QA preview.
 _ADMIN_PREVIEW_NAV = (
     ("Recepção", "/admin/recepcao", "users", "recepcao"),
     ("Agenda", "/admin/agenda", "calendar", "agenda"),
     ("Atendimento clínico", "/admin/atendimento", "stethoscope", "atendimento"),
     ("Pacientes", "/admin/pacientes", "user", "pacientes"),
     ("Financeiro", "/admin/financeiro", "wallet", "financeiro"),
-    ("Administração", "/admin", "settings", "administracao"),
-    ("Funcionários", "/admin/funcionarios", "users", "funcionarios"),
-    ("Horários", "/admin/horarios", "calendar_clock", "horarios"),
 )
 
 
@@ -337,6 +344,15 @@ def _nav_link(
 
 
 def _admin_navigation(active: str) -> rx.Component:
+    core_items = rx.vstack(
+        *[
+            _nav_link(label, href, icon, active=key == active)
+            for label, href, icon, key in _ADMIN_TASK_NAV
+        ],
+        spacing="1",
+        align="stretch",
+        width="100%",
+    )
     preview_items = rx.vstack(
         *[
             _nav_link(label, href, icon, active=key == active)
@@ -346,30 +362,27 @@ def _admin_navigation(active: str) -> rx.Component:
         align="stretch",
         width="100%",
     )
-    standard_items = rx.vstack(
-        _nav_link(
-            "Administração",
-            "/admin",
-            "settings",
-            active=active == "administracao",
+    return rx.vstack(
+        rx.text("ADMINISTRAÇÃO", class_name="vitta-sidebar-section-label"),
+        core_items,
+        rx.cond(
+            AuthState.local_admin_preview,
+            rx.vstack(
+                rx.text("INSPEÇÃO LOCAL · QA", class_name="vitta-sidebar-section-label"),
+                rx.text("Visualizações somente leitura", class_name="vitta-sidebar-section-hint"),
+                preview_items,
+                spacing="2",
+                align="stretch",
+                width="100%",
+                class_name="vitta-admin-preview-navigation",
+            ),
+            rx.fragment(),
         ),
-        _nav_link(
-            "Funcionários",
-            "/admin/funcionarios",
-            "users",
-            active=active == "funcionarios",
-        ),
-        _nav_link(
-            "Horários",
-            "/admin/horarios",
-            "calendar_clock",
-            active=active == "horarios",
-        ),
-        spacing="1",
+        spacing="2",
         align="stretch",
         width="100%",
+        class_name="vitta-admin-navigation",
     )
-    return rx.cond(AuthState.local_admin_preview, preview_items, standard_items)
 
 
 def _role_navigation(role: Role, active: str) -> rx.Component:
@@ -391,9 +404,24 @@ def _role_navigation(role: Role, active: str) -> rx.Component:
 def authenticated_sidebar(role: Role, active: str) -> rx.Component:
     """Render role-aware product navigation; local Admin preview is explicitly gated."""
     return rx.el.aside(
-        rx.box(
-            brand_logo(width="8.75rem"),
-            class_name="vitta-sidebar-brand",
+        rx.flex(
+            rx.box(
+                brand_logo(width="8.75rem"),
+                class_name="vitta-sidebar-brand",
+            ),
+            rx.button(
+                rx.icon("x", size=20),
+                type="button",
+                variant="ghost",
+                color_scheme="gray",
+                on_click=SidebarState.close_mobile,
+                aria_label="Fechar navegação",
+                class_name="vitta-sidebar-close",
+            ),
+            justify="between",
+            align="center",
+            width="100%",
+            class_name="vitta-sidebar-head",
         ),
         rx.cond(
             (AuthState.current_role == Role.ADMINISTRADOR.value)
@@ -426,6 +454,7 @@ def authenticated_sidebar(role: Role, active: str) -> rx.Component:
             ),
             class_name="vitta-sidebar-session vitta-sidebar-logout",
         ),
+        id="vitta-navigation-panel",
         class_name={
             Role.RECEPCIONISTA: "vitta-sidebar vitta-sidebar--reception",
             Role.MEDICO: "vitta-sidebar vitta-sidebar--doctor",
@@ -537,7 +566,8 @@ def authenticated_topbar() -> rx.Component:
             rx.icon("menu", size=21),
             type="button", variant="ghost", color_scheme="gray",
             on_click=SidebarState.toggle_desktop,
-            aria_label="Recolher ou expandir menu",
+            aria_label=rx.cond(SidebarState.desktop_open, "Recolher navegação", "Expandir navegação"),
+            aria_controls="vitta-navigation-panel",
             aria_expanded=SidebarState.desktop_open,
             class_name="vitta-hamburger-desktop",
         ),
@@ -545,7 +575,8 @@ def authenticated_topbar() -> rx.Component:
             rx.icon("menu", size=21),
             type="button", variant="ghost", color_scheme="gray",
             on_click=SidebarState.toggle_mobile,
-            aria_label="Abrir ou fechar navegação",
+            aria_label=rx.cond(SidebarState.mobile_open, "Fechar navegação", "Abrir navegação"),
+            aria_controls="vitta-navigation-panel",
             aria_expanded=SidebarState.mobile_open,
             class_name="vitta-hamburger-mobile",
         ),
@@ -705,6 +736,7 @@ def empty_state(
 def _product_shell(role: Role, active: str, *children: rx.Component) -> rx.Component:
     return rx.box(
         rx.script(src="/input-masks.js"),
+        rx.script(src="/sidebar-accessibility.js"),
         authenticated_sidebar(role, active),
         rx.cond(SidebarState.mobile_open,
                 rx.box(class_name="vitta-sidebar-scrim", on_click=SidebarState.close_mobile,
