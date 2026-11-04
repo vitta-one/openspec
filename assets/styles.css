@@ -243,41 +243,26 @@ button:disabled,
 .vitta-login-shell {
   min-height: 100dvh;
   display: grid;
-  grid-template-columns: minmax(22rem, 0.92fr) minmax(28rem, 1.08fr);
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
   background: var(--vitta-surface);
 }
 
 .vitta-login-form-pane {
   min-width: 0;
   min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 2rem;
-  padding: clamp(1.5rem, 3vw, 3.5rem);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: clamp(2rem, 5vh, 4rem);
+  padding: clamp(1.5rem, 3vw, 3rem);
   background: var(--vitta-surface);
   border-right: 1px solid var(--vitta-border);
-  overflow-y: auto;
-  scrollbar-gutter: stable;
   z-index: 2;
 }
 
 .vitta-login-form-wrap {
-  width: min(100%, 29rem);
-  margin: auto;
-}
-
-.vitta-login-kicker {
-  display: inline-flex;
-  align-items: center;
-  width: max-content;
-  padding: 0.38rem 0.65rem;
-  border-radius: 999px;
-  color: var(--vitta-primary);
-  background: var(--vitta-primary-soft);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  width: min(100%, 27.5rem);
+  justify-self: center;
+  align-self: center;
 }
 
 .vitta-login-visual {
@@ -314,11 +299,11 @@ button:disabled,
 
 .vitta-login-emblem {
   position: absolute;
-  width: clamp(15rem, 29vw, 25rem);
+  width: clamp(10rem, 23vw, 18rem);
   aspect-ratio: 1;
-  right: clamp(2rem, 8vw, 8rem);
-  top: 11%;
-  border: clamp(1.7rem, 3vw, 2.9rem) solid rgba(255, 255, 255, 0.12);
+  right: clamp(1.5rem, 4vw, 3.5rem);
+  top: 12%;
+  border: clamp(1.1rem, 2vw, 1.8rem) solid rgba(255, 255, 255, 0.12);
   border-radius: 999px;
   display: grid;
   place-items: center;
@@ -355,17 +340,8 @@ button:disabled,
   position: absolute;
   left: clamp(1.75rem, 4vw, 4.25rem);
   right: clamp(1.75rem, 4vw, 4.25rem);
-  bottom: clamp(2rem, 5vw, 4.5rem);
+  bottom: clamp(2rem, 4vw, 3.5rem);
   z-index: 2;
-}
-
-.vitta-login-feature {
-  min-height: 2.3rem;
-  padding: 0.45rem 0.7rem;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 0.65rem;
-  color: rgba(255, 255, 255, 0.90);
-  background: rgba(255, 255, 255, 0.08);
 }
 
 /* Product shell */
@@ -877,7 +853,7 @@ button:disabled,
 
 @media (max-width: 1180px) and (min-width: 861px) {
   .vitta-login-shell {
-    grid-template-columns: minmax(21rem, 1fr) minmax(25rem, 0.95fr);
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
   }
 
   .vitta-login-form-pane {
@@ -897,7 +873,7 @@ button:disabled,
   }
 
   .vitta-login-form-wrap {
-    margin: 0.75rem auto;
+    margin-block: 0;
   }
 
   .vitta-login-title {
@@ -1004,11 +980,12 @@ button:disabled,
     min-height: 100dvh;
     border-right: 0;
     padding: clamp(1.25rem, 5vw, 2.25rem);
-    gap: 1.5rem;
+    gap: clamp(2rem, 6vh, 3rem);
   }
 
   .vitta-login-form-wrap {
-    width: min(100%, 31rem);
+    width: min(100%, 27.5rem);
+    align-self: start;
   }
 
   .vitta-login-visual {
@@ -2619,6 +2596,102 @@ button:disabled,
   box-shadow: var(--vitta-shadow-xs);
 }
 .vitta-queue-patient-row > div { gap: 1rem; }
+
+
+/* Administration: compact task hub, grouped links and distinct QA navigation. */
+.vitta-admin-hub {
+  max-width: 70rem;
+  margin-inline: auto;
+}
+.vitta-admin-hub-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: clamp(1rem, 1.8vw, 1.5rem);
+  width: 100%;
+}
+.vitta-admin-hub-group { min-width: 0; }
+.vitta-admin-hub-heading {
+  margin: 0 0 .7rem;
+  color: var(--vitta-text);
+}
+.vitta-admin-hub-list {
+  overflow: hidden;
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-panel);
+  background: var(--vitta-surface);
+  box-shadow: var(--vitta-shadow-xs);
+}
+.vitta-admin-hub-list .vitta-admin-action {
+  display: block;
+  min-height: 4.4rem;
+  margin: 0;
+  padding: .75rem .9rem;
+  border: 0;
+  border-radius: 0;
+}
+.vitta-admin-hub-list .vitta-admin-action + .vitta-admin-action {
+  border-top: 1px solid var(--vitta-border);
+}
+.vitta-admin-hub-list .vitta-admin-action:hover {
+  background: var(--vitta-primary-soft);
+}
+.vitta-admin-hub-list .vitta-admin-action:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 3px solid var(--vitta-focus);
+  outline-offset: -3px;
+}
+.vitta-admin-hub-list .vitta-admin-action-icon {
+  width: 2.4rem;
+  height: 2.4rem;
+}
+.vitta-sidebar-section-label {
+  padding: .75rem .75rem .2rem;
+  color: var(--vitta-text-subtle);
+  font-size: .69rem;
+  font-weight: 800;
+  letter-spacing: .075em;
+}
+.vitta-admin-preview-navigation {
+  margin-top: .65rem;
+  padding-top: .55rem;
+  border-top: 1px solid var(--vitta-border);
+}
+.vitta-sidebar-section-hint {
+  padding-inline: .75rem;
+  color: var(--vitta-text-muted);
+  font-size: .75rem;
+  line-height: 1.45;
+}
+.vitta-sidebar-head { min-width: 0; }
+.vitta-sidebar-close { display: none !important; }
+@media (max-width: 1050px) {
+  /* Desktop collapse must not strip the mobile drawer of padding or scrolling. */
+  .vitta-shell.is-sidebar-closed.is-mobile-nav-open .vitta-sidebar {
+    padding: 1rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+    border-right: 1px solid var(--vitta-border);
+  }
+  .vitta-shell.is-mobile-nav-open .vitta-sidebar-close {
+    display: inline-flex !important;
+    flex: 0 0 auto;
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+    color: var(--vitta-text);
+  }
+}
+@media (max-width: 800px) {
+  .vitta-admin-hub-groups { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 520px) {
+  .vitta-admin-hub-list .vitta-admin-action { padding: .8rem .7rem; }
+  .vitta-admin-hub-list .vitta-admin-action-icon { width: 2.25rem; height: 2.25rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vitta-admin-hub-list .vitta-admin-action { transition: none; }
+}
 
 
 /* Shared navigation: keep shell tokens, one sidebar for every authorized role. */

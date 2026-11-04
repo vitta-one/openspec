@@ -77,39 +77,36 @@ def root_page() -> rx.Component:
 
 
 def login_page() -> rx.Component:
-    """Render the premium internal authentication entry point."""
+    """Prioritize authentication while preserving the Vitta One split layout."""
     content = rx.box(
         rx.box(
+            brand_logo(width="10rem"),
             rx.box(
-                brand_logo(width="10rem"),
-
-            ),
-            rx.box(
-                rx.text(
-                    "ACESSO SEGURO",
-                    class_name="vitta-login-kicker",
-                ),
                 rx.heading(
-                    "Bem-vindo de volta.",
+                    "Acesse sua conta",
                     font_size=rx.breakpoints(initial="2rem", sm="2.45rem"),
-                    line_height="1.08",
-                    letter_spacing="-0.045em",
+                    line_height="1.12",
+                    letter_spacing="-0.035em",
                     font_family="var(--vitta-font-display)",
-                    margin_top="1rem",
                     class_name="vitta-login-title",
                 ),
                 rx.text(
-                    "Entre com suas credenciais para acessar o ambiente operacional da clínica.",
+                    "Entre com seu e-mail e senha para continuar.",
                     color="var(--vitta-text-muted)",
-                    line_height="1.65",
-                    margin_top="0.75rem",
+                    line_height="1.6",
+                    margin_top="0.7rem",
                     max_width="42ch",
                     class_name="vitta-login-lead",
                 ),
                 rx.box(login_form(), margin_top="1.75rem"),
+                rx.text(
+                    "Acesso exclusivo a usuários autorizados.",
+                    color="var(--vitta-text-subtle)",
+                    font_size="0.8rem",
+                    margin_top="1.4rem",
+                ),
                 class_name="vitta-login-form-wrap",
             ),
-
             class_name="vitta-login-form-pane",
         ),
         rx.box(
@@ -118,73 +115,29 @@ def login_page() -> rx.Component:
                     rx.icon("activity", size=42),
                     class_name="vitta-login-emblem-icon",
                 ),
-                rx.box(
-                    width="0.65rem",
-                    height="0.65rem",
-                    border_radius="999px",
-                    background="#ffffff",
-                    opacity="0.95",
-                    position="absolute",
-                    right="18%",
-                    top="18%",
-                ),
                 class_name="vitta-login-emblem",
-                aria_hidden="true",
             ),
             rx.box(
-                rx.text(
-                    "CLÍNICA EM FOCO",
-                    font_size="0.72rem",
-                    font_weight="800",
-                    letter_spacing="0.1em",
-                    color="rgba(255,255,255,0.72)",
-                ),
                 rx.heading(
-                    "Uma estação clínica para trabalhar com clareza.",
-                    font_size=rx.breakpoints(initial="2rem", lg="3.15rem"),
-                    line_height="1.04",
-                    letter_spacing="-0.045em",
+                    "Uma rotina clínica mais clara.",
+                    font_size=rx.breakpoints(initial="2rem", lg="2.75rem"),
+                    line_height="1.1",
+                    letter_spacing="-0.035em",
                     color="#ffffff",
                     font_family="var(--vitta-font-display)",
-                    max_width="12ch",
-                    margin_top="0.7rem",
+                    max_width="14ch",
                 ),
                 rx.text(
-                    "Pacientes, equipe e operação organizados em uma experiência única, precisa e rastreável.",
-                    color="rgba(255,255,255,0.78)",
-                    line_height="1.65",
-                    max_width="48ch",
-                    margin_top="1rem",
-                ),
-                rx.flex(
-                    rx.hstack(
-                        rx.icon("users", size=16),
-                        rx.text("Recepção", font_size="0.8rem", font_weight="700"),
-                        spacing="2",
-                        align="center",
-                        class_name="vitta-login-feature",
-                    ),
-                    rx.hstack(
-                        rx.icon("stethoscope", size=16),
-                        rx.text("Equipe clínica", font_size="0.8rem", font_weight="700"),
-                        spacing="2",
-                        align="center",
-                        class_name="vitta-login-feature",
-                    ),
-                    rx.hstack(
-                        rx.icon("settings", size=16),
-                        rx.text("Administração", font_size="0.8rem", font_weight="700"),
-                        spacing="2",
-                        align="center",
-                        class_name="vitta-login-feature",
-                    ),
-                    gap="0.5rem",
-                    flex_wrap="wrap",
-                    margin_top="1.35rem",
+                    "Agenda, atendimento e prontuário em um ambiente integrado.",
+                    color="rgba(255,255,255,0.87)",
+                    line_height="1.6",
+                    max_width="40ch",
+                    margin_top="0.95rem",
                 ),
                 class_name="vitta-login-caption",
             ),
             class_name="vitta-login-visual",
+            aria_hidden="true",
         ),
         class_name="vitta-login-shell",
     )

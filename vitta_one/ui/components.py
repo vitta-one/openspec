@@ -62,6 +62,18 @@ _NAV_BY_ROLE = {
     ),
 }
 
+_ADMIN_TASK_NAV = (
+    ("Gestão da clínica", "/admin", "layout_dashboard", "administracao"),
+    ("Funcionários", "/admin/funcionarios", "users", "funcionarios"),
+    ("Profissionais", "/admin/profissionais", "stethoscope", "profissionais"),
+    ("Especialidades", "/admin/especialidades", "list_filter", "especialidades"),
+    ("Horários", "/admin/horarios", "calendar_clock", "horarios"),
+    ("Configurações", "/admin/configuracoes", "settings", "configuracoes"),
+)
+
+_ADMIN_MANAGEMENT_NAV = _ADMIN_TASK_NAV[1:]
+
+# These routes remain server-restricted to the explicit local QA preview.
 _ADMIN_PREVIEW_NAV = (
     ("Recepção", "/admin/recepcao", "users", "recepcao"),
     ("Agenda", "/admin/agenda", "calendar", "agenda"),
@@ -69,15 +81,6 @@ _ADMIN_PREVIEW_NAV = (
     ("Pacientes", "/admin/pacientes", "user", "pacientes"),
     ("Financeiro", "/admin/financeiro", "wallet", "financeiro"),
 )
-
-_ADMIN_MANAGEMENT_NAV = (
-    ("Funcionários", "/admin/funcionarios", "users", "funcionarios"),
-    ("Profissionais", "/admin/profissionais", "stethoscope", "profissionais"),
-    ("Especialidades", "/admin/especialidades", "list", "especialidades"),
-    ("Horários", "/admin/horarios", "calendar_clock", "horarios"),
-    ("Configurações", "/admin/configuracoes", "settings", "configuracoes"),
-)
-
 
 
 def brand_logo(*, width: str = "9rem") -> rx.Component:
@@ -186,7 +189,7 @@ def field_label(text: str, control_id: str) -> rx.Component:
 
 
 def login_form() -> rx.Component:
-    """Render the public login form with an accessible icon-only password reveal."""
+    """Accessible login using the shared field, feedback and action primitives."""
     return rx.el.form(
         rx.vstack(
             rx.box(
@@ -202,10 +205,22 @@ def login_form() -> rx.Component:
                     class_name="vitta-input",
                     placeholder="seu.email@clinica.com",
                     margin_top="0.45rem",
-                    aria_invalid=AuthState.login_error != "",
+                    aria_invalid=AuthState.login_email_error != "",
                     aria_describedby=rx.cond(
-                        AuthState.login_error != "", "login-error", ""
+                        AuthState.login_email_error != "", "login-email-error", ""
                     ),
+                ),
+                rx.cond(
+                    AuthState.login_email_error != "",
+                    rx.text(
+                        AuthState.login_email_error,
+                        id="login-email-error",
+                        role="alert",
+                        color="var(--vitta-danger)",
+                        font_size="0.82rem",
+                        margin_top="0.4rem",
+                    ),
+                    rx.fragment(),
                 ),
                 width="100%",
             ),
@@ -220,9 +235,9 @@ def login_form() -> rx.Component:
                         auto_complete="current-password",
                         class_name="vitta-input vitta-password-input",
                         placeholder="Digite sua senha",
-                        aria_invalid=AuthState.login_error != "",
+                        aria_invalid=AuthState.login_password_error != "",
                         aria_describedby=rx.cond(
-                            AuthState.login_error != "", "login-error", ""
+                            AuthState.login_password_error != "", "login-password-error", ""
                         ),
                     ),
                     rx.button(
@@ -246,14 +261,24 @@ def login_form() -> rx.Component:
                     position="relative",
                     margin_top="0.45rem",
                 ),
+                rx.cond(
+                    AuthState.login_password_error != "",
+                    rx.text(
+                        AuthState.login_password_error,
+                        id="login-password-error",
+                        role="alert",
+                        color="var(--vitta-danger)",
+                        font_size="0.82rem",
+                        margin_top="0.4rem",
+                    ),
+                    rx.fragment(),
+                ),
                 width="100%",
             ),
-            rx.box(
-                AuthState.login_error,
-                id="login-error",
-                role="status",
-                aria_live="polite",
-                class_name="vitta-sr-only",
+            rx.cond(
+                AuthState.login_error != "",
+                error_banner(AuthState.login_error, "login-error"),
+                rx.fragment(),
             ),
             rx.button(
                 rx.hstack(
@@ -262,7 +287,11 @@ def login_form() -> rx.Component:
                         rx.spinner(size="2"),
                         rx.icon("log_in", size=18),
                     ),
-                    rx.text("Entrar"),
+                    rx.cond(
+                        AuthState.is_submitting,
+                        rx.text("Entrando…"),
+                        rx.text("Entrar"),
+                    ),
                     spacing="2",
                     align="center",
                     justify="center",
@@ -274,6 +303,7 @@ def login_form() -> rx.Component:
                 color_scheme="teal",
                 high_contrast=True,
                 disabled=AuthState.is_submitting,
+                aria_busy=AuthState.is_submitting,
                 class_name="vitta-primary-action",
             ),
             spacing="4",
@@ -281,8 +311,10 @@ def login_form() -> rx.Component:
         ),
         on_submit=AuthState.login,
         no_validate=True,
+        reset_on_submit=False,
         width="100%",
         class_name="vitta-login-form",
+        aria_busy=AuthState.is_submitting,
     )
 
 
@@ -330,7 +362,8 @@ def _nav_group_heading(label: str) -> rx.Component:
 
 def _admin_navigation(active: str) -> rx.Component:
     preview_items = rx.vstack(
-        _nav_group_heading("Visualizações de QA"),
+        _nav_group_heading("Inspeção local · QA"),
+        rx.text("Visualizações somente leitura", class_name="vitta-sidebar-section-hint"),
         *[
             _nav_link(label, href, icon, active=key == active)
             for label, href, icon, key in _ADMIN_PREVIEW_NAV
@@ -365,8 +398,8 @@ def _admin_navigation(active: str) -> rx.Component:
         class_name="vitta-nav-group",
     )
     return rx.vstack(
-        rx.cond(AuthState.local_admin_preview, preview_items, rx.fragment()),
         management_items,
+        rx.cond(AuthState.local_admin_preview, preview_items, rx.fragment()),
         spacing="3",
         align="stretch",
         width="100%",
@@ -586,7 +619,7 @@ def authenticated_topbar(role: Role) -> rx.Component:
             rx.icon("menu", size=21),
             type="button", variant="ghost", color_scheme="gray",
             on_click=SidebarState.toggle_desktop,
-            aria_label="Recolher ou expandir menu",
+            aria_label=rx.cond(SidebarState.desktop_open, "Recolher navegação", "Expandir navegação"),
             aria_controls="vitta-sidebar",
             aria_expanded=SidebarState.desktop_open,
             class_name="vitta-hamburger-desktop",
@@ -595,7 +628,7 @@ def authenticated_topbar(role: Role) -> rx.Component:
             rx.icon("menu", size=21),
             type="button", variant="ghost", color_scheme="gray",
             on_click=SidebarState.toggle_mobile,
-            aria_label="Abrir ou fechar navegação",
+            aria_label=rx.cond(SidebarState.mobile_open, "Fechar navegação", "Abrir navegação"),
             aria_controls="vitta-sidebar",
             aria_expanded=SidebarState.mobile_open,
             class_name="vitta-hamburger-mobile",

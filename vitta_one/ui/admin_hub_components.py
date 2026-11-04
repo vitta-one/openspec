@@ -28,49 +28,67 @@ def _admin_destination(title: str, description: str, href: str, icon: str) -> rx
     )
 
 
+def _admin_group(title: str, *destinations: rx.Component) -> rx.Component:
+    """Group related destinations into one compact, keyboard-friendly list."""
+    return rx.el.section(
+        rx.heading(title, size="4", class_name="vitta-admin-hub-heading"),
+        rx.vstack(
+            *destinations,
+            spacing="0",
+            align="stretch",
+            width="100%",
+            class_name="vitta-admin-hub-list",
+        ),
+        class_name="vitta-admin-hub-group",
+    )
+
+
 def admin_hub_workspace() -> rx.Component:
-    """The admin landing screen routes to one task instead of rendering all forms."""
+    """Compact landing page with real task links and no fictitious metrics."""
     return rx.vstack(
         page_header(
             "Administração",
             "Gestão da clínica",
-            "Selecione o que precisa fazer. Cada operação tem seu próprio espaço.",
+            "Acesse as tarefas administrativas da clínica.",
         ),
-        section_panel(
-            rx.vstack(
-                rx.heading("Equipe e acessos", size="4", color="var(--vitta-text)"),
+        rx.box(
+            _admin_group(
+                "Equipe e acessos",
                 _admin_destination(
                     "Criar funcionário",
-                    "Escolha entre Médico e Recepcionista antes de preencher o cadastro.",
-                    "/admin/funcionarios", "user_plus",
+                    "Cadastre um médico ou recepcionista.",
+                    "/admin/funcionarios/novo", "user_plus",
                 ),
                 _admin_destination(
-                    "Gerenciar médicos",
-                    "Consulte, edite e acompanhe os profissionais cadastrados.",
+                    "Profissionais",
+                    "Consulte e gerencie os médicos cadastrados.",
                     "/admin/profissionais", "stethoscope",
                 ),
                 _admin_destination(
                     "Especialidades",
-                    "Cadastre ou organize as áreas de atendimento.",
+                    "Organize as áreas de atendimento da clínica.",
                     "/admin/especialidades", "list_filter",
                 ),
-                rx.divider(),
-                rx.heading("Agenda e clínica", size="4", color="var(--vitta-text)"),
+            ),
+            _admin_group(
+                "Agenda e clínica",
                 _admin_destination(
                     "Gerenciar horários",
-                    "Configure o expediente, horários avulsos e consulte a disponibilidade.",
+                    "Configure expedientes e consulte a disponibilidade médica.",
                     "/admin/horarios", "calendar_clock",
                 ),
                 _admin_destination(
                     "Configurações da clínica",
-                    "Atualize os dados de funcionamento disponíveis para os pacientes.",
+                    "Consulte as informações exibidas no portal do paciente.",
                     "/admin/configuracoes", "settings",
                 ),
-                spacing="2", align="stretch", width="100%",
             ),
-            padding=rx.breakpoints(initial="0.85rem", sm="1.25rem"),
+            class_name="vitta-admin-hub-groups",
         ),
-        spacing="4", align="stretch", width="100%",
+        spacing="4",
+        align="stretch",
+        width="100%",
+        class_name="vitta-admin-hub",
     )
 
 
