@@ -190,17 +190,6 @@ def _admin_slot_day(day) -> rx.Component:
     )
 
 
-def _reception_slot_day(day) -> rx.Component:
-    return rx.box(
-        rx.heading(day["date_label"], size="3", margin_bottom="0.75rem"),
-        rx.vstack(
-            rx.foreach(day["slots"], _available_slot_row),
-            spacing="2", width="100%", align="stretch", role="list",
-        ),
-        width="100%", class_name="vitta-day-group",
-    )
-
-
 def _weekday_select(*, control_id: str, value, on_change) -> rx.Component:
     return rx.select.root(
         rx.select.trigger(id=control_id, width="100%", class_name="vitta-select-trigger"),
@@ -516,33 +505,6 @@ def admin_availability_panel() -> rx.Component:
             align="stretch",
             width="100%",
         ),
-    )
-
-
-def _available_slot_row(row) -> rx.Component:
-    return rx.box(
-        rx.flex(
-            rx.box(
-                rx.text(row["time_label"], font_weight="750", size="4", class_name="vitta-tabular"),
-                rx.text(row["professional_name"], size="1", color="var(--vitta-text-muted)", margin_top="0.15rem"),
-            ),
-            rx.button(
-                "Agendar",
-                type="button",
-                color_scheme="teal",
-                high_contrast=True,
-                size="2",
-                on_click=ReceptionAgendaState.schedule(row["id"]),
-                disabled=(ReceptionAgendaState.selected_patient_id == 0) | ReceptionAgendaState.is_submitting,
-            ),
-            direction=rx.breakpoints(initial="column", sm="row"),
-            align=rx.breakpoints(initial="stretch", sm="center"),
-            justify="between",
-            gap="0.65rem",
-            width="100%",
-        ),
-        class_name="vitta-schedule-row",
-        role="listitem",
     )
 
 
@@ -889,9 +851,401 @@ def _cancel_dialog() -> rx.Component:
     )
 
 
+def _booking_patient_result(row) -> rx.Component:
+    return rx.button(
+        rx.flex(
+            rx.vstack(
+                rx.text(row["name"], font_weight="700", size="2"),
+                rx.text(row["contact_hint"], size="1", color="var(--vitta-text-muted)"),
+                spacing="1", align="start",
+            ),
+            rx.icon("chevron_right", size=16),
+            justify="between", align="center", width="100%",
+        ),
+        type="button", variant="outline", color_scheme="teal",
+        width="100%", min_height="3.3rem",
+        on_click=ReceptionAgendaState.select_booking_patient(row["id"]),
+        disabled=ReceptionAgendaState.is_booking_loading,
+        class_name="vitta-booking-patient-result",
+    )
+
+
+def _booking_patient_step() -> rx.Component:
+    return rx.vstack(
+        rx.text("Encontre o paciente por nome, CPF ou telefone.", size="2",
+                color="var(--vitta-text-muted)", id="booking-patient-hint"),
+        rx.el.form(
+            rx.flex(
+                rx.box(
+                    field_label("Buscar paciente", "booking-patient-query"),
+                    rx.el.input(
+                        id="booking-patient-query", name="query", type="search",
+                        value=ReceptionAgendaState.booking_patient_query,
+                        on_change=ReceptionAgendaState.update_booking_patient_query,
+                        placeholder="Nome, CPF ou telefone", max_length=100,
+                        required=True, min_length=2,
+                        aria_describedby="booking-patient-hint",
+                        class_name="vitta-input", margin_top="0.4rem",
+                        width="100%",
+                    ),
+                    flex="1", min_width="0",
+                ),
+                rx.button("Buscar", type="submit", color_scheme="teal",
+                          disabled=ReceptionAgendaState.is_booking_loading,
+                          loading=ReceptionAgendaState.is_booking_loading,
+                          align_self="end", min_height="2.8rem"),
+                direction=rx.breakpoints(initial="column", sm="row"),
+                gap="2", align="stretch", width="100%",
+            ),
+            on_submit=ReceptionAgendaState.search_booking_patients,
+            width="100%",
+        ),
+        rx.cond(
+            ReceptionAgendaState.selected_patient_id > 0,
+            rx.flex(
+                rx.hstack(rx.icon("check_circle", size=18),
+                          rx.text(ReceptionAgendaState.selected_patient_name,
+                                  font_weight="700", size="2"), spacing="2"),
+                rx.button("Trocar", type="button", variant="ghost", size="2",
+                          on_click=ReceptionAgendaState.clear_booking_patient),
+                justify="between", align="center", width="100%", gap="2",
+                flex_wrap="wrap", class_name="vitta-selection-bar",
+            ),
+            rx.fragment(),
+        ),
+        rx.cond(
+            ReceptionAgendaState.booking_patients.length() > 0,
+            rx.vstack(
+                rx.text("Resultados da busca", font_weight="700", size="2"),
+                rx.foreach(ReceptionAgendaState.booking_patients, _booking_patient_result),
+                spacing="2", align="stretch", width="100%", role="list",
+                class_name="vitta-booking-results",
+            ),
+            rx.fragment(),
+        ),
+        rx.link("Cadastrar novo paciente", href="/recepcao/pacientes/novo",
+                color="var(--vitta-primary)", size="2"),
+        spacing="4", align="stretch", width="100%",
+    )
+
+
+def _booking_professional_step() -> rx.Component:
+    return rx.vstack(
+        rx.text("Selecione o profissional que realizará a consulta.",
+                color="var(--vitta-text-muted)", size="2"),
+        field_label("Médico", "booking-professional"),
+        rx.select.root(
+            rx.select.trigger(id="booking-professional", width="100%",
+                              class_name="vitta-select-trigger"),
+            rx.select.content(
+                rx.select.item("Selecione um médico", value="__none__"),
+                rx.foreach(
+                    ReceptionAgendaState.booking_professionals,
+                    lambda row: rx.select.item(row["label"], value=row["value"]),
+                ),
+                position="popper",
+            ),
+            value=ReceptionAgendaState.booking_professional,
+            on_change=ReceptionAgendaState.choose_booking_professional,
+            disabled=ReceptionAgendaState.is_booking_loading,
+            size="3",
+        ),
+        rx.cond(
+            ReceptionAgendaState.booking_specialties != "",
+            rx.box(
+                rx.text("Especialidade(s) vinculada(s)", font_weight="700", size="1"),
+                rx.text(ReceptionAgendaState.booking_specialties, size="2", margin_top="0.2rem"),
+                class_name="vitta-info-strip",
+            ),
+            rx.text("A especialidade é opcional quando não há vínculo no cadastro.",
+                    color="var(--vitta-text-muted)", size="2"),
+        ),
+        rx.cond(
+            ReceptionAgendaState.booking_professionals.length() == 0,
+            empty_state("stethoscope", "Nenhum médico disponível",
+                        "A Administração precisa cadastrar um médico ativo."),
+            rx.fragment(),
+        ),
+        spacing="3", align="stretch", width="100%",
+    )
+
+
+def _booking_calendar_day(day) -> rx.Component:
+    return rx.button(
+        rx.vstack(
+            rx.text(day["day"], font_weight="700", size="2"),
+            rx.cond(day["has_slots"],
+                    rx.text(day["slot_count"], " horários",
+                            size="1", class_name="vitta-calendar-day-count"),
+                    rx.fragment()),
+            spacing="1", align="center", justify="center",
+        ),
+        type="button",
+        class_name=rx.cond(
+            day["is_selected"], "vitta-calendar-date is-selected",
+            rx.cond(day["has_slots"], "vitta-calendar-date has-slots",
+                    "vitta-calendar-date is-unavailable"),
+        ),
+        disabled=~day["has_slots"] | ReceptionAgendaState.is_booking_loading,
+        on_click=ReceptionAgendaState.choose_booking_date(day["date_label"]),
+        aria_label=day["aria_label"], aria_pressed=day["is_selected"],
+        width="100%",
+    )
+
+
+def _booking_calendar_step() -> rx.Component:
+    return rx.vstack(
+        rx.text("Dias destacados possuem horários livres do médico selecionado.",
+                color="var(--vitta-text-muted)", size="2"),
+        rx.box(
+            rx.flex(
+                rx.button(rx.icon("chevron_left", size=18), type="button",
+                          variant="ghost", aria_label="Mês anterior",
+                          on_click=ReceptionAgendaState.move_booking_month(-1),
+                          disabled=~ReceptionAgendaState.booking_can_move_previous_month),
+                rx.heading(ReceptionAgendaState.booking_month_title, size="4"),
+                rx.button(rx.icon("chevron_right", size=18), type="button",
+                          variant="ghost", aria_label="Próximo mês",
+                          on_click=ReceptionAgendaState.move_booking_month(1),
+                          disabled=~ReceptionAgendaState.booking_can_move_next_month),
+                align="center", justify="between", width="100%",
+                class_name="vitta-calendar-header",
+            ),
+            rx.grid(
+                *[rx.center(rx.text(name, size="1", font_weight="700"))
+                  for name in ("Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb")],
+                columns="7", gap="1", class_name="vitta-calendar-weekdays",
+            ),
+            rx.grid(
+                rx.foreach(ReceptionAgendaState.booking_calendar_days, _booking_calendar_day),
+                columns="7", gap="1", class_name="vitta-calendar-grid",
+            ),
+            class_name="vitta-availability-calendar vitta-booking-calendar",
+        ),
+        rx.cond(
+            ReceptionAgendaState.booking_slots.length() == 0,
+            empty_state("calendar_days", "Sem horários disponíveis",
+                        "Escolha outro médico ou tente novamente quando houver horários publicados."),
+            rx.fragment(),
+        ),
+        rx.cond(
+            ReceptionAgendaState.booking_date != "",
+            rx.text("Data selecionada: ", ReceptionAgendaState.booking_date,
+                    color="var(--vitta-primary)", font_weight="700", size="2"),
+            rx.fragment(),
+        ),
+        spacing="3", align="stretch", width="100%",
+    )
+
+
+def _booking_hour_option(row) -> rx.Component:
+    return rx.button(
+        row["time_label"], type="button", size="3", variant="outline",
+        color_scheme="teal",
+        class_name=rx.cond(
+            ReceptionAgendaState.booking_slot_id == row["id"],
+            "vitta-booking-time is-selected", "vitta-booking-time",
+        ),
+        aria_pressed=ReceptionAgendaState.booking_slot_id == row["id"],
+        aria_label="Selecionar horário " + row["time_label"],
+        on_click=ReceptionAgendaState.choose_booking_slot(row["id"]),
+        disabled=ReceptionAgendaState.is_booking_loading,
+    )
+
+
+def _booking_time_step() -> rx.Component:
+    return rx.vstack(
+        rx.flex(
+            rx.box(
+                rx.heading(ReceptionAgendaState.booking_date, size="4"),
+                rx.text("Horários livres para " ,
+                        ReceptionAgendaState.booking_professional_name,
+                        size="2", color="var(--vitta-text-muted)"),
+            ),
+            rx.button(rx.icon("refresh_cw", size=16), "Atualizar horários",
+                      type="button", variant="outline", size="2", color_scheme="teal",
+                      on_click=ReceptionAgendaState.refresh_booking_availability,
+                      disabled=ReceptionAgendaState.is_booking_loading),
+            justify="between", align="center", gap="3", width="100%", flex_wrap="wrap",
+        ),
+        rx.cond(
+            ReceptionAgendaState.booking_date_slots.length() > 0,
+            rx.grid(
+                rx.foreach(ReceptionAgendaState.booking_date_slots, _booking_hour_option),
+                columns=rx.breakpoints(initial="3", sm="4", md="5"),
+                gap="2", width="100%",
+            ),
+            empty_state("clock", "Nenhum horário livre neste dia",
+                        "Volte ao calendário e escolha outro dia disponível."),
+        ),
+        spacing="4", align="stretch", width="100%",
+    )
+
+
+def _booking_review_step() -> rx.Component:
+    return rx.vstack(
+        rx.text("Confira todos os dados antes de confirmar a reserva.",
+                size="2", color="var(--vitta-text-muted)"),
+        rx.box(
+            rx.vstack(
+                rx.text("Paciente", size="1", color="var(--vitta-text-muted)"),
+                rx.text(ReceptionAgendaState.selected_patient_name, font_weight="700"),
+                rx.divider(),
+                rx.text("Médico", size="1", color="var(--vitta-text-muted)"),
+                rx.text(ReceptionAgendaState.booking_professional_name, font_weight="700"),
+                rx.cond(
+                    ReceptionAgendaState.booking_specialties != "",
+                    rx.text(ReceptionAgendaState.booking_specialties, size="2",
+                            color="var(--vitta-text-muted)"),
+                    rx.fragment(),
+                ),
+                rx.divider(),
+                rx.text("Data e horário", size="1", color="var(--vitta-text-muted)"),
+                rx.text(ReceptionAgendaState.booking_slot_label,
+                        font_weight="700", class_name="vitta-tabular"),
+                spacing="2", align="stretch",
+            ),
+            class_name="vitta-booking-summary",
+        ),
+        rx.text("A disponibilidade será verificada novamente no momento da confirmação.",
+                size="1", color="var(--vitta-text-muted)"),
+        spacing="4", align="stretch", width="100%",
+    )
+
+
+def _booking_dialog() -> rx.Component:
+    """Single five-step booking dialog, shared by Reception dashboard and Agenda."""
+    return rx.fragment(
+        rx.dialog.root(
+            rx.dialog.content(
+                rx.flex(
+                    rx.box(
+                        rx.dialog.title("Agendar consulta", size="5"),
+                        rx.dialog.description(
+                            "Selecione paciente, médico, data e horário sem sair da Recepção.",
+                            size="2", margin_top="0.35rem",
+                        ),
+                    ),
+                    rx.button(
+                        rx.icon("x", size=18), type="button", variant="ghost",
+                        aria_label="Fechar agendamento", title="Fechar agendamento",
+                        on_click=ReceptionAgendaState.cancel_booking,
+                        disabled=ReceptionAgendaState.is_submitting,
+                    ),
+                    justify="between", align="start", gap="3", width="100%",
+                ),
+                rx.hstack(
+                    rx.text("Etapa ", ReceptionAgendaState.booking_step, " de 5",
+                            size="2", color="var(--vitta-primary)", font_weight="700"),
+                    rx.text(
+                        rx.cond(ReceptionAgendaState.booking_step == 1, "Paciente",
+                        rx.cond(ReceptionAgendaState.booking_step == 2, "Médico",
+                        rx.cond(ReceptionAgendaState.booking_step == 3, "Data",
+                        rx.cond(ReceptionAgendaState.booking_step == 4, "Horário",
+                                "Revisão")))),
+                        size="2", font_weight="700",
+                    ),
+                    justify="between", width="100%",
+                    class_name="vitta-booking-step-indicator",
+                    role="status", aria_live="polite",
+                ),
+                rx.box(
+                    rx.cond(
+                        ReceptionAgendaState.booking_step == 1, _booking_patient_step(),
+                        rx.cond(
+                            ReceptionAgendaState.booking_step == 2, _booking_professional_step(),
+                            rx.cond(
+                                ReceptionAgendaState.booking_step == 3, _booking_calendar_step(),
+                                rx.cond(
+                                    ReceptionAgendaState.booking_step == 4,
+                                    _booking_time_step(), _booking_review_step(),
+                                ),
+                            ),
+                        ),
+                    ),
+                    rx.cond(
+                        ReceptionAgendaState.booking_error_message != "",
+                        rx.box(
+                            rx.hstack(rx.icon("alert_circle", size=16),
+                                      rx.text(ReceptionAgendaState.booking_error_message, size="2"),
+                                      spacing="2"),
+                            role="alert", id="booking-error",
+                            class_name="vitta-booking-error",
+                        ),
+                        rx.fragment(),
+                    ),
+                    rx.cond(
+                        ReceptionAgendaState.is_booking_loading,
+                        rx.hstack(rx.spinner(size="2"), rx.text("Atualizando dados...", size="2"),
+                                  role="status", aria_live="polite", spacing="2"),
+                        rx.fragment(),
+                    ),
+                    class_name="vitta-booking-body",
+                ),
+                rx.flex(
+                    rx.button("Cancelar", type="button", variant="ghost",
+                              on_click=ReceptionAgendaState.cancel_booking,
+                              disabled=ReceptionAgendaState.is_submitting),
+                    rx.hstack(
+                        rx.cond(
+                            ReceptionAgendaState.booking_step > 1,
+                            rx.button("Voltar", type="button", variant="outline",
+                                      on_click=ReceptionAgendaState.booking_back,
+                                      disabled=ReceptionAgendaState.is_submitting),
+                            rx.fragment(),
+                        ),
+                        rx.cond(
+                            ReceptionAgendaState.booking_step < 5,
+                            rx.button("Continuar", type="button", color_scheme="teal",
+                                      high_contrast=True,
+                                      on_click=ReceptionAgendaState.booking_next,
+                                      disabled=ReceptionAgendaState.is_booking_loading),
+                            rx.button("Confirmar agendamento", type="button",
+                                      color_scheme="teal", high_contrast=True,
+                                      on_click=ReceptionAgendaState.confirm_booking,
+                                      disabled=ReceptionAgendaState.is_submitting
+                                               | ReceptionAgendaState.is_booking_loading,
+                                      loading=ReceptionAgendaState.is_submitting),
+                        ),
+                        spacing="2", align="center",
+                    ),
+                    justify="between", align="center", gap="2", flex_wrap="wrap",
+                    width="100%", class_name="vitta-booking-footer",
+                ),
+                class_name="vitta-dialog-content vitta-booking-dialog",
+                max_width="44rem",
+            ),
+            open=ReceptionAgendaState.booking_dialog_open,
+            on_open_change=ReceptionAgendaState.set_booking_dialog_open,
+        ),
+        rx.alert_dialog.root(
+            rx.alert_dialog.content(
+                rx.alert_dialog.title("Descartar agendamento?"),
+                rx.alert_dialog.description(
+                    "Os dados preenchidos serão perdidos. Você pode continuar de onde parou.",
+                ),
+                rx.flex(
+                    rx.alert_dialog.cancel(
+                        rx.button("Continuar preenchendo", type="button",
+                                  variant="outline"),
+                    ),
+                    rx.alert_dialog.action(
+                        rx.button("Descartar", type="button", color_scheme="red",
+                                  on_click=ReceptionAgendaState.discard_booking),
+                    ),
+                    justify="end", gap="2", flex_wrap="wrap", margin_top="4",
+                ),
+                max_width="26rem", class_name="vitta-dialog-content",
+            ),
+            open=ReceptionAgendaState.booking_discard_open,
+            on_open_change=ReceptionAgendaState.set_booking_discard_open,
+        ),
+    )
+
+
 def reception_agenda_dialogs() -> rx.Component:
     """Shared appointment dialogs, mounted outside contextual menus."""
-    return rx.fragment(_arrival_dialog(), _reschedule_dialog(), _cancel_dialog())
+    return rx.fragment(_booking_dialog(), _arrival_dialog(), _reschedule_dialog(), _cancel_dialog())
 
 
 def _agenda_week_entry(entry) -> rx.Component:
@@ -1005,6 +1359,13 @@ def reception_agenda_panel() -> rx.Component:
                     ),
                 ),
                 rx.hstack(
+                    rx.button(
+                        rx.icon("calendar_plus", size=17),
+                        "Nova consulta",
+                        type="button", color_scheme="teal", high_contrast=True,
+                        on_click=ReceptionAgendaState.open_booking,
+                        disabled=ReceptionAgendaState.is_submitting,
+                    ),
                     rx.button(
                         rx.icon("chevron_left", size=18),
                         type="button", variant="outline", color_scheme="teal",
@@ -1213,167 +1574,3 @@ def reception_agenda_panel() -> rx.Component:
     )
 
 
-def reception_booking_panel() -> rx.Component:
-    """One task per screen: patient lookup, doctor/date filtering and slot booking."""
-    return section_panel(
-        rx.vstack(
-            rx.heading("Dados do agendamento", size="4"),
-            rx.text("Selecione um paciente e um horário realmente disponível.",
-                    color="var(--vitta-text-muted)", size="2"),
-            rx.grid(
-                rx.box(
-                    field_label("Profissional", "reception-filter-professional"),
-                    rx.box(
-                        _professional_select(
-                            control_id="reception-filter-professional",
-                            value=ReceptionAgendaState.filter_professional,
-                            on_change=ReceptionAgendaState.update_filter_professional,
-                            include_all=True,
-                            disabled=ReceptionAgendaState.is_loading,
-                        ),
-                        margin_top="0.4rem",
-                    ),
-                ),
-                rx.box(
-                    field_label("Data inicial", "reception-filter-start"),
-                    rx.el.input(
-                        id="reception-filter-start",
-                        type="date", lang="pt-BR",
-                        value=ReceptionAgendaState.filter_start_date,
-                        on_change=ReceptionAgendaState.update_filter_start_date,
-                        class_name="vitta-input",
-                        margin_top="0.4rem",
-                    ),
-                ),
-                rx.box(
-                    field_label("Data final", "reception-filter-end"),
-                    rx.el.input(
-                        id="reception-filter-end",
-                        type="date", lang="pt-BR",
-                        value=ReceptionAgendaState.filter_end_date,
-                        on_change=ReceptionAgendaState.update_filter_end_date,
-                        class_name="vitta-input",
-                        margin_top="0.4rem",
-                    ),
-                ),
-                rx.button(
-                    "Aplicar filtros",
-                    type="button",
-                    variant="outline",
-                    color_scheme="teal",
-                    min_height="3rem",
-                    align_self="end",
-                    on_click=ReceptionAgendaState.refresh,
-                    disabled=ReceptionAgendaState.is_loading,
-                ),
-                columns=rx.breakpoints(initial="1", lg="minmax(14rem, 1fr) 10rem 10rem auto"),
-                gap="0.65rem",
-                align_items="end",
-                width="100%",
-                class_name="vitta-filter-strip",
-            ),
-                    rx.el.form(
-                        rx.flex(
-                            rx.box(
-                                field_label("CPF do paciente", "agenda-patient-cpf"),
-                                rx.el.input(
-                                    id="agenda-patient-cpf",
-                                    type="text",
-                                    input_mode="numeric",
-                                    auto_complete="off",
-                                    value=ReceptionAgendaState.patient_cpf,
-                                    on_change=ReceptionAgendaState.update_patient_cpf,
-                                    placeholder="000.000.000-00",
-                                    required=True,
-                                    max_length=14,
-                                    min_length=14,
-                                    pattern=r"[0-9]{3}\.[0-9]{3}\.[0-9]{3}-[0-9]{2}",
-                                    title="Informe o CPF completo: 000.000.000-00",
-                                    class_name="vitta-input",
-                                    margin_top="0.4rem",
-                                ),
-                                flex="1 1 16rem",
-                            ),
-                            rx.button(
-                                "Localizar paciente",
-                                type="submit",
-                                color_scheme="teal",
-                                high_contrast=True,
-                                min_height="3rem",
-                                align_self="end",
-                                disabled=ReceptionAgendaState.is_submitting,
-                                loading=ReceptionAgendaState.is_submitting,
-                            ),
-                            direction=rx.breakpoints(initial="column", sm="row"),
-                            align=rx.breakpoints(initial="stretch", sm="end"),
-                            gap="0.65rem",
-                            width="100%",
-                        ),
-                        on_submit=ReceptionAgendaState.find_patient,
-                        width="100%",
-                    ),
-                    rx.cond(
-                        ReceptionAgendaState.selected_patient_id > 0,
-                        rx.flex(
-                            rx.hstack(
-                                rx.icon("user", size=17),
-                                rx.text(ReceptionAgendaState.selected_patient_name, font_weight="750", size="2"),
-                                spacing="2",
-                                align="center",
-                            ),
-                            rx.button(
-                                "Trocar paciente",
-                                type="button",
-                                variant="ghost",
-                                size="2",
-                                on_click=ReceptionAgendaState.clear_patient,
-                            ),
-                            direction=rx.breakpoints(initial="column", sm="row"),
-                            justify="between",
-                            align=rx.breakpoints(initial="stretch", sm="center"),
-                            gap="0.5rem",
-                            class_name="vitta-selection-bar",
-                            width="100%",
-                        ),
-                        rx.box(
-                            rx.hstack(
-                                rx.icon("info", size=17),
-                                rx.text("Localize um paciente para habilitar o agendamento.", size="2"),
-                                spacing="2",
-                                align="center",
-                            ),
-                            class_name="vitta-info-strip",
-                        ),
-                    ),
-                    rx.cond(
-                        ReceptionAgendaState.is_loading,
-                        rx.center(rx.spinner(size="3"), min_height="10rem", width="100%",
-                                  role="status", aria_live="polite"),
-                        rx.vstack(
-                            rx.box(
-                                rx.heading("Horários disponíveis", size="4"),
-                                rx.cond(
-                                    ReceptionAgendaState.has_available_slots,
-                                    rx.vstack(
-                                        rx.foreach(ReceptionAgendaState.available_slots_by_day, _reception_slot_day),
-                                        spacing="2",
-                                        align="stretch",
-                                        width="100%",
-                                        role="list",
-                                        margin_top="0.8rem",
-                                    ),
-                                    empty_state(
-                                        "calendar",
-                                        "Sem horários disponíveis",
-                                        "Tente outro profissional ou período. A Administração poderá adicionar novos horários.",
-                                    ),
-                                ),
-                                min_width="0",
-                            ),
-                            spacing="3", align="stretch", width="100%",
-                        ),
-                    ),
-
-            spacing="5", align="stretch", width="100%",
-        ),
-    )

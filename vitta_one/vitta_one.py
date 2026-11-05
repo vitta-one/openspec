@@ -239,7 +239,8 @@ app.add_page(
     reception_booking_page,
     route="/recepcao/agenda/nova",
     title="Agendar consulta | Vitta-One",
-    on_load=[AuthState.load_protected, ReceptionAgendaState.load],
+    on_load=[AuthState.load_protected, ReceptionAgendaState.load,
+             ReceptionDashboardState.load, ReceptionAgendaState.open_booking],
 )
 app.add_page(
     reception_patients_page,

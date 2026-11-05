@@ -26,7 +26,7 @@ from vitta_one.ui.admin_directory_components import (
     specialties_management_workspace,
     professionals_management_workspace,
 )
-from vitta_one.ui.appointment_components import admin_availability_panel, reception_agenda_panel, reception_booking_panel
+from vitta_one.ui.appointment_components import admin_availability_panel, reception_agenda_panel
 from vitta_one.ui.admin_preview_components import (
     agenda_preview,
     clinical_preview,
@@ -445,7 +445,7 @@ def reception_page() -> rx.Component:
     )
 
 
-def reception_agenda_page() -> rx.Component:
+def reception_agenda_page(verified_path: str = "/recepcao/agenda") -> rx.Component:
     """Scheduling, rescheduling, cancellation and check-in; preserved services."""
     return protected_workspace(
         Role.RECEPCIONISTA,
@@ -453,10 +453,12 @@ def reception_agenda_page() -> rx.Component:
             "Agenda",
             "Agenda e check-in",
             "Consulte a semana, localize consultas e confirme a chegada.",
-            rx.link(
-                rx.hstack(rx.icon("calendar_plus", size=17),
-                          rx.text("Agendar consulta"), spacing="2", align="center"),
-                href="/recepcao/agenda/nova",
+            rx.button(
+                rx.icon("calendar_plus", size=17),
+                "Agendar consulta",
+                type="button", color_scheme="teal", high_contrast=True,
+                on_click=ReceptionAgendaState.open_booking,
+                disabled=ReceptionAgendaState.is_submitting,
                 class_name="vitta-primary-action",
             ),
         ),
@@ -467,17 +469,8 @@ def reception_agenda_page() -> rx.Component:
 
 
 def reception_booking_page() -> rx.Component:
-    """Dedicated booking screen using the existing server-authorized scheduling flow."""
-    return protected_workspace(
-        Role.RECEPCIONISTA,
-        breadcrumb(("Recepção", "/recepcao"), ("Agenda", "/recepcao/agenda"),
-                   ("Nova consulta", None)),
-        page_header("Agenda", "Agendar consulta",
-                    "Localize o paciente e reserve um horário disponível."),
-        reception_booking_panel(),
-        active="agenda",
-        verified_path="/recepcao/agenda/nova",
-    )
+    """Compatibility route: show the canonical Agenda with its booking modal."""
+    return reception_agenda_page(verified_path="/recepcao/agenda/nova")
 
 
 def reception_patients_page() -> rx.Component:

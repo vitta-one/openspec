@@ -20,6 +20,7 @@ from vitta_one.appointment_scheduling.service import (
 )
 from vitta_one.appointment_scheduling.weekly import save_weekly_schedule
 from vitta_one.models.appointment import ProfessionalWeeklySchedule
+from vitta_one.models.professional import ProfessionalSpecialty, Specialty
 
 def admin_get_weekly_schedule(db: Session, *, token: str, professional_id: int):
     require_role(db, token, Role.ADMINISTRADOR)
@@ -97,6 +98,32 @@ def admin_set_availability_slot_active(
 def reception_list_active_professionals(db: Session, *, token: str) -> list[ProfessionalOption]:
     require_role(db, token, Role.RECEPCIONISTA)
     return list_active_professionals(db)
+
+
+def reception_list_booking_professionals(
+    db: Session, *, token: str
+) -> list[tuple[ProfessionalOption, str]]:
+    """Only active doctors and their active specialties; a specialty is optional."""
+    require_role(db, token, Role.RECEPCIONISTA)
+    professionals = list_active_professionals(db)
+    if not professionals:
+        return []
+    permitted_ids = {item.id for item in professionals}
+    associations = db.exec(
+        select(ProfessionalSpecialty.professional_id, Specialty.name)
+        .join(Specialty, Specialty.id == ProfessionalSpecialty.specialty_id)
+        .where(
+            ProfessionalSpecialty.professional_id.in_(permitted_ids),
+            Specialty.is_active.is_(True),
+        )
+        .order_by(Specialty.name)
+    ).all()
+    names: dict[int, list[str]] = {}
+    for professional_id, specialty_name in associations:
+        names.setdefault(professional_id, []).append(specialty_name)
+    return [
+        (item, ", ".join(names.get(item.id, []))) for item in professionals
+    ]
 
 
 def reception_get_agenda(

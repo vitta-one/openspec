@@ -2675,6 +2675,120 @@ button:disabled,
 }
 .vitta-queue-patient-row > div { gap: 1rem; }
 
+/* Recepção — agendamento no diálogo canônico da Agenda.
+   O corpo rola sem empurrar as ações para fora da viewport. */
+.vitta-booking-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(calc(100vw - 1rem), 44rem);
+  max-width: min(calc(100vw - 1rem), 44rem);
+  max-height: min(90dvh, 48rem);
+  overflow: hidden;
+  padding: clamp(.85rem, 2vw, 1.4rem);
+  gap: .75rem;
+}
+.vitta-booking-step-indicator {
+  padding: .7rem .85rem;
+  border: 1px solid var(--vitta-border);
+  background: var(--vitta-surface-subtle);
+  border-radius: var(--vitta-radius-control);
+}
+.vitta-booking-body {
+  min-height: 5rem;
+  min-width: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1 1 auto;
+  padding: .35rem .15rem .85rem;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+.vitta-booking-footer {
+  flex: 0 0 auto;
+  background: var(--vitta-surface);
+  border-top: 1px solid var(--vitta-border);
+  padding-top: .85rem;
+}
+.vitta-booking-results {
+  max-height: 13rem;
+  overflow-y: auto;
+  padding: .2rem;
+}
+.vitta-booking-patient-result {
+  text-align: left;
+  justify-content: stretch;
+  white-space: normal;
+}
+.vitta-booking-calendar {
+  width: min(100%, 32rem);
+  box-shadow: none;
+}
+.vitta-booking-calendar .vitta-calendar-date {
+  min-width: 0;
+  min-height: 3.55rem;
+  padding: .2rem;
+  border: 1px solid transparent;
+  border-radius: .45rem;
+  background: var(--vitta-surface);
+  color: var(--vitta-text);
+}
+.vitta-booking-calendar .vitta-calendar-date.has-slots {
+  background: var(--vitta-primary-soft);
+  border-color: var(--vitta-primary);
+  color: #115e59;
+}
+.vitta-booking-calendar .vitta-calendar-date.is-selected {
+  background: var(--vitta-primary);
+  border-color: var(--vitta-primary);
+  color: #fff;
+}
+.vitta-booking-calendar .vitta-calendar-date.is-unavailable:disabled {
+  background: var(--vitta-surface-muted);
+  border-color: transparent;
+  color: var(--vitta-text-muted);
+  opacity: 1;
+}
+.vitta-booking-calendar .vitta-calendar-date:focus-visible,
+.vitta-booking-time:focus-visible,
+.vitta-booking-patient-result:focus-visible {
+  outline: 3px solid var(--vitta-focus);
+  outline-offset: 2px;
+}
+.vitta-booking-time {
+  min-width: 0;
+  min-height: 2.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.vitta-booking-time.is-selected {
+  background: var(--vitta-primary);
+  border-color: var(--vitta-primary);
+  color: #fff;
+}
+.vitta-booking-summary {
+  padding: 1rem;
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-control);
+  background: var(--vitta-surface-subtle);
+}
+.vitta-booking-error {
+  padding: .7rem .85rem;
+  border: 1px solid var(--vitta-danger);
+  border-radius: var(--vitta-radius-control);
+  color: var(--vitta-danger);
+  background: var(--vitta-danger-soft);
+  margin-top: .75rem;
+}
+@media (max-width: 390px) {
+  .vitta-booking-dialog { max-height: 94dvh; }
+  .vitta-booking-calendar .vitta-calendar-date { min-height: 3rem; padding: .1rem; }
+  .vitta-booking-calendar .vitta-calendar-date .vitta-calendar-day-count { font-size: .55rem; }
+  .vitta-booking-footer .rt-Button { min-height: 2.65rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vitta-booking-calendar .vitta-calendar-date,
+  .vitta-booking-time { transition: none !important; }
+}
+
 
 /* Reception queue: compact, semantic operational board. */
 .vitta-queue-operational-summary {

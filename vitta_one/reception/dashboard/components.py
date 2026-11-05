@@ -267,6 +267,11 @@ def _appointments_table() -> rx.Component:
                     "calendar",
                     "Nenhuma consulta agendada hoje",
                     "A agenda do dia está vazia. Outras atividades da fila podem continuar em andamento.",
+                    rx.button(
+                        "Agendar primeira consulta",
+                        type="button", variant="outline", color_scheme="teal",
+                        on_click=ReceptionAgendaState.open_booking,
+                    ),
                     min_height="10rem",
                     padding="1.25rem",
                 ),
@@ -407,9 +412,12 @@ def _reception_day_header() -> rx.Component:
         ),
         rx.vstack(
             rx.hstack(
-                rx.link(
+                rx.button(
                     rx.icon("plus", size=16), "Nova consulta",
-                    href="/recepcao/agenda/nova", class_name="vitta-primary-action",
+                    type="button", color_scheme="teal", high_contrast=True,
+                    on_click=ReceptionAgendaState.open_booking,
+                    disabled=ReceptionAgendaState.is_submitting,
+                    class_name="vitta-primary-action",
                 ),
                 rx.button(
                     rx.cond(
@@ -578,8 +586,11 @@ def reception_week_calendar() -> rx.Component:
                             size="2", color="var(--vitta-text-muted)"),
                     spacing="2", align="start",
                 ),
-                rx.link(rx.icon("plus", size=17), "Agendar consulta",
-                        href="/recepcao/agenda/nova", class_name="vitta-context-link"),
+                rx.button(
+                    rx.icon("plus", size=17), "Agendar consulta",
+                    type="button", variant="outline", color_scheme="teal",
+                    on_click=ReceptionAgendaState.open_booking,
+                ),
                 justify="between", align="center", flex_wrap="wrap", gap="3", width="100%",
             ),
             rx.box(
