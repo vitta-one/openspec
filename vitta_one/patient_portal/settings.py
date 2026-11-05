@@ -1,4 +1,4 @@
-"""Deployment-owned public clinic details and application URL."""
+"""Legacy deployment fallback and public activation URL."""
 
 from dataclasses import dataclass
 import os
@@ -10,6 +10,8 @@ class ClinicLocation:
     name: str
     address: str
     configured: bool
+    persisted: bool = False
+    revision: int = 0
 
 
 def clinic_location() -> ClinicLocation:
