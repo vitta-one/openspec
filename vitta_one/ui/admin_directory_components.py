@@ -39,9 +39,7 @@ def specialty_row(row) -> rx.Component:
                     type="button",
                     variant="outline",
                     color_scheme="teal",
-                    on_click=AdminDirectoryState.begin_specialty_edit(
-                        row["id"], row["name"]
-                    ),
+                    on_click=AdminDirectoryState.begin_specialty_edit(row["id"]),
                     disabled=AdminDirectoryState.is_submitting,
                 ),
                 rx.button(
@@ -49,9 +47,7 @@ def specialty_row(row) -> rx.Component:
                     type="button",
                     variant="ghost",
                     color_scheme=rx.cond(row["is_active"], "gray", "teal"),
-                    on_click=AdminDirectoryState.toggle_specialty_active(
-                        row["id"], row["is_active"]
-                    ),
+                    on_click=AdminDirectoryState.begin_specialty_status_change(row["id"]),
                     disabled=AdminDirectoryState.is_submitting,
                 ),
                 gap="0.5rem",
@@ -69,6 +65,78 @@ def specialty_row(row) -> rx.Component:
         border_radius="var(--vitta-radius-control)",
         background="var(--vitta-surface)",
         role="listitem",
+    )
+
+
+def specialty_table_row(row) -> rx.Component:
+    """Compact semantic row for the full specialty directory."""
+    return rx.table.row(
+        rx.table.row_header_cell(
+            rx.text(row["name"], font_weight="650", color="var(--vitta-text)"),
+        ),
+        rx.table.cell(status_badge(row["is_active"], "Ativa", "Inativa")),
+        rx.table.cell(
+            rx.flex(
+                rx.button(
+                    "Editar",
+                    type="button",
+                    variant="outline",
+                    color_scheme="teal",
+                    size="2",
+                    aria_label="Editar especialidade " + row["name"],
+                    on_click=AdminDirectoryState.begin_specialty_edit(row["id"]),
+                    disabled=AdminDirectoryState.is_submitting,
+                ),
+                rx.button(
+                    rx.cond(row["is_active"], "Desativar", "Reativar"),
+                    type="button",
+                    variant="outline",
+                    color_scheme=rx.cond(row["is_active"], "gray", "teal"),
+                    size="2",
+                    aria_label=rx.cond(
+                        row["is_active"],
+                        "Desativar especialidade " + row["name"],
+                        "Reativar especialidade " + row["name"],
+                    ),
+                    on_click=AdminDirectoryState.begin_specialty_status_change(row["id"]),
+                    disabled=AdminDirectoryState.is_submitting,
+                ),
+                justify="end",
+                align="center",
+                gap="0.5rem",
+                flex_wrap="wrap",
+                width="100%",
+            ),
+            justify="end",
+        ),
+    )
+
+
+def specialties_table() -> rx.Component:
+    """Shared Radix table primitives, scrollable only within its own region."""
+    return rx.box(
+        rx.table.root(
+            rx.table.header(
+                rx.table.row(
+                    rx.table.column_header_cell("Especialidade", scope="col"),
+                    rx.table.column_header_cell("Situação", scope="col"),
+                    rx.table.column_header_cell("Ações", scope="col", justify="end"),
+                )
+            ),
+            rx.table.body(
+                rx.foreach(AdminDirectoryState.paged_specialties, specialty_table_row),
+            ),
+            variant="ghost",
+            size="2",
+            width="100%",
+            min_width="34rem",
+            summary="Especialidades cadastradas com situação e ações de manutenção",
+        ),
+        width="100%",
+        max_width="100%",
+        overflow_x="auto",
+        role="region",
+        aria_label="Tabela de especialidades; role para os lados em telas pequenas",
     )
 
 
@@ -196,100 +264,53 @@ def medical_account_select() -> rx.Component:
     )
 
 
-def _specialty_create_form() -> rx.Component:
-    return rx.el.form(
-        rx.vstack(
-            rx.cond(
-                AdminDirectoryState.error_message != "",
-                error_banner(
-                    AdminDirectoryState.error_message,
-                    "specialty-dialog-error",
-                ),
-                rx.fragment(),
-            ),
-            rx.box(
-                field_label("Nome da especialidade", "specialty-create-name"),
-                rx.el.input(
-                    id="specialty-create-name",
-                    name="name",
-                    type="text",
-                    value=AdminDirectoryState.new_specialty_name,
-                    on_change=AdminDirectoryState.update_new_specialty_name,
-                    required=True,
-                    max_length=120,
-                    class_name="vitta-input",
-                    aria_invalid=AdminDirectoryState.error_message != "",
-                    aria_describedby=rx.cond(
-                        AdminDirectoryState.error_message != "",
-                        "specialty-dialog-error",
-                        "",
-                    ),
-                    margin_top="0.4rem",
-                    auto_focus=True,
-                ),
-                width="100%",
-            ),
-            rx.flex(
-                rx.button(
-                    "Cancelar",
-                    type="button",
-                    variant="ghost",
-                    on_click=AdminDirectoryState.cancel_specialty_dialog,
-                    disabled=AdminDirectoryState.is_submitting,
-                ),
-                rx.button(
-                    "Cadastrar especialidade",
-                    type="submit",
-                    color_scheme="teal",
-                    high_contrast=True,
-                    disabled=AdminDirectoryState.is_submitting,
-                    loading=AdminDirectoryState.is_submitting,
-                ),
-                justify="end",
-                gap="0.5rem",
-                direction=rx.breakpoints(initial="column-reverse", sm="row"),
-                width="100%",
-            ),
-            spacing="4",
-            align="stretch",
-            width="100%",
-        ),
-        on_submit=AdminDirectoryState.create_specialty,
-        no_validate=True,
-        width="100%",
+def _specialty_form(*, editing: bool) -> rx.Component:
+    """One form layout, with the State selecting the create/edit action."""
+    input_id = "specialty-edit-name" if editing else "specialty-create-name"
+    field_value = (
+        AdminDirectoryState.editing_specialty_name
+        if editing else AdminDirectoryState.new_specialty_name
     )
-
-
-def _specialty_edit_form() -> rx.Component:
+    on_change = (
+        AdminDirectoryState.update_specialty_edit_name
+        if editing else AdminDirectoryState.update_new_specialty_name
+    )
+    on_submit = (
+        AdminDirectoryState.save_specialty_edit
+        if editing else AdminDirectoryState.create_specialty
+    )
     return rx.el.form(
         rx.vstack(
-            rx.cond(
-                AdminDirectoryState.error_message != "",
-                error_banner(
-                    AdminDirectoryState.error_message,
-                    "specialty-dialog-error",
-                ),
-                rx.fragment(),
-            ),
             rx.box(
-                field_label("Nome da especialidade", "specialty-edit-name"),
+                field_label("Nome da especialidade", input_id),
                 rx.el.input(
-                    id="specialty-edit-name",
+                    id=input_id,
                     name="name",
                     type="text",
-                    value=AdminDirectoryState.editing_specialty_name,
-                    on_change=AdminDirectoryState.update_specialty_edit_name,
+                    value=field_value,
+                    on_change=on_change,
                     required=True,
                     max_length=120,
                     class_name="vitta-input",
-                    aria_invalid=AdminDirectoryState.error_message != "",
+                    aria_invalid=AdminDirectoryState.specialty_form_error != "",
                     aria_describedby=rx.cond(
-                        AdminDirectoryState.error_message != "",
+                        AdminDirectoryState.specialty_form_error != "",
                         "specialty-dialog-error",
                         "",
                     ),
                     margin_top="0.4rem",
                     auto_focus=True,
+                ),
+                rx.cond(
+                    AdminDirectoryState.specialty_form_error != "",
+                    rx.box(
+                        error_banner(
+                            AdminDirectoryState.specialty_form_error,
+                            "specialty-dialog-error",
+                        ),
+                        margin_top="0.65rem",
+                    ),
+                    rx.fragment(),
                 ),
                 width="100%",
             ),
@@ -297,12 +318,13 @@ def _specialty_edit_form() -> rx.Component:
                 rx.button(
                     "Cancelar",
                     type="button",
-                    variant="ghost",
+                    variant="outline",
+                    color_scheme="teal",
                     on_click=AdminDirectoryState.cancel_specialty_dialog,
                     disabled=AdminDirectoryState.is_submitting,
                 ),
                 rx.button(
-                    "Salvar alterações",
+                    "Salvar alterações" if editing else "Cadastrar especialidade",
                     type="submit",
                     color_scheme="teal",
                     high_contrast=True,
@@ -310,7 +332,8 @@ def _specialty_edit_form() -> rx.Component:
                     loading=AdminDirectoryState.is_submitting,
                 ),
                 justify="end",
-                gap="0.5rem",
+                align="center",
+                gap="0.65rem",
                 direction=rx.breakpoints(initial="column-reverse", sm="row"),
                 width="100%",
             ),
@@ -318,7 +341,7 @@ def _specialty_edit_form() -> rx.Component:
             align="stretch",
             width="100%",
         ),
-        on_submit=AdminDirectoryState.save_specialty_edit,
+        on_submit=on_submit,
         no_validate=True,
         width="100%",
     )
@@ -345,14 +368,92 @@ def specialty_dialog() -> rx.Component:
             ),
             rx.cond(
                 AdminDirectoryState.editing_specialty_id > 0,
-                _specialty_edit_form(),
-                _specialty_create_form(),
+                _specialty_form(editing=True),
+                _specialty_form(editing=False),
             ),
             class_name="vitta-dialog-content",
             max_width="34rem",
         ),
         open=AdminDirectoryState.specialty_dialog_open,
         on_open_change=AdminDirectoryState.set_specialty_dialog_open,
+    )
+
+
+def specialty_status_dialog() -> rx.Component:
+    """Confirm the persisted status change before any write is attempted."""
+    return rx.dialog.root(
+        rx.dialog.content(
+            rx.dialog.title(
+                rx.cond(
+                    AdminDirectoryState.pending_specialty_is_active,
+                    "Desativar especialidade",
+                    "Reativar especialidade",
+                )
+            ),
+            rx.dialog.description(
+                rx.cond(
+                    AdminDirectoryState.pending_specialty_is_active,
+                    "A especialidade não poderá ser vinculada a novos profissionais. Os vínculos históricos serão mantidos.",
+                    "A especialidade voltará a estar disponível para novos vínculos profissionais.",
+                ),
+                margin_top="0.5rem",
+                margin_bottom="1rem",
+            ),
+            rx.box(
+                rx.text(
+                    AdminDirectoryState.pending_specialty_name,
+                    font_weight="700",
+                    color="var(--vitta-text)",
+                ),
+                rx.flex(
+                    rx.text("Situação atual:", size="2", color="var(--vitta-text-muted)"),
+                    status_badge(
+                        AdminDirectoryState.pending_specialty_is_active, "Ativa", "Inativa"
+                    ),
+                    align="center",
+                    gap="0.5rem",
+                    margin_top="0.35rem",
+                ),
+                padding="0.85rem",
+                border="1px solid var(--vitta-border)",
+                border_radius="var(--vitta-radius-control)",
+            ),
+            rx.cond(
+                AdminDirectoryState.error_message != "",
+                error_banner(AdminDirectoryState.error_message, "specialty-status-error"),
+                rx.fragment(),
+            ),
+            rx.flex(
+                rx.button(
+                    "Cancelar",
+                    type="button",
+                    variant="ghost",
+                    on_click=AdminDirectoryState.cancel_specialty_status_change,
+                    disabled=AdminDirectoryState.is_submitting,
+                ),
+                rx.button(
+                    rx.cond(
+                        AdminDirectoryState.pending_specialty_is_active,
+                        "Confirmar desativação",
+                        "Confirmar reativação",
+                    ),
+                    type="button",
+                    color_scheme="teal",
+                    high_contrast=True,
+                    on_click=AdminDirectoryState.confirm_specialty_status_change,
+                    disabled=AdminDirectoryState.is_submitting,
+                    loading=AdminDirectoryState.is_submitting,
+                ),
+                justify="end",
+                gap="0.75rem",
+                flex_wrap="wrap",
+                margin_top="1.25rem",
+            ),
+            class_name="vitta-dialog-content",
+            max_width="32rem",
+        ),
+        open=AdminDirectoryState.specialty_status_dialog_open,
+        on_open_change=AdminDirectoryState.set_specialty_status_dialog_open,
     )
 
 
@@ -983,6 +1084,7 @@ def admin_directory_workspace() -> rx.Component:
         rx.box(qa_receptionist_panel(), id="qa-receptionist-setup", width="100%",
                scroll_margin_top="6rem"),
         specialty_dialog(),
+        specialty_status_dialog(),
         professional_dialog(),
         medical_reissue_dialog(),
         spacing="5",
@@ -1154,43 +1256,114 @@ def _directory_pagination(*, is_professional: bool) -> rx.Component:
 
 
 def specialties_management_workspace() -> rx.Component:
-    """All specialties live on a dedicated authenticated management page."""
+    """Dense authenticated specialty directory, with no fabricated records."""
     return rx.vstack(
         page_header(
-            "Administração", "Todas as especialidades",
-            "Organize as áreas de atendimento cadastradas.",
-            rx.button("Nova especialidade", type="button", color_scheme="teal",
-                      on_click=AdminDirectoryState.start_new_specialty),
+            "Administração",
+            "Todas as especialidades",
+            "Pesquise, cadastre e mantenha as especialidades da clínica.",
+            rx.button(
+                "Nova especialidade",
+                type="button",
+                color_scheme="teal",
+                high_contrast=True,
+                on_click=AdminDirectoryState.start_new_specialty,
+                disabled=AdminDirectoryState.is_submitting,
+            ),
         ),
-        rx.link("← Voltar ao painel", href="/admin", class_name="vitta-text-link"),
-        feedback_region(AdminDirectoryState.error_message, AdminDirectoryState.success_message),
+        breadcrumb(("Administração", "/admin"), ("Especialidades", None)),
+        feedback_region(
+            AdminDirectoryState.error_message, AdminDirectoryState.success_message
+        ),
         section_panel(
             rx.vstack(
                 _directory_filters(is_professional=False),
+                rx.flex(
+                    rx.text(
+                        "Resultados: ",
+                        AdminDirectoryState.specialty_result_count,
+                        size="2",
+                        color="var(--vitta-text-muted)",
+                        role="status",
+                        aria_live="polite",
+                    ),
+                    rx.cond(
+                        AdminDirectoryState.has_active_specialty_filters,
+                        rx.button(
+                            "Limpar filtros",
+                            type="button",
+                            variant="ghost",
+                            color_scheme="teal",
+                            size="2",
+                            on_click=AdminDirectoryState.clear_specialty_filters,
+                            disabled=AdminDirectoryState.is_submitting,
+                        ),
+                        rx.fragment(),
+                    ),
+                    justify="between",
+                    align="center",
+                    gap="0.75rem",
+                    width="100%",
+                    flex_wrap="wrap",
+                ),
                 rx.cond(
                     AdminDirectoryState.is_loading,
-                    rx.center(rx.spinner(size="3"), min_height="8rem", width="100%"),
+                    rx.center(
+                        rx.spinner(size="3"),
+                        min_height="8rem",
+                        width="100%",
+                        role="status",
+                        aria_label="Carregando especialidades",
+                    ),
                     rx.cond(
                         AdminDirectoryState.has_filtered_specialties,
-                        rx.vstack(
-                            rx.foreach(AdminDirectoryState.paged_specialties, specialty_row),
-                            spacing="3", align="stretch", width="100%", role="list",
-                        ),
+                        specialties_table(),
                         rx.center(
-                            rx.text("Nenhuma especialidade encontrada. Ajuste a busca ou os filtros.",
-                                    color="var(--vitta-text-muted)", text_align="center"),
-                            min_height="8rem", width="100%",
+                            rx.vstack(
+                                rx.text(
+                                    rx.cond(
+                                        AdminDirectoryState.has_specialties,
+                                        "Nenhuma especialidade encontrada para os filtros selecionados.",
+                                        "Nenhuma especialidade cadastrada.",
+                                    ),
+                                    color="var(--vitta-text-muted)",
+                                    text_align="center",
+                                    size="2",
+                                ),
+                                rx.cond(
+                                    AdminDirectoryState.has_active_specialty_filters,
+                                    rx.button(
+                                        "Limpar filtros",
+                                        type="button",
+                                        variant="outline",
+                                        on_click=AdminDirectoryState.clear_specialty_filters,
+                                    ),
+                                    rx.button(
+                                        "Nova especialidade",
+                                        type="button",
+                                        color_scheme="teal",
+                                        on_click=AdminDirectoryState.start_new_specialty,
+                                    ),
+                                ),
+                                spacing="3",
+                                align="center",
+                            ),
+                            min_height="10rem",
+                            width="100%",
                         ),
                     ),
                 ),
                 _directory_pagination(is_professional=False),
-                spacing="4", align="stretch", width="100%",
-            )
+                spacing="3",
+                align="stretch",
+                width="100%",
+            ),
         ),
         specialty_dialog(),
-        professional_dialog(),
-        medical_reissue_dialog(),
-        spacing="4", align="stretch", width="100%",
+        specialty_status_dialog(),
+        spacing="3",
+        align="stretch",
+        width="100%",
     )
 
 
@@ -1348,6 +1521,7 @@ def professionals_management_workspace() -> rx.Component:
         ),
         professional_dialog(),
         specialty_dialog(),
+        specialty_status_dialog(),
         medical_reissue_dialog(),
         professional_status_dialog(),
         spacing="4", align="stretch", width="100%",

@@ -134,6 +134,14 @@ def create_specialty(db: Session, *, name: str) -> Specialty:
     return specialty
 
 
+def get_specialty(db: Session, *, specialty_id: int) -> SpecialtyItem:
+    """Read the current persisted name for the editor."""
+    item = db.get(Specialty, specialty_id)
+    if item is None:
+        raise DirectoryNotFoundError("A especialidade não está disponível.")
+    return SpecialtyItem(id=item.id, name=item.name, is_active=item.is_active)
+
+
 def list_specialties(
     db: Session, *, recent_limit: int | None = None
 ) -> list[SpecialtyItem]:
@@ -155,10 +163,20 @@ def list_specialties(
     ]
 
 
-def rename_specialty(db: Session, *, specialty_id: int, name: str) -> Specialty:
-    specialty = db.get(Specialty, specialty_id)
+def rename_specialty(
+    db: Session, *, specialty_id: int, name: str,
+    expected_name: str | None = None,
+) -> Specialty:
+    # A lock prevents concurrent renames from silently overwriting an open editor.
+    specialty = db.exec(
+        select(Specialty).where(Specialty.id == specialty_id).with_for_update()
+    ).first()
     if specialty is None:
         raise DirectoryNotFoundError("A especialidade não está disponível.")
+    if expected_name is not None and specialty.name != expected_name:
+        raise DirectoryConflictError(
+            "Esta especialidade foi alterada por outra pessoa. Reabra a edição."
+        )
 
     display, normalized = _validate_specialty_name(name)
     duplicate = db.exec(
@@ -169,6 +187,8 @@ def rename_specialty(db: Session, *, specialty_id: int, name: str) -> Specialty:
     ).first()
     if duplicate is not None:
         raise DirectoryConflictError("Já existe uma especialidade com esse nome.")
+    if specialty.name == display and specialty.normalized_name == normalized:
+        return specialty
 
     specialty.name = display
     specialty.normalized_name = normalized
@@ -184,11 +204,20 @@ def rename_specialty(db: Session, *, specialty_id: int, name: str) -> Specialty:
 
 
 def set_specialty_active(
-    db: Session, *, specialty_id: int, is_active: bool
+    db: Session, *, specialty_id: int, is_active: bool,
+    expected_active: bool | None = None,
 ) -> Specialty:
-    specialty = db.get(Specialty, specialty_id)
+    specialty = db.exec(
+        select(Specialty).where(Specialty.id == specialty_id).with_for_update()
+    ).first()
     if specialty is None:
         raise DirectoryNotFoundError("A especialidade não está disponível.")
+    if expected_active is not None and specialty.is_active != expected_active:
+        raise DirectoryConflictError(
+            "A situação desta especialidade mudou. Atualize a lista e tente novamente."
+        )
+    if specialty.is_active == bool(is_active):
+        return specialty
     specialty.is_active = bool(is_active)
     specialty.updated_at = utc_now()
     db.add(specialty)

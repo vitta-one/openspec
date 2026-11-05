@@ -11,6 +11,7 @@ from vitta_one.professional_directory.service import (
     SpecialtyItem,
     create_professional,
     create_specialty,
+    get_specialty,
     register_medical_professional,
     update_professional_onboarding_status,
     MedicalRegistrationResult,
@@ -38,23 +39,35 @@ def admin_list_recent_specialties(
     return list_specialties(db, recent_limit=limit)
 
 
+def admin_get_specialty(db: Session, *, token: str, specialty_id: int) -> SpecialtyItem:
+    require_role(db, token, Role.ADMINISTRADOR)
+    return get_specialty(db, specialty_id=specialty_id)
+
+
 def admin_create_specialty(db: Session, *, token: str, name: str) -> Specialty:
     require_role(db, token, Role.ADMINISTRADOR)
     return create_specialty(db, name=name)
 
 
 def admin_rename_specialty(
-    db: Session, *, token: str, specialty_id: int, name: str
+    db: Session, *, token: str, specialty_id: int, name: str,
+    expected_name: str | None = None,
 ) -> Specialty:
     require_role(db, token, Role.ADMINISTRADOR)
-    return rename_specialty(db, specialty_id=specialty_id, name=name)
+    return rename_specialty(
+        db, specialty_id=specialty_id, name=name, expected_name=expected_name
+    )
 
 
 def admin_set_specialty_active(
-    db: Session, *, token: str, specialty_id: int, is_active: bool
+    db: Session, *, token: str, specialty_id: int, is_active: bool,
+    expected_active: bool | None = None,
 ) -> Specialty:
     require_role(db, token, Role.ADMINISTRADOR)
-    return set_specialty_active(db, specialty_id=specialty_id, is_active=is_active)
+    return set_specialty_active(
+        db, specialty_id=specialty_id, is_active=is_active,
+        expected_active=expected_active,
+    )
 
 
 def admin_list_professionals(db: Session, *, token: str) -> list[ProfessionalItem]:
