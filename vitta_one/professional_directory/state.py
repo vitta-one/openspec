@@ -33,6 +33,8 @@ from vitta_one.professional_directory.service import (
     DirectoryConflictError,
     DirectoryNotFoundError,
     DirectoryValidationError,
+    validate_professional_name,
+    validate_professional_email,
 )
 
 
@@ -180,6 +182,8 @@ class AdminDirectoryState(rx.State):
     editing_professional_id: int = 0
     professional_name: str = ""
     professional_email: str = ""
+    professional_name_error: str = ""
+    professional_email_error: str = ""
     registration_identifier: str = ""
     selected_medical_user: str = "__none__"
 
@@ -194,6 +198,10 @@ class AdminDirectoryState(rx.State):
     @rx.var
     def has_specialties(self) -> bool:
         return bool(self.specialties)
+
+    @rx.var
+    def has_selectable_specialties(self) -> bool:
+        return bool(self.specialty_options)
 
     @rx.var
     def has_professionals(self) -> bool:
@@ -327,6 +335,8 @@ class AdminDirectoryState(rx.State):
         self.editing_professional_id = 0
         self.professional_name = ""
         self.professional_email = ""
+        self.professional_name_error = ""
+        self.professional_email_error = ""
         self.registration_identifier = ""
         self.selected_medical_user = "__none__"
         self.specialty_options = [
@@ -785,11 +795,13 @@ class AdminDirectoryState(rx.State):
     @rx.event
     def update_professional_name(self, value: str) -> None:
         self.professional_name = value
+        self.professional_name_error = ""
 
     @rx.event
     def update_professional_email(self, value: str) -> None:
         if not self.editing_professional_id:
             self.professional_email = value
+            self.professional_email_error = ""
 
     @rx.event
     def update_registration_identifier(self, value: str) -> None:
@@ -847,6 +859,21 @@ class AdminDirectoryState(rx.State):
         created_staff_user_id = 0
         yield
         try:
+            self.professional_name_error = ""
+            self.professional_email_error = ""
+            try:
+                validate_professional_name(self.professional_name)
+            except DirectoryValidationError as exc:
+                self.professional_name_error = str(exc)
+            if not self.editing_professional_id:
+                try:
+                    validate_professional_email(self.professional_email)
+                except DirectoryValidationError as exc:
+                    self.professional_email_error = str(exc)
+            if self.professional_name_error or self.professional_email_error:
+                self.error_message = "Revise os campos destacados e tente novamente."
+                return
+
             token = await self._token()
             specialty_ids = self._selected_specialty_ids()
             user_id = (
@@ -914,7 +941,9 @@ class AdminDirectoryState(rx.State):
             self._load_with_token(token)
             self.success_message = message
             yield rx.toast.success(message, position="top-right")
-            if created_staff_user_id:
+            if created_staff_user_id and self.router.route_id in {
+                "/admin/funcionarios/novo", "/admin/funcionarios/medico"
+            }:
                 yield rx.redirect(f"/admin/funcionarios/{created_staff_user_id}")
         except (
             DirectoryValidationError,

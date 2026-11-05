@@ -336,3 +336,23 @@ def test_simultaneous_doctor_registration_cannot_duplicate_email_in_disposable_p
                 session.delete(specialty)
             session.commit()
         engine.dispose()
+
+
+def test_other_role_email_is_rejected_and_specialties_are_optional(db):
+    specialty = _specialty(db)
+    db.add(User(email="admin@example.invalid", role=Role.ADMINISTRADOR.value, password_hash="test"))
+    db.commit()
+    with pytest.raises(DirectoryConflictError):
+        register_medical_professional(
+            db, name="Doctor", email="admin@example.invalid", specialty_ids=[specialty.id]
+        )
+    result = register_medical_professional(
+        db, name="Dr. Sem Especialidade", email="doc2@example.invalid", specialty_ids=[]
+    )
+    assert db.get(Professional, result.professional_id).user_id == result.user_id
+    assert db.exec(
+        select(ProfessionalSpecialty).where(
+            ProfessionalSpecialty.professional_id == result.professional_id
+        )
+    ).all() == []
+    assert len(db.exec(select(Professional)).all()) == 1

@@ -341,3 +341,29 @@ def test_edit_professional_can_remove_all_specialty_links(db: Session) -> None:
         )
     ).all()
     assert links == []
+
+
+def test_professional_can_remove_all_specialties_and_reject_invalid_ids(db: Session) -> None:
+    specialty = create_specialty(db, name="Cardiologia")
+    professional = create_professional(
+        db, name="Dr. Atualização", registration_identifier="REG-NEW",
+        specialty_ids=[specialty.id],
+    )
+    update_professional(
+        db, professional_id=professional.id, name="Dr. Atualização",
+        registration_identifier="REG-NEW", specialty_ids=[],
+    )
+    assert next(
+        item for item in list_professionals(db) if item.id == professional.id
+    ).specialties == ()
+
+    with pytest.raises(DirectoryValidationError, match="inválida"):
+        update_professional(
+            db, professional_id=professional.id, name="Dr. Atualização",
+            registration_identifier="REG-NEW", specialty_ids=["não-numérico"],
+        )
+    with pytest.raises(DirectoryValidationError, match="não existe"):
+        update_professional(
+            db, professional_id=professional.id, name="Dr. Atualização",
+            registration_identifier="REG-NEW", specialty_ids=[987654],
+        )

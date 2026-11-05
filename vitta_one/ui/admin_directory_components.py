@@ -165,11 +165,6 @@ def specialty_option(option) -> rx.Component:
             ),
             width="100%",
             class_name="vitta-specialty-choice",
-            background=rx.cond(
-                option["locked"],
-                "var(--vitta-surface-muted)",
-                "var(--vitta-surface)",
-            ),
         ),
         rx.fragment(),
     )
@@ -377,6 +372,20 @@ def _professional_form_fields() -> rx.Component:
                 class_name="vitta-input",
                 margin_top="0.4rem",
                 auto_focus=True,
+                aria_invalid=AdminDirectoryState.professional_name_error != "",
+                aria_describedby="professional-name-error",
+            ),
+            rx.cond(
+                AdminDirectoryState.professional_name_error != "",
+                rx.text(
+                    AdminDirectoryState.professional_name_error,
+                    id="professional-name-error",
+                    role="alert",
+                    size="1",
+                    color="var(--vitta-danger)",
+                    margin_top="0.3rem",
+                ),
+                rx.fragment(),
             ),
             width="100%",
         ),
@@ -395,6 +404,20 @@ def _professional_form_fields() -> rx.Component:
                 class_name="vitta-input",
                 margin_top="0.4rem",
                 placeholder="medico@clinica.com",
+                aria_invalid=AdminDirectoryState.professional_email_error != "",
+                aria_describedby="professional-email-error",
+            ),
+            rx.cond(
+                AdminDirectoryState.professional_email_error != "",
+                rx.text(
+                    AdminDirectoryState.professional_email_error,
+                    id="professional-email-error",
+                    role="alert",
+                    size="1",
+                    color="var(--vitta-danger)",
+                    margin_top="0.3rem",
+                ),
+                rx.fragment(),
             ),
             rx.text(
                 rx.cond(
@@ -442,13 +465,27 @@ def _professional_form_fields() -> rx.Component:
             ),
             rx.vstack(
                 rx.cond(
-                    AdminDirectoryState.specialty_options.length() > 0,
-                    rx.foreach(AdminDirectoryState.specialty_options, specialty_option),
-                    rx.text("Nenhuma especialidade disponível. Cadastre o médico e associe depois.",
-                            size="2", color="var(--vitta-text-muted)"),
+                    AdminDirectoryState.has_selectable_specialties,
+                    rx.vstack(
+                        rx.foreach(AdminDirectoryState.specialty_options, specialty_option),
+                        spacing="2",
+                        align="stretch",
+                        width="100%",
+                        max_height="12rem",
+                        overflow_y="auto",
+                        padding_right="0.25rem",
+                    ),
+                    rx.text(
+                        "Nenhuma especialidade ativa disponível. "
+                        "Você poderá vincular especialidades depois do cadastro.",
+                        size="2",
+                        color="var(--vitta-text-muted)",
+                        line_height="1.5",
+                        role="status",
+                    ),
                 ),
                 rx.text(
-                    "Associe uma ou mais especialidades ao médico. Você também poderá fazer isso posteriormente.",
+                    "Você pode vincular especialidades agora ou posteriormente.",
                     size="1",
                     color="var(--vitta-text-muted)",
                     line_height="1.45",
@@ -471,7 +508,23 @@ def _professional_form_fields() -> rx.Component:
 def professional_dialog() -> rx.Component:
     return rx.dialog.root(
         rx.dialog.content(
-            rx.dialog.title(AdminDirectoryState.professional_form_title),
+            rx.flex(
+                rx.dialog.title(AdminDirectoryState.professional_form_title),
+                rx.button(
+                    rx.icon("x", size=18),
+                    type="button",
+                    variant="soft",
+                    color_scheme="gray",
+                    aria_label="Fechar formulário de profissional",
+                    title="Fechar formulário",
+                    on_click=AdminDirectoryState.cancel_professional_dialog,
+                    disabled=AdminDirectoryState.is_submitting,
+                ),
+                justify="between",
+                align="center",
+                gap="3",
+                width="100%",
+            ),
             rx.dialog.description(
                 rx.cond(
                     AdminDirectoryState.is_editing_professional,
@@ -496,7 +549,9 @@ def professional_dialog() -> rx.Component:
                         rx.button(
                             "Cancelar",
                             type="button",
-                            variant="ghost",
+                            variant="outline",
+                            color_scheme="gray",
+                            min_height="2.75rem",
                             on_click=AdminDirectoryState.cancel_professional_dialog,
                             disabled=AdminDirectoryState.is_submitting,
                         ),
@@ -708,7 +763,12 @@ def professional_summary_row(row) -> rx.Component:
             rx.box(
                 rx.text(row["name"], font_weight="700", size="3"),
                 rx.text(
-                    row["specialty_names"], size="2",
+                    rx.cond(
+                        row["specialty_names"] != "",
+                        row["specialty_names"],
+                        "Sem especialidades vinculadas",
+                    ),
+                    size="2",
                     color="var(--vitta-text-muted)", margin_top="0.3rem",
                     overflow_wrap="anywhere",
                 ),

@@ -87,13 +87,21 @@ def _validate_specialty_name(value: str) -> tuple[str, str]:
     return display, normalize_specialty_key(display)
 
 
-def _validate_professional_name(value: str) -> str:
+def validate_professional_name(value: str) -> str:
     display = normalize_display_name(value)
     if not display:
         raise DirectoryValidationError("Informe o nome do profissional.")
     if len(display) > 160:
         raise DirectoryValidationError("O nome do profissional excede o limite permitido.")
     return display
+
+
+def validate_professional_email(value: str) -> str:
+    """Normalize medical identity email with the canonical server contract."""
+    normalized = normalize_email(value)
+    if not is_valid_email_identifier(normalized):
+        raise DirectoryValidationError("Informe um e-mail profissional válido.")
+    return normalized
 
 
 def _validate_registration_identifier(value: str) -> str:
@@ -204,7 +212,10 @@ def _validate_specialty_ids(
     *,
     existing_ids: set[int] | None = None,
 ) -> list[int]:
-    unique_ids = list(dict.fromkeys(int(value) for value in specialty_ids))
+    try:
+        unique_ids = list(dict.fromkeys(int(value) for value in specialty_ids))
+    except (TypeError, ValueError) as exc:
+        raise DirectoryValidationError("Uma das especialidades selecionadas é inválida.") from exc
     # Uma especialidade pode ser vinculada depois do cadastro.
     if not unique_ids:
         return []
@@ -280,7 +291,7 @@ def create_professional(
     specialty_ids: list[int] | tuple[int, ...],
     user_id: int | None = None,
 ) -> Professional:
-    display_name = _validate_professional_name(name)
+    display_name = validate_professional_name(name)
     normalized_identifier = _validate_registration_identifier(registration_identifier)
     _validate_registration_unique(db, normalized_identifier)
     valid_specialties = _validate_specialty_ids(db, specialty_ids)
@@ -327,7 +338,7 @@ def update_professional(
     if professional is None:
         raise DirectoryNotFoundError("O profissional não está disponível.")
 
-    display_name = _validate_professional_name(name)
+    display_name = validate_professional_name(name)
     normalized_identifier = _validate_registration_identifier(registration_identifier)
     _validate_registration_unique(
         db,
@@ -502,10 +513,8 @@ def register_medical_professional(
     local_qa_password: str | None = None,
 ) -> MedicalRegistrationResult:
     """Create physician + identity; allow a chosen password ONLY in isolated local QA."""
-    display_name = _validate_professional_name(name)
-    normalized_email = normalize_email(email)
-    if not is_valid_email_identifier(normalized_email):
-        raise DirectoryValidationError("Informe um e-mail profissional válido.")
+    display_name = validate_professional_name(name)
+    normalized_email = validate_professional_email(email)
     valid_specialties = _validate_specialty_ids(db, specialty_ids)
     if local_qa_password is not None:
         if not local_qa_enabled():
