@@ -8,9 +8,15 @@ import reflex as rx
 
 from vitta_one.appointment_scheduling.application import patient_get_my_agenda
 from vitta_one.appointment_scheduling.temporal import clinic_today_iso, format_clinic_datetime
-from vitta_one.auth.authorization import AuthenticationRequiredError, RoleForbiddenError
+from vitta_one.auth.authorization import (
+    AuthenticationRequiredError, RoleForbiddenError, PasswordChangeRequiredError, require_role,
+)
+from vitta_one.auth.roles import Role
+from vitta_one.clinic_settings.service import (
+    ClinicSettingsConflictError, ClinicSettingsValidationError,
+    get_clinic_location, save_clinic_location,
+)
 from vitta_one.auth.state import AuthState
-from vitta_one.patient_portal.settings import clinic_location
 
 
 class PatientConsultationRow(TypedDict):
@@ -90,10 +96,6 @@ class PatientPortalState(rx.State):
             month_date = date.fromisoformat(f"{self.month}-01")
             last_day = monthrange(month_date.year, month_date.month)[1]
             self.month_label = _month_label(month_date)
-            location = clinic_location()
-            self.location_configured = location.configured
-            self.clinic_name = location.name if location.configured else ""
-            self.clinic_address = location.address if location.configured else ""
             token = await self._token()
             with rx.session() as db:
                 _patient, items = patient_get_my_agenda(
@@ -102,6 +104,10 @@ class PatientPortalState(rx.State):
                     start_date=f"{self.month}-01",
                     end_date=f"{self.month}-{last_day:02d}",
                 )
+                location = get_clinic_location(db)
+            self.location_configured = location.configured
+            self.clinic_name = location.name if location.configured else ""
+            self.clinic_address = location.address if location.configured else ""
             rows: list[PatientConsultationRow] = []
             for item in items:
                 previous = ""
@@ -155,15 +161,109 @@ class PatientPortalState(rx.State):
 
 
 class AdminClinicConfigurationState(rx.State):
-    """Public configuration status shown to the Administrator without fake defaults."""
+    """Authorized editing of persisted public clinic information."""
 
     clinic_name: str = ""
     clinic_address: str = ""
     configured: bool = False
+    revision: int = 0
+    is_loading: bool = True
+    is_saving: bool = False
+    load_failed: bool = False
+    name_error: str = ""
+    address_error: str = ""
+    error_message: str = ""
+    success_message: str = ""
+
+    async def _token(self) -> str:
+        auth = await self.get_state(AuthState)
+        return auth.session_token
+
+    def _clear(self) -> None:
+        self.clinic_name = ""
+        self.clinic_address = ""
+        self.configured = False
+        self.revision = 0
 
     @rx.event
-    def load(self):
-        location = clinic_location()
-        self.configured = location.configured
-        self.clinic_name = location.name if location.configured else ""
-        self.clinic_address = location.address if location.configured else ""
+    def set_clinic_name(self, value: str):
+        self.clinic_name = value
+        self.name_error = ""
+        self.success_message = ""
+
+    @rx.event
+    def set_clinic_address(self, value: str):
+        self.clinic_address = value
+        self.address_error = ""
+        self.success_message = ""
+
+    @rx.event
+    async def load(self):
+        self.is_loading = True
+        self.load_failed = False
+        self.error_message = ""
+        self.success_message = ""
+        self.name_error = ""
+        self.address_error = ""
+        yield
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                require_role(db, token, Role.ADMINISTRADOR)
+                location = get_clinic_location(db)
+            self.clinic_name = location.name
+            self.clinic_address = location.address
+            self.configured = location.persisted
+            self.revision = location.revision
+        except (AuthenticationRequiredError, RoleForbiddenError, PasswordChangeRequiredError) as exc:
+            self._clear()
+            self.load_failed = True
+            yield rx.redirect("/login" if isinstance(exc, AuthenticationRequiredError) else "/acesso-negado")
+        except Exception:
+            self.load_failed = True
+            self.error_message = "Não foi possível carregar as configurações. Tente novamente."
+        finally:
+            self.is_loading = False
+            yield
+
+    @rx.event
+    async def save(self, form_data: dict[str, str]):
+        if self.is_saving or self.is_loading or self.load_failed:
+            return
+        self.is_saving = True
+        self.error_message = ""
+        self.success_message = ""
+        self.name_error = ""
+        self.address_error = ""
+        yield
+        try:
+            name = str(form_data.get("name", self.clinic_name))
+            address = str(form_data.get("address", self.clinic_address))
+            token = await self._token()
+            with rx.session() as db:
+                location = save_clinic_location(
+                    db, token=token, name=name, address=address,
+                    expected_revision=self.revision,
+                )
+            self.clinic_name = location.name
+            self.clinic_address = location.address
+            self.configured = location.persisted
+            self.revision = location.revision
+            self.success_message = "Configurações atualizadas com sucesso."
+        except ClinicSettingsValidationError as exc:
+            if exc.field == "name":
+                self.name_error = str(exc)
+            else:
+                self.address_error = str(exc)
+        except ClinicSettingsConflictError:
+            self.error_message = (
+                "As configurações foram modificadas em outra sessão. "
+                "Atualize a página antes de tentar salvar novamente."
+            )
+        except (AuthenticationRequiredError, RoleForbiddenError, PasswordChangeRequiredError) as exc:
+            yield rx.redirect("/login" if isinstance(exc, AuthenticationRequiredError) else "/acesso-negado")
+        except Exception:
+            self.error_message = "Não foi possível salvar as configurações. Tente novamente."
+        finally:
+            self.is_saving = False
+            yield

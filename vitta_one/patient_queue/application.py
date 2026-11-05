@@ -6,6 +6,7 @@ from sqlalchemy import func, or_
 from vitta_one.auth.authorization import require_role
 from vitta_one.auth.roles import Role
 from vitta_one.models.patient_queue import Patient, QueueEntry
+from vitta_one.patient_queue.profile import get_patient_operational_summary
 from vitta_one.patient_queue.service import (
     PatientSearchResult,
     QueueItem,
@@ -39,6 +40,16 @@ def reception_get_patient_identity(
 ) -> PatientSearchResult | None:
     require_role(db, token, Role.RECEPCIONISTA)
     return get_patient_identity(db, patient_id=patient_id)
+
+
+def reception_get_patient_operational_summary(
+    db: Session, *, token: str, patient_id: int, history_page: int = 1,
+):
+    """Keep patient identity, appointments and queue metadata behind Reception RBAC."""
+    require_role(db, token, Role.RECEPCIONISTA)
+    return get_patient_operational_summary(
+        db, patient_id=patient_id, history_page=history_page,
+    )
 
 
 def reception_find_patient(db: Session, *, token: str, cpf: str) -> Patient | None:
@@ -148,13 +159,19 @@ def reception_list_patient_directory(
     require_role(db, token, Role.RECEPCIONISTA)
     page = max(1, int(page))
     size = max(1, min(int(size), 30))
-    term = str(search or "").strip()[:100]
+    term = " ".join(str(search or "").split())[:100]
     statement = select(Patient)
     if term:
-        normalized_digits = "".join(char for char in term if char.isdigit())
-        conditions = [Patient.name.ilike(f"%{term}%")]
-        if normalized_digits:
-            conditions.append(Patient.cpf.like(f"%{normalized_digits}%"))
+        # Keep the directory search equivalent to the existing receptionist
+        # quick search. Escape SQL LIKE wildcards; do not expose CPF in results.
+        escaped = term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        digits = "".join(char for char in term if char.isdigit())
+        conditions = [Patient.name.ilike(f"%{escaped}%", escape="\\")]
+        if digits:
+            conditions.extend((
+                Patient.cpf.like(f"%{digits}%"),
+                func.coalesce(Patient.phone, "").like(f"%{digits}%"),
+            ))
         statement = statement.where(or_(*conditions))
     total = int(db.exec(select(func.count()).select_from(statement.subquery())).one())
     patients = db.exec(

@@ -283,3 +283,27 @@ def test_day_table_application_requires_reception_role(db):
         reception_day_operations(db, token=doctor_token)
     with pytest.raises(RoleForbiddenError):
         reception_search_patients(db, token=doctor_token, query="Helena")
+
+
+def test_reception_home_mounts_real_day_table_and_existing_dialogs():
+    """Prevents a regression where the daily table exists but is unmounted."""
+    import ast
+    import inspect
+    import textwrap
+
+    from vitta_one.reception.dashboard.components import reception_dashboard
+
+    tree = ast.parse(textwrap.dedent(inspect.getsource(reception_dashboard)))
+    calls = {
+        node.func.id
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    }
+    assert {
+        "_reception_day_header",
+        "_reception_day_toolbar",
+        "_appointments_table",
+        "_appointment_details_dialog",
+        "reception_agenda_dialogs",
+        "reception_overview_cards",
+    }.issubset(calls)

@@ -15,6 +15,7 @@ from vitta_one.clinical_care.service import (
 from vitta_one.models.auth import User
 from vitta_one.models.patient_queue import Patient, QueueEntry
 from vitta_one.models.professional import Professional
+from vitta_one.patient_queue.active_entry import ActiveQueueEntryError, lock_patient_queue_slot
 from vitta_one.patient_queue.domain import QueueStatus
 from vitta_one.patient_queue.validation import (
     QueuePayloadValidationError,
@@ -102,7 +103,10 @@ def confirm_arrival(
             "Somente consultas agendadas podem ter a chegada confirmada."
         )
 
-    patient = db.get(Patient, consultation.patient_id)
+    try:
+        patient = lock_patient_queue_slot(db, patient_id=consultation.patient_id)
+    except ActiveQueueEntryError as exc:
+        raise CareLifecycleConflictError(str(exc)) from exc
     if patient is None:
         raise CareLifecycleValidationError("O paciente desta consulta não está disponível.")
     _validate_arrival_professional(db, consultation)

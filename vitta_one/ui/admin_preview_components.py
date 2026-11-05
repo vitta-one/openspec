@@ -3,7 +3,12 @@
 import reflex as rx
 
 from vitta_one.admin_preview.state import AdminPreviewState
+from vitta_one.admin_preview.reception_state import AdminReceptionPreviewState as R
+from vitta_one.admin_preview.agenda_state import AdminAgendaPreviewState
+from vitta_one.ui.calendar_components import month_calendar
 from vitta_one.ui.components import (
+    breadcrumb,
+    field_label,
     empty_state,
     error_banner,
     metric_card,
@@ -59,148 +64,308 @@ def _preview_notice() -> rx.Component:
     )
 
 
-def _queue_row(row) -> rx.Component:
+def _reception_stat(label: str, value, detail) -> rx.Component:
+    """Compact factual indicator without an unexplained colored dot."""
+    return rx.box(
+        rx.text(label, size="2", color="var(--vitta-text-muted)", font_weight="700"),
+        rx.text(
+            value,
+            font_size="1.75rem",
+            font_weight="800",
+            font_family="var(--vitta-font-display)",
+            class_name="vitta-tabular",
+            margin_top="0.45rem",
+        ),
+        rx.text(detail, size="1", color="var(--vitta-text-subtle)", margin_top="0.15rem"),
+        class_name="vitta-metric-card",
+    )
+
+
+def _reception_queue_entry(row, *, history: bool = False) -> rx.Component:
     return rx.box(
         rx.flex(
             rx.box(
-                rx.text(row["patient_name"], font_weight="750", size="2"),
+                rx.text(row["patient_name"], size="2", font_weight="750", overflow_wrap="anywhere"),
                 rx.text(
-                    row["entered_at"],
-                    font_size="0.74rem",
-                    color="var(--vitta-text-subtle)",
-                    margin_top="0.2rem",
-                    class_name="vitta-tabular",
+                    ("Movimentação: " if history else "Entrada: ") + row["event_at"],
+                    size="1", color="var(--vitta-text-muted)",
+                    margin_top="0.2rem", class_name="vitta-tabular",
                 ),
-                min_width="0",
-                flex="1 1 12rem",
+                min_width="0", flex="1 1 12rem",
             ),
             rx.hstack(
+                rx.text("Prioridade:", size="1", color="var(--vitta-text-muted)"),
                 _priority_badge(row["priority"], row["priority_label"]),
+                rx.text("Situação:", size="1", color="var(--vitta-text-muted)"),
                 _status_badge(row["status"], row["status_label"]),
-                spacing="2",
-                align="center",
-                flex_wrap="wrap",
+                spacing="2", align="center", flex_wrap="wrap",
             ),
             direction=rx.breakpoints(initial="column", sm="row"),
-            justify="between",
             align=rx.breakpoints(initial="stretch", sm="center"),
-            gap="0.75rem",
-            width="100%",
+            justify="between", gap="0.75rem", width="100%",
         ),
-        rx.text(
-            row["symptoms"],
-            size="2",
-            color="var(--vitta-text-muted)",
-            line_height="1.5",
+        rx.hstack(
+            rx.icon("stethoscope", size=14, color="var(--vitta-text-muted)"),
+            rx.text(row["professional_name"], size="1", color="var(--vitta-text-muted)"),
+            rx.cond(
+                row["wait_label"] != "",
+                rx.text("Espera: " + row["wait_label"], size="1", color="var(--vitta-text-muted)"),
+                rx.fragment(),
+            ),
+            spacing="2", align="center", flex_wrap="wrap",
             margin_top="0.65rem",
-            overflow_wrap="anywhere",
         ),
         class_name="vitta-data-row",
     )
 
 
+def _reception_consultation_row(row) -> rx.Component:
+    return rx.box(
+        rx.flex(
+            rx.box(
+                rx.text(row["scheduled_at"], size="2", font_weight="750", class_name="vitta-tabular"),
+                rx.text(
+                    row["professional_name"], size="2", color="var(--vitta-text-muted)",
+                    margin_top="0.2rem", overflow_wrap="anywhere",
+                ),
+                min_width="0", flex="1",
+            ),
+            rx.badge(
+                row["status_label"], color_scheme="gray", variant="soft",
+                high_contrast=True,
+            ),
+            justify="between",
+            align=rx.breakpoints(initial="stretch", sm="center"),
+            direction=rx.breakpoints(initial="column", sm="row"),
+            gap="0.6rem", width="100%",
+        ),
+        class_name="vitta-data-row",
+    )
+
+
+def _reception_select(
+    label: str,
+    control_id: str,
+    value,
+    on_change,
+    *items: rx.Component,
+) -> rx.Component:
+    return rx.box(
+        field_label(label, control_id),
+        rx.select.root(
+            rx.select.trigger(
+                id=control_id, width="100%", class_name="vitta-select-trigger",
+            ),
+            rx.select.content(*items, position="popper"),
+            value=value, on_change=on_change,
+            disabled=R.is_loading, size="3",
+        ),
+        width="100%",
+        min_width="0",
+    )
+
+
+def _reception_filters() -> rx.Component:
+    return section_panel(
+        rx.hstack(
+            rx.box(
+                rx.heading("Filtros da operação", size="4"),
+                rx.text(
+                    "A fila ativa representa o momento atual. Os históricos e a agenda usam o período selecionado (até 31 dias).",
+                    size="2", color="var(--vitta-text-muted)", margin_top="0.2rem",
+                ),
+            ),
+            rx.badge("Somente leitura", color_scheme="gray", variant="soft"),
+            align="start", justify="between", width="100%", gap="0.75rem", flex_wrap="wrap",
+        ),
+        rx.grid(
+            rx.box(
+                field_label("Data inicial", "admin-reception-start"),
+                rx.input(
+                    id="admin-reception-start", type="date",
+                    value=R.start_date, on_change=R.update_start_date,
+                    disabled=R.is_loading, class_name="vitta-input", width="100%",
+                ),
+                min_width="0",
+            ),
+            rx.box(
+                field_label("Data final", "admin-reception-end"),
+                rx.input(
+                    id="admin-reception-end", type="date",
+                    value=R.end_date, on_change=R.update_end_date,
+                    disabled=R.is_loading, class_name="vitta-input", width="100%",
+                ),
+                min_width="0",
+            ),
+            _reception_select(
+                "Prioridade", "admin-reception-priority",
+                R.priority_filter, R.update_priority_filter,
+                rx.select.item("Todas as prioridades", value="__all__"),
+                rx.select.item("Vermelho", value="VERMELHO"),
+                rx.select.item("Amarelo", value="AMARELO"),
+                rx.select.item("Verde", value="VERDE"),
+            ),
+            _reception_select(
+                "Situação das listas", "admin-reception-status",
+                R.status_filter, R.update_status_filter,
+                rx.select.item("Todas as situações", value="__all__"),
+                rx.select.item("Aguardando", value="AGUARDANDO"),
+                rx.select.item("Em atendimento", value="EM_ATENDIMENTO"),
+                rx.select.item("Finalizado", value="FINALIZADO"),
+                rx.select.item("Retirado", value="RETIRADO"),
+            ),
+            _reception_select(
+                "Profissional da agenda", "admin-reception-professional",
+                R.professional_filter, R.update_professional_filter,
+                rx.select.item("Todos os profissionais", value="__all__"),
+                rx.foreach(
+                    R.professional_options,
+                    lambda item: rx.select.item(item["label"], value=item["value"]),
+                ),
+            ),
+            columns=rx.breakpoints(initial="1", sm="2", lg="3", xl="5"),
+            gap="0.8rem", width="100%", margin_top="1rem",
+        ),
+        rx.hstack(
+            rx.button(
+                "Aplicar filtros", on_click=R.apply_filters,
+                disabled=R.is_loading, color_scheme="teal", size="3",
+            ),
+            rx.button(
+                rx.icon("refresh_cw", size=16), "Atualizar",
+                on_click=R.refresh, disabled=R.is_loading, variant="outline", size="3",
+            ),
+            rx.cond(
+                R.updated_at != "",
+                rx.text(
+                    "Atualizado: ", R.updated_at,
+                    size="1", color="var(--vitta-text-muted)", role="status",
+                ),
+                rx.fragment(),
+            ),
+            justify="start", align="center", spacing="3",
+            flex_wrap="wrap", margin_top="1rem",
+        ),
+    )
+
+
 def reception_preview() -> rx.Component:
-    """Read-only operational dashboard inspired by the supplied reception reference."""
+    """Administrative QA: operational stock, recent history and persisted agenda."""
     return rx.vstack(
         page_header(
             "Operação",
             "Recepção",
-            "Visão consolidada da fila persistida. Agenda e consultas entram quando a capability de agendamento for aplicada.",
+            "Acompanhe a fila de atendimento, as consultas e a operação da recepção.",
         ),
         _preview_notice(),
+        _reception_filters(),
         rx.cond(
-            AdminPreviewState.error_message != "",
-            error_banner(AdminPreviewState.error_message),
-            rx.fragment(),
-        ),
-        rx.cond(
-            AdminPreviewState.is_loading,
-            rx.center(
+            R.error_message != "",
+            error_banner(R.error_message),
+            rx.cond(
+                R.is_loading | ~R.has_loaded,
+                rx.center(
+                    rx.vstack(
+                        rx.spinner(size="3"),
+                        rx.text("Carregando operação…", size="2", color="var(--vitta-text-muted)"),
+                        spacing="2", align="center",
+                    ),
+                    role="status", aria_live="polite", min_height="12rem",
+                ),
                 rx.vstack(
-                    rx.spinner(size="3"),
-                    rx.text("Carregando operação…", color="var(--vitta-text-muted)", size="2"),
-                    spacing="2",
-                    align="center",
-                ),
-                min_height="15rem",
-                role="status",
-                aria_live="polite",
-            ),
-            rx.vstack(
-                rx.grid(
-                    metric_card("Aguardando", AdminPreviewState.waiting_count, "fila ativa"),
-                    metric_card("Em atendimento", AdminPreviewState.attending_count, "atendimentos operacionais"),
-                    metric_card("Finalizados", AdminPreviewState.finalized_count, "histórico persistido"),
-                    metric_card("Retirados", AdminPreviewState.withdrawn_count, "histórico preservado"),
-                    columns=rx.breakpoints(initial="1", sm="2", lg="4"),
-                    gap="0.75rem",
-                    width="100%",
-                ),
-                rx.grid(
-                    section_panel(
-                        rx.hstack(
-                            rx.box(
-                                rx.heading("Fila e operação", size="5"),
+                    rx.grid(
+                        _reception_stat("Aguardando", R.waiting_count, "Agora · fila ativa"),
+                        _reception_stat("Em atendimento", R.attending_count, "Agora · atendimentos ativos"),
+                        _reception_stat("Finalizados", R.finalized_count, R.period_label),
+                        _reception_stat("Retirados", R.withdrawn_count, R.period_label),
+                        columns=rx.breakpoints(initial="2", md="4"),
+                        gap="0.75rem", width="100%",
+                    ),
+                    rx.grid(
+                        rx.vstack(
+                            section_panel(
+                                rx.heading("Fila atual", size="5"),
                                 rx.text(
-                                    "Entradas reais registradas no banco, em ordem mais recente primeiro.",
-                                    size="2",
-                                    color="var(--vitta-text-muted)",
-                                    margin_top="0.25rem",
+                                    "Aguardando por prioridade e ordem de chegada; em atendimento em seguida.",
+                                    size="2", color="var(--vitta-text-muted)",
+                                ),
+                                rx.cond(
+                                    R.active_rows.length() > 0,
+                                    rx.vstack(
+                                        rx.foreach(R.active_rows, _reception_queue_entry),
+                                        spacing="2", align="stretch", width="100%", margin_top="0.75rem",
+                                    ),
+                                    empty_state(
+                                        "users", "Fila sem resultados",
+                                        "Não há pacientes aguardando atendimento com os filtros selecionados.",
+                                        min_height="8rem",
+                                    ),
                                 ),
                             ),
-                            rx.badge(
-                                "Somente leitura",
-                                color_scheme="gray",
-                                variant="soft",
+                            section_panel(
+                                rx.heading("Histórico recente", size="5"),
+                                rx.text(
+                                    "Finalizações e retiradas registradas de ", R.period_label, ".",
+                                    size="2", color="var(--vitta-text-muted)",
+                                ),
+                                rx.cond(
+                                    R.history_rows.length() > 0,
+                                    rx.vstack(
+                                        rx.foreach(
+                                            R.history_rows,
+                                            lambda row: _reception_queue_entry(row, history=True),
+                                        ),
+                                        rx.text(
+                                            "Exibindo até 50 de ", R.history_total,
+                                            " movimentações.", size="1",
+                                            color="var(--vitta-text-muted)",
+                                        ),
+                                        spacing="2", align="stretch", width="100%",
+                                        margin_top="0.75rem",
+                                    ),
+                                    empty_state(
+                                        "history", "Histórico vazio",
+                                        "Nenhuma movimentação encontrada neste período.",
+                                        min_height="8rem",
+                                    ),
+                                ),
                             ),
-                            justify="between",
-                            align="start",
-                            width="100%",
-                            gap="1rem",
+                            spacing="3", align="stretch", width="100%",
                         ),
-                        rx.cond(
-                            AdminPreviewState.queue_rows.length() > 0,
-                            rx.vstack(
-                                rx.foreach(AdminPreviewState.queue_rows, _queue_row),
-                                spacing="2",
-                                align="stretch",
-                                width="100%",
-                                margin_top="1rem",
+                        section_panel(
+                            rx.heading("Agenda — período selecionado", size="5"),
+                            rx.text(
+                                "Consultas persistidas de ", R.period_label,
+                                ". Filtro por profissional aplicado apenas à agenda.",
+                                size="2", color="var(--vitta-text-muted)",
                             ),
-                            empty_state(
-                                "users",
-                                "Fila vazia",
-                                "Nenhuma entrada de fila foi persistida ainda. Cadastros e mutações continuam exclusivos da Recepção.",
+                            rx.cond(
+                                R.consultation_rows.length() > 0,
+                                rx.vstack(
+                                    rx.foreach(R.consultation_rows, _reception_consultation_row),
+                                    rx.text(
+                                        "Exibindo até 50 de ", R.consultation_total,
+                                        " consultas.", size="1", color="var(--vitta-text-muted)",
+                                    ),
+                                    spacing="2", align="stretch", width="100%",
+                                    margin_top="0.75rem",
+                                ),
+                                empty_state(
+                                    "calendar", "Nenhuma consulta no período",
+                                    "Nenhuma consulta encontrada para o período selecionado.",
+                                    min_height="8rem",
+                                ),
                             ),
                         ),
+                        columns=rx.breakpoints(initial="1", xl="2"),
+                        gap="1rem", width="100%", align_items="start",
                     ),
-                    section_panel(
-                        rx.heading("Agenda", size="5"),
-                        rx.text(
-                            "A referência visual já está incorporada ao fluxo, mas nenhum horário será inventado antes da implementação da agenda.",
-                            size="2",
-                            color="var(--vitta-text-muted)",
-                            line_height="1.55",
-                            margin_top="0.25rem",
-                        ),
-                        empty_state(
-                            "calendar",
-                            "Agenda ainda sem dados",
-                            "A change add-appointment-scheduling está planejada. Quando for aplicada, esta área passa a refletir slots e Consultas reais.",
-                        ),
-                    ),
-                    columns=rx.breakpoints(initial="1", xl="2"),
-                    gap="1rem",
-                    width="100%",
+                    spacing="4", align="stretch", width="100%",
                 ),
-                spacing="4",
-                align="stretch",
-                width="100%",
             ),
         ),
-        spacing="5",
-        align="stretch",
-        width="100%",
+        rx.moment(interval=60000, on_change=R.tick, display="none"),
+        spacing="4", align="stretch", width="100%",
     )
 
 
@@ -229,273 +394,341 @@ def _professional_chip(row) -> rx.Component:
     )
 
 
-def _preview_slot_row(row) -> rx.Component:
-    return rx.box(
-        rx.flex(
-            rx.box(
-                rx.text(row["starts_at"], font_weight="750", size="2", class_name="vitta-tabular"),
-                rx.text(row["professional_name"], size="1", color="var(--vitta-text-muted)", margin_top="0.15rem"),
-            ),
-            rx.badge(
-                row["status_label"],
-                color_scheme=rx.cond(
-                    row["status"] == "AVAILABLE",
-                    "green",
-                    rx.cond(row["status"] == "BOOKED", "blue", "gray"),
-                ),
-                variant="soft",
-            ),
-            direction=rx.breakpoints(initial="column", sm="row"),
-            justify="between",
-            align=rx.breakpoints(initial="stretch", sm="center"),
-            gap="0.6rem",
-            width="100%",
+def _agenda_slot_row(row) -> rx.Component:
+    return rx.flex(
+        rx.box(
+            rx.text(row["time_label"], font_weight="750", size="3", class_name="vitta-tabular"),
+            rx.text(row["professional_name"], size="2", color="var(--vitta-text-muted)"),
+            min_width="0",
         ),
+        rx.badge(
+            row["status_label"],
+            color_scheme=rx.match(
+                row["status"],
+                ("AVAILABLE", "green"),
+                ("BOOKED", "blue"),
+                "gray",
+            ),
+            high_contrast=True,
+            variant="soft",
+        ),
+        justify="between", align="center", gap="3", width="100%",
         class_name="vitta-schedule-row",
         role="listitem",
     )
 
 
-def _preview_lifecycle_meta(row) -> rx.Component:
-    return rx.vstack(
-        rx.cond(
-            row["confirmed_at"] != "",
-            rx.text(
-                "Chegada confirmada: ",
-                row["confirmed_at"],
-                size="1",
-                color="var(--vitta-text-subtle)",
-                class_name="vitta-tabular",
-            ),
-            rx.fragment(),
+def _agenda_consultation_row(row) -> rx.Component:
+    return rx.flex(
+        rx.box(
+            rx.text(row["time_label"], font_weight="750", size="3", class_name="vitta-tabular"),
+            rx.text(row["professional_name"], size="2", color="var(--vitta-text-muted)"),
+            min_width="0",
         ),
-        rx.cond(
-            row["started_at"] != "",
-            rx.text(
-                "Atendimento iniciado: ",
-                row["started_at"],
-                size="1",
-                color="var(--vitta-text-subtle)",
-                class_name="vitta-tabular",
+        rx.badge(
+            row["status_label"],
+            color_scheme=rx.match(
+                row["status"],
+                ("CANCELADA", "red"),
+                ("CONCLUIDA", "green"),
+                ("EM_ANDAMENTO", "amber"),
+                ("CONFIRMADA", "teal"),
+                "blue",
             ),
-            rx.fragment(),
+            variant="soft",
+            high_contrast=True,
         ),
-        rx.cond(
-            row["completed_at"] != "",
-            rx.text(
-                "Concluída: ",
-                row["completed_at"],
-                size="1",
-                color="var(--vitta-text-subtle)",
-                class_name="vitta-tabular",
-            ),
-            rx.fragment(),
-        ),
-        rx.cond(
-            row["cancelled_at"] != "",
-            rx.text(
-                "Cancelada: ",
-                row["cancelled_at"],
-                size="1",
-                color="var(--vitta-text-subtle)",
-                class_name="vitta-tabular",
-            ),
-            rx.fragment(),
-        ),
-        spacing="1",
-        align="start",
-        margin_top="0.4rem",
-    )
-
-
-def _preview_consultation_row(row) -> rx.Component:
-    return rx.box(
-        rx.flex(
-            rx.box(
-                rx.text(
-                    row["scheduled_at"],
-                    font_weight="750",
-                    size="2",
-                    class_name="vitta-tabular",
-                ),
-                rx.text(row["patient_name"], size="2", margin_top="0.2rem"),
-                rx.text(
-                    row["professional_name"],
-                    size="1",
-                    color="var(--vitta-text-muted)",
-                    margin_top="0.1rem",
-                ),
-                _preview_lifecycle_meta(row),
-            ),
-            rx.badge(
-                row["status_label"],
-                color_scheme=rx.match(
-                    row["status"],
-                    ("CANCELADA", "red"),
-                    ("CONCLUIDA", "green"),
-                    ("EM_ANDAMENTO", "amber"),
-                    ("CONFIRMADA", "teal"),
-                    "blue",
-                ),
-                variant="soft",
-            ),
-            direction=rx.breakpoints(initial="column", sm="row"),
-            justify="between",
-            align=rx.breakpoints(initial="stretch", sm="start"),
-            gap="0.6rem",
-            width="100%",
-        ),
+        justify="between", align="center", gap="3", width="100%",
         class_name="vitta-schedule-row",
         role="listitem",
     )
+
+
+def _agenda_professional_filter() -> rx.Component:
+    return rx.box(
+        field_label("Profissional", "qa-agenda-professional"),
+        rx.select.root(
+            rx.select.trigger(
+                id="qa-agenda-professional",
+                width="100%",
+                class_name="vitta-select-trigger",
+            ),
+            rx.select.content(
+                rx.select.item("Todos os profissionais", value="__all__"),
+                rx.foreach(
+                    AdminAgendaPreviewState.professionals,
+                    lambda item: rx.select.item(item["label"], value=item["value"]),
+                ),
+                position="popper",
+            ),
+            value=AdminAgendaPreviewState.filter_professional,
+            on_change=AdminAgendaPreviewState.filter_by_professional,
+            disabled=AdminAgendaPreviewState.is_loading,
+            size="3",
+        ),
+        width=rx.breakpoints(initial="100%", sm="min(24rem, 100%)"),
+    )
+
+
+def _agenda_summary() -> rx.Component:
+    return rx.flex(
+        rx.badge(
+            "Disponíveis: ", AdminAgendaPreviewState.available_count,
+            color_scheme="green", variant="soft",
+        ),
+        rx.badge(
+            "Reservados: ", AdminAgendaPreviewState.booked_count,
+            color_scheme="blue", variant="soft",
+        ),
+        rx.badge(
+            "Agendadas: ", AdminAgendaPreviewState.scheduled_count,
+            color_scheme="teal", variant="soft",
+        ),
+        rx.badge(
+            "Canceladas: ", AdminAgendaPreviewState.cancelled_count,
+            color_scheme="red", variant="soft",
+        ),
+        wrap="wrap", gap="2", width="100%",
+        aria_label="Resumo da data selecionada",
+    )
+
+
+def _agenda_pagination(*, page, total, on_previous, on_next) -> rx.Component:
+    return rx.cond(
+        total > 1,
+        rx.flex(
+            rx.text("Página ", page, " de ", total, size="2",
+                    color="var(--vitta-text-muted)", class_name="vitta-tabular"),
+            rx.hstack(
+                rx.button(
+                    rx.icon("chevron_left", size=16),
+                    type="button", size="2", variant="outline",
+                    aria_label="Página anterior",
+                    disabled=page <= 1, on_click=on_previous,
+                ),
+                rx.button(
+                    rx.icon("chevron_right", size=16),
+                    type="button", size="2", variant="outline",
+                    aria_label="Próxima página",
+                    disabled=page >= total, on_click=on_next,
+                ),
+                spacing="2",
+            ),
+            align="center", justify="between", gap="3", width="100%",
+            margin_top="0.6rem",
+        ),
+        rx.fragment(),
+    )
+
 
 def agenda_preview() -> rx.Component:
-    """Read-only local QA projection of persisted scheduling data."""
+    """Visualização administrativa de QA, sem ações da Recepção e sem dados clínicos."""
     return rx.vstack(
         page_header(
             "Agenda",
             "Agenda clínica",
-            "Confira slots e Consultas persistidos sem conceder à sessão Administrador as mutações exclusivas da Recepção.",
+            "Consulte a disponibilidade e a situação das consultas por profissional e data.",
         ),
-        _preview_notice(),
+        rx.flex(
+            rx.badge(
+                "QA · somente leitura",
+                color_scheme="gray", variant="soft", high_contrast=True,
+            ),
+            rx.text(
+                "A gestão de horários permanece em Administração / Horários.",
+                size="2", color="var(--vitta-text-muted)",
+            ),
+            gap="3", align="center", wrap="wrap", width="100%",
+        ),
         rx.cond(
-            AdminPreviewState.error_message != "",
-            error_banner(AdminPreviewState.error_message),
+            AdminAgendaPreviewState.error_message != "",
+            section_panel(
+                error_banner(AdminAgendaPreviewState.error_message),
+                rx.button(
+                    "Tentar novamente", type="button", variant="outline",
+                    on_click=AdminAgendaPreviewState.reload_agenda,
+                ),
+            ),
             rx.fragment(),
         ),
-        rx.grid(
-            section_panel(
-                rx.heading("Disponibilidade", size="5"),
-                rx.text(
-                    "Slots reais cadastrados pela Administração.",
-                    size="2",
-                    color="var(--vitta-text-muted)",
-                    margin_top="0.25rem",
-                ),
-                rx.cond(
-                    AdminPreviewState.agenda_slots.length() > 0,
-                    rx.vstack(
-                        rx.foreach(AdminPreviewState.agenda_slots, _preview_slot_row),
-                        spacing="2",
-                        align="stretch",
-                        width="100%",
-                        role="list",
-                        margin_top="1rem",
+        section_panel(
+            rx.flex(
+                _agenda_professional_filter(),
+                rx.hstack(
+                    rx.button(
+                        rx.icon("x", size=15), "Limpar filtros",
+                        type="button", variant="outline", color_scheme="gray",
+                        on_click=AdminAgendaPreviewState.clear_filters,
+                        disabled=AdminAgendaPreviewState.is_loading,
                     ),
-                    empty_state(
-                        "calendar",
-                        "Nenhum horário persistido",
-                        "Cadastre disponibilidade em Administração para vê-la neste preview.",
+                    rx.button(
+                        rx.icon("refresh_cw", size=15), "Atualizar",
+                        type="button", variant="outline", color_scheme="teal",
+                        on_click=AdminAgendaPreviewState.reload_agenda,
+                        disabled=AdminAgendaPreviewState.is_loading,
                     ),
+                    spacing="2", align="center", flex_wrap="wrap",
                 ),
+                direction=rx.breakpoints(initial="column", md="row"),
+                align=rx.breakpoints(initial="stretch", md="end"),
+                justify="between", gap="3", width="100%",
             ),
-            section_panel(
-                rx.heading("Consultas", size="5"),
-                rx.text(
-                    "Agendamentos e cancelamentos reais do período persistido.",
-                    size="2",
-                    color="var(--vitta-text-muted)",
-                    margin_top="0.25rem",
-                ),
-                rx.cond(
-                    AdminPreviewState.agenda_consultations.length() > 0,
-                    rx.vstack(
-                        rx.foreach(
-                            AdminPreviewState.agenda_consultations,
-                            _preview_consultation_row,
-                        ),
-                        spacing="2",
-                        align="stretch",
-                        width="100%",
-                        role="list",
-                        margin_top="1rem",
-                    ),
-                    empty_state(
-                        "calendar",
-                        "Nenhuma consulta persistida",
-                        "Quando a Recepção fizer um agendamento, ele aparecerá aqui em modo somente leitura.",
-                    ),
-                ),
+            rx.text(
+                "Período consultado: ", AdminAgendaPreviewState.month_title,
+                size="2", color="var(--vitta-text-muted)",
+                margin_top="0.75rem",
             ),
-            columns=rx.breakpoints(initial="1", xl="1fr 1fr"),
-            gap="1rem",
-            width="100%",
-            align_items="start",
         ),
-        spacing="5",
-        align="stretch",
-        width="100%",
+        rx.cond(
+            AdminAgendaPreviewState.error_message == "",
+            rx.vstack(
+                rx.grid(
+                    section_panel(
+                        rx.heading("Calendário", size="4"),
+                        rx.text(
+                            "Selecione um dia para ver os horários persistidos.",
+                            size="2", color="var(--vitta-text-muted)",
+                            margin_top="0.3rem", margin_bottom="0.9rem",
+                        ),
+                        month_calendar(
+                            month_title=AdminAgendaPreviewState.month_title,
+                            days=AdminAgendaPreviewState.calendar_days,
+                            is_loading=AdminAgendaPreviewState.is_loading,
+                            on_previous=AdminAgendaPreviewState.move_month(-1),
+                            on_next=AdminAgendaPreviewState.move_month(1),
+                            on_select_day=AdminAgendaPreviewState.select_day,
+                            allow_empty=True,
+                            show_consultations=True,
+                            show_today=True,
+                        ),
+                    ),
+                    section_panel(
+                        rx.heading("Disponibilidade do dia", size="4"),
+                        rx.text(
+                            AdminAgendaPreviewState.selected_day_label,
+                            size="2", color="var(--vitta-text-muted)",
+                            margin_top="0.3rem", margin_bottom="0.75rem",
+                        ),
+                        rx.cond(
+                            AdminAgendaPreviewState.is_loading,
+                            rx.text("Atualizando indicadores…", size="2", color="var(--vitta-text-muted)"),
+                            _agenda_summary(),
+                        ),
+                        rx.cond(
+                            AdminAgendaPreviewState.is_loading,
+                            rx.center(rx.spinner(size="3"), min_height="8rem"),
+                            rx.cond(
+                                AdminAgendaPreviewState.day_slots.length() > 0,
+                                rx.vstack(
+                                    rx.foreach(
+                                        AdminAgendaPreviewState.paginated_day_slots,
+                                        _agenda_slot_row,
+                                    ),
+                                    _agenda_pagination(
+                                        page=AdminAgendaPreviewState.slot_page,
+                                        total=AdminAgendaPreviewState.slot_total_pages,
+                                        on_previous=AdminAgendaPreviewState.previous_slot_page,
+                                        on_next=AdminAgendaPreviewState.next_slot_page,
+                                    ),
+                                    role="list", spacing="2", align="stretch",
+                                    width="100%", margin_top="1rem",
+                                ),
+                                rx.text(
+                                    "Nenhum horário cadastrado para este dia e profissional.",
+                                    size="2", color="var(--vitta-text-muted)",
+                                    padding="1.2rem 0",
+                                ),
+                            ),
+                        ),
+                    ),
+                    columns=rx.breakpoints(initial="1", lg="1.05fr 1fr"),
+                    gap="1rem", width="100%", align_items="start",
+                ),
+                section_panel(
+                    rx.flex(
+                        rx.heading("Consultas do dia", size="4"),
+                        rx.badge(
+                            AdminAgendaPreviewState.day_consultations.length(),
+                            " consultas",
+                            color_scheme="gray", variant="soft",
+                        ),
+                        justify="between", align="center", gap="3", width="100%",
+                    ),
+                    rx.cond(
+                        AdminAgendaPreviewState.is_loading,
+                        rx.center(rx.spinner(size="3"), min_height="5rem"),
+                        rx.cond(
+                            AdminAgendaPreviewState.day_consultations.length() > 0,
+                            rx.vstack(
+                                rx.foreach(
+                                    AdminAgendaPreviewState.paginated_day_consultations,
+                                    _agenda_consultation_row,
+                                ),
+                                _agenda_pagination(
+                                    page=AdminAgendaPreviewState.consultation_page,
+                                    total=AdminAgendaPreviewState.consultation_total_pages,
+                                    on_previous=AdminAgendaPreviewState.previous_consultation_page,
+                                    on_next=AdminAgendaPreviewState.next_consultation_page,
+                                ),
+                                role="list", spacing="2", align="stretch",
+                                width="100%", margin_top="0.8rem",
+                            ),
+                            rx.text(
+                                "Nenhuma consulta encontrada neste período.",
+                                size="2", color="var(--vitta-text-muted)",
+                                padding="0.9rem 0",
+                            ),
+                        ),
+                    ),
+                ),
+                spacing="4", width="100%", align="stretch",
+            ),
+            rx.fragment(),
+        ),
+        spacing="4", align="stretch", width="100%",
     )
+
 
 def _patient_list_row(row) -> rx.Component:
-    is_selected = AdminPreviewState.selected_patient_id == row["id"]
-    return rx.box(
-        rx.hstack(
-            rx.checkbox(
-                checked=is_selected,
-                on_change=lambda checked: AdminPreviewState.toggle_patient_selection(
-                    row["id"],
-                    row["name"],
-                    row["cpf_masked"],
-                    checked,
+    """Semantic, compact administrative table row with explicit navigation."""
+    return rx.table.row(
+        rx.table.row_header_cell(
+            rx.hstack(
+                rx.box(rx.icon("user", size=17), class_name="vitta-patient-avatar"),
+                rx.box(
+                    rx.text(
+                        row["name"], font_weight="700", size="2",
+                        overflow_wrap="anywhere",
+                    ),
+                    rx.text(
+                        row["cpf_masked"], size="1",
+                        class_name="vitta-tabular",
+                        color="var(--vitta-text-muted)",
+                        display=rx.breakpoints(initial="block", sm="none"),
+                    ),
+                    min_width="0",
                 ),
-                color_scheme="teal",
-                high_contrast=True,
-                size="2",
-                aria_label=row["name"],
-            ),
-            rx.box(
-                rx.icon("user", size=16),
-                class_name="vitta-patient-avatar",
-            ),
-            rx.box(
-                rx.text(
-                    row["name"],
-                    font_weight="720",
-                    size="2",
-                    overflow="hidden",
-                    text_overflow="ellipsis",
-                    white_space="nowrap",
-                ),
-                rx.text(
-                    row["cpf_masked"],
-                    font_size="0.74rem",
-                    color="var(--vitta-text-subtle)",
-                    class_name="vitta-tabular",
-                    margin_top="0.12rem",
-                ),
+                align="center",
+                spacing="2",
                 min_width="0",
-                flex="1",
             ),
-            rx.cond(
-                is_selected,
-                rx.badge(
-                    "Selecionado",
-                    color_scheme="teal",
-                    variant="soft",
-                    high_contrast=True,
-                ),
-                rx.fragment(),
+        ),
+        rx.table.cell(
+            rx.text(row["cpf_masked"], class_name="vitta-tabular", size="2"),
+            display=rx.breakpoints(initial="none", sm="table-cell"),
+        ),
+        rx.table.cell(
+            rx.link(
+                "Ver detalhes",
+                href="/admin/pacientes/" + row["id"].to(str),
+                class_name="vitta-context-link",
+                aria_label="Ver detalhes de " + row["name"],
+                white_space="nowrap",
             ),
-            spacing="3",
-            align="center",
-            width="100%",
+            justify="end",
         ),
-        class_name="vitta-patient-row",
-        border_color=rx.cond(
-            is_selected,
-            "var(--vitta-primary)",
-            "var(--vitta-border)",
-        ),
-        background=rx.cond(
-            is_selected,
-            "var(--vitta-primary-soft)",
-            "var(--vitta-surface)",
-        ),
-        role="listitem",
-        aria_selected=is_selected,
+        align="center",
     )
-
 
 def _history_row(row) -> rx.Component:
     return rx.box(
@@ -531,38 +764,45 @@ def _patient_search_bar() -> rx.Component:
     return section_panel(
         rx.flex(
             rx.box(
-                rx.icon(
-                    "search",
-                    size=17,
-                    position="absolute",
-                    left="0.8rem",
-                    top="50%",
-                    transform="translateY(-50%)",
-                    color="var(--vitta-text-subtle)",
-                    pointer_events="none",
-                ),
-                rx.el.input(
-                    type="search",
-                    value=AdminPreviewState.patient_query,
-                    on_change=AdminPreviewState.update_patient_query,
-                    placeholder="Buscar paciente por nome ou CPF mascarado",
-                    class_name="vitta-input vitta-search-input",
-                    aria_label="Buscar pacientes",
-                ),
-                rx.cond(
-                    AdminPreviewState.patient_query != "",
-                    rx.button(
-                        rx.icon("x", size=16),
-                        type="button",
-                        variant="ghost",
-                        size="1",
-                        class_name="vitta-search-clear",
-                        aria_label="Limpar busca",
-                        on_click=AdminPreviewState.clear_patient_query,
+                field_label("Pesquisar pacientes", "admin-patient-search"),
+                rx.box(
+                    rx.icon(
+                        "search",
+                        size=17,
+                        position="absolute",
+                        left="0.8rem",
+                        top="50%",
+                        transform="translateY(-50%)",
+                        color="var(--vitta-text-subtle)",
+                        pointer_events="none",
                     ),
-                    rx.fragment(),
+                    rx.el.input(
+                        id="admin-patient-search",
+                        type="search",
+                        value=AdminPreviewState.patient_query,
+                        on_change=AdminPreviewState.update_patient_query,
+                        placeholder="Nome ou CPF mascarado",
+                        class_name="vitta-input vitta-search-input",
+                        aria_label="Pesquisar pacientes",
+                        auto_complete="off",
+                    ),
+                    rx.cond(
+                        AdminPreviewState.patient_query != "",
+                        rx.button(
+                            rx.icon("x", size=16),
+                            type="button",
+                            variant="ghost",
+                            size="1",
+                            class_name="vitta-search-clear",
+                            aria_label="Limpar busca de pacientes",
+                            on_click=AdminPreviewState.clear_patient_query,
+                        ),
+                        rx.fragment(),
+                    ),
+                    position="relative",
+                    width="100%",
+                    margin_top="0.3rem",
                 ),
-                position="relative",
                 flex="1 1 28rem",
                 min_width="0",
             ),
@@ -580,21 +820,14 @@ def _patient_search_bar() -> rx.Component:
                 flex="0 0 auto",
             ),
             direction=rx.breakpoints(initial="column", sm="row"),
-            align=rx.breakpoints(initial="stretch", sm="center"),
+            align=rx.breakpoints(initial="stretch", sm="end"),
             gap="0.75rem",
             width="100%",
         ),
     )
 
-
 def _patient_pagination() -> rx.Component:
     return rx.flex(
-        rx.text(
-            AdminPreviewState.patient_range_label,
-            size="1",
-            color="var(--vitta-text-subtle)",
-            class_name="vitta-tabular",
-        ),
         rx.hstack(
             rx.button(
                 rx.icon("chevron_left", size=16),
@@ -614,8 +847,8 @@ def _patient_pagination() -> rx.Component:
                 size="2",
                 font_weight="650",
                 class_name="vitta-tabular",
-                min_width="7rem",
                 text_align="center",
+                min_width="6rem",
             ),
             rx.button(
                 rx.icon("chevron_right", size=16),
@@ -630,91 +863,14 @@ def _patient_pagination() -> rx.Component:
             spacing="2",
             align="center",
         ),
-        direction=rx.breakpoints(initial="column", sm="row"),
-        justify="between",
-        align=rx.breakpoints(initial="stretch", sm="center"),
-        gap="0.75rem",
+        justify="end",
         width="100%",
-        padding_top="0.9rem",
+        padding_top="0.85rem",
         border_top="1px solid var(--vitta-border)",
     )
 
 
-def _patient_selection_bar() -> rx.Component:
-    return rx.cond(
-        AdminPreviewState.selected_patient_id > 0,
-        rx.box(
-            rx.flex(
-                rx.hstack(
-                    rx.box(
-                        rx.icon("user", size=18),
-                        class_name="vitta-patient-avatar",
-                    ),
-                    rx.box(
-                        rx.text(
-                            AdminPreviewState.selected_patient_name,
-                            font_weight="750",
-                            size="2",
-                        ),
-                        rx.text(
-                            AdminPreviewState.selected_patient_cpf,
-                            font_size="0.72rem",
-                            color="var(--vitta-text-subtle)",
-                            class_name="vitta-tabular",
-                            margin_top="0.12rem",
-                        ),
-                    ),
-                    spacing="3",
-                    align="center",
-                    min_width="0",
-                ),
-                rx.hstack(
-                    rx.link(
-                        rx.hstack(
-                            rx.icon("history", size=16),
-                            rx.text("Ver histórico"),
-                            spacing="2",
-                            align="center",
-                        ),
-                        href="#patient-history",
-                        class_name="vitta-context-link",
-                    ),
-                    rx.button(
-                        "Limpar seleção",
-                        type="button",
-                        variant="ghost",
-                        color_scheme="gray",
-                        on_click=AdminPreviewState.clear_patient_selection,
-                    ),
-                    spacing="2",
-                    align="center",
-                    flex_wrap="wrap",
-                ),
-                direction=rx.breakpoints(initial="column", sm="row"),
-                align=rx.breakpoints(initial="stretch", sm="center"),
-                justify="between",
-                gap="0.75rem",
-                width="100%",
-            ),
-            class_name="vitta-selection-bar",
-            role="region",
-            aria_label="Ações do paciente selecionado",
-        ),
-        rx.box(
-            rx.hstack(
-                rx.icon("info", size=17),
-                rx.text(
-                    "Selecione um paciente pelo checkbox para consultar o histórico operacional e as ações disponíveis neste preview.",
-                    size="2",
-                    line_height="1.5",
-                ),
-                spacing="2",
-                align="start",
-            ),
-            class_name="vitta-info-strip",
-        ),
-    )
-
+# Patient selection was removed: the list links to a dedicated, guarded detail route.
 
 def _readonly_clinical_value(label: str, value) -> rx.Component:
     return rx.box(
@@ -920,7 +1076,7 @@ def _admin_clinical_history_panel() -> rx.Component:
     return rx.box(
         rx.flex(
             rx.box(
-                rx.text("Histórico clínico", font_weight="750", size="2"),
+                rx.heading("Histórico clínico", size="4"),
                 rx.text(
                     "Projeção local de QA · somente atendimentos concluídos",
                     size="1",
@@ -1018,10 +1174,14 @@ def _admin_clinical_history_panel() -> rx.Component:
                     width="100%",
                     margin_top="0.8rem",
                 ),
-                empty_state(
-                    "file_text",
-                    "Sem histórico clínico concluído",
-                    "Este paciente ainda não possui Atendimento clínico persistido em Consulta concluída.",
+                rx.box(
+                    rx.text(
+                        "Não há registros clínicos concluídos disponíveis para esta visualização.",
+                        color="var(--vitta-text-muted)",
+                        size="2",
+                    ),
+                    role="status",
+                    padding="1rem 0",
                 ),
             ),
         ),
@@ -1031,12 +1191,12 @@ def _admin_clinical_history_panel() -> rx.Component:
 
 
 def patients_preview() -> rx.Component:
-    """Paginated read-only patient browser with operational and clinical history."""
+    """Find patients in a read-only table; no history is loaded on this route."""
     return rx.vstack(
         page_header(
-            "Cadastros",
+            "Administração",
             "Pacientes",
-            "Pesquise pacientes persistidos e consulte histórico operacional e clínico real em modo local de QA.",
+            "Localize um cadastro e abra sua ficha para consultar os históricos autorizados.",
         ),
         _preview_notice(),
         rx.cond(
@@ -1045,103 +1205,158 @@ def patients_preview() -> rx.Component:
             rx.fragment(),
         ),
         _patient_search_bar(),
-        _patient_selection_bar(),
         section_panel(
-            rx.flex(
-                rx.box(
-                    rx.heading("Lista de pacientes", size="5"),
-                    rx.text(
-                        "A seleção é individual e somente leitura neste modo local de QA.",
-                        size="2",
-                        color="var(--vitta-text-muted)",
-                        margin_top="0.25rem",
-                    ),
-                ),
-                rx.badge(
-                    "1 paciente por vez",
-                    color_scheme="gray",
-                    variant="soft",
-                ),
-                direction=rx.breakpoints(initial="column", sm="row"),
-                justify="between",
-                align=rx.breakpoints(initial="stretch", sm="start"),
-                gap="0.75rem",
-                width="100%",
-            ),
             rx.cond(
-                AdminPreviewState.filtered_patients.length() > 0,
-                rx.vstack(
-                    rx.vstack(
-                        rx.foreach(
-                            AdminPreviewState.paginated_patients,
-                            _patient_list_row,
-                        ),
-                        spacing="2",
-                        align="stretch",
-                        width="100%",
-                        role="list",
-                        margin_top="1rem",
+                AdminPreviewState.is_loading,
+                rx.center(
+                    rx.hstack(
+                        rx.spinner(size="2"),
+                        rx.text("Carregando pacientes…", size="2"),
+                        spacing="3",
                     ),
-                    _patient_pagination(),
-                    spacing="3",
-                    align="stretch",
-                    width="100%",
+                    min_height="8rem",
+                    role="status",
+                    aria_live="polite",
                 ),
-                empty_state(
-                    "search",
-                    "Nenhum paciente encontrado",
-                    "Ajuste a busca. Esta lista usa somente pacientes persistidos e não cria dados de demonstração.",
+                rx.cond(
+                    AdminPreviewState.patient_result_count > 0,
+                    rx.vstack(
+                        rx.table.root(
+                            rx.table.header(
+                                rx.table.row(
+                                    rx.table.column_header_cell("Paciente"),
+                                    rx.table.column_header_cell(
+                                        "CPF mascarado",
+                                        display=rx.breakpoints(initial="none", sm="table-cell"),
+                                    ),
+                                    rx.table.column_header_cell("Ações", justify="end"),
+                                ),
+                            ),
+                            rx.table.body(
+                                rx.foreach(
+                                    AdminPreviewState.paginated_patients,
+                                    _patient_list_row,
+                                ),
+                            ),
+                            width="100%",
+                            size="1",
+                            variant="surface",
+                        ),
+                        rx.cond(
+                            AdminPreviewState.patient_total_pages > 1,
+                            _patient_pagination(),
+                            rx.fragment(),
+                        ),
+                        spacing="3",
+                        width="100%",
+                        align="stretch",
+                    ),
+                    rx.box(
+                        rx.text(
+                            rx.cond(
+                                AdminPreviewState.patient_query != "",
+                                "Nenhum paciente encontrado para os filtros selecionados.",
+                                "Nenhum paciente cadastrado.",
+                            ),
+                            size="2",
+                            color="var(--vitta-text-muted)",
+                        ),
+                        padding="1.25rem 0",
+                        role="status",
+                        aria_live="polite",
+                    ),
                 ),
             ),
         ),
+        spacing="4",
+        align="stretch",
+        width="100%",
+    )
+
+
+def patient_detail_preview() -> rx.Component:
+    """One read-only QA patient dossier with independently authorized histories."""
+    return rx.vstack(
+        breadcrumb(
+            ("Administração", "/admin"),
+            ("Pacientes", "/admin/pacientes"),
+            ("Ficha do paciente", None),
+        ),
         rx.cond(
-            AdminPreviewState.selected_patient_id > 0,
-            section_panel(
-                rx.vstack(
-                    rx.flex(
-                        rx.hstack(
-                            rx.box(
-                                rx.icon("user", size=22),
-                                class_name="vitta-profile-avatar",
-                            ),
-                            rx.box(
-                                rx.heading(
-                                    AdminPreviewState.selected_patient_name,
-                                    size="6",
-                                ),
-                                rx.text(
-                                    AdminPreviewState.selected_patient_cpf,
-                                    size="2",
-                                    color="var(--vitta-text-subtle)",
-                                    class_name="vitta-tabular",
-                                    margin_top="0.15rem",
-                                ),
-                            ),
-                            spacing="3",
-                            align="center",
+            AdminPreviewState.detail_status == "ready",
+            rx.vstack(
+                page_header(
+                    "Pacientes",
+                    "Ficha do paciente",
+                    "Identificação e histórico do cadastro, disponíveis apenas no modo QA.",
+                ),
+                _preview_notice(),
+                rx.cond(
+                    AdminPreviewState.error_message != "",
+                    error_banner(AdminPreviewState.error_message),
+                    rx.fragment(),
+                ),
+                section_panel(
+                    rx.hstack(
+                        rx.box(
+                            rx.icon("user", size=22),
+                            class_name="vitta-profile-avatar",
                         ),
-                        rx.badge("Paciente", color_scheme="teal", variant="soft"),
-                        justify="between",
+                        rx.box(
+                            rx.heading(
+                                AdminPreviewState.selected_patient_name,
+                                size="6",
+                                overflow_wrap="anywhere",
+                            ),
+                            rx.text(
+                                "CPF " + AdminPreviewState.selected_patient_cpf,
+                                size="2",
+                                color="var(--vitta-text-muted)",
+                                class_name="vitta-tabular",
+                                margin_top="0.2rem",
+                            ),
+                            min_width="0",
+                        ),
+                        spacing="3",
                         align="center",
                         width="100%",
-                        gap="1rem",
                     ),
-                    rx.box(
-                        rx.hstack(
-                            rx.text(
-                                "Histórico operacional",
-                                font_weight="750",
-                                size="2",
-                            ),
-                            rx.text(
-                                "Fila registrada",
-                                font_size="0.72rem",
-                                color="var(--vitta-text-subtle)",
-                            ),
-                            justify="between",
-                            align="center",
-                            width="100%",
+                ),
+                rx.flex(
+                    rx.button(
+                        "Histórico operacional",
+                        type="button",
+                        color_scheme="teal",
+                        variant=rx.cond(
+                            AdminPreviewState.active_patient_tab == "operacional",
+                            "solid",
+                            "outline",
                         ),
+                        aria_pressed=AdminPreviewState.active_patient_tab == "operacional",
+                        on_click=AdminPreviewState.show_operational_history,
+                    ),
+                    rx.button(
+                        "Histórico clínico",
+                        type="button",
+                        color_scheme="teal",
+                        variant=rx.cond(
+                            AdminPreviewState.active_patient_tab == "clinico",
+                            "solid",
+                            "outline",
+                        ),
+                        aria_pressed=AdminPreviewState.active_patient_tab == "clinico",
+                        on_click=AdminPreviewState.show_clinical_history,
+                        disabled=AdminPreviewState.is_loading_clinical_history,
+                    ),
+                    role="group",
+                    aria_label="Escolha o histórico do paciente",
+                    gap="0.65rem",
+                    flex_wrap="wrap",
+                ),
+                rx.cond(
+                    AdminPreviewState.active_patient_tab == "operacional",
+                    section_panel(
+                        rx.heading("Histórico operacional", size="4"),
                         rx.cond(
                             AdminPreviewState.selected_patient_history.length() > 0,
                             rx.vstack(
@@ -1154,23 +1369,68 @@ def patients_preview() -> rx.Component:
                                 width="100%",
                                 margin_top="0.8rem",
                             ),
-                            empty_state(
-                                "activity",
-                                "Sem passagens registradas",
-                                "Este paciente ainda não possui entradas persistidas na fila.",
+                            rx.box(
+                                rx.text(
+                                    "Nenhuma movimentação operacional encontrada para este paciente.",
+                                    size="2",
+                                    color="var(--vitta-text-muted)",
+                                ),
+                                role="status",
+                                padding_top="0.9rem",
                             ),
                         ),
                     ),
-                    _admin_clinical_history_panel(),
-                    spacing="4",
-                    align="stretch",
-                    width="100%",
+                    section_panel(_admin_clinical_history_panel()),
                 ),
-                id="patient-history",
+                spacing="4",
+                width="100%",
+                align="stretch",
             ),
-            rx.fragment(),
+            rx.cond(
+                AdminPreviewState.detail_status == "loading",
+                rx.center(
+                    rx.hstack(
+                        rx.spinner(size="2"),
+                        rx.text("Carregando ficha do paciente…", size="2"),
+                        spacing="3",
+                    ),
+                    min_height="8rem",
+                    width="100%",
+                    role="status",
+                    aria_live="polite",
+                ),
+                section_panel(
+                    rx.vstack(
+                        rx.heading(
+                            rx.cond(
+                                AdminPreviewState.detail_status == "not_found",
+                                "Paciente não encontrado.",
+                                "Não foi possível consultar a ficha.",
+                            ),
+                            size="4",
+                        ),
+                        rx.cond(
+                            AdminPreviewState.detail_status == "error",
+                            rx.button(
+                                "Tentar novamente",
+                                on_click=AdminPreviewState.load_patient_detail,
+                                variant="outline",
+                                color_scheme="teal",
+                            ),
+                            rx.fragment(),
+                        ),
+                        rx.link(
+                            "Voltar aos pacientes",
+                            href="/admin/pacientes",
+                            class_name="vitta-context-link",
+                        ),
+                        spacing="3",
+                        align="start",
+                    ),
+                ),
+            ),
         ),
-        spacing="5",
+        spacing="4",
         align="stretch",
         width="100%",
     )

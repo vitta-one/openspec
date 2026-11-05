@@ -3,6 +3,8 @@
 import reflex as rx
 
 from vitta_one.admin_preview.state import AdminPreviewState
+from vitta_one.admin_preview.agenda_state import AdminAgendaPreviewState
+from vitta_one.admin_preview.reception_state import AdminReceptionPreviewState
 from vitta_one.appointment_scheduling.state import AdminAvailabilityState, ReceptionAgendaState
 from vitta_one.doctor_workspace.state import DoctorWorkspaceState
 from vitta_one.auth.roles import Role
@@ -12,6 +14,8 @@ from vitta_one.clinical_prescription.state import PrintPrescriptionState
 from vitta_one.models import (
     AuthSession,
     ClinicalCareRecord,
+    ClinicConfiguration,
+    ClinicConfigurationChange,
     Consultation,
     ConsultationScheduleChange,
     Patient,
@@ -47,6 +51,7 @@ from vitta_one.ui.pages import (
     admin_specialties_page,
     admin_professionals_page,
     admin_patients_preview_page,
+    admin_patient_detail_preview_page,
     admin_reception_preview_page,
     doctor_page,
     doctor_agenda_page,
@@ -86,6 +91,8 @@ _PERSISTENT_MODELS = (
     ProfessionalSpecialty,
     Consultation,
     ClinicalCareRecord,
+    ClinicConfiguration,
+    ClinicConfigurationChange,
     Prescription,
     PrescriptionItem,
     ConsultationScheduleChange,
@@ -192,13 +199,13 @@ app.add_page(
     admin_reception_preview_page,
     route="/admin/recepcao",
     title="Recepção · Preview local | Vitta-One",
-    on_load=[AuthState.load_admin_preview, AdminPreviewState.load],
+    on_load=[AuthState.load_admin_preview, AdminReceptionPreviewState.load],
 )
 app.add_page(
     admin_agenda_preview_page,
     route="/admin/agenda",
     title="Agenda · Preview local | Vitta-One",
-    on_load=[AuthState.load_admin_preview, AdminPreviewState.load],
+    on_load=[AuthState.load_admin_preview, AdminAgendaPreviewState.load_agenda],
 )
 app.add_page(
     admin_clinical_preview_page,
@@ -210,7 +217,13 @@ app.add_page(
     admin_patients_preview_page,
     route="/admin/pacientes",
     title="Pacientes · Preview local | Vitta-One",
-    on_load=[AuthState.load_admin_preview, AdminPreviewState.load],
+    on_load=[AuthState.load_admin_preview, AdminPreviewState.load_patient_list],
+)
+app.add_page(
+    admin_patient_detail_preview_page,
+    route="/admin/pacientes/[patient_id]",
+    title="Ficha do paciente · Preview local | Vitta-One",
+    on_load=[AuthState.load_admin_preview, AdminPreviewState.load_patient_detail],
 )
 app.add_page(
     admin_finance_preview_page,
@@ -229,13 +242,14 @@ app.add_page(
     reception_agenda_page,
     route="/recepcao/agenda",
     title="Agenda e check-in | Vitta-One",
-    on_load=[AuthState.load_protected, ReceptionAgendaState.load, ReceptionDashboardState.load],
+    on_load=[AuthState.load_protected, ReceptionAgendaState.load_agenda],
 )
 app.add_page(
     reception_booking_page,
     route="/recepcao/agenda/nova",
     title="Agendar consulta | Vitta-One",
-    on_load=[AuthState.load_protected, ReceptionAgendaState.load],
+    on_load=[AuthState.load_protected, ReceptionAgendaState.load,
+             ReceptionDashboardState.load, ReceptionAgendaState.open_booking],
 )
 app.add_page(
     reception_patients_page,
@@ -247,7 +261,7 @@ app.add_page(
     reception_patient_create_page,
     route="/recepcao/pacientes/novo",
     title="Novo paciente | Vitta-One",
-    on_load=[AuthState.load_protected, ReceptionQueueState.load],
+    on_load=[AuthState.load_protected, ReceptionQueueState.prepare_new_patient],
 )
 app.add_page(
     reception_patient_detail_page,

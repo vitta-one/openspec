@@ -87,13 +87,21 @@ def _validate_specialty_name(value: str) -> tuple[str, str]:
     return display, normalize_specialty_key(display)
 
 
-def _validate_professional_name(value: str) -> str:
+def validate_professional_name(value: str) -> str:
     display = normalize_display_name(value)
     if not display:
         raise DirectoryValidationError("Informe o nome do profissional.")
     if len(display) > 160:
         raise DirectoryValidationError("O nome do profissional excede o limite permitido.")
     return display
+
+
+def validate_professional_email(value: str) -> str:
+    """Normalize medical identity email with the canonical server contract."""
+    normalized = normalize_email(value)
+    if not is_valid_email_identifier(normalized):
+        raise DirectoryValidationError("Informe um e-mail profissional válido.")
+    return normalized
 
 
 def _validate_registration_identifier(value: str) -> str:
@@ -126,6 +134,14 @@ def create_specialty(db: Session, *, name: str) -> Specialty:
     return specialty
 
 
+def get_specialty(db: Session, *, specialty_id: int) -> SpecialtyItem:
+    """Read the current persisted name for the editor."""
+    item = db.get(Specialty, specialty_id)
+    if item is None:
+        raise DirectoryNotFoundError("A especialidade não está disponível.")
+    return SpecialtyItem(id=item.id, name=item.name, is_active=item.is_active)
+
+
 def list_specialties(
     db: Session, *, recent_limit: int | None = None
 ) -> list[SpecialtyItem]:
@@ -147,10 +163,20 @@ def list_specialties(
     ]
 
 
-def rename_specialty(db: Session, *, specialty_id: int, name: str) -> Specialty:
-    specialty = db.get(Specialty, specialty_id)
+def rename_specialty(
+    db: Session, *, specialty_id: int, name: str,
+    expected_name: str | None = None,
+) -> Specialty:
+    # A lock prevents concurrent renames from silently overwriting an open editor.
+    specialty = db.exec(
+        select(Specialty).where(Specialty.id == specialty_id).with_for_update()
+    ).first()
     if specialty is None:
         raise DirectoryNotFoundError("A especialidade não está disponível.")
+    if expected_name is not None and specialty.name != expected_name:
+        raise DirectoryConflictError(
+            "Esta especialidade foi alterada por outra pessoa. Reabra a edição."
+        )
 
     display, normalized = _validate_specialty_name(name)
     duplicate = db.exec(
@@ -161,6 +187,8 @@ def rename_specialty(db: Session, *, specialty_id: int, name: str) -> Specialty:
     ).first()
     if duplicate is not None:
         raise DirectoryConflictError("Já existe uma especialidade com esse nome.")
+    if specialty.name == display and specialty.normalized_name == normalized:
+        return specialty
 
     specialty.name = display
     specialty.normalized_name = normalized
@@ -176,11 +204,20 @@ def rename_specialty(db: Session, *, specialty_id: int, name: str) -> Specialty:
 
 
 def set_specialty_active(
-    db: Session, *, specialty_id: int, is_active: bool
+    db: Session, *, specialty_id: int, is_active: bool,
+    expected_active: bool | None = None,
 ) -> Specialty:
-    specialty = db.get(Specialty, specialty_id)
+    specialty = db.exec(
+        select(Specialty).where(Specialty.id == specialty_id).with_for_update()
+    ).first()
     if specialty is None:
         raise DirectoryNotFoundError("A especialidade não está disponível.")
+    if expected_active is not None and specialty.is_active != expected_active:
+        raise DirectoryConflictError(
+            "A situação desta especialidade mudou. Atualize a lista e tente novamente."
+        )
+    if specialty.is_active == bool(is_active):
+        return specialty
     specialty.is_active = bool(is_active)
     specialty.updated_at = utc_now()
     db.add(specialty)
@@ -204,7 +241,14 @@ def _validate_specialty_ids(
     *,
     existing_ids: set[int] | None = None,
 ) -> list[int]:
-    unique_ids = list(dict.fromkeys(int(value) for value in specialty_ids))
+    try:
+        unique_ids = list(dict.fromkeys(int(value) for value in specialty_ids))
+    except (TypeError, ValueError) as exc:
+        raise DirectoryValidationError("Uma das especialidades selecionadas é inválida.") from exc
+    # Uma especialidade pode ser vinculada depois do cadastro.
+    if not unique_ids:
+        return []
+
     rows = db.exec(
         select(Specialty).where(Specialty.id.in_(unique_ids))
     ).all()
@@ -276,7 +320,7 @@ def create_professional(
     specialty_ids: list[int] | tuple[int, ...],
     user_id: int | None = None,
 ) -> Professional:
-    display_name = _validate_professional_name(name)
+    display_name = validate_professional_name(name)
     normalized_identifier = _validate_registration_identifier(registration_identifier)
     _validate_registration_unique(db, normalized_identifier)
     valid_specialties = _validate_specialty_ids(db, specialty_ids)
@@ -323,7 +367,7 @@ def update_professional(
     if professional is None:
         raise DirectoryNotFoundError("O profissional não está disponível.")
 
-    display_name = _validate_professional_name(name)
+    display_name = validate_professional_name(name)
     normalized_identifier = _validate_registration_identifier(registration_identifier)
     _validate_registration_unique(
         db,
@@ -373,11 +417,21 @@ def update_professional(
 
 
 def set_professional_active(
-    db: Session, *, professional_id: int, is_active: bool
+    db: Session, *, professional_id: int, is_active: bool,
+    expected_active: bool | None = None,
 ) -> Professional:
-    professional = db.get(Professional, professional_id)
+    """Change status atomically, rejecting stale administrative confirmations."""
+    professional = db.exec(
+        select(Professional)
+        .where(Professional.id == professional_id)
+        .with_for_update()
+    ).first()
     if professional is None:
         raise DirectoryNotFoundError("O profissional não está disponível.")
+    if expected_active is not None and professional.is_active != expected_active:
+        raise DirectoryConflictError(
+            "A situação do profissional mudou. Atualize a listagem e tente novamente."
+        )
     professional.is_active = bool(is_active)
     professional.updated_at = utc_now()
     db.add(professional)
@@ -488,10 +542,8 @@ def register_medical_professional(
     local_qa_password: str | None = None,
 ) -> MedicalRegistrationResult:
     """Create physician + identity; allow a chosen password ONLY in isolated local QA."""
-    display_name = _validate_professional_name(name)
-    normalized_email = normalize_email(email)
-    if not is_valid_email_identifier(normalized_email):
-        raise DirectoryValidationError("Informe um e-mail profissional válido.")
+    display_name = validate_professional_name(name)
+    normalized_email = validate_professional_email(email)
     valid_specialties = _validate_specialty_ids(db, specialty_ids)
     if local_qa_password is not None:
         if not local_qa_enabled():

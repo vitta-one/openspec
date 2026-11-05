@@ -504,6 +504,71 @@ def test_reception_routes_and_responsive_daily_table(page: Page) -> None:
     ).to_be_visible(timeout=30000)
 
 
+def test_reception_booking_modal_is_shared_and_keyboard_responsive(page: Page) -> None:
+    """Exercise the five selection steps against persisted QA data without reserving it."""
+    login_as_reception(page)
+    page.get_by_role("button", name="Nova consulta").click()
+    dialog = page.get_by_role("dialog", name="Agendar consulta")
+    expect(dialog).to_be_visible(timeout=30000)
+    expect(page).to_have_url(re.compile(r"/recepcao/?$"))
+    expect(dialog.get_by_text("Etapa 1 de 5")).to_be_visible()
+
+    patient_input = dialog.locator("#booking-patient-query")
+    patient_input.fill(FIXTURE["booking_patient_name"])
+    dialog.get_by_role("button", name="Buscar", exact=True).click()
+    patient_result = dialog.get_by_role(
+        "button", name=re.compile(re.escape(FIXTURE["booking_patient_name"]))
+    ).first
+    expect(patient_result).to_be_visible(timeout=30000)
+    patient_result.click()
+    expect(dialog.get_by_text(FIXTURE["booking_patient_name"], exact=True)).to_be_visible()
+    dialog.get_by_role("button", name="Continuar").click()
+
+    expect(dialog.get_by_text("Etapa 2 de 5")).to_be_visible()
+    dialog.locator("#booking-professional").click()
+    page.get_by_role("option", name=FIXTURE["booking_doctor_name"]).click()
+    dialog.get_by_role("button", name="Continuar").click()
+    expect(dialog.get_by_text("Etapa 3 de 5")).to_be_visible()
+    days = dialog.locator(".vitta-booking-calendar .vitta-calendar-date.has-slots")
+    if days.count() == 0:
+        dialog.get_by_role("button", name="Próximo mês").click()
+    expect(days.first).to_be_visible(timeout=30000)
+
+    for width in (320, 390, 768, 1024, 1440):
+        page.set_viewport_size({"width": width, "height": 760})
+        assert page.evaluate(
+            "document.documentElement.scrollWidth <= window.innerWidth + 2"
+        ), overflowing_elements(page)
+        page.screenshot(path=f"qa-artifacts/agendamento-modal-{width}px.png")
+
+    days.first.click()
+    dialog.get_by_role("button", name="Continuar").click()
+    expect(dialog.get_by_text("Etapa 4 de 5")).to_be_visible()
+    options = dialog.locator(".vitta-booking-time")
+    expect(options.first).to_be_visible(timeout=30000)
+    options.first.click()
+    dialog.get_by_role("button", name="Continuar").click()
+    expect(dialog.get_by_text("Etapa 5 de 5")).to_be_visible()
+    expect(dialog.get_by_role("button", name="Confirmar agendamento")).to_be_visible()
+
+    # Escape must request explicit discard and allow restoring the filled state.
+    page.keyboard.press("Escape")
+    confirm = page.get_by_role("alertdialog", name="Descartar agendamento?")
+    expect(confirm).to_be_visible(timeout=15000)
+    confirm.get_by_role("button", name="Continuar preenchendo").click()
+    expect(dialog.get_by_text("Etapa 5 de 5")).to_be_visible()
+    dialog.get_by_role("button", name="Cancelar", exact=True).click()
+    confirm.get_by_role("button", name="Descartar", exact=True).click()
+    expect(dialog).to_be_hidden(timeout=15000)
+
+    # The Agenda provides the same modal without a second booking screen.
+    page.goto(BASE + "/recepcao/agenda", wait_until="domcontentloaded")
+    page.get_by_role("button", name="+ Agendar consulta").click()
+    expect(page.get_by_role("dialog", name="Agendar consulta")).to_be_visible(
+        timeout=30000
+    )
+
+
 def test_reception_global_patient_search_uses_identity_only(page: Page) -> None:
     login_as_reception(page)
     search = page.locator("#topbar-patient-search")
@@ -1025,3 +1090,60 @@ def test_admin_directory_and_modal_text_have_explicit_light_contrast(page: Page)
         "el => getComputedStyle(el).color"
     ) == "rgb(15, 23, 42)"
     page.screenshot(path="qa-artifacts/admin-contrast-professional.png", full_page=True)
+
+
+def test_admin_qa_patient_directory_and_dossier_are_separate(page: Page) -> None:
+    """Verify real QA-only patient navigation, lazy clinical history and narrow widths."""
+    login_as_admin(page)
+    page.goto(BASE + "/admin/pacientes", wait_until="domcontentloaded")
+    expect(page.get_by_role("heading", name="Pacientes", exact=True)).to_be_visible(timeout=30000)
+    directory = page.get_by_role("table")
+    expect(directory).to_be_visible(timeout=30000)
+    expect(directory.get_by_role("columnheader", name="Paciente")).to_be_visible()
+    expect(directory.get_by_role("columnheader", name="CPF mascarado")).to_be_visible()
+    assert directory.get_by_role("checkbox").count() == 0
+    assert page.get_by_role("heading", name="Histórico operacional").count() == 0
+    assert page.get_by_role("heading", name="Histórico clínico").count() == 0
+
+    for width in (320, 390, 768, 1024, 1440):
+        page.set_viewport_size({"width": width, "height": 850})
+        assert page.evaluate(
+            "document.documentElement.scrollWidth <= window.innerWidth + 2"
+        ), f"patient directory overflow at {width}px: {overflowing_elements(page)}"
+
+    details = directory.get_by_role("link", name=re.compile(r"^Ver detalhes")).first
+    details.focus()
+    details.press("Enter")
+    expect(page).to_have_url(re.compile(r"/admin/pacientes/\d+/?$"), timeout=30000)
+    expect(page.get_by_role("heading", name="Ficha do paciente")).to_be_visible(timeout=30000)
+    expect(page.get_by_role("heading", name="Histórico operacional")).to_be_visible()
+
+    for width in (320, 390, 768, 1024, 1440):
+        page.set_viewport_size({"width": width, "height": 850})
+        assert page.evaluate(
+            "document.documentElement.scrollWidth <= window.innerWidth + 2"
+        ), f"patient dossier overflow at {width}px: {overflowing_elements(page)}"
+
+    clinical = page.get_by_role("button", name="Histórico clínico")
+    clinical.focus()
+    clinical.press("Enter")
+    expect(clinical).to_have_attribute("aria-pressed", "true", timeout=15000)
+    expect(page.get_by_role("heading", name="Histórico clínico")).to_be_visible()
+    expect(page.get_by_role("button", name="Histórico operacional")).to_be_visible()
+
+    page.get_by_role("button", name="Histórico operacional").click()
+    expect(page.get_by_role("heading", name="Histórico operacional")).to_be_visible()
+    breadcrumb = page.locator(".vitta-breadcrumb")
+    breadcrumb.get_by_role("link", name="Pacientes").click()
+    expect(page).to_have_url(re.compile(r"/admin/pacientes/?$"), timeout=30000)
+    expect(page.get_by_role("table")).to_be_visible(timeout=30000)
+    page.goto(BASE + "/admin/pacientes/999999999", wait_until="domcontentloaded")
+    expect(page.get_by_text("Paciente não encontrado.")).to_be_visible(timeout=30000)
+    assert page.get_by_role("heading", name="Histórico operacional").count() == 0
+
+
+def test_unauthenticated_admin_patient_detail_cannot_expose_identity(page: Page) -> None:
+    """Direct object URLs require an authenticated QA Administrator."""
+    page.goto(BASE + "/admin/pacientes/1", wait_until="domcontentloaded")
+    expect(page).to_have_url(re.compile(r"/login/?$"), timeout=30000)
+    assert page.get_by_role("heading", name="Ficha do paciente").count() == 0

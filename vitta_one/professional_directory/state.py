@@ -2,6 +2,7 @@
 
 from typing import Any, TypedDict
 import asyncio
+import unicodedata
 
 import reflex as rx
 from vitta_one.auth.local_qa import (
@@ -13,6 +14,7 @@ from vitta_one.auth.state import AuthState
 from vitta_one.professional_directory.application import (
     admin_create_professional,
     admin_create_specialty,
+    admin_get_specialty,
     admin_register_medical_professional,
     admin_set_onboarding_email_status,
     admin_reissue_medical_access,
@@ -33,6 +35,8 @@ from vitta_one.professional_directory.service import (
     DirectoryConflictError,
     DirectoryNotFoundError,
     DirectoryValidationError,
+    validate_professional_name,
+    validate_professional_email,
 )
 
 
@@ -74,6 +78,11 @@ class ProfessionalRow(TypedDict):
     specialty_names: str
     has_inactive_specialty: bool
     onboarding_email_status: str
+    access_label: str
+    can_reissue_access: bool
+    reissue_action_label: str
+    specialty_primary: str
+    specialty_more_count: int
 
 
 def _specialty_row(item) -> SpecialtyRow:
@@ -86,6 +95,19 @@ def _specialty_row(item) -> SpecialtyRow:
 
 
 def _professional_row(item) -> ProfessionalRow:
+    status = item.onboarding_email_status
+    labels = {
+        "PENDING": "Envio em processamento",
+        "ACCEPTED": "Aceito pelo provedor",
+        "FAILED": "Falha no envio",
+        "UNKNOWN": "Envio não confirmado",
+        "NOT_CONFIGURED": "Não enviado",
+        "NOT_REQUIRED": "Conta vinculada",
+    }
+    access_label = (
+        "Sem conta vinculada" if item.user_id is None
+        else labels.get(status, "Situação não disponível")
+    )
     return {
         "id": item.id,
         "name": item.name,
@@ -102,8 +124,41 @@ def _professional_row(item) -> ProfessionalRow:
         "has_inactive_specialty": any(
             not specialty.is_active for specialty in item.specialties
         ),
-        "onboarding_email_status": item.onboarding_email_status,
+        "onboarding_email_status": status,
+        "access_label": access_label,
+        "can_reissue_access": bool(item.user_id) and status in {
+            "FAILED", "UNKNOWN", "NOT_CONFIGURED"
+        },
+        "reissue_action_label": (
+            "Gerar novo acesso e enviar"
+            if status == "NOT_CONFIGURED"
+            else "Tentar enviar novo acesso"
+        ),
+        "specialty_primary": (
+            item.specialties[0].name if item.specialties else "Não vinculada"
+        ),
+        "specialty_more_count": max(0, len(item.specialties) - 1),
     }
+
+
+def _specialty_search_key(value: str) -> str:
+    """Case/accent insensitive search without changing the domain uniqueness key."""
+    return "".join(
+        char for char in unicodedata.normalize("NFKD", value.casefold())
+        if not unicodedata.combining(char)
+    )
+
+
+def filter_specialty_rows(
+    rows: list[SpecialtyRow], search: str, status: str
+) -> list[SpecialtyRow]:
+    """Combine search and status against records actually loaded from the server."""
+    term = _specialty_search_key(search.strip())
+    return [
+        item for item in rows
+        if (not term or term in _specialty_search_key(item["name"]))
+        and (status == "all" or item["is_active"] == (status == "active"))
+    ]
 
 
 class AdminDirectoryState(rx.State):
@@ -126,23 +181,37 @@ class AdminDirectoryState(rx.State):
     specialty_options: list[SpecialtyOption] = []
 
     is_loading: bool = False
+    directory_load_failed: bool = False
     is_submitting: bool = False
     error_message: str = ""
     success_message: str = ""
     qa_local_enabled: bool = False
 
     specialty_dialog_open: bool = False
+    specialty_status_dialog_open: bool = False
+    pending_specialty_id: int = 0
+    pending_specialty_name: str = ""
+    pending_specialty_is_active: bool = False
     professional_dialog_open: bool = False
     reissue_dialog_open: bool = False
     reissue_professional_id: int = 0
+    reissue_is_unsent: bool = False
+    status_dialog_open: bool = False
+    status_professional_id: int = 0
+    status_professional_name: str = ""
+    status_professional_active: bool = False
 
     new_specialty_name: str = ""
+    specialty_form_error: str = ""
     editing_specialty_id: int = 0
     editing_specialty_name: str = ""
+    editing_specialty_original_name: str = ""
 
     editing_professional_id: int = 0
     professional_name: str = ""
     professional_email: str = ""
+    professional_name_error: str = ""
+    professional_email_error: str = ""
     registration_identifier: str = ""
     selected_medical_user: str = "__none__"
 
@@ -159,20 +228,26 @@ class AdminDirectoryState(rx.State):
         return bool(self.specialties)
 
     @rx.var
+    def has_selectable_specialties(self) -> bool:
+        return bool(self.specialty_options)
+
+    @rx.var
     def has_professionals(self) -> bool:
         return bool(self.professionals)
 
     @rx.var
     def filtered_specialties(self) -> list[SpecialtyRow]:
-        term = self.specialty_search.strip().casefold()
-        return [
-            item for item in self.specialties
-            if (not term or term in item["name"].casefold())
-            and (
-                self.specialty_status == "all"
-                or item["is_active"] == (self.specialty_status == "active")
-            )
-        ]
+        return filter_specialty_rows(
+            self.specialties, self.specialty_search, self.specialty_status
+        )
+
+    @rx.var
+    def has_active_specialty_filters(self) -> bool:
+        return bool(self.specialty_search.strip()) or self.specialty_status != "all"
+
+    @rx.var
+    def specialty_result_count(self) -> int:
+        return len(self.filtered_specialties)
 
     @rx.var
     def professional_specialty_filter_options(self) -> list[DirectorySpecialtyFilterRow]:
@@ -230,6 +305,18 @@ class AdminDirectoryState(rx.State):
         return self.filtered_professionals[start:start + self.directory_page_size]
 
     @rx.var
+    def professional_results_count(self) -> int:
+        return len(self.filtered_professionals)
+
+    @rx.var
+    def professional_filters_active(self) -> bool:
+        return bool(
+            self.professional_search.strip()
+            or self.professional_status != "all"
+            or self.professional_specialty_filter != "all"
+        )
+
+    @rx.var
     def is_editing_professional(self) -> bool:
         return self.editing_professional_id > 0
 
@@ -258,21 +345,37 @@ class AdminDirectoryState(rx.State):
         self.medical_accounts = []
         self.specialty_options = []
         self.specialty_dialog_open = False
+        self._reset_specialty_status_change()
         self.professional_dialog_open = False
         self.reissue_dialog_open = False
         self.reissue_professional_id = 0
+        self.reissue_is_unsent = False
+        self.status_dialog_open = False
+        self.status_professional_id = 0
+        self.status_professional_name = ""
+        self.status_professional_active = False
         self.new_specialty_name = ""
+        self.specialty_form_error = ""
         self._reset_specialty_edit()
         self._reset_professional_form()
 
     def _reset_specialty_edit(self) -> None:
         self.editing_specialty_id = 0
         self.editing_specialty_name = ""
+        self.editing_specialty_original_name = ""
+
+    def _reset_specialty_status_change(self) -> None:
+        self.specialty_status_dialog_open = False
+        self.pending_specialty_id = 0
+        self.pending_specialty_name = ""
+        self.pending_specialty_is_active = False
 
     def _reset_professional_form(self) -> None:
         self.editing_professional_id = 0
         self.professional_name = ""
         self.professional_email = ""
+        self.professional_name_error = ""
+        self.professional_email_error = ""
         self.registration_identifier = ""
         self.selected_medical_user = "__none__"
         self.specialty_options = [
@@ -310,10 +413,15 @@ class AdminDirectoryState(rx.State):
                 recent_professional_items = []
 
         self.specialties = [_specialty_row(item) for item in specialty_items]
+        self.specialty_page = min(self.specialty_page, self.specialty_page_count)
         self.professionals = [_professional_row(item) for item in professional_items]
         self.recent_specialties = [_specialty_row(item) for item in recent_specialty_items]
         self.recent_professionals = [_professional_row(item) for item in recent_professional_items]
+        # Uma mutação pode remover o último resultado da página filtrada.
+        self.professional_page = min(self.professional_page, self.professional_page_count)
+        self.specialty_page = min(self.specialty_page, self.specialty_page_count)
         self.medical_accounts = []
+        self.directory_load_failed = False
         if not self.editing_professional_id:
             self._reset_professional_form()
 
@@ -344,8 +452,9 @@ class AdminDirectoryState(rx.State):
                 yield event
         except Exception:
             self._clear_sensitive_data()
+            self.directory_load_failed = True
             self.error_message = (
-                "Não foi possível carregar o diretório agora. Atualize a página e tente novamente."
+                "Não foi possível carregar o diretório agora. Tente novamente."
             )
         finally:
             self.is_loading = False
@@ -361,6 +470,12 @@ class AdminDirectoryState(rx.State):
         if value in {"all", "active", "inactive"}:
             self.specialty_status = value
             self.specialty_page = 1
+
+    @rx.event
+    def clear_specialty_filters(self) -> None:
+        self.specialty_search = ""
+        self.specialty_status = "all"
+        self.specialty_page = 1
 
     @rx.event
     def move_specialty_page(self, delta: int) -> None:
@@ -388,6 +503,13 @@ class AdminDirectoryState(rx.State):
             self.professional_page = 1
 
     @rx.event
+    def clear_professional_filters(self) -> None:
+        self.professional_search = ""
+        self.professional_status = "all"
+        self.professional_specialty_filter = "all"
+        self.professional_page = 1
+
+    @rx.event
     def move_professional_page(self, delta: int) -> None:
         self.professional_page = max(1, min(
             self.professional_page + delta, self.professional_page_count
@@ -400,12 +522,17 @@ class AdminDirectoryState(rx.State):
         self.specialty_dialog_open = is_open
         if not is_open:
             self.new_specialty_name = ""
+            self.specialty_form_error = ""
             self._reset_specialty_edit()
 
     @rx.event
     def start_new_specialty(self) -> None:
+        if self.is_submitting:
+            return
         self._clear_feedback()
+        self.specialty_form_error = ""
         self.new_specialty_name = ""
+        self.specialty_form_error = ""
         self._reset_specialty_edit()
         self.specialty_dialog_open = True
 
@@ -440,11 +567,14 @@ class AdminDirectoryState(rx.State):
             self.reissue_professional_id = 0
 
     @rx.event
-    def begin_medical_reissue(self, professional_id: int) -> None:
+    def begin_medical_reissue(
+        self, professional_id: int, onboarding_status: str = ""
+    ) -> None:
         if self.is_submitting:
             return
         self._clear_feedback()
         self.reissue_professional_id = professional_id
+        self.reissue_is_unsent = onboarding_status == "NOT_CONFIGURED"
         self.reissue_dialog_open = True
 
     @rx.event
@@ -471,12 +601,16 @@ class AdminDirectoryState(rx.State):
                 result = admin_reissue_medical_access(
                     db, token=token, professional_id=self.reissue_professional_id
                 )
-            delivery = await asyncio.to_thread(
-                send_medical_welcome,
-                name=result.name, email=result.email,
-                temporary_password=result.temporary_password,
-                professional_id=result.professional_id,
-            )
+            try:
+                delivery = await asyncio.to_thread(
+                    send_medical_welcome,
+                    name=result.name, email=result.email,
+                    temporary_password=result.temporary_password,
+                    professional_id=result.professional_id,
+                )
+            except Exception:
+                # O provedor pode ter recebido a requisição: nunca reenviar automaticamente.
+                delivery = EmailDelivery(status="UNKNOWN")
             with rx.session() as db:
                 admin_set_onboarding_email_status(
                     db, token=token, professional_id=result.professional_id,
@@ -506,55 +640,83 @@ class AdminDirectoryState(rx.State):
     @rx.event
     def update_new_specialty_name(self, value: str) -> None:
         self.new_specialty_name = value
+        self.specialty_form_error = ""
 
     @rx.event
     async def create_specialty(self, _form_data: dict[str, Any]):
+        if self.is_submitting:
+            return
         self.is_submitting = True
         self._clear_feedback()
+        self.specialty_form_error = ""
         yield
         try:
             token = await self._token()
             with rx.session() as db:
-                admin_create_specialty(
-                    db,
-                    token=token,
-                    name=self.new_specialty_name,
-                )
+                admin_create_specialty(db, token=token, name=self.new_specialty_name)
             self.new_specialty_name = ""
             self.specialty_dialog_open = False
             self._load_with_token(token)
-            self.success_message = "Especialidade cadastrada."
+            self.specialty_page = 1
+            yield rx.toast.success(
+                "Especialidade cadastrada com sucesso.", position="top-right"
+            )
         except (DirectoryValidationError, DirectoryConflictError) as exc:
-            self.error_message = str(exc)
+            self.specialty_form_error = str(exc)
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
-            self.error_message = "Não foi possível cadastrar a especialidade agora."
+            self.specialty_form_error = "Não foi possível cadastrar a especialidade agora."
         finally:
             self.is_submitting = False
             yield
 
     @rx.event
-    def begin_specialty_edit(self, specialty_id: int, name: str) -> None:
+    async def begin_specialty_edit(self, specialty_id: int):
+        if self.is_submitting:
+            return
         self._clear_feedback()
-        self.editing_specialty_id = specialty_id
-        self.editing_specialty_name = name
-        self.specialty_dialog_open = True
+        self.specialty_form_error = ""
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                specialty = admin_get_specialty(
+                    db, token=token, specialty_id=specialty_id
+                )
+            self.editing_specialty_id = specialty.id
+            self.editing_specialty_name = specialty.name
+            self.editing_specialty_original_name = specialty.name
+            self.specialty_dialog_open = True
+        except DirectoryNotFoundError as exc:
+            self.error_message = str(exc)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.error_message = "Não foi possível carregar a especialidade para edição."
 
     @rx.event
     def update_specialty_edit_name(self, value: str) -> None:
         self.editing_specialty_name = value
+        self.specialty_form_error = ""
 
     @rx.event
     def cancel_specialty_edit(self) -> None:
+        if self.is_submitting:
+            return
+        self.new_specialty_name = ""
+        self.specialty_form_error = ""
         self._reset_specialty_edit()
         self.specialty_dialog_open = False
 
     @rx.event
     async def save_specialty_edit(self, _form_data: dict[str, Any]):
+        if self.is_submitting:
+            return
         self.is_submitting = True
         self._clear_feedback()
+        self.specialty_form_error = ""
         yield
         try:
             if not self.editing_specialty_id:
@@ -566,28 +728,62 @@ class AdminDirectoryState(rx.State):
                     token=token,
                     specialty_id=self.editing_specialty_id,
                     name=self.editing_specialty_name,
+                    expected_name=self.editing_specialty_original_name,
                 )
             self._reset_specialty_edit()
             self.specialty_dialog_open = False
             self._load_with_token(token)
-            self.success_message = "Especialidade atualizada."
+            yield rx.toast.success(
+                "Especialidade atualizada com sucesso.", position="top-right"
+            )
         except (
             DirectoryValidationError,
             DirectoryConflictError,
             DirectoryNotFoundError,
         ) as exc:
-            self.error_message = str(exc)
+            self.specialty_form_error = str(exc)
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
-            self.error_message = "Não foi possível atualizar a especialidade agora."
+            self.specialty_form_error = "Não foi possível atualizar a especialidade agora."
         finally:
             self.is_submitting = False
             yield
 
     @rx.event
-    async def toggle_specialty_active(self, specialty_id: int, current_active: bool):
+    def begin_specialty_status_change(self, specialty_id: int) -> None:
+        if self.is_submitting:
+            return
+        row = next(
+            (item for item in self.specialties + self.recent_specialties
+             if item["id"] == specialty_id),
+            None,
+        )
+        if row is None:
+            return
+        self._clear_feedback()
+        self.pending_specialty_id = row["id"]
+        self.pending_specialty_name = row["name"]
+        self.pending_specialty_is_active = row["is_active"]
+        self.specialty_status_dialog_open = True
+
+    @rx.event
+    def set_specialty_status_dialog_open(self, is_open: bool) -> None:
+        if self.is_submitting and not is_open:
+            return
+        if not is_open:
+            self._reset_specialty_status_change()
+
+    @rx.event
+    def cancel_specialty_status_change(self) -> None:
+        if not self.is_submitting:
+            self._reset_specialty_status_change()
+
+    @rx.event
+    async def confirm_specialty_status_change(self):
+        if self.is_submitting or not self.specialty_status_dialog_open or not self.pending_specialty_id:
+            return
         self.is_submitting = True
         self._clear_feedback()
         yield
@@ -597,16 +793,22 @@ class AdminDirectoryState(rx.State):
                 admin_set_specialty_active(
                     db,
                     token=token,
-                    specialty_id=specialty_id,
-                    is_active=not current_active,
+                    specialty_id=self.pending_specialty_id,
+                    is_active=not self.pending_specialty_is_active,
+                    expected_active=self.pending_specialty_is_active,
                 )
+            was_active = self.pending_specialty_is_active
+            self._reset_specialty_status_change()
             self._load_with_token(token)
-            self.success_message = (
-                "Especialidade desativada."
-                if current_active
-                else "Especialidade reativada."
+            self.specialty_page = 1
+            yield rx.toast.success(
+                "Especialidade desativada." if was_active
+                else "Especialidade reativada.",
+                position="top-right",
             )
-        except DirectoryNotFoundError as exc:
+        except (
+            DirectoryValidationError, DirectoryConflictError, DirectoryNotFoundError
+        ) as exc:
             self.error_message = str(exc)
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
@@ -712,11 +914,13 @@ class AdminDirectoryState(rx.State):
     @rx.event
     def update_professional_name(self, value: str) -> None:
         self.professional_name = value
+        self.professional_name_error = ""
 
     @rx.event
     def update_professional_email(self, value: str) -> None:
         if not self.editing_professional_id:
             self.professional_email = value
+            self.professional_email_error = ""
 
     @rx.event
     def update_registration_identifier(self, value: str) -> None:
@@ -774,6 +978,21 @@ class AdminDirectoryState(rx.State):
         created_staff_user_id = 0
         yield
         try:
+            self.professional_name_error = ""
+            self.professional_email_error = ""
+            try:
+                validate_professional_name(self.professional_name)
+            except DirectoryValidationError as exc:
+                self.professional_name_error = str(exc)
+            if not self.editing_professional_id:
+                try:
+                    validate_professional_email(self.professional_email)
+                except DirectoryValidationError as exc:
+                    self.professional_email_error = str(exc)
+            if self.professional_name_error or self.professional_email_error:
+                self.error_message = "Revise os campos destacados e tente novamente."
+                return
+
             token = await self._token()
             specialty_ids = self._selected_specialty_ids()
             user_id = (
@@ -841,7 +1060,9 @@ class AdminDirectoryState(rx.State):
             self._load_with_token(token)
             self.success_message = message
             yield rx.toast.success(message, position="top-right")
-            if created_staff_user_id:
+            if created_staff_user_id and self.router.route_id in {
+                "/admin/funcionarios/novo", "/admin/funcionarios/medico"
+            }:
                 yield rx.redirect(f"/admin/funcionarios/{created_staff_user_id}")
         except (
             DirectoryValidationError,
@@ -868,9 +1089,38 @@ class AdminDirectoryState(rx.State):
             yield
 
     @rx.event
-    async def toggle_professional_active(
-        self, professional_id: int, current_active: bool
-    ):
+    def begin_professional_status_change(
+        self, professional_id: int, name: str, current_active: bool
+    ) -> None:
+        if self.is_submitting:
+            return
+        self._clear_feedback()
+        self.status_professional_id = professional_id
+        self.status_professional_name = name
+        self.status_professional_active = current_active
+        self.status_dialog_open = True
+
+    @rx.event
+    def set_professional_status_dialog_open(self, is_open: bool) -> None:
+        if self.is_submitting and not is_open:
+            return
+        self.status_dialog_open = is_open
+        if not is_open:
+            self.status_professional_id = 0
+            self.status_professional_name = ""
+
+    @rx.event
+    def cancel_professional_status_change(self) -> None:
+        if self.is_submitting:
+            return
+        self.status_dialog_open = False
+        self.status_professional_id = 0
+        self.status_professional_name = ""
+
+    @rx.event
+    async def confirm_professional_status_change(self):
+        if self.is_submitting or not self.status_professional_id:
+            return
         self.is_submitting = True
         self._clear_feedback()
         yield
@@ -880,16 +1130,22 @@ class AdminDirectoryState(rx.State):
                 admin_set_professional_active(
                     db,
                     token=token,
-                    professional_id=professional_id,
-                    is_active=not current_active,
+                    professional_id=self.status_professional_id,
+                    is_active=not self.status_professional_active,
+                    expected_active=self.status_professional_active,
                 )
-            self._load_with_token(token)
-            self.success_message = (
+            message = (
                 "Profissional desativado."
-                if current_active
+                if self.status_professional_active
                 else "Profissional reativado."
             )
-        except DirectoryNotFoundError as exc:
+            self.status_dialog_open = False
+            self.status_professional_id = 0
+            self.status_professional_name = ""
+            self._load_with_token(token)
+            self.success_message = message
+            yield rx.toast.success(message, position="top-right")
+        except (DirectoryNotFoundError, DirectoryConflictError) as exc:
             self.error_message = str(exc)
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):

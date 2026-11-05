@@ -27,6 +27,7 @@ from vitta_one.models.appointment import Consultation
 from vitta_one.models.auth import User
 from vitta_one.models.patient_queue import Patient, QueueEntry
 from vitta_one.models.professional import Professional
+from vitta_one.patient_queue.active_entry import ActiveQueueEntryError, lock_patient_queue_slot
 from vitta_one.patient_queue.domain import QueuePriority, QueueStatus
 from vitta_one.patient_queue.validation import (
     QueuePayloadValidationError,
@@ -244,7 +245,7 @@ def create_patient(
         raise PatientValidationError("Informe o nome do paciente.")
     if len(normalized_name) > 160:
         raise PatientValidationError("O nome do paciente excede o limite permitido.")
-    if not is_valid_cpf(normalized_cpf):
+    if not is_valid_cpf(cpf):
         raise PatientValidationError("Informe um CPF válido.")
 
     existing = db.exec(select(Patient).where(Patient.cpf == normalized_cpf)).first()
@@ -260,7 +261,9 @@ def create_patient(
     except IntegrityError as exc:
         db.rollback()
         existing = db.exec(select(Patient).where(Patient.cpf == normalized_cpf)).first()
-        raise PatientAlreadyExistsError(existing.id if existing else None) from exc
+        if existing is not None:
+            raise PatientAlreadyExistsError(existing.id) from exc
+        raise
     db.refresh(patient)
     return patient
 
@@ -298,7 +301,10 @@ def create_queue_entry(
     now: datetime | None = None,
 ) -> QueueEntry:
     """Place an existing patient in the operational queue as a walk-in."""
-    patient = db.get(Patient, patient_id)
+    try:
+        patient = lock_patient_queue_slot(db, patient_id=patient_id)
+    except ActiveQueueEntryError as exc:
+        raise QueueValidationError(str(exc)) from exc
     if patient is None:
         raise QueueValidationError("Selecione um paciente válido.")
 

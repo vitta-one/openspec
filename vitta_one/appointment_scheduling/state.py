@@ -2,7 +2,7 @@
 
 from typing import Any, TypedDict
 import calendar
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 
 import reflex as rx
 
@@ -17,11 +17,18 @@ from vitta_one.appointment_scheduling.application import (
     reception_get_agenda,
     reception_get_consultation_by_id,
     reception_list_active_professionals,
+    reception_list_booking_professionals,
     reception_reschedule_consultation,
     reception_schedule_consultation,
 )
 from vitta_one.appointment_scheduling.domain import AvailabilitySlotStatus, ConsultationStatus
 from vitta_one.appointment_scheduling.ical_export import build_consultation_ics
+from vitta_one.appointment_scheduling.reception_calendar import (
+    AgendaWeekDay,
+    build_week_days,
+    filter_consultations_for_day,
+    week_bounds,
+)
 from vitta_one.appointment_scheduling.service import (
     SchedulingConflictError,
     SchedulingNotFoundError,
@@ -43,7 +50,11 @@ from vitta_one.consultation_care.service import (
     CareLifecycleTransitionError,
     CareLifecycleValidationError,
 )
-from vitta_one.patient_queue.application import reception_find_patient
+from vitta_one.patient_queue.application import (
+    reception_find_patient,
+    reception_get_patient_identity,
+    reception_search_patients,
+)
 from vitta_one.patient_queue.state import ReceptionQueueState
 
 
@@ -84,14 +95,23 @@ class ConsultationRow(TypedDict):
 
 
 def _professional_rows(items) -> list[ProfessionalOptionRow]:
-    return [
-        {
-            "id": item.id,
-            "value": str(item.id),
-            "label": f"{item.name} · {item.registration_identifier}",
-        }
-        for item in items
-    ]
+    """Present readable names; technical INT registrations stay out of the UI."""
+    rows = list(items)
+    duplicates: dict[str, int] = {}
+    for item in rows:
+        duplicates[item.name] = duplicates.get(item.name, 0) + 1
+
+    result: list[ProfessionalOptionRow] = []
+    for item in rows:
+        label = item.name
+        if duplicates[item.name] > 1:
+            registration = (item.registration_identifier or "").strip()
+            if registration and not registration.upper().startswith("INT-"):
+                label = f"{item.name} · {registration}"
+            else:
+                label = f"{item.name} · cadastro {item.id}"
+        result.append({"id": item.id, "value": str(item.id), "label": label})
+    return result
 
 
 def _slot_rows(items) -> list[SlotRow]:
@@ -149,6 +169,88 @@ class AdminCalendarCell(TypedDict):
     aria_label: str
 
 
+def build_admin_calendar_cells(
+    slots: list[SlotRow], month_value: str, selected: str,
+) -> list[AdminCalendarCell]:
+    """Build a calendar from persisted data, without fabricating availability."""
+    try:
+        year, month = map(int, month_value.split("-"))
+        date(year, month, 1)
+    except (ValueError, IndexError):
+        return []
+    by_day: dict[str, int] = {}
+    for slot in slots:
+        label = slot["date_label"]
+        by_day[label] = by_day.get(label, 0) + 1
+    days: list[AdminCalendarCell] = []
+    for day in calendar.Calendar(firstweekday=6).itermonthdates(year, month):
+        label = day.strftime("%d/%m/%Y")
+        count = by_day.get(label, 0)
+        days.append({
+            "date_label": label,
+            "day": str(day.day),
+            "is_current_month": day.month == month,
+            "is_selected": label == selected,
+            "has_slots": count > 0 and day.month == month,
+            "slot_count": count if day.month == month else 0,
+            "aria_label": f"{label}: {count} horário(s) configurado(s)" if count and day.month == month else f"{label}: sem horários",
+        })
+    return days
+
+
+class BookingProfessionalRow(TypedDict):
+    id: int
+    value: str
+    label: str
+    specialties: str
+
+
+class BookingPatientRow(TypedDict):
+    id: int
+    name: str
+    contact_hint: str
+
+
+def _masked_booking_contact(value: str | None) -> str:
+    digits = "".join(char for char in (value or "") if char.isdigit())
+    return f"Telefone final {digits[-4:]}" if len(digits) >= 4 else "Telefone não informado"
+
+
+def booking_calendar_cells(
+    slots: list[SlotRow],
+    month_label: str,
+    selected_date: str,
+    today_iso: str,
+    end_iso: str,
+) -> list[AdminCalendarCell]:
+    """An accessible month built only from genuinely bookable persisted slots."""
+    try:
+        year, month = map(int, month_label.split("-"))
+        start = date.fromisoformat(today_iso)
+        end = date.fromisoformat(end_iso)
+        date(year, month, 1)
+    except (ValueError, IndexError):
+        return []
+    counts: dict[str, int] = {}
+    for slot in slots:
+        if slot["status"] == AvailabilitySlotStatus.AVAILABLE.value:
+            counts[slot["date_label"]] = counts.get(slot["date_label"], 0) + 1
+    cells: list[AdminCalendarCell] = []
+    for day in calendar.Calendar(firstweekday=6).itermonthdates(year, month):
+        label = day.strftime("%d/%m/%Y")
+        count = counts.get(label, 0) if start <= day <= end and day.month == month else 0
+        cells.append({
+            "date_label": label,
+            "day": str(day.day),
+            "is_current_month": day.month == month,
+            "is_selected": label == selected_date,
+            "has_slots": count > 0,
+            "slot_count": count,
+            "aria_label": f"{label}: {count} horário(s) disponível(is)" if count else f"{label}: sem horários disponíveis",
+        })
+    return cells
+
+
 class AdminAvailabilityState(rx.State):
     """Administrator-only availability management with server-side RBAC."""
 
@@ -162,6 +264,7 @@ class AdminAvailabilityState(rx.State):
     weekly_end_time: str = "17:00"
     weekly_slot_minutes: str = "30"
     weekly_existing: bool = False
+    weekly_saved_summary: str = ""
     slot_datetime_local: str = ""
     slot_date_local: str = ""
     slot_time_local: str = ""
@@ -170,6 +273,7 @@ class AdminAvailabilityState(rx.State):
     filter_end_date: str = ""
     calendar_month: str = ""
     selected_calendar_day: str = ""
+    active_operation: str = "search"
 
     is_loading: bool = False
     is_submitting: bool = False
@@ -199,40 +303,40 @@ class AdminAvailabilityState(rx.State):
 
     @rx.var
     def calendar_days(self) -> list[AdminCalendarCell]:
-        """Dias sem horários persistidos permanecem desabilitados."""
-        try:
-            year, month = map(int, self.calendar_month.split("-"))
-            first_day = date(year, month, 1)
-        except (ValueError, IndexError):
-            return []
-        by_day: dict[str, int] = {}
-        for slot in self.slots:
-            label = slot["date_label"]
-            by_day[label] = by_day.get(label, 0) + 1
-        days: list[AdminCalendarCell] = []
-        for day in calendar.Calendar(firstweekday=6).itermonthdates(year, month):
-            label = day.strftime("%d/%m/%Y")
-            count = by_day.get(label, 0)
-            days.append({
-                "date_label": label,
-                "day": str(day.day),
-                "is_current_month": day.month == month,
-                "is_selected": label == self.selected_calendar_day,
-                "has_slots": count > 0 and day.month == month,
-                "slot_count": count,
-                "aria_label": f"{label}: {count} horário(s) configurado(s)" if count else f"{label}: sem horários",
-            })
-        return days
+        return build_admin_calendar_cells(
+            self.slots, self.calendar_month, self.selected_calendar_day
+        )
 
     @rx.var
     def selected_day_slots(self) -> list[SlotRow]:
         return [slot for slot in self.slots if slot["date_label"] == self.selected_calendar_day]
 
+    @rx.var
+    def selected_day_available(self) -> int:
+        return sum(slot["status"] == AvailabilitySlotStatus.AVAILABLE.value for slot in self.selected_day_slots)
+
+    @rx.var
+    def selected_day_booked(self) -> int:
+        return sum(slot["status"] == AvailabilitySlotStatus.BOOKED.value for slot in self.selected_day_slots)
+
+    @rx.var
+    def selected_day_inactive(self) -> int:
+        return sum(slot["status"] == AvailabilitySlotStatus.INACTIVE.value for slot in self.selected_day_slots)
+
     @rx.event
     def select_calendar_day(self, label: str) -> None:
-        """Seleção só pode usar datas com horários retornados pelo servidor."""
-        if any(slot["date_label"] == label for slot in self.slots):
+        """Allow inspection of an empty date, never of a different visible month."""
+        try:
+            selected = datetime.strptime(label, "%d/%m/%Y").date()
+        except ValueError:
+            return
+        if selected.strftime("%Y-%m") == self.calendar_month:
             self.selected_calendar_day = label
+
+    @rx.event
+    def change_operation(self, value: str) -> None:
+        if value in ("search", "weekly", "single"):
+            self.active_operation = value
 
     @rx.event
     async def move_calendar_month(self, delta: int):
@@ -283,6 +387,17 @@ class AdminAvailabilityState(rx.State):
         self.weekly_start_time = rule.time_start if rule is not None else "08:00"
         self.weekly_end_time = rule.time_end if rule is not None else "17:00"
         self.weekly_slot_minutes = str(rule.slot_minutes) if rule is not None else "30"
+        if rule is None:
+            self.weekly_saved_summary = ""
+        else:
+            weekdays = ("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")
+            day_label = weekdays[rule.weekday_start]
+            if rule.weekday_end != rule.weekday_start:
+                day_label += f"–{weekdays[rule.weekday_end]}"
+            self.weekly_saved_summary = (
+                f"{day_label} · {rule.time_start}–{rule.time_end} · "
+                f"{rule.slot_minutes} minutos por consulta"
+            )
 
     def _professional_filter_id(self) -> int | None:
         return None if self.filter_professional == "__all__" else int(self.filter_professional)
@@ -299,25 +414,39 @@ class AdminAvailabilityState(rx.State):
         self._ensure_default_period()
         with rx.session() as db:
             professional_items = admin_list_active_professionals(db, token=token)
-            slot_items = admin_list_availability_slots(
-                db,
-                token=token,
-                professional_id=self._professional_filter_id(),
-                start_date=self.filter_start_date,
-                end_date=self.filter_end_date,
+            professionals = _professional_rows(professional_items)
+            allowed = {item["value"] for item in professionals}
+            if self.selected_professional not in allowed:
+                self.selected_professional = professionals[0]["value"] if professionals else "__none__"
+            self.filter_professional = (
+                self.selected_professional if self.selected_professional != "__none__" else "__all__"
             )
-        self.professionals = _professional_rows(professional_items)
+            slot_items = (
+                admin_list_availability_slots(
+                    db,
+                    token=token,
+                    professional_id=int(self.selected_professional),
+                    start_date=self.filter_start_date,
+                    end_date=self.filter_end_date,
+                )
+                if self.selected_professional != "__none__" else []
+            )
+            rule = (
+                admin_get_weekly_schedule(
+                    db, token=token, professional_id=int(self.selected_professional)
+                )
+                if self.selected_professional != "__none__" else None
+            )
+        self.professionals = professionals
         self.slots = _slot_rows(slot_items)
-        if self.selected_calendar_day and not any(
-            row["date_label"] == self.selected_calendar_day for row in self.slots
-        ):
-            self.selected_calendar_day = ""
-        if self.selected_professional == "__none__" and self.professionals:
-            self.selected_professional = self.professionals[0]["value"]
-        with rx.session() as db:
-            rule = (admin_get_weekly_schedule(db, token=token,
-                    professional_id=int(self.selected_professional))
-                    if self.selected_professional != "__none__" else None)
+        if self.selected_calendar_day:
+            try:
+                day = datetime.strptime(self.selected_calendar_day, "%d/%m/%Y").date()
+            except ValueError:
+                self.selected_calendar_day = ""
+            else:
+                if day.strftime("%Y-%m") != self.calendar_month:
+                    self.selected_calendar_day = ""
         self._apply_weekly_rule(rule)
 
     async def _authorization_redirect(self, exc: Exception):
@@ -351,19 +480,30 @@ class AdminAvailabilityState(rx.State):
 
     @rx.event
     async def update_selected_professional(self, value: str):
-        self.selected_professional = value
         self._clear_feedback()
+        if value not in {item["value"] for item in self.professionals}:
+            self.error_message = "Selecione um médico ativo da lista."
+            return
+        previous_professional = self.selected_professional
+        previous_filter = self.filter_professional
+        self.selected_professional = value
+        self.filter_professional = value
+        self.selected_calendar_day = ""
+        self.is_loading = True
+        yield
         try:
             token = await self._token()
-            with rx.session() as db:
-                rule = (admin_get_weekly_schedule(db, token=token, professional_id=int(value))
-                        if value != "__none__" else None)
-            self._apply_weekly_rule(rule)
+            self._load_with_token(token)
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
-            self.error_message = "Não foi possível consultar o expediente deste médico."
+            self.selected_professional = previous_professional
+            self.filter_professional = previous_filter
+            self.error_message = "Não foi possível consultar a agenda deste médico."
+        finally:
+            self.is_loading = False
+            yield
 
     @rx.event
     def update_weekly_start_day(self, value: str) -> None:
@@ -397,7 +537,7 @@ class AdminAvailabilityState(rx.State):
                 raise SchedulingValidationError("Selecione o médico antes de configurar o expediente.")
             token = await self._token()
             with rx.session() as db:
-                count = admin_save_weekly_schedule(
+                admin_save_weekly_schedule(
                     db, token=token, professional_id=int(self.selected_professional),
                     weekday_start=int(self.weekly_start_day),
                     weekday_end=int(self.weekly_end_day),
@@ -407,7 +547,7 @@ class AdminAvailabilityState(rx.State):
                 )
             self._load_with_token(token)
             yield rx.toast.success(
-                f"Expediente salvo. {count} horário(s) novo(s) nos próximos 45 dias.",
+                "Expediente salvo. Disponibilidade atualizada para a janela de 45 dias.",
                 position="top-right",
             )
         except (SchedulingValidationError, SchedulingConflictError,
@@ -436,24 +576,10 @@ class AdminAvailabilityState(rx.State):
         self.slot_time_local = value
 
     @rx.event
-    @rx.event
-    async def update_filter_professional(self, value: str):
-        """The month calendar immediately reflects the chosen physician."""
-        self.filter_professional = value
-        self.selected_calendar_day = ""
-        self.is_loading = True
-        yield
-        try:
-            token = await self._token()
-            self._load_with_token(token)
-        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
-            async for event in self._authorization_redirect(exc):
-                yield event
-        except Exception:
-            yield rx.toast.error("Não foi possível filtrar a agenda.", position="top-right")
-        finally:
-            self.is_loading = False
-            yield
+    def update_filter_professional(self, value: str):
+        """Backward-compatible alias for legacy callers."""
+        if value != "__all__":
+            return AdminAvailabilityState.update_selected_professional(value)
 
     @rx.event
     def update_filter_start_date(self, value: str) -> None:
@@ -485,6 +611,8 @@ class AdminAvailabilityState(rx.State):
 
     @rx.event
     async def create_slot(self, _form_data: dict[str, Any]):
+        if self.is_submitting:
+            return
         self.is_submitting = True
         self._clear_feedback()
         yield
@@ -512,7 +640,15 @@ class AdminAvailabilityState(rx.State):
             self.slot_datetime_local = ""
             self.slot_date_local = ""
             self.slot_time_local = ""
+            created_date = self.slot_date_local or starts_at_local[:10]
+            self.calendar_month = created_date[:7]
+            year, month = map(int, self.calendar_month.split("-"))
+            self.filter_start_date = f"{year:04d}-{month:02d}-01"
+            self.filter_end_date = f"{year:04d}-{month:02d}-{calendar.monthrange(year, month)[1]:02d}"
             self._load_with_token(token)
+            from datetime import datetime
+            self.selected_calendar_day = datetime.strptime(created_date, "%Y-%m-%d").strftime("%d/%m/%Y")
+            self.active_operation = "search"
             yield rx.toast.success("Horário disponibilizado.", position="top-right")
         except (
             SchedulingValidationError,
@@ -534,6 +670,8 @@ class AdminAvailabilityState(rx.State):
 
     @rx.event
     async def toggle_slot(self, slot_id: int, current_status: str):
+        if self.is_submitting:
+            return
         self.is_submitting = True
         self._clear_feedback()
         yield
@@ -582,6 +720,8 @@ class ReceptionAgendaState(rx.State):
     filter_professional: str = "__all__"
     filter_start_date: str = ""
     filter_end_date: str = ""
+    agenda_date_input: str = ""
+    selected_agenda_date: str = ""
 
     patient_cpf: str = ""
     selected_patient_id: int = 0
@@ -593,6 +733,22 @@ class ReceptionAgendaState(rx.State):
     consultation_page: int = 1
     consultation_page_size: int = 10
     focus_booking_on_next_load: bool = False
+
+    booking_dialog_open: bool = False
+    booking_locked_patient_id: int = 0
+    booking_origin: str = ""
+    booking_discard_open: bool = False
+    booking_step: int = 1
+    booking_patient_query: str = ""
+    booking_patients: list[BookingPatientRow] = []
+    booking_professionals: list[BookingProfessionalRow] = []
+    booking_professional: str = "__none__"
+    booking_slots: list[SlotRow] = []
+    booking_month: str = ""
+    booking_date: str = ""
+    booking_slot_id: int = 0
+    booking_error_message: str = ""
+    is_booking_loading: bool = False
 
     arrival_dialog_open: bool = False
     arrival_consultation_id: int = 0
@@ -618,13 +774,37 @@ class ReceptionAgendaState(rx.State):
     success_message: str = ""
 
     @rx.var
+    def visible_consultations(self) -> list[ConsultationRow]:
+        return filter_consultations_for_day(self.consultations, self.selected_agenda_date)
+
+    @rx.var
+    def agenda_week_days(self) -> list[AgendaWeekDay]:
+        return build_week_days(
+            self.consultations,
+            self.filter_start_date or clinic_today_iso(),
+            self.selected_agenda_date,
+            clinic_today_iso(),
+        )
+
+    @rx.var
+    def agenda_period_label(self) -> str:
+        start, end = week_bounds(self.filter_start_date or clinic_today_iso())
+        return f"{date.fromisoformat(start):%d/%m/%Y} a {date.fromisoformat(end):%d/%m/%Y}"
+
+    @rx.var
+    def selected_agenda_day_label(self) -> str:
+        if not self.selected_agenda_date:
+            return ""
+        return date.fromisoformat(self.selected_agenda_date).strftime("%d/%m/%Y")
+
+    @rx.var
     def consultation_total_pages(self) -> int:
-        return max(1, (len(self.consultations) + self.consultation_page_size - 1) // self.consultation_page_size)
+        return max(1, (len(self.visible_consultations) + self.consultation_page_size - 1) // self.consultation_page_size)
 
     @rx.var
     def paged_consultations(self) -> list[ConsultationRow]:
         start = (self.consultation_page - 1) * self.consultation_page_size
-        return self.consultations[start:start + self.consultation_page_size]
+        return self.visible_consultations[start:start + self.consultation_page_size]
 
     @rx.event
     def move_consultation_page(self, delta: int) -> None:
@@ -667,10 +847,12 @@ class ReceptionAgendaState(rx.State):
         self.professionals = []
         self.slots = []
         self.consultations = []
+        self.selected_agenda_date = ""
         self.selected_patient_id = 0
         self.selected_patient_name = ""
         self.active_tab = "consultations"
         self.focus_booking_on_next_load = False
+        self._reset_booking()
         self._reset_arrival()
         self._reset_reschedule()
         self._reset_cancel()
@@ -698,6 +880,13 @@ class ReceptionAgendaState(rx.State):
         self.professionals = _professional_rows(professional_items)
         self.slots = _slot_rows(snapshot.slots)
         self.consultations = _consultation_rows(snapshot.consultations)
+        self.consultation_page = min(self.consultation_page, self.consultation_total_pages)
+
+    def _set_agenda_week(self, first_day: str) -> None:
+        self.filter_start_date, self.filter_end_date = week_bounds(first_day)
+        self.agenda_date_input = self.filter_start_date
+        self.selected_agenda_date = ""
+        self.consultation_page = 1
 
     def _reset_arrival(self) -> None:
         self.arrival_dialog_open = False
@@ -779,14 +968,12 @@ class ReceptionAgendaState(rx.State):
 
     @rx.event
     def change_active_tab(self, value: str) -> None:
-        if value in {"consultations", "booking"}:
-            self.active_tab = value
+        self.active_tab = "consultations"
 
     @rx.event
     async def load(self):
-        self.active_tab = (
-            "booking" if self.focus_booking_on_next_load else "consultations"
-        )
+        open_from_patient = self.focus_booking_on_next_load
+        self.active_tab = "consultations"
         self.focus_booking_on_next_load = False
         self.is_loading = True
         self._clear_feedback()
@@ -794,6 +981,10 @@ class ReceptionAgendaState(rx.State):
         try:
             token = await self._token()
             self._load_with_token(token)
+            if open_from_patient:
+                self._reset_booking(preserve_patient=True)
+                self._load_booking_professionals_with_token(token)
+                self.booking_dialog_open = True
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
@@ -804,6 +995,74 @@ class ReceptionAgendaState(rx.State):
         finally:
             self.is_loading = False
             yield
+
+    @rx.event
+    async def load_agenda(self):
+        """Load a single seven-day clinic-local window for both views."""
+        try:
+            start = self.filter_start_date or clinic_today_iso()
+            self._set_agenda_week(start)
+        except (ValueError, OverflowError):
+            self._set_agenda_week(clinic_today_iso())
+        async for event in self.load():
+            yield event
+
+    @rx.event
+    def update_agenda_date_input(self, value: str) -> None:
+        self.agenda_date_input = value
+
+    @rx.event
+    async def apply_agenda_date(self):
+        try:
+            self._set_agenda_week(self.agenda_date_input)
+        except (ValueError, OverflowError):
+            self.error_message = "Informe uma data inicial válida."
+            return
+        async for event in self.refresh():
+            yield event
+
+    @rx.event
+    async def move_agenda_week(self, delta: int):
+        if delta not in (-1, 1):
+            return
+        try:
+            first = date.fromisoformat(self.filter_start_date or clinic_today_iso())
+            self._set_agenda_week((first + timedelta(days=7 * delta)).isoformat())
+        except (ValueError, OverflowError):
+            self.error_message = "Não foi possível navegar para esse período."
+            return
+        async for event in self.refresh():
+            yield event
+
+    @rx.event
+    async def go_to_agenda_today(self):
+        self._set_agenda_week(clinic_today_iso())
+        async for event in self.refresh():
+            yield event
+
+    @rx.event
+    async def clear_agenda_filters(self):
+        self.filter_professional = "__all__"
+        self._set_agenda_week(clinic_today_iso())
+        async for event in self.refresh():
+            yield event
+
+    @rx.event
+    def select_agenda_day(self, day_iso: str) -> None:
+        try:
+            day = date.fromisoformat(day_iso)
+            start = date.fromisoformat(self.filter_start_date)
+            if not start <= day <= start + timedelta(days=6):
+                return
+        except ValueError:
+            return
+        self.selected_agenda_date = "" if self.selected_agenda_date == day_iso else day_iso
+        self.consultation_page = 1
+
+    @rx.event
+    def clear_agenda_day(self) -> None:
+        self.selected_agenda_date = ""
+        self.consultation_page = 1
 
     @rx.event
     def update_filter_professional(self, value: str) -> None:
@@ -881,6 +1140,429 @@ class ReceptionAgendaState(rx.State):
         self.selected_patient_name = ""
         self._clear_feedback()
 
+    @rx.var
+    def booking_professional_name(self) -> str:
+        return next((row["label"] for row in self.booking_professionals
+                     if row["value"] == self.booking_professional), "")
+
+    @rx.var
+    def booking_specialties(self) -> str:
+        return next((row["specialties"] for row in self.booking_professionals
+                     if row["value"] == self.booking_professional), "")
+
+    @rx.var
+    def booking_month_title(self) -> str:
+        try:
+            year, month = map(int, self.booking_month.split("-"))
+            return f"{('Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro')[month - 1]} {year}"
+        except (ValueError, IndexError):
+            return ""
+
+    @rx.var
+    def booking_calendar_days(self) -> list[AdminCalendarCell]:
+        return booking_calendar_cells(
+            self.booking_slots, self.booking_month, self.booking_date,
+            clinic_today_iso(), clinic_date_after_iso(44),
+        )
+
+    @rx.var
+    def booking_can_move_previous_month(self) -> bool:
+        return bool(self.booking_month) and self.booking_month > clinic_today_iso()[:7]
+
+    @rx.var
+    def booking_can_move_next_month(self) -> bool:
+        return bool(self.booking_month) and self.booking_month < clinic_date_after_iso(44)[:7]
+
+    @rx.var
+    def booking_date_slots(self) -> list[SlotRow]:
+        return [slot for slot in self.booking_slots if
+                slot["date_label"] == self.booking_date
+                and slot["status"] == AvailabilitySlotStatus.AVAILABLE.value]
+
+    @rx.var
+    def booking_slot_label(self) -> str:
+        return next((slot["starts_at"] for slot in self.booking_slots
+                     if slot["id"] == self.booking_slot_id), "")
+
+    def _reset_booking(self, *, preserve_patient: bool = False) -> None:
+        if not preserve_patient:
+            self.selected_patient_id = 0
+            self.selected_patient_name = ""
+        self.booking_dialog_open = False
+        self.booking_origin = ""
+        self.booking_locked_patient_id = 0
+        self.booking_discard_open = False
+        self.booking_step = 1
+        self.booking_patient_query = ""
+        self.booking_patients = []
+        self.booking_professionals = []
+        self.booking_professional = "__none__"
+        self.booking_slots = []
+        self.booking_month = clinic_today_iso()[:7]
+        self.booking_date = ""
+        self.booking_slot_id = 0
+        self.booking_error_message = ""
+        self.is_booking_loading = False
+
+    def _load_booking_professionals_with_token(self, token: str) -> None:
+        with rx.session() as db:
+            rows = reception_list_booking_professionals(db, token=token)
+        self.booking_professionals = [
+            {"id": professional.id, "value": str(professional.id),
+             "label": professional.name, "specialties": specialties}
+            for professional, specialties in rows
+        ]
+
+    def _load_booking_slots_with_token(self, token: str) -> None:
+        if not self.booking_professional.isdecimal():
+            self.booking_slots = []
+            return
+        with rx.session() as db:
+            snapshot = reception_get_agenda(
+                db, token=token,
+                professional_id=int(self.booking_professional),
+                start_date=clinic_today_iso(), end_date=clinic_date_after_iso(44),
+            )
+        now = datetime.now(timezone.utc)
+        self.booking_slots = _slot_rows([
+            slot for slot in snapshot.slots
+            if slot.status is AvailabilitySlotStatus.AVAILABLE and slot.starts_at > now
+        ])
+        if self.booking_date and not any(
+            slot["date_label"] == self.booking_date for slot in self.booking_slots
+        ):
+            self.booking_date = ""
+            self.booking_slot_id = 0
+        elif self.booking_slot_id and not any(
+            slot["id"] == self.booking_slot_id for slot in self.booking_slots
+        ):
+            self.booking_slot_id = 0
+
+    def _request_booking_close(self) -> None:
+        if self.is_submitting:
+            return
+        if (self.selected_patient_id or self.booking_patient_query.strip()
+                or self.booking_professional != "__none__"):
+            self.booking_discard_open = True
+        else:
+            self._reset_booking()
+
+    @rx.event
+    async def open_booking(self):
+        if self.is_submitting:
+            return
+        self._reset_booking()
+        self.is_booking_loading = True
+        yield
+        try:
+            token = await self._token()
+            self._load_booking_professionals_with_token(token)
+            self.booking_dialog_open = True
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            yield rx.toast.error(
+                "Não foi possível iniciar o agendamento. Tente novamente.",
+                position="top-right",
+            )
+        finally:
+            self.is_booking_loading = False
+            yield
+
+    @rx.event
+    def set_booking_dialog_open(self, is_open: bool) -> None:
+        if is_open:
+            self.booking_dialog_open = True
+        else:
+            self._request_booking_close()
+
+    @rx.event
+    def cancel_booking(self) -> None:
+        self._request_booking_close()
+
+    @rx.event
+    def set_booking_discard_open(self, is_open: bool) -> None:
+        self.booking_discard_open = is_open
+
+    @rx.event
+    def discard_booking(self) -> None:
+        self._reset_booking()
+
+    @rx.event
+    def update_booking_patient_query(self, value: str) -> None:
+        self.booking_patient_query = str(value or "")[:100]
+        self.booking_patients = []
+        self.booking_error_message = ""
+
+    @rx.event
+    async def search_booking_patients(self, form_data: dict[str, Any]):
+        if self.booking_locked_patient_id:
+            return
+        self.booking_patient_query = str(
+            form_data.get("query", self.booking_patient_query) or ""
+        )[:100]
+        if len(self.booking_patient_query.strip()) < 2:
+            self.booking_error_message = "Digite ao menos 2 caracteres para buscar pacientes."
+            return
+        self.is_booking_loading = True
+        self.booking_error_message = ""
+        self.booking_patients = []
+        yield
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                results = reception_search_patients(
+                    db, token=token, query=self.booking_patient_query, limit=8
+                )
+            self.booking_patients = [
+                {"id": item.id, "name": item.name,
+                 "contact_hint": _masked_booking_contact(item.phone)}
+                for item in results
+            ]
+            if not results:
+                self.booking_error_message = "Nenhum paciente encontrado para esta busca."
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.booking_error_message = "Não foi possível buscar pacientes agora."
+        finally:
+            self.is_booking_loading = False
+            yield
+
+    @rx.event
+    async def select_booking_patient(self, patient_id: int):
+        if self.booking_locked_patient_id:
+            return
+        self.booking_error_message = ""
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                patient = reception_get_patient_identity(
+                    db, token=token, patient_id=patient_id,
+                )
+            if patient is None:
+                raise SchedulingValidationError("Paciente não encontrado. Faça outra busca.")
+            self.selected_patient_id = patient.id
+            self.selected_patient_name = patient.name
+            self.booking_patients = []
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except SchedulingValidationError as exc:
+            self.booking_error_message = str(exc)
+        except Exception:
+            self.booking_error_message = "Não foi possível selecionar o paciente."
+
+    @rx.event
+    def clear_booking_patient(self) -> None:
+        if self.booking_locked_patient_id:
+            return
+        self.selected_patient_id = 0
+        self.selected_patient_name = ""
+        self.booking_error_message = ""
+
+    @rx.event
+    async def choose_booking_professional(self, value: str):
+        self.booking_professional = value if any(
+            row["value"] == value for row in self.booking_professionals
+        ) else "__none__"
+        self.booking_date = ""
+        self.booking_slot_id = 0
+        self.booking_slots = []
+        self.booking_month = clinic_today_iso()[:7]
+        self.booking_error_message = ""
+        if self.booking_professional == "__none__":
+            return
+        self.is_booking_loading = True
+        yield
+        try:
+            token = await self._token()
+            self._load_booking_slots_with_token(token)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.booking_error_message = "Não foi possível consultar a disponibilidade."
+        finally:
+            self.is_booking_loading = False
+            yield
+
+    @rx.event
+    def move_booking_month(self, delta: int) -> None:
+        try:
+            year, month = map(int, self.booking_month.split("-"))
+            next_month = date(year + (month - 1 + delta) // 12,
+                              (month - 1 + delta) % 12 + 1, 1).strftime("%Y-%m")
+            if clinic_today_iso()[:7] <= next_month <= clinic_date_after_iso(44)[:7]:
+                self.booking_month = next_month
+                self.booking_date = ""
+                self.booking_slot_id = 0
+                self.booking_error_message = ""
+        except (ValueError, IndexError):
+            return
+
+    @rx.event
+    async def choose_booking_date(self, value: str):
+        if not any(day["date_label"] == value and day["has_slots"]
+                   for day in self.booking_calendar_days):
+            self.booking_error_message = "Selecione uma data com horários disponíveis."
+            return
+        self.booking_date = value
+        self.booking_slot_id = 0
+        self.booking_error_message = ""
+        self.is_booking_loading = True
+        yield
+        try:
+            token = await self._token()
+            self._load_booking_slots_with_token(token)
+            if not self.booking_date:
+                self.booking_error_message = (
+                    "A disponibilidade deste dia mudou. Escolha outra data."
+                )
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.booking_error_message = "Não foi possível atualizar os horários."
+        finally:
+            self.is_booking_loading = False
+            yield
+
+    @rx.event
+    def choose_booking_slot(self, slot_id: int) -> None:
+        if any(item["id"] == slot_id for item in self.booking_date_slots):
+            self.booking_slot_id = slot_id
+            self.booking_error_message = ""
+        else:
+            self.booking_slot_id = 0
+            self.booking_error_message = "Este horário deixou de estar disponível."
+
+    @rx.event
+    async def refresh_booking_availability(self):
+        if self.booking_professional == "__none__":
+            return
+        self.is_booking_loading = True
+        self.booking_error_message = ""
+        yield
+        try:
+            token = await self._token()
+            self._load_booking_slots_with_token(token)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.booking_error_message = "Não foi possível atualizar a disponibilidade."
+        finally:
+            self.is_booking_loading = False
+            yield
+
+    @rx.event
+    def booking_next(self) -> None:
+        if self.is_submitting or self.is_booking_loading:
+            return
+        messages = {
+            1: (self.selected_patient_id > 0, "Selecione um paciente para continuar."),
+            2: (self.booking_professional != "__none__", "Selecione um médico."),
+            3: (bool(self.booking_date and self.booking_date_slots), "Selecione um dia disponível."),
+            4: (self.booking_slot_id > 0 and bool(self.booking_slot_label),
+                "Selecione um horário disponível."),
+        }
+        valid, message = messages.get(self.booking_step, (False, "Etapa inválida."))
+        if not valid:
+            self.booking_error_message = message
+            return
+        self.booking_error_message = ""
+        self.booking_step = min(5, self.booking_step + 1)
+
+    @rx.event
+    def booking_back(self) -> None:
+        if not self.is_submitting:
+            self.booking_step = max(2 if self.booking_locked_patient_id else 1, self.booking_step - 1)
+            self.booking_error_message = ""
+
+    @rx.event
+    async def confirm_booking(self):
+        if self.is_submitting:
+            return
+        self.is_submitting = True
+        self.booking_error_message = ""
+        yield
+        token = ""
+        try:
+            if self.booking_step != 5 or not self.selected_patient_id:
+                raise SchedulingValidationError("Revise o paciente antes de confirmar.")
+            slot = next(
+                (row for row in self.booking_date_slots
+                 if row["id"] == self.booking_slot_id), None
+            )
+            if (slot is None or str(slot["professional_id"]) != self.booking_professional):
+                raise SchedulingValidationError("Revise médico, data e horário antes de confirmar.")
+            if (self.booking_locked_patient_id
+                    and self.selected_patient_id != self.booking_locked_patient_id):
+                raise SchedulingValidationError("O paciente da ficha não pode ser alterado nesta reserva.")
+            token = await self._token()
+            with rx.session() as db:
+                reception_schedule_consultation(
+                    db, token=token,
+                    patient_id=self.selected_patient_id,
+                    slot_id=self.booking_slot_id,
+                )
+            origin = self.booking_origin
+            booked_date_iso = datetime.strptime(self.booking_date, "%d/%m/%Y").date().isoformat()
+            if self.filter_professional not in ("__all__", self.booking_professional):
+                self.filter_professional = self.booking_professional
+            if not self.filter_start_date or booked_date_iso < self.filter_start_date:
+                self.filter_start_date = booked_date_iso
+            if not self.filter_end_date or booked_date_iso > self.filter_end_date:
+                self.filter_end_date = booked_date_iso
+            self.consultation_page = 1
+            self._reset_booking()
+            self.success_message = "Consulta agendada com sucesso"
+            yield rx.toast.success(self.success_message, position="top-right")
+            if origin == "patient":
+                yield ReceptionQueueState.load_patient_detail
+            try:
+                self._load_with_token(token)
+            except Exception:
+                # Reservation was already committed; never offer an unsafe retry.
+                yield rx.toast.warning(
+                    "Consulta salva. Não foi possível atualizar a lista agora.",
+                    position="top-right",
+                )
+            try:
+                async for event in self._refresh_daily_dashboard_if_loaded():
+                    yield event
+            except Exception:
+                # The booking is already committed; a read-only refresh must not
+                # turn success into an error that encourages a duplicate submit.
+                yield rx.toast.warning(
+                    "Consulta salva. Atualize o painel para visualizar os indicadores.",
+                    position="top-right",
+                )
+        except (SchedulingConflictError, SchedulingNotFoundError) as exc:
+            self.booking_error_message = str(exc)
+            self.booking_slot_id = 0
+            if token:
+                try:
+                    self._load_booking_slots_with_token(token)
+                except Exception:
+                    self.booking_slots = []
+                    self.booking_date = ""
+            self.booking_step = 4 if self.booking_date and self.booking_date_slots else 3
+            yield rx.toast.error(self.booking_error_message, position="top-right")
+        except (SchedulingValidationError, SchedulingTimeValidationError) as exc:
+            self.booking_error_message = str(exc)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.booking_error_message = "Não foi possível agendar. Tente novamente."
+        finally:
+            self.is_submitting = False
+            yield
+
     @rx.event
     async def download_appointment_calendar(self, consultation_id: int):
         """Download an .ics file only after authorized re-read of the appointment."""
@@ -924,6 +1606,12 @@ class ReceptionAgendaState(rx.State):
                     patient_id=self.selected_patient_id,
                     slot_id=slot_id,
                 )
+            booked_slot = next((item for item in self.slots if item["id"] == slot_id), None)
+            if booked_slot is not None:
+                booked_day = datetime.strptime(
+                    booked_slot["starts_at"], "%d/%m/%Y às %H:%M"
+                ).date().isoformat()
+                self._set_agenda_week(booked_day)
             self._load_with_token(token)
             self.success_message = "Consulta agendada."
             yield rx.toast.success(self.success_message, position="top-right")

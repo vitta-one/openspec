@@ -67,8 +67,18 @@ def test_admin_qa_links_are_separate_from_real_administration() -> None:
     preview_routes = {href for _, href, _, _ in _ADMIN_PREVIEW_NAV}
     assert len(task_routes) == len(_ADMIN_TASK_NAV)
     assert len(preview_routes) == len(_ADMIN_PREVIEW_NAV)
-    assert preview_routes == _ADMIN_PREVIEW_ROUTES
-    assert task_routes.isdisjoint(preview_routes)
+    # Contextual detail routes are QA-only, but must not clutter the sidebar.
+    assert preview_routes.issubset(_ADMIN_PREVIEW_ROUTES)
+    assert _ADMIN_PREVIEW_ROUTES - preview_routes == {"/admin/pacientes/[patient_id]"}
+    assert task_routes.isdisjoint(_ADMIN_PREVIEW_ROUTES)
+
+
+def test_admin_patient_detail_is_qa_protected_without_sidebar_duplicate() -> None:
+    assert "/admin/pacientes/[patient_id]" in _ADMIN_PREVIEW_ROUTES
+    assert "/admin/pacientes/[patient_id]" not in {
+        href for _, href, _, _ in _ADMIN_PREVIEW_NAV
+    }
+    assert "/admin/pacientes/[patient_id]" not in _ROLE_BY_ROUTE
 
 
 def test_admin_sidebar_has_explicit_active_key_for_each_destination() -> None:
