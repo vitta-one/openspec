@@ -4,6 +4,7 @@ import reflex as rx
 
 from vitta_one.admin_preview.state import AdminPreviewState
 from vitta_one.admin_preview.agenda_state import AdminAgendaPreviewState
+from vitta_one.admin_preview.reception_state import AdminReceptionPreviewState
 from vitta_one.appointment_scheduling.state import AdminAvailabilityState, ReceptionAgendaState
 from vitta_one.doctor_workspace.state import DoctorWorkspaceState
 from vitta_one.auth.roles import Role
@@ -197,7 +198,7 @@ app.add_page(
     admin_reception_preview_page,
     route="/admin/recepcao",
     title="Recepção · Preview local | Vitta-One",
-    on_load=[AuthState.load_admin_preview, AdminPreviewState.load],
+    on_load=[AuthState.load_admin_preview, AdminReceptionPreviewState.load],
 )
 app.add_page(
     admin_agenda_preview_page,

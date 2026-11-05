@@ -123,6 +123,7 @@ class AuthState(rx.State):
     async def _clear_sensitive_states(self) -> None:
         """Remove role-scoped patient and clinical projections from browser state."""
         from vitta_one.admin_preview.state import AdminPreviewState
+        from vitta_one.admin_preview.reception_state import AdminReceptionPreviewState
         from vitta_one.clinical_prescription.state import PrintPrescriptionState
         from vitta_one.doctor_workspace.state import DoctorWorkspaceState
         from vitta_one.patient_portal.state import PatientPortalState
@@ -149,6 +150,9 @@ class AuthState(rx.State):
         prescriptions._clear()
         preview = await self.get_state(AdminPreviewState)
         preview._clear()
+        reception_preview = await self.get_state(AdminReceptionPreviewState)
+        reception_preview._clear_data()
+        reception_preview.error_message = ""
 
     @rx.var
     def role_label(self) -> str:
