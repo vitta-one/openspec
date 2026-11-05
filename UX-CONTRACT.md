@@ -30,16 +30,28 @@ Este contrato define o comportamento observável do login, shell autenticado e n
 
 ### Desktop
 
-- Sidebar persistente à esquerda.
-- Topbar compacto no conteúdo.
-- O documento mantém a rolagem principal.
-- Item ativo é identificado por contraste, texto e `aria-current`.
+- Sidebar persistente à esquerda e recolhível em trilho de ícones, sem remover destinos ou perder seus nomes acessíveis.
+- Topbar compacto com controle de menu e indicação curta do contexto operacional; sem duplicação de conta ou estado decorativo de sessão.
+- A região de conta e logout fica no rodapé da sidebar e usa os dados da sessão validada.
+- O documento mantém a rolagem principal; a lista de navegação pode rolar quando necessário.
+- Item ativo usa contraste, texto e `aria-current="page"`; a seção administrativa ancestral tem destaque mais discreto e não recebe `aria-current`.
+- Rotas profundas como `/admin/funcionarios/novo` mantêm Funcionários selecionado, enquanto o breadcrumb identifica a página específica.
 
-### Tela estreita
+### Tablet e celular (até 1050 px)
 
-- A navegação vira faixa horizontal rolável acima do conteúdo.
+- A navegação é um único drawer temporário, acessado pelo hamburger, sem segunda sidebar ou faixa horizontal redundante.
+- O drawer possui fechamento visível, Escape, foco mantido dentro enquanto aberto e foco restaurado ao acionador após fechar.
+- Com o drawer aberto, o conteúdo principal fica inerte e o scroll de fundo é bloqueado; redimensionar não aprisiona o foco.
 - Nenhuma ação essencial depende de hover.
 - Conteúdo retorna a uma coluna quando a divisão comprometer leitura.
+- O layout não pode gerar overflow horizontal em 320, 390, 768, 1024 ou 1440 px.
+
+### Navegação e permissões
+
+- O menu é montado a partir das rotas existentes de cada role, sem ampliar a autorização do servidor.
+- A Administração contém sua página inicial e os destinos de Funcionários, Profissionais, Especialidades, Horários e Configurações.
+- Visualizações locais de QA formam grupo separado, visível apenas com a configuração autorizada; não oferecem permissão de mutação clínica ao Administrador.
+- As páginas e eventos continuam sujeitos ao RBAC e à validação de sessão no servidor.
 
 ## 4. Navegação por role
 
