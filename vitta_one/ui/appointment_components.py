@@ -122,48 +122,59 @@ def _consultation_status_badge(status, label) -> rx.Component:
     return consultation_status_badge(status, label)
 
 def _admin_slot_row(row) -> rx.Component:
-    return rx.box(
-        rx.flex(
-            rx.hstack(
-                rx.box(rx.icon("calendar_clock", size=18), class_name="vitta-patient-avatar"),
-                rx.box(
-                    rx.text(row["time_label"], font_weight="750", size="4", class_name="vitta-tabular"),
-                    rx.text(row["professional_name"], size="1", color="var(--vitta-text-muted)", margin_top="0.15rem"),
+    """A compact daily row with a confirmation before making a slot unavailable."""
+    return rx.flex(
+        rx.hstack(
+            rx.text(row["time_label"], font_weight="750", size="3", class_name="vitta-tabular"),
+            _slot_status_badge(row["status"], row["status_label"]),
+            spacing="3",
+            align="center",
+        ),
+        rx.cond(
+            row["status"] == AvailabilitySlotStatus.BOOKED.value,
+            rx.text("Reserva existente — gerenciar pela Recepção", size="2",
+                    color="var(--vitta-text-muted)"),
+            rx.cond(
+                row["status"] == AvailabilitySlotStatus.INACTIVE.value,
+                rx.button(
+                    "Reativar", type="button", variant="outline", color_scheme="teal",
+                    size="2", on_click=AdminAvailabilityState.toggle_slot(row["id"], row["status"]),
+                    disabled=AdminAvailabilityState.is_submitting,
                 ),
-                spacing="3",
-                align="center",
-                min_width="0",
-            ),
-            rx.hstack(
-                _slot_status_badge(row["status"], row["status_label"]),
-                rx.cond(
-                    row["status"] == AvailabilitySlotStatus.BOOKED.value,
-                    rx.text("Gerenciado pela Recepção", size="1", color="var(--vitta-text-subtle)"),
-                    rx.button(
-                        rx.cond(
-                            row["status"] == AvailabilitySlotStatus.INACTIVE.value,
-                            "Reativar",
-                            "Desativar",
+                rx.dialog.root(
+                    rx.dialog.trigger(
+                        rx.button("Desativar", type="button", variant="outline",
+                                  color_scheme="red", size="2",
+                                  disabled=AdminAvailabilityState.is_submitting)
+                    ),
+                    rx.dialog.content(
+                        rx.dialog.title("Desativar horário"),
+                        rx.dialog.description(
+                            "Este horário deixará de aceitar novas reservas. "
+                            "Consultas já reservadas não serão canceladas."
                         ),
-                        type="button",
-                        variant="outline",
-                        color_scheme="teal",
-                        size="2",
-                        on_click=AdminAvailabilityState.toggle_slot(row["id"], row["status"]),
-                        disabled=AdminAvailabilityState.is_submitting,
+                        rx.text(row["date_label"], " às ", row["time_label"],
+                                font_weight="700", margin_y="1rem"),
+                        rx.flex(
+                            rx.dialog.close(
+                                rx.button("Manter horário", type="button", variant="ghost")
+                            ),
+                            rx.dialog.close(
+                                rx.button(
+                                    "Confirmar desativação", type="button", color_scheme="red",
+                                    on_click=AdminAvailabilityState.toggle_slot(row["id"], row["status"]),
+                                    disabled=AdminAvailabilityState.is_submitting,
+                                )
+                            ),
+                            justify="end", gap="2", flex_wrap="wrap",
+                        ),
+                        max_width="28rem",
                     ),
                 ),
-                spacing="2",
-                align="center",
-                flex_wrap="wrap",
             ),
-            direction=rx.breakpoints(initial="column", md="row"),
-            align=rx.breakpoints(initial="stretch", md="center"),
-            justify="between",
-            gap="0.75rem",
-            width="100%",
         ),
-        class_name="vitta-schedule-row",
+        justify="between", align="center", gap="3", width="100%",
+        flex_wrap="wrap", class_name="vitta-calendar-slot-row",
         role="listitem",
     )
 
@@ -208,13 +219,13 @@ def _weekday_select(*, control_id: str, value, on_change) -> rx.Component:
 
 
 def _admin_calendar_day(day) -> rx.Component:
-    """Calendar cell: only dates containing persisted slots are interactive."""
+    """Calendar cell: empty dates are inspectable, adjacent-month dates are not."""
     return rx.button(
         rx.vstack(
             rx.text(day["day"], font_weight="700", size="3"),
             rx.cond(
                 day["has_slots"],
-                rx.text(day["slot_count"], " horários", size="1",
+                rx.text(day["slot_count"], size="1",
                         class_name="vitta-calendar-day-count"),
                 rx.fragment(),
             ),
@@ -227,10 +238,14 @@ def _admin_calendar_day(day) -> rx.Component:
             rx.cond(
                 day["has_slots"],
                 "vitta-calendar-date has-slots",
-                "vitta-calendar-date is-unavailable",
+                rx.cond(
+                    day["is_current_month"],
+                    "vitta-calendar-date is-empty",
+                    "vitta-calendar-date is-unavailable",
+                ),
             ),
         ),
-        disabled=~day["has_slots"],
+        disabled=~day["is_current_month"],
         on_click=AdminAvailabilityState.select_calendar_day(day["date_label"]),
         aria_label=day["aria_label"],
         aria_pressed=day["is_selected"],
@@ -244,20 +259,11 @@ def admin_calendar_view() -> rx.Component:
         rx.flex(
             rx.box(
                 rx.heading("Disponibilidade dos médicos", size="4"),
-                rx.text("Selecione um dia destacado para consultar e gerenciar os horários.",
+                rx.text("Selecione qualquer data do mês para conferir disponibilidade ou ausência de horários.",
                         color="var(--vitta-text-muted)", size="2", margin_top="0.35rem"),
             ),
-            rx.box(
-                field_label("Profissional", "admin-calendar-professional"),
-                _professional_select(
-                    control_id="admin-calendar-professional",
-                    value=AdminAvailabilityState.filter_professional,
-                    on_change=AdminAvailabilityState.update_filter_professional,
-                    include_all=True,
-                    disabled=AdminAvailabilityState.is_loading,
-                ),
-                width=rx.breakpoints(initial="100%", md="min(22rem, 100%)"),
-            ),
+            rx.text("Somente horários persistidos, no fuso da clínica.",
+                    size="2", color="var(--vitta-text-muted)"),
             direction=rx.breakpoints(initial="column", lg="row"),
             justify="between", align="center", gap="4", width="100%",
         ),
@@ -293,20 +299,31 @@ def admin_calendar_view() -> rx.Component:
             rx.vstack(
                 rx.flex(
                     rx.heading(AdminAvailabilityState.selected_calendar_day, size="4"),
-                    rx.text(AdminAvailabilityState.selected_day_slots.length(), " horário(s) encontrado(s)",
-                            size="2", color="var(--vitta-text-muted)"),
+                    rx.hstack(
+                        rx.text(AdminAvailabilityState.selected_day_available, " disponíveis", size="2"),
+                        rx.text("·", color="var(--vitta-text-subtle)"),
+                        rx.text(AdminAvailabilityState.selected_day_booked, " reservados", size="2"),
+                        rx.text("·", color="var(--vitta-text-subtle)"),
+                        rx.text(AdminAvailabilityState.selected_day_inactive, " inativos", size="2"),
+                        spacing="2", flex_wrap="wrap", color="var(--vitta-text-muted)",
+                    ),
                     justify="between", align="center", gap="3", width="100%", flex_wrap="wrap",
                 ),
-                rx.vstack(
-                    rx.foreach(AdminAvailabilityState.selected_day_slots, _admin_slot_row),
-                    spacing="2", align="stretch", width="100%",
+                rx.cond(
+                    AdminAvailabilityState.selected_day_slots.length() > 0,
+                    rx.vstack(
+                        rx.foreach(AdminAvailabilityState.selected_day_slots, _admin_slot_row),
+                        spacing="0", align="stretch", width="100%", role="list",
+                    ),
+                    rx.text("Não há horários cadastrados para esta data.",
+                            color="var(--vitta-text-muted)", padding_y="1rem"),
                 ),
                 class_name="vitta-calendar-day-details",
                 spacing="4", align="stretch", width="100%",
             ),
             rx.box(
                 rx.icon("calendar_days", size=24, color="var(--vitta-text-subtle)"),
-                rx.text("Escolha uma data com horários configurados.",
+                rx.text("Escolha uma data do calendário para conferir os horários.",
                         color="var(--vitta-text-muted)", margin_top="0.6rem"),
                 class_name="vitta-calendar-empty",
             ),
@@ -319,11 +336,29 @@ def admin_availability_panel() -> rx.Component:
     """Focused schedule management: each task has a separate accessible tab."""
     return section_panel(
         rx.vstack(
-            rx.tabs.root(
+            rx.box(
+                field_label("Médico responsável", "admin-schedule-professional"),
+                _professional_select(
+                    control_id="admin-schedule-professional",
+                    value=AdminAvailabilityState.selected_professional,
+                    on_change=AdminAvailabilityState.update_selected_professional,
+                    include_all=False,
+                    disabled=AdminAvailabilityState.is_loading | AdminAvailabilityState.is_submitting,
+                ),
+                width=rx.breakpoints(initial="100%", md="min(24rem, 100%)"),
+            ),
+            feedback_region(AdminAvailabilityState.error_message, AdminAvailabilityState.success_message,
+                            "admin-hours-feedback"),
+            rx.cond(
+                AdminAvailabilityState.is_loading & ~AdminAvailabilityState.has_professionals,
+                rx.center(rx.spinner(size="3"), min_height="10rem", width="100%"),
+                rx.cond(
+                    AdminAvailabilityState.has_professionals,
+                    rx.tabs.root(
                 rx.tabs.list(
+                    rx.tabs.trigger("Consultar disponibilidade", value="search"),
                     rx.tabs.trigger("Expediente semanal", value="weekly"),
                     rx.tabs.trigger("Horário avulso", value="single"),
-                    rx.tabs.trigger("Calendário de horários", value="search"),
                     class_name="vitta-task-tabs",
                 ),
                 rx.tabs.content(
@@ -331,20 +366,23 @@ def admin_availability_panel() -> rx.Component:
                     rx.vstack(
                         rx.heading("Expediente semanal do médico", size="4", color="var(--vitta-text)"),
                         rx.text("Configure os dias e o intervalo de trabalho. Horários de consulta disponíveis são publicados para os próximos 45 dias, sem cancelar reservas já existentes.", color="var(--vitta-text-muted)", size="2", line_height="1.5"),
-                        rx.box(
-                            field_label("Médico", "admin-weekly-professional"),
+                        rx.cond(
+                            AdminAvailabilityState.weekly_existing,
                             rx.box(
-                                _professional_select(
-                                    control_id="admin-weekly-professional",
-                                    value=AdminAvailabilityState.selected_professional,
-                                    on_change=AdminAvailabilityState.update_selected_professional,
-                                    include_all=False,
-                                    disabled=AdminAvailabilityState.is_submitting,
+                                rx.text("Expediente atualmente configurado", size="2", font_weight="700"),
+                                rx.hstack(
+                                    rx.text(AdminAvailabilityState.weekly_saved_summary,
+                                            size="2", color="var(--vitta-text-muted)"),
+                                    spacing="2", flex_wrap="wrap",
                                 ),
-                                margin_top="0.4rem",
+                                class_name="vitta-info-strip",
                             ),
-                            width="100%",
+                            rx.text("Este médico ainda não possui expediente semanal.",
+                                    color="var(--vitta-text-muted)", size="2"),
                         ),
+                        rx.text("O período entre o primeiro e o último dia é contínuo. "
+                                "A agenda atual aceita uma regra semanal por médico.",
+                                color="var(--vitta-text-muted)", size="2"),
                         rx.grid(
                             rx.box(
                                 field_label("Trabalha de", "admin-weekly-start-day"),
@@ -361,14 +399,14 @@ def admin_availability_panel() -> rx.Component:
                             rx.box(
                                 field_label("Início do expediente", "admin-weekly-start-time"),
                                 rx.el.input(id="admin-weekly-start-time", type="time", name="start_time",
-                                            required=True, class_name="vitta-input", margin_top="0.4rem",
+                                            required=True, lang="pt-BR", class_name="vitta-input", margin_top="0.4rem",
                                             value=AdminAvailabilityState.weekly_start_time,
                                             on_change=AdminAvailabilityState.update_weekly_start_time),
                             ),
                             rx.box(
                                 field_label("Fim do expediente", "admin-weekly-end-time"),
                                 rx.el.input(id="admin-weekly-end-time", type="time", name="end_time",
-                                            required=True, class_name="vitta-input", margin_top="0.4rem",
+                                            required=True, lang="pt-BR", class_name="vitta-input", margin_top="0.4rem",
                                             value=AdminAvailabilityState.weekly_end_time,
                                             on_change=AdminAvailabilityState.update_weekly_end_time),
                             ),
@@ -412,24 +450,12 @@ def admin_availability_panel() -> rx.Component:
                 rx.el.form(
                     rx.grid(
                         rx.box(
-                            field_label("Profissional", "admin-slot-professional"),
-                            rx.box(
-                                _professional_select(
-                                    control_id="admin-slot-professional",
-                                    value=AdminAvailabilityState.selected_professional,
-                                    on_change=AdminAvailabilityState.update_selected_professional,
-                                    include_all=False,
-                                    disabled=AdminAvailabilityState.is_submitting,
-                                ),
-                                margin_top="0.4rem",
-                            ),
-                        ),
-                        rx.box(
                             field_label("Data do atendimento", "admin-slot-date"),
                             rx.el.input(
                                 id="admin-slot-date",
                                 name="date",
                                 type="date",
+                                lang="pt-BR",
                                 value=AdminAvailabilityState.slot_date_local,
                                 on_change=AdminAvailabilityState.update_slot_date,
                                 required=True,
@@ -443,6 +469,7 @@ def admin_availability_panel() -> rx.Component:
                                 id="admin-slot-time",
                                 name="time",
                                 type="time",
+                                lang="pt-BR",
                                 value=AdminAvailabilityState.slot_time_local,
                                 on_change=AdminAvailabilityState.update_slot_time,
                                 required=True,
@@ -460,7 +487,7 @@ def admin_availability_panel() -> rx.Component:
                             disabled=AdminAvailabilityState.is_submitting | ~AdminAvailabilityState.has_professionals,
                             loading=AdminAvailabilityState.is_submitting,
                         ),
-                        columns=rx.breakpoints(initial="1", md="repeat(2, minmax(0, 1fr))", xl="minmax(13rem, 1.5fr) minmax(9rem, 1fr) minmax(9rem, 1fr) auto"),
+                        columns=rx.breakpoints(initial="1", md="repeat(2, minmax(0, 1fr))", xl="minmax(9rem, 1fr) minmax(9rem, 1fr) auto"),
                         gap="0.75rem",
                         align_items="end",
                         width="100%",
@@ -477,8 +504,13 @@ def admin_availability_panel() -> rx.Component:
                     value="search",
                     padding_top="1.25rem",
                 ),
-                default_value="weekly",
+                value=AdminAvailabilityState.active_operation,
+                on_change=AdminAvailabilityState.change_operation,
                 width="100%",
+                ),
+                empty_state("stethoscope", "Nenhum médico ativo",
+                            "Cadastre um profissional ativo antes de configurar horários."),
+                ),
             ),
             spacing="4",
             align="stretch",

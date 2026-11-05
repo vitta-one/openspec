@@ -2,7 +2,7 @@
 
 from typing import Any, TypedDict
 import calendar
-from datetime import date
+from datetime import date, datetime
 
 import reflex as rx
 
@@ -84,14 +84,23 @@ class ConsultationRow(TypedDict):
 
 
 def _professional_rows(items) -> list[ProfessionalOptionRow]:
-    return [
-        {
-            "id": item.id,
-            "value": str(item.id),
-            "label": f"{item.name} · {item.registration_identifier}",
-        }
-        for item in items
-    ]
+    """Present readable names; technical INT registrations stay out of the UI."""
+    rows = list(items)
+    duplicates: dict[str, int] = {}
+    for item in rows:
+        duplicates[item.name] = duplicates.get(item.name, 0) + 1
+
+    result: list[ProfessionalOptionRow] = []
+    for item in rows:
+        label = item.name
+        if duplicates[item.name] > 1:
+            registration = (item.registration_identifier or "").strip()
+            if registration and not registration.upper().startswith("INT-"):
+                label = f"{item.name} · {registration}"
+            else:
+                label = f"{item.name} · cadastro {item.id}"
+        result.append({"id": item.id, "value": str(item.id), "label": label})
+    return result
 
 
 def _slot_rows(items) -> list[SlotRow]:
@@ -149,6 +158,35 @@ class AdminCalendarCell(TypedDict):
     aria_label: str
 
 
+def build_admin_calendar_cells(
+    slots: list[SlotRow], month_value: str, selected: str,
+) -> list[AdminCalendarCell]:
+    """Build a calendar from persisted data, without fabricating availability."""
+    try:
+        year, month = map(int, month_value.split("-"))
+        date(year, month, 1)
+    except (ValueError, IndexError):
+        return []
+    by_day: dict[str, int] = {}
+    for slot in slots:
+        label = slot["date_label"]
+        by_day[label] = by_day.get(label, 0) + 1
+    days: list[AdminCalendarCell] = []
+    for day in calendar.Calendar(firstweekday=6).itermonthdates(year, month):
+        label = day.strftime("%d/%m/%Y")
+        count = by_day.get(label, 0)
+        days.append({
+            "date_label": label,
+            "day": str(day.day),
+            "is_current_month": day.month == month,
+            "is_selected": label == selected,
+            "has_slots": count > 0 and day.month == month,
+            "slot_count": count if day.month == month else 0,
+            "aria_label": f"{label}: {count} horário(s) configurado(s)" if count and day.month == month else f"{label}: sem horários",
+        })
+    return days
+
+
 class AdminAvailabilityState(rx.State):
     """Administrator-only availability management with server-side RBAC."""
 
@@ -162,6 +200,7 @@ class AdminAvailabilityState(rx.State):
     weekly_end_time: str = "17:00"
     weekly_slot_minutes: str = "30"
     weekly_existing: bool = False
+    weekly_saved_summary: str = ""
     slot_datetime_local: str = ""
     slot_date_local: str = ""
     slot_time_local: str = ""
@@ -170,6 +209,7 @@ class AdminAvailabilityState(rx.State):
     filter_end_date: str = ""
     calendar_month: str = ""
     selected_calendar_day: str = ""
+    active_operation: str = "search"
 
     is_loading: bool = False
     is_submitting: bool = False
@@ -199,40 +239,40 @@ class AdminAvailabilityState(rx.State):
 
     @rx.var
     def calendar_days(self) -> list[AdminCalendarCell]:
-        """Dias sem horários persistidos permanecem desabilitados."""
-        try:
-            year, month = map(int, self.calendar_month.split("-"))
-            first_day = date(year, month, 1)
-        except (ValueError, IndexError):
-            return []
-        by_day: dict[str, int] = {}
-        for slot in self.slots:
-            label = slot["date_label"]
-            by_day[label] = by_day.get(label, 0) + 1
-        days: list[AdminCalendarCell] = []
-        for day in calendar.Calendar(firstweekday=6).itermonthdates(year, month):
-            label = day.strftime("%d/%m/%Y")
-            count = by_day.get(label, 0)
-            days.append({
-                "date_label": label,
-                "day": str(day.day),
-                "is_current_month": day.month == month,
-                "is_selected": label == self.selected_calendar_day,
-                "has_slots": count > 0 and day.month == month,
-                "slot_count": count,
-                "aria_label": f"{label}: {count} horário(s) configurado(s)" if count else f"{label}: sem horários",
-            })
-        return days
+        return build_admin_calendar_cells(
+            self.slots, self.calendar_month, self.selected_calendar_day
+        )
 
     @rx.var
     def selected_day_slots(self) -> list[SlotRow]:
         return [slot for slot in self.slots if slot["date_label"] == self.selected_calendar_day]
 
+    @rx.var
+    def selected_day_available(self) -> int:
+        return sum(slot["status"] == AvailabilitySlotStatus.AVAILABLE.value for slot in self.selected_day_slots)
+
+    @rx.var
+    def selected_day_booked(self) -> int:
+        return sum(slot["status"] == AvailabilitySlotStatus.BOOKED.value for slot in self.selected_day_slots)
+
+    @rx.var
+    def selected_day_inactive(self) -> int:
+        return sum(slot["status"] == AvailabilitySlotStatus.INACTIVE.value for slot in self.selected_day_slots)
+
     @rx.event
     def select_calendar_day(self, label: str) -> None:
-        """Seleção só pode usar datas com horários retornados pelo servidor."""
-        if any(slot["date_label"] == label for slot in self.slots):
+        """Allow inspection of an empty date, never of a different visible month."""
+        try:
+            selected = datetime.strptime(label, "%d/%m/%Y").date()
+        except ValueError:
+            return
+        if selected.strftime("%Y-%m") == self.calendar_month:
             self.selected_calendar_day = label
+
+    @rx.event
+    def change_operation(self, value: str) -> None:
+        if value in ("search", "weekly", "single"):
+            self.active_operation = value
 
     @rx.event
     async def move_calendar_month(self, delta: int):
@@ -283,6 +323,17 @@ class AdminAvailabilityState(rx.State):
         self.weekly_start_time = rule.time_start if rule is not None else "08:00"
         self.weekly_end_time = rule.time_end if rule is not None else "17:00"
         self.weekly_slot_minutes = str(rule.slot_minutes) if rule is not None else "30"
+        if rule is None:
+            self.weekly_saved_summary = ""
+        else:
+            weekdays = ("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")
+            day_label = weekdays[rule.weekday_start]
+            if rule.weekday_end != rule.weekday_start:
+                day_label += f"–{weekdays[rule.weekday_end]}"
+            self.weekly_saved_summary = (
+                f"{day_label} · {rule.time_start}–{rule.time_end} · "
+                f"{rule.slot_minutes} minutos por consulta"
+            )
 
     def _professional_filter_id(self) -> int | None:
         return None if self.filter_professional == "__all__" else int(self.filter_professional)
@@ -299,25 +350,39 @@ class AdminAvailabilityState(rx.State):
         self._ensure_default_period()
         with rx.session() as db:
             professional_items = admin_list_active_professionals(db, token=token)
-            slot_items = admin_list_availability_slots(
-                db,
-                token=token,
-                professional_id=self._professional_filter_id(),
-                start_date=self.filter_start_date,
-                end_date=self.filter_end_date,
+            professionals = _professional_rows(professional_items)
+            allowed = {item["value"] for item in professionals}
+            if self.selected_professional not in allowed:
+                self.selected_professional = professionals[0]["value"] if professionals else "__none__"
+            self.filter_professional = (
+                self.selected_professional if self.selected_professional != "__none__" else "__all__"
             )
-        self.professionals = _professional_rows(professional_items)
+            slot_items = (
+                admin_list_availability_slots(
+                    db,
+                    token=token,
+                    professional_id=int(self.selected_professional),
+                    start_date=self.filter_start_date,
+                    end_date=self.filter_end_date,
+                )
+                if self.selected_professional != "__none__" else []
+            )
+            rule = (
+                admin_get_weekly_schedule(
+                    db, token=token, professional_id=int(self.selected_professional)
+                )
+                if self.selected_professional != "__none__" else None
+            )
+        self.professionals = professionals
         self.slots = _slot_rows(slot_items)
-        if self.selected_calendar_day and not any(
-            row["date_label"] == self.selected_calendar_day for row in self.slots
-        ):
-            self.selected_calendar_day = ""
-        if self.selected_professional == "__none__" and self.professionals:
-            self.selected_professional = self.professionals[0]["value"]
-        with rx.session() as db:
-            rule = (admin_get_weekly_schedule(db, token=token,
-                    professional_id=int(self.selected_professional))
-                    if self.selected_professional != "__none__" else None)
+        if self.selected_calendar_day:
+            try:
+                day = datetime.strptime(self.selected_calendar_day, "%d/%m/%Y").date()
+            except ValueError:
+                self.selected_calendar_day = ""
+            else:
+                if day.strftime("%Y-%m") != self.calendar_month:
+                    self.selected_calendar_day = ""
         self._apply_weekly_rule(rule)
 
     async def _authorization_redirect(self, exc: Exception):
@@ -351,19 +416,30 @@ class AdminAvailabilityState(rx.State):
 
     @rx.event
     async def update_selected_professional(self, value: str):
-        self.selected_professional = value
         self._clear_feedback()
+        if value not in {item["value"] for item in self.professionals}:
+            self.error_message = "Selecione um médico ativo da lista."
+            return
+        previous_professional = self.selected_professional
+        previous_filter = self.filter_professional
+        self.selected_professional = value
+        self.filter_professional = value
+        self.selected_calendar_day = ""
+        self.is_loading = True
+        yield
         try:
             token = await self._token()
-            with rx.session() as db:
-                rule = (admin_get_weekly_schedule(db, token=token, professional_id=int(value))
-                        if value != "__none__" else None)
-            self._apply_weekly_rule(rule)
+            self._load_with_token(token)
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
-            self.error_message = "Não foi possível consultar o expediente deste médico."
+            self.selected_professional = previous_professional
+            self.filter_professional = previous_filter
+            self.error_message = "Não foi possível consultar a agenda deste médico."
+        finally:
+            self.is_loading = False
+            yield
 
     @rx.event
     def update_weekly_start_day(self, value: str) -> None:
@@ -397,7 +473,7 @@ class AdminAvailabilityState(rx.State):
                 raise SchedulingValidationError("Selecione o médico antes de configurar o expediente.")
             token = await self._token()
             with rx.session() as db:
-                count = admin_save_weekly_schedule(
+                admin_save_weekly_schedule(
                     db, token=token, professional_id=int(self.selected_professional),
                     weekday_start=int(self.weekly_start_day),
                     weekday_end=int(self.weekly_end_day),
@@ -407,7 +483,7 @@ class AdminAvailabilityState(rx.State):
                 )
             self._load_with_token(token)
             yield rx.toast.success(
-                f"Expediente salvo. {count} horário(s) novo(s) nos próximos 45 dias.",
+                "Expediente salvo. Disponibilidade atualizada para a janela de 45 dias.",
                 position="top-right",
             )
         except (SchedulingValidationError, SchedulingConflictError,
@@ -436,24 +512,10 @@ class AdminAvailabilityState(rx.State):
         self.slot_time_local = value
 
     @rx.event
-    @rx.event
-    async def update_filter_professional(self, value: str):
-        """The month calendar immediately reflects the chosen physician."""
-        self.filter_professional = value
-        self.selected_calendar_day = ""
-        self.is_loading = True
-        yield
-        try:
-            token = await self._token()
-            self._load_with_token(token)
-        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
-            async for event in self._authorization_redirect(exc):
-                yield event
-        except Exception:
-            yield rx.toast.error("Não foi possível filtrar a agenda.", position="top-right")
-        finally:
-            self.is_loading = False
-            yield
+    def update_filter_professional(self, value: str):
+        """Backward-compatible alias for legacy callers."""
+        if value != "__all__":
+            return AdminAvailabilityState.update_selected_professional(value)
 
     @rx.event
     def update_filter_start_date(self, value: str) -> None:
@@ -485,6 +547,8 @@ class AdminAvailabilityState(rx.State):
 
     @rx.event
     async def create_slot(self, _form_data: dict[str, Any]):
+        if self.is_submitting:
+            return
         self.is_submitting = True
         self._clear_feedback()
         yield
@@ -512,7 +576,15 @@ class AdminAvailabilityState(rx.State):
             self.slot_datetime_local = ""
             self.slot_date_local = ""
             self.slot_time_local = ""
+            created_date = self.slot_date_local or starts_at_local[:10]
+            self.calendar_month = created_date[:7]
+            year, month = map(int, self.calendar_month.split("-"))
+            self.filter_start_date = f"{year:04d}-{month:02d}-01"
+            self.filter_end_date = f"{year:04d}-{month:02d}-{calendar.monthrange(year, month)[1]:02d}"
             self._load_with_token(token)
+            from datetime import datetime
+            self.selected_calendar_day = datetime.strptime(created_date, "%Y-%m-%d").strftime("%d/%m/%Y")
+            self.active_operation = "search"
             yield rx.toast.success("Horário disponibilizado.", position="top-right")
         except (
             SchedulingValidationError,
@@ -534,6 +606,8 @@ class AdminAvailabilityState(rx.State):
 
     @rx.event
     async def toggle_slot(self, slot_id: int, current_status: str):
+        if self.is_submitting:
+            return
         self.is_submitting = True
         self._clear_feedback()
         yield
