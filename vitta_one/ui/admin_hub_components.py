@@ -2,7 +2,7 @@
 
 import reflex as rx
 
-from vitta_one.ui.components import breadcrumb, error_banner, field_label, page_header, section_panel
+from vitta_one.ui.components import breadcrumb, error_banner, field_label, page_header, section_panel, empty_state
 from vitta_one.auth.staff_state import AdminStaffState
 from vitta_one.professional_directory.state import AdminDirectoryState
 from vitta_one.ui.staff_components import admin_staff_panel
@@ -397,34 +397,214 @@ def admin_staff_create_workspace() -> rx.Component:
     )
 
 
-def admin_staff_detail_workspace() -> rx.Component:
-    """Read-only proof of creation; no editable or sensitive credentials shown."""
+def _employee_detail_field(label: str, value) -> rx.Component:
+    """One readable, compact label/value pair with safe wrapping on narrow screens."""
     return rx.vstack(
-        breadcrumb(("Administração", "/admin"), ("Funcionários", "/admin/funcionarios"),
-                   ("Ficha do funcionário", None)),
-        page_header("Equipe", "Ficha do funcionário",
-                    "Cadastro concluído. Consulte o perfil e a identificação do acesso."),
+        rx.text(label, size="2", color="var(--vitta-text-muted)"),
+        rx.text(
+            value,
+            size="3",
+            font_weight="650",
+            color="var(--vitta-text)",
+            overflow_wrap="anywhere",
+            width="100%",
+        ),
+        spacing="1",
+        align="start",
+        min_width="0",
+        width="100%",
+    )
+
+
+def _employee_detail_content() -> rx.Component:
+    """Permanent employee record; never imply a new registration on revisit."""
+    return rx.vstack(
         section_panel(
             rx.vstack(
-                rx.hstack(
-                    rx.icon("badge_check", size=24, color="var(--vitta-primary)"),
-                    rx.heading("Funcionário cadastrado", size="4"),
-                    gap="3", align="center",
+                rx.heading("Informações do funcionário", size="4"),
+                rx.flex(
+                    rx.box(
+                        rx.icon("user_round", size=25, color="var(--vitta-primary)"),
+                        class_name="vitta-admin-action-icon",
+                        flex_shrink="0",
+                        aria_hidden="true",
+                    ),
+                    rx.vstack(
+                        rx.cond(
+                            AdminStaffState.employee_detail["has_name"],
+                            rx.heading(
+                                AdminStaffState.employee_detail["name"],
+                                size="6",
+                                overflow_wrap="anywhere",
+                            ),
+                            rx.text(
+                                "Nome não informado",
+                                font_weight="650",
+                                color="var(--vitta-text-muted)",
+                                size="4",
+                            ),
+                        ),
+                        rx.badge(
+                            AdminStaffState.employee_detail["role_label"],
+                            color_scheme="teal",
+                            variant="soft",
+                            high_contrast=True,
+                            width="fit-content",
+                        ),
+                        spacing="2",
+                        align="start",
+                        min_width="0",
+                        width="100%",
+                    ),
+                    direction=rx.breakpoints(initial="column", sm="row"),
+                    align="start",
+                    gap="3",
+                    width="100%",
                 ),
                 rx.separator(),
-                rx.text("Nome", color="var(--vitta-text-muted)", size="2"),
-                rx.text(AdminStaffState.employee_detail["name"], font_weight="700", size="4"),
-                rx.text("E-mail de acesso", color="var(--vitta-text-muted)", size="2"),
-                rx.text(AdminStaffState.employee_detail["email"], font_weight="700", size="4"),
-                rx.text("Perfil", color="var(--vitta-text-muted)", size="2"),
-                rx.badge(AdminStaffState.employee_detail["role_label"],
-                         color_scheme="teal", variant="soft", high_contrast=True),
-                rx.text("ID do cadastro: ", AdminStaffState.employee_detail["id"],
-                        size="2", color="var(--vitta-text-muted)"),
-                rx.link("Voltar aos funcionários", href="/admin/funcionarios",
-                        class_name="vitta-context-link"),
-                spacing="3", align="stretch", width="100%",
+                rx.heading("Dados de acesso", size="3"),
+                _employee_detail_field(
+                    "E-mail de acesso",
+                    AdminStaffState.employee_detail["email"],
+                ),
+                spacing="4",
+                align="stretch",
+                width="100%",
             )
         ),
-        spacing="4", align="stretch", width="100%",
+        rx.cond(
+            AdminStaffState.employee_detail["professional_identifier"] != "",
+            section_panel(
+                rx.vstack(
+                    rx.heading("Vínculo profissional", size="4"),
+                    rx.flex(
+                        _employee_detail_field(
+                            "Identificador do profissional",
+                            AdminStaffState.employee_detail["professional_identifier"],
+                        ),
+                        _employee_detail_field(
+                            "Situação do vínculo",
+                            AdminStaffState.employee_detail["professional_status"],
+                        ),
+                        direction=rx.breakpoints(initial="column", md="row"),
+                        align="start",
+                        gap="4",
+                        width="100%",
+                    ),
+                    rx.cond(
+                        AdminStaffState.employee_detail["specialties"] != "",
+                        _employee_detail_field(
+                            "Especialidades vinculadas",
+                            AdminStaffState.employee_detail["specialties"],
+                        ),
+                        rx.fragment(),
+                    ),
+                    rx.link(
+                        "Gerenciar médicos",
+                        href="/admin/profissionais",
+                        class_name="vitta-context-link",
+                        aria_label="Abrir diretório de profissionais para gerenciar médicos",
+                    ),
+                    align="stretch",
+                    spacing="4",
+                    width="100%",
+                )
+            ),
+            rx.fragment(),
+        ),
+        rx.text(
+            "Identificador interno do cadastro: #",
+            AdminStaffState.employee_detail["id"],
+            size="1",
+            color="var(--vitta-text-muted)",
+        ),
+        spacing="4",
+        align="stretch",
+        width="100%",
+    )
+
+
+def admin_staff_detail_workspace() -> rx.Component:
+    """Read-only authorized staff profile with explicit retrieval states."""
+    return rx.vstack(
+        breadcrumb(
+            ("Administração", "/admin"),
+            ("Funcionários", "/admin/funcionarios"),
+            ("Ficha do funcionário", None),
+        ),
+        rx.vstack(
+            page_header(
+                "Equipe",
+                "Ficha do funcionário",
+                "Consulte os dados de identificação, acesso e vínculo profissional.",
+                rx.link(
+                    rx.hstack(
+                        rx.icon("arrow_left", size=16),
+                        rx.text("Voltar aos funcionários"),
+                        spacing="2",
+                        align="center",
+                    ),
+                    href="/admin/funcionarios",
+                    class_name="vitta-context-link",
+                ),
+            ),
+            rx.cond(
+                AdminStaffState.detail_matches_route,
+                _employee_detail_content(),
+                rx.cond(
+                    AdminStaffState.detail_status == "not_found",
+                    section_panel(
+                        empty_state(
+                            "user_round_x",
+                            "Funcionário não encontrado",
+                            "O cadastro solicitado não existe ou não está disponível nesta lista.",
+                            rx.link(
+                                "Voltar aos funcionários",
+                                href="/admin/funcionarios",
+                                class_name="vitta-context-link",
+                            ),
+                        )
+                    ),
+                    rx.cond(
+                        AdminStaffState.detail_status == "error",
+                        section_panel(
+                            rx.vstack(
+                                error_banner(
+                                    "Não foi possível consultar os dados do funcionário. Tente novamente."
+                                ),
+                                rx.button(
+                                    "Tentar novamente",
+                                    type="button",
+                                    variant="outline",
+                                    color_scheme="teal",
+                                    on_click=AdminStaffState.load_detail,
+                                ),
+                                align="start",
+                                spacing="3",
+                                width="100%",
+                            )
+                        ),
+                        rx.center(
+                            rx.hstack(
+                                rx.spinner(size="2"),
+                                rx.text("Carregando ficha do funcionário…", size="2"),
+                                align="center",
+                                spacing="3",
+                            ),
+                            min_height="12rem",
+                            width="100%",
+                            role="status",
+                            aria_live="polite",
+                        ),
+                    ),
+                ),
+            ),
+            spacing="4",
+            align="stretch",
+            width="100%",
+            max_width="58rem",
+        ),
+        spacing="4",
+        align="stretch",
+        width="100%",
     )

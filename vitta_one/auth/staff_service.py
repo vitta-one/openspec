@@ -4,6 +4,7 @@ from vitta_one.auth.authorization import require_role
 from vitta_one.auth.roles import Role
 from vitta_one.auth.security import hash_password, is_valid_email_identifier, normalize_email
 from vitta_one.models.auth import User
+from vitta_one.models.professional import Professional, ProfessionalSpecialty, Specialty
 
 def create_receptionist(db: Session, *, token: str, email: str, password: str, name: str | None = None) -> User:
     require_role(db, token, Role.ADMINISTRADOR)
@@ -45,14 +46,51 @@ def list_employee_directory(db: Session, *, token: str) -> list[dict]:
 
 
 def get_employee_detail(db: Session, *, token: str, employee_id: int) -> dict | None:
-    """Return only the staff member selected by an authorized Administrator."""
+    """Return authorized staff identity and only its persisted professional linkage."""
     require_role(db, token, Role.ADMINISTRADOR)
     user = db.get(User, employee_id)
     if user is None or user.role not in (Role.MEDICO.value, Role.RECEPCIONISTA.value):
         return None
-    return {"id": user.id, "email": user.email, "name": user.display_name or "Nome não informado", "role": user.role,
-            "role_label": ("Médico" if user.role == Role.MEDICO.value else "Recepcionista"),
-            "href": f"/admin/funcionarios/{user.id}"}
+
+    professional = None
+    specialty_names: list[str] = []
+    if user.role == Role.MEDICO.value:
+        professional = db.exec(
+            select(Professional).where(Professional.user_id == user.id)
+        ).first()
+        if professional is not None:
+            specialty_names = list(db.exec(
+                select(Specialty.name)
+                .join(
+                    ProfessionalSpecialty,
+                    ProfessionalSpecialty.specialty_id == Specialty.id,
+                )
+                .where(ProfessionalSpecialty.professional_id == professional.id)
+                .order_by(Specialty.name)
+            ).all())
+
+    # Older accounts may lack display_name; never present their e-mail as a person's name.
+    name = (user.display_name or "").strip()
+    if not name and professional is not None:
+        name = professional.name.strip()
+
+    return {
+        "id": user.id,
+        "email": user.email,
+        "name": name or "Nome não informado",
+        "has_name": bool(name),
+        "role": user.role,
+        "role_label": "Médico" if user.role == Role.MEDICO.value else "Recepcionista",
+        "href": f"/admin/funcionarios/{user.id}",
+        "professional_identifier": (
+            professional.registration_identifier if professional is not None else ""
+        ),
+        "professional_status": (
+            ("Ativo" if professional.is_active else "Inativo")
+            if professional is not None else ""
+        ),
+        "specialties": ", ".join(specialty_names),
+    }
 
 
 def filter_employee_directory(
