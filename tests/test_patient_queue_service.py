@@ -16,6 +16,7 @@ from vitta_one.patient_queue.service import (
     QueueEmptyError,
     QueueOwnershipError,
     QueueTransitionError,
+    QueueValidationError,
     claim_next_patient,
     count_waiting_queue,
     create_patient,
@@ -80,6 +81,26 @@ def test_patient_creation_rejects_invalid_characters_before_cpf_normalization(db
     with pytest.raises(PatientValidationError, match="CPF válido"):
         create_patient(db, name="Paciente Teste", cpf="<529.982.247-25>")
 
+
+
+def test_repeated_walk_in_rejected_until_prior_passage_closed(db: Session) -> None:
+    patient = create_patient(db, name="Paciente único", cpf="52998224725")
+    first = create_queue_entry(
+        db, patient_id=patient.id, symptoms="Primeira entrada", priority="VERDE"
+    )
+
+    with pytest.raises(QueueValidationError, match="entrada ativa"):
+        create_queue_entry(
+            db, patient_id=patient.id, symptoms="Clique repetido", priority="AMARELO"
+        )
+    assert [entry.id for entry in list_waiting_queue(db)] == [first.id]
+
+    withdraw_queue_entry(db, entry_id=first.id, reason="Paciente saiu")
+    second = create_queue_entry(
+        db, patient_id=patient.id, symptoms="Nova chegada", priority="AMARELO"
+    )
+    assert second.id != first.id
+    assert [entry.id for entry in list_waiting_queue(db)] == [second.id]
 
 
 def test_waiting_queue_orders_priority_then_entry_time_and_id(db: Session) -> None:

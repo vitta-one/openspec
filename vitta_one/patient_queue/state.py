@@ -1,5 +1,6 @@
 """Reflex states for the patient reception queue capability."""
 
+from datetime import datetime, timezone
 from typing import Any, TypedDict
 
 import reflex as rx
@@ -7,7 +8,7 @@ from vitta_one.auth.local_qa import (
     LocalQaAccountError, local_qa_enabled, reception_activate_qa_patient,
 )
 
-from vitta_one.appointment_scheduling.temporal import format_clinic_datetime
+from vitta_one.appointment_scheduling.temporal import ensure_utc, format_clinic_datetime
 from vitta_one.auth.authorization import AuthenticationRequiredError, RoleForbiddenError
 from vitta_one.auth.state import AuthState
 from vitta_one.clinical_care.application import (
@@ -126,6 +127,9 @@ class QueueRow(TypedDict):
     priority: str
     priority_label: str
     entered_at: str
+    wait_minutes: int
+    wait_label: str
+    status_label: str
     is_scheduled: bool
     scheduled_at: str
     professional_name: str
@@ -227,6 +231,29 @@ def _format_patient_contact(value: str | None) -> str:
     return format_patient_phone_input(value) or "Telefone não informado"
 
 
+def queue_wait_minutes(entered_at: datetime, now: datetime | None = None) -> int:
+    """Calculate wait from persistent UTC timestamps; never alter priority."""
+    current = ensure_utc(now or datetime.now(timezone.utc))
+    return max(0, int((current - ensure_utc(entered_at)).total_seconds() // 60))
+
+
+def format_queue_wait(minutes: int) -> str:
+    hours, remaining = divmod(max(0, minutes), 60)
+    return f"{hours}h {remaining:02d}min" if hours else f"{remaining} min"
+
+
+def filter_active_queue(
+    rows: list[QueueRow], query: str, priority: str
+) -> list[QueueRow]:
+    """Filter only authorized rows, preserving service-provided order."""
+    term = query.strip().casefold()
+    return [
+        row for row in rows
+        if (priority == "TODAS" or row["priority"] == priority)
+        and (not term or term in row["patient_name"].casefold())
+    ]
+
+
 def _serialize_prescription_item(item) -> PrescriptionItemRow:
     return {
         "id": item.id,
@@ -269,14 +296,18 @@ def _serialize_history_item(item) -> ClinicalHistoryRow:
     }
 
 
-def _serialize_queue_item(item) -> QueueRow:
+def _serialize_queue_item(item, *, now: datetime | None = None) -> QueueRow:
+    minutes = queue_wait_minutes(item.entered_at, now)
     return {
         "id": item.id,
         "patient_name": item.patient_name,
         "symptoms": item.symptoms,
         "priority": item.priority.value,
         "priority_label": item.priority.label,
-        "entered_at": item.entered_at.strftime("%H:%M UTC"),
+        "entered_at": format_clinic_datetime(item.entered_at),
+        "wait_minutes": minutes,
+        "wait_label": format_queue_wait(minutes),
+        "status_label": "Aguardando",
         "is_scheduled": item.consultation_id is not None,
         "scheduled_at": (
             format_clinic_datetime(item.scheduled_at) if item.scheduled_at else ""
@@ -284,11 +315,14 @@ def _serialize_queue_item(item) -> QueueRow:
         "professional_name": item.professional_name or "",
     }
 
-
 class ReceptionQueueState(rx.State):
     """Reception-only UI state; every data operation revalidates RBAC server-side."""
 
     queue_rows: list[QueueRow] = []
+    queue_search_query: str = ""
+    queue_priority_filter: str = "TODAS"
+    queue_last_updated_at: str = ""
+    queue_load_error: str = ""
     patient_directory: list[PatientDirectoryRow] = []
     patient_directory_query: str = ""
     patient_directory_applied_query: str = ""
@@ -349,6 +383,40 @@ class ReceptionQueueState(rx.State):
     def green_waiting_count(self) -> int:
         return sum(row["priority"] == "VERDE" for row in self.queue_rows)
 
+    @rx.var
+    def visible_queue_rows(self) -> list[QueueRow]:
+        return filter_active_queue(
+            self.queue_rows, self.queue_search_query, self.queue_priority_filter
+        )
+
+    @rx.var
+    def has_visible_queue(self) -> bool:
+        return bool(self.visible_queue_rows)
+
+    @rx.var
+    def queue_filters_active(self) -> bool:
+        return bool(self.queue_search_query.strip()) or self.queue_priority_filter != "TODAS"
+
+    @rx.var
+    def queue_longest_wait(self) -> str:
+        return format_queue_wait(max(
+            (row["wait_minutes"] for row in self.queue_rows), default=0
+        ))
+
+    @rx.event
+    def set_queue_search(self, value: str) -> None:
+        self.queue_search_query = str(value or "")[:100]
+
+    @rx.event
+    def set_queue_priority(self, value: str) -> None:
+        if value in {"TODAS", "VERMELHO", "AMARELO", "VERDE"}:
+            self.queue_priority_filter = value
+
+    @rx.event
+    def clear_queue_filters(self) -> None:
+        self.queue_search_query = ""
+        self.queue_priority_filter = "TODAS"
+
     async def _token(self) -> str:
         auth = await self.get_state(AuthState)
         return auth.session_token
@@ -371,6 +439,10 @@ class ReceptionQueueState(rx.State):
     def _clear_sensitive_view(self) -> None:
         self.qa_local_enabled = False
         self.queue_rows = []
+        self.queue_search_query = ""
+        self.queue_priority_filter = "TODAS"
+        self.queue_last_updated_at = ""
+        self.queue_load_error = ""
         self.patient_directory = []
         self.patient_directory_query = ""
         self.patient_directory_applied_query = ""
@@ -401,7 +473,10 @@ class ReceptionQueueState(rx.State):
     def _load_queue_with_token(self, token: str) -> None:
         with rx.session() as db:
             items = reception_list_queue(db, token=token)
-        self.queue_rows = [_serialize_queue_item(item) for item in items]
+        now = datetime.now(timezone.utc)
+        self.queue_rows = [_serialize_queue_item(item, now=now) for item in items]
+        self.queue_last_updated_at = format_clinic_datetime(now)
+        self.queue_load_error = ""
 
     async def _authorization_redirect(self, exc: Exception):
         self._clear_sensitive_view()
@@ -544,7 +619,7 @@ class ReceptionQueueState(rx.State):
             self.error_message = (
                 "Não foi possível carregar a fila agora. Atualize a página e tente novamente."
             )
-            self.queue_rows = []
+            self.queue_load_error = self.error_message
         finally:
             self.is_loading_queue = False
             yield
@@ -599,6 +674,32 @@ class ReceptionQueueState(rx.State):
         finally:
             self.is_quick_searching = False
             yield
+
+    @rx.event
+    async def select_queue_patient(self, patient_id: int):
+        """Select an authorized existing patient for the single enqueue flow."""
+        if self.is_submitting:
+            return
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                patient = reception_get_patient_identity(
+                    db, token=token, patient_id=patient_id
+                )
+            if patient is None:
+                self.quick_search_error = "Paciente não encontrado."
+                return
+            self.selected_patient_id = patient.id
+            self.selected_patient_name = patient.name
+            self.quick_search_query = ""
+            self.quick_search_results = []
+            self.quick_search_error = ""
+            self._clear_feedback()
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.quick_search_error = "Não foi possível selecionar o paciente."
 
     @rx.event
     async def select_quick_search_patient(self, patient_id: int):

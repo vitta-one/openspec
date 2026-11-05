@@ -14,6 +14,7 @@ from vitta_one.patient_queue.service import (
     DoctorAlreadyAttendingError,
     QueueEmptyError,
     QueueItem,
+    QueueValidationError,
     claim_next_patient,
     create_patient,
     create_queue_entry,
@@ -210,3 +211,57 @@ def test_same_doctor_cannot_claim_two_patients_concurrently() -> None:
                 if row is not None:
                     db.delete(row)
             db.commit()
+
+
+
+@pytest.mark.skipif(
+    not _DATABASE_URL.startswith("postgresql"),
+    reason="Patient arrival row locking requires PostgreSQL.",
+)
+def test_concurrent_walk_in_submissions_create_one_active_entry() -> None:
+    engine = create_engine(_DATABASE_URL, pool_pre_ping=True)
+    patient_id = 0
+    try:
+        with Session(engine) as db:
+            patient = create_patient(
+                db, name="Chegada concorrente", cpf=_random_cpf()
+            )
+            assert patient.id is not None
+            patient_id = patient.id
+
+        def arrive() -> str:
+            with Session(engine) as db:
+                try:
+                    create_queue_entry(
+                        db, patient_id=patient_id,
+                        symptoms="Tentativa concorrente",
+                        priority="AMARELO",
+                    )
+                    return "created"
+                except QueueValidationError:
+                    return "already-active"
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(lambda _: arrive(), range(2)))
+
+        assert sorted(results) == ["already-active", "created"]
+        with Session(engine) as db:
+            active = db.exec(
+                select(QueueEntry).where(
+                    QueueEntry.patient_id == patient_id,
+                    QueueEntry.status == "AGUARDANDO",
+                )
+            ).all()
+            assert len(active) == 1
+    finally:
+        with Session(engine) as db:
+            for entry in db.exec(
+                select(QueueEntry).where(QueueEntry.patient_id == patient_id)
+            ).all():
+                db.delete(entry)
+            db.commit()
+            if patient_id:
+                patient = db.get(Patient, patient_id)
+                if patient is not None:
+                    db.delete(patient)
+                    db.commit()
