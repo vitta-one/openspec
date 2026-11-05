@@ -7,6 +7,8 @@ from vitta_one.admin_preview.reception_state import AdminReceptionPreviewState a
 from vitta_one.admin_preview.agenda_state import AdminAgendaPreviewState
 from vitta_one.ui.calendar_components import month_calendar
 from vitta_one.ui.components import (
+    breadcrumb,
+    field_label,
     empty_state,
     error_banner,
     metric_card,
