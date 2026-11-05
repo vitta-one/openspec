@@ -205,11 +205,6 @@ def _validate_specialty_ids(
     existing_ids: set[int] | None = None,
 ) -> list[int]:
     unique_ids = list(dict.fromkeys(int(value) for value in specialty_ids))
-    if not unique_ids:
-        raise DirectoryValidationError(
-            "Selecione ao menos uma especialidade para o profissional."
-        )
-
     rows = db.exec(
         select(Specialty).where(Specialty.id.in_(unique_ids))
     ).all()

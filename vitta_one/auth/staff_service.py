@@ -1,5 +1,6 @@
 """Server-authorized creation of receptionist identities."""
 from sqlmodel import Session, select
+from sqlalchemy.exc import IntegrityError
 from vitta_one.auth.authorization import require_role
 from vitta_one.auth.roles import Role
 from vitta_one.auth.security import hash_password, is_valid_email_identifier, normalize_email
@@ -8,8 +9,8 @@ from vitta_one.models.professional import Professional, ProfessionalSpecialty, S
 
 def create_receptionist(db: Session, *, token: str, email: str, password: str, name: str | None = None) -> User:
     require_role(db, token, Role.ADMINISTRADOR)
-    display_name = " ".join(name.split()) if name is not None else None
-    if display_name is not None and not 2 <= len(display_name) <= 160:
+    display_name = " ".join((name or "").split())
+    if not 2 <= len(display_name) <= 160:
         raise ValueError("Informe um nome de 2 a 160 caracteres.")
     address = normalize_email(email)
     if not is_valid_email_identifier(address):
@@ -20,7 +21,11 @@ def create_receptionist(db: Session, *, token: str, email: str, password: str, n
         raise ValueError("Esse e-mail já está cadastrado.")
     user = User(email=address, display_name=display_name, password_hash=hash_password(password), role=Role.RECEPCIONISTA.value)
     db.add(user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise ValueError("Esse e-mail já está cadastrado.") from exc
     db.refresh(user)
     return user
 

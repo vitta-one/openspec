@@ -75,9 +75,16 @@ def test_rejects_empty_short_or_long_staff_name(db, name):
 
 def test_legacy_identity_is_not_misrepresented_as_a_name(db):
     token = _session(db, Role.ADMINISTRADOR)
-    user = create_receptionist(
-        db, token=token, email="legado@exemplo.com", password="Segura123456789!"
+    # Registros anteriores podem não ter nome; novos cadastros exigem nome.
+    user = User(
+        email="legado@exemplo.com",
+        password_hash=hash_password("Segura123456789!"),
+        role=Role.RECEPCIONISTA.value,
+        display_name=None,
     )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
     assert user.display_name is None
     entries = list_employee_directory(db, token=token)
     assert any(row["name"] == "Nome não informado" and row["email"] == "legado@exemplo.com" for row in entries)

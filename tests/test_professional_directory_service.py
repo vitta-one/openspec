@@ -78,17 +78,22 @@ def test_specialty_create_rename_uniqueness_and_activation(db: Session) -> None:
     ]
 
 
-def test_professional_requires_specialty_and_deduplicates_associations(db: Session) -> None:
+def test_professional_allows_optional_specialty_and_deduplicates_associations(db: Session) -> None:
     cardiology = create_specialty(db, name="Cardiologia")
     pediatrics = create_specialty(db, name="Pediatria")
 
-    with pytest.raises(DirectoryValidationError):
-        create_professional(
-            db,
-            name="Dra. Sem Especialidade",
-            registration_identifier="REG-0",
-            specialty_ids=[],
+    without_specialty = create_professional(
+        db,
+        name="Dra. Sem Especialidade",
+        registration_identifier="REG-0",
+        specialty_ids=[],
+    )
+    assert without_specialty.id is not None
+    assert db.exec(
+        __import__("sqlmodel").select(ProfessionalSpecialty).where(
+            ProfessionalSpecialty.professional_id == without_specialty.id
         )
+    ).all() == []
 
     professional = create_professional(
         db,
@@ -276,3 +281,31 @@ def test_update_replaces_specialties_atomically_after_validation(db: Session) ->
     assert item.name == "Dra. Transação"
     assert item.registration_identifier == "REG-T"
     assert [specialty.id for specialty in item.specialties] == [first.id]
+
+
+def test_edit_professional_can_remove_all_specialty_links(db: Session) -> None:
+    specialty = create_specialty(db, name="Clínica geral")
+    doctor = create_professional(
+        db,
+        name="Dra. Disponível",
+        registration_identifier="REG-SEM-VINCULO",
+        specialty_ids=[specialty.id],
+    )
+
+    updated = update_professional(
+        db,
+        professional_id=doctor.id,
+        name="Dra. Disponível",
+        registration_identifier="REG-SEM-VINCULO",
+        specialty_ids=[],
+    )
+
+    assert updated.id == doctor.id
+    item = next(row for row in list_professionals(db) if row.id == doctor.id)
+    assert item.specialties == ()
+    links = db.exec(
+        __import__("sqlmodel").select(ProfessionalSpecialty).where(
+            ProfessionalSpecialty.professional_id == doctor.id
+        )
+    ).all()
+    assert links == []

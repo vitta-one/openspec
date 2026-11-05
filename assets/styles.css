@@ -2811,3 +2811,53 @@ button:disabled,
 @media (prefers-reduced-motion: reduce) {
   .vitta-shell, .vitta-shell .vitta-sidebar, .vitta-shell .vitta-nav-link { transition: none !important; }
 }
+
+
+/* Formulário de funcionários: leitura compacta, controle de senha e foco acessível. */
+.vitta-staff-form { min-width: 0; }
+.vitta-staff-form .vitta-specialty-choice {
+  display: flex;
+  align-items: center;
+  min-height: 2.85rem;
+  padding: 0.65rem 0.85rem;
+}
+.vitta-staff-form .vitta-specialty-choice .rt-Checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  cursor: pointer;
+  line-height: 1.4;
+}
+.vitta-staff-form .vitta-specialty-choice .rt-CheckboxRoot {
+  flex-shrink: 0;
+}
+.vitta-staff-form .vitta-staff-specific {
+  border-top: 1px solid var(--vitta-border);
+  padding-top: 1rem;
+}
+.vitta-staff-form .vitta-password-input { padding-right: 3.25rem; }
+.vitta-staff-form .vitta-staff-password-toggle {
+  position: absolute !important;
+  top: 50%;
+  right: 0.4rem;
+  transform: translateY(-50%);
+  display: grid !important;
+  place-items: center;
+  width: 2.4rem !important;
+  height: 2.4rem !important;
+  min-width: 2.4rem !important;
+  min-height: 2.4rem !important;
+  padding: 0 !important;
+}
+.vitta-staff-form :is(input, button, [role="combobox"], [role="checkbox"]):focus-visible,
+.vitta-staff-form .vitta-specialty-choice:focus-within {
+  outline: 3px solid var(--vitta-focus);
+  outline-offset: 3px;
+}
+@media (max-width: 575px) {
+  .vitta-staff-form .vitta-staff-actions > button { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vitta-staff-form .vitta-specialty-choice { transition: none; }
+}
