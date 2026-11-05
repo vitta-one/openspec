@@ -12,6 +12,10 @@ class EmployeeRow(TypedDict):
     href: str
 
 
+_EMPTY_EMPLOYEE: EmployeeRow = {
+    "id": 0, "email": "", "name": "", "role": "", "role_label": "", "href": "",
+}
+
 class EmployeeDetail(EmployeeRow):
     has_name: bool
     professional_identifier: str
@@ -32,6 +36,7 @@ from vitta_one.auth.staff_service import (
     get_employee_detail,
     list_employee_directory,
     list_receptionists,
+    filter_employee_directory,
 )
 
 
@@ -41,6 +46,8 @@ class AdminStaffState(rx.State):
     employee_detail: EmployeeDetail = _EMPTY_EMPLOYEE_DETAIL
     detail_status: str = "loading"
     employee_search: str = ""
+    employee_role: str = "todos"
+    is_loading: bool = True
     current_page: int = 1
     page_size: int = 10
     creation_profile: str = "__none__"
@@ -50,11 +57,9 @@ class AdminStaffState(rx.State):
 
     @rx.var
     def filtered_employees(self) -> list[EmployeeRow]:
-        search = self.employee_search.strip().casefold()
-        return [employee for employee in self.employees
-                if not search or search in str(employee["name"]).casefold()
-                or search in str(employee["email"]).casefold()
-                or search in str(employee["role_label"]).casefold()]
+        return filter_employee_directory(
+            self.employees, search=self.employee_search, role=self.employee_role,
+        )
 
     @rx.var
     def detail_matches_route(self) -> bool:
@@ -64,6 +69,10 @@ class AdminStaffState(rx.State):
             and str(self.employee_detail["id"])
             == str(self.router.page.params.get("employee_id", ""))
         )
+
+    @rx.var
+    def has_employee_filters(self) -> bool:
+        return bool(self.employee_search.strip()) or self.employee_role != "todos"
 
     @rx.var
     def total_pages(self) -> int:
@@ -84,6 +93,17 @@ class AdminStaffState(rx.State):
         self.current_page = 1
 
     @rx.event
+    def update_employee_role(self, value: str):
+        self.employee_role = value if value in ("todos", "MEDICO", "RECEPCIONISTA") else "todos"
+        self.current_page = 1
+
+    @rx.event
+    def clear_employee_filters(self):
+        self.employee_search = ""
+        self.employee_role = "todos"
+        self.current_page = 1
+
+    @rx.event
     def move_employee_page(self, delta: int):
         self.current_page = max(1, min(self.current_page + delta, self.total_pages))
 
@@ -99,6 +119,8 @@ class AdminStaffState(rx.State):
     async def load(self):
         self.error = ""
         self.success = ""
+        self.is_loading = True
+        yield
         try:
             token = await self._token()
             with rx.session() as db:
@@ -116,6 +138,8 @@ class AdminStaffState(rx.State):
             self.emails = []
             self.employees = []
             self.error = "Não foi possível carregar os funcionários."
+        finally:
+            self.is_loading = False
 
     @rx.event
     async def load_detail(self):

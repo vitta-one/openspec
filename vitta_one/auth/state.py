@@ -27,7 +27,6 @@ from vitta_one.auth.settings import (
 from vitta_one.auth.security import is_valid_email_identifier, normalize_email
 
 _INVALID_CREDENTIALS = "E-mail ou senha inválidos. Verifique os dados e tente novamente."
-_LOGIN_REQUIRED = "Preencha o e-mail e a senha para continuar."
 _SYSTEM_LOGIN_ERROR = "Não foi possível concluir o acesso agora. Tente novamente."
 _LOGOUT_ERROR = "Não foi possível encerrar a sessão agora. Tente novamente."
 
@@ -66,6 +65,19 @@ _ADMIN_PREVIEW_ROUTES = frozenset(
 )
 
 
+def _login_field_errors(email: str, password: str) -> tuple[str, str]:
+    """Validate submitted fields without exposing account existence."""
+    normalized_email = normalize_email(email)
+    if not email.strip():
+        email_error = "Informe seu e-mail."
+    elif not is_valid_email_identifier(normalized_email) or "." not in normalized_email.rsplit("@", 1)[1]:
+        email_error = "Informe um e-mail válido, como nome@dominio.com."
+    else:
+        email_error = ""
+    password_error = "Informe sua senha." if not password else ""
+    return email_error, password_error
+
+
 class LoginFormData(TypedDict):
     """Expected login form fields submitted by the Reflex form."""
 
@@ -92,6 +104,8 @@ class AuthState(rx.State):
     is_submitting: bool = False
     show_password: bool = False
     login_error: str = ""
+    login_email_error: str = ""
+    login_password_error: str = ""
     first_access_error: str = ""
     shell_error: str = ""
     local_admin_preview: bool = local_admin_preview_enabled()
@@ -162,6 +176,10 @@ class AuthState(rx.State):
         """Restore a valid session on the login page or expose the login form."""
         self.auth_checked = False
         self.login_error = ""
+        self.login_email_error = ""
+        self.login_password_error = ""
+        self.is_submitting = False
+        self.show_password = False
         self.shell_error = ""
         yield
 
@@ -199,8 +217,13 @@ class AuthState(rx.State):
 
     @rx.event
     async def login(self, form_data: LoginFormData):
-        """Authenticate credentials, create the opaque server session, and route by role."""
+        """Authenticate once, keep failures inline, and route only by server role."""
+        if self.is_submitting:
+            return
+
         self.login_error = ""
+        self.login_email_error = ""
+        self.login_password_error = ""
         self.shell_error = ""
         self.is_submitting = True
         yield
@@ -208,16 +231,10 @@ class AuthState(rx.State):
         email = str(form_data.get("email", ""))
         password = str(form_data.get("password", ""))
         normalized_email = normalize_email(email)
-
-        if not email.strip() or not password:
-            self.login_error = _LOGIN_REQUIRED
+        self.login_email_error, self.login_password_error = _login_field_errors(email, password)
+        if self.login_email_error or self.login_password_error:
             self.is_submitting = False
-            yield rx.toast.error(self.login_error, position="top-right")
-            return
-        if not is_valid_email_identifier(normalized_email) or "." not in normalized_email.rsplit("@", 1)[1]:
-            self.login_error = "Informe um e-mail válido, como nome@dominio.com."
-            self.is_submitting = False
-            yield rx.toast.error(self.login_error, position="top-right")
+            yield
             return
 
         try:
@@ -226,7 +243,7 @@ class AuthState(rx.State):
                 if user is None or user.id is None:
                     self.login_error = _INVALID_CREDENTIALS
                     self.is_submitting = False
-                    yield rx.toast.error(self.login_error, position="top-right")
+                    yield
                     return
 
                 if user.must_change_password and temporary_password_is_expired(user):
@@ -234,7 +251,7 @@ class AuthState(rx.State):
                         "Sua senha inicial expirou. Solicite novo acesso à administração."
                     )
                     self.is_submitting = False
-                    yield rx.toast.error(self.login_error, position="top-right")
+                    yield
                     return
                 requires_initial_change = user.must_change_password
                 role = Role(user.role)
@@ -248,7 +265,7 @@ class AuthState(rx.State):
         except Exception:
             self.login_error = _SYSTEM_LOGIN_ERROR
             self.is_submitting = False
-            yield rx.toast.error(self.login_error, position="top-right")
+            yield
             return
 
         await self._clear_sensitive_states()

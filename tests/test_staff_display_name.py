@@ -9,7 +9,10 @@ from sqlmodel import Session, SQLModel, create_engine, select
 from vitta_one.auth.roles import Role
 from vitta_one.auth.security import hash_password, verify_password
 from vitta_one.auth.service import create_session
-from vitta_one.auth.staff_service import create_receptionist, list_employee_directory
+from vitta_one.auth.staff_service import (
+    create_receptionist, filter_employee_directory, get_employee_detail,
+    list_employee_directory,
+)
 from vitta_one.auth.authorization import RoleForbiddenError
 from vitta_one.models.auth import User, AuthSession
 
@@ -70,14 +73,16 @@ def test_rejects_empty_short_or_long_staff_name(db, name):
     assert db.exec(select(User).where(User.email == "recepcao@exemplo.com")).first() is None
 
 
-def test_legacy_identity_is_displayed_with_email_fallback(db):
+def test_legacy_identity_is_not_misrepresented_as_a_name(db):
     token = _session(db, Role.ADMINISTRADOR)
     user = create_receptionist(
         db, token=token, email="legado@exemplo.com", password="Segura123456789!"
     )
     assert user.display_name is None
     entries = list_employee_directory(db, token=token)
-    assert any(row["name"] == "legado@exemplo.com" for row in entries)
+    assert any(row["name"] == "Nome não informado" and row["email"] == "legado@exemplo.com" for row in entries)
+    detail = get_employee_detail(db, token=token, employee_id=user.id)
+    assert detail is not None and detail["name"] == "Nome não informado"
 
 
 def test_receptionist_cannot_create_another_receptionist(db):
@@ -90,3 +95,41 @@ def test_receptionist_cannot_create_another_receptionist(db):
             email="novo@exemplo.com",
             password="Segura123456789!",
         )
+
+
+
+def test_employee_filter_combines_name_email_profile_and_role():
+    rows = [
+        {"id": 1, "name": "Maria de Souza", "email": "maria@exemplo.com",
+         "role": Role.RECEPCIONISTA.value, "role_label": "Recepcionista"},
+        {"id": 2, "name": "João Silva", "email": "joao@exemplo.com",
+         "role": Role.MEDICO.value, "role_label": "Médico"},
+        {"id": 3, "name": "Nome não informado", "email": "legado@exemplo.com",
+         "role": Role.MEDICO.value, "role_label": "Médico"},
+    ]
+    assert [row["id"] for row in filter_employee_directory(rows, search="  MARIA  ")] == [1]
+    assert [row["id"] for row in filter_employee_directory(rows, search="@exemplo.com", role="MEDICO")] == [2, 3]
+    assert [row["id"] for row in filter_employee_directory(rows, search="médico", role="MEDICO")] == [2, 3]
+    assert filter_employee_directory(rows, search="sem correspondência") == []
+    assert filter_employee_directory(rows, role="RECEPCIONISTA") == [rows[0]]
+    assert filter_employee_directory(rows) == rows
+
+
+def test_receptionist_cannot_read_staff_directory_or_employee_details(db):
+    admin_token = _session(db, Role.ADMINISTRADOR)
+    receptionist = create_receptionist(
+        db, token=admin_token, email="recepcao2@exemplo.com",
+        name="Atendente de Teste", password="Segura123456789!",
+    )
+    receptionist_token = create_session(db, user_id=receptionist.id, ttl=timedelta(hours=1))
+    with pytest.raises(RoleForbiddenError):
+        list_employee_directory(db, token=receptionist_token)
+    with pytest.raises(RoleForbiddenError):
+        get_employee_detail(db, token=receptionist_token, employee_id=receptionist.id)
+
+
+def test_patient_users_are_excluded_from_the_staff_directory(db):
+    admin_token = _session(db, Role.ADMINISTRADOR)
+    _session(db, Role.PACIENTE)
+    rows = list_employee_directory(db, token=admin_token)
+    assert rows == []

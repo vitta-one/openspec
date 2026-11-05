@@ -9,6 +9,7 @@ import pytest
 from vitta_one.auth.authorization import RoleForbiddenError
 from vitta_one.auth.roles import Role
 from vitta_one.auth.state import _ADMIN_PREVIEW_ROUTES, _ROLE_BY_ROUTE
+from vitta_one.ui.components import _ADMIN_PREVIEW_NAV, _ADMIN_TASK_NAV
 
 
 _ADMIN_TASK_ROUTES = (
@@ -49,3 +50,28 @@ def test_patient_registration_and_details_require_receptionist_role(route: str) 
 
 def test_medical_records_are_not_an_unprotected_route() -> None:
     assert _ROLE_BY_ROUTE.get("/medico/prontuarios") is Role.MEDICO
+
+
+@pytest.mark.parametrize("label, route, icon, active_key", _ADMIN_TASK_NAV)
+def test_admin_sidebar_destinations_are_real_authorized_routes(
+    label: str, route: str, icon: str, active_key: str,
+) -> None:
+    assert label and icon and active_key
+    assert route in _ADMIN_TASK_ROUTES
+    assert _ROLE_BY_ROUTE[route] is Role.ADMINISTRADOR
+    assert route not in _ADMIN_PREVIEW_ROUTES
+
+
+def test_admin_qa_links_are_separate_from_real_administration() -> None:
+    task_routes = {href for _, href, _, _ in _ADMIN_TASK_NAV}
+    preview_routes = {href for _, href, _, _ in _ADMIN_PREVIEW_NAV}
+    assert len(task_routes) == len(_ADMIN_TASK_NAV)
+    assert len(preview_routes) == len(_ADMIN_PREVIEW_NAV)
+    assert preview_routes == _ADMIN_PREVIEW_ROUTES
+    assert task_routes.isdisjoint(preview_routes)
+
+
+def test_admin_sidebar_has_explicit_active_key_for_each_destination() -> None:
+    keys = [active for _, _, _, active in _ADMIN_TASK_NAV]
+    assert len(keys) == len(set(keys))
+    assert "administracao" in keys

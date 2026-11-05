@@ -38,7 +38,7 @@ def list_employee_directory(db: Session, *, token: str) -> list[dict]:
         .order_by(User.created_at.desc(), User.id.desc())
     ).all()
     return [
-        {"id": user.id, "email": user.email, "name": user.display_name or user.email, "role": user.role,
+        {"id": user.id, "email": user.email, "name": user.display_name or "Nome não informado", "role": user.role,
          "role_label": ("Médico" if user.role == Role.MEDICO.value else "Recepcionista"),
          "href": f"/admin/funcionarios/{user.id}"}
         for user in users
@@ -91,3 +91,21 @@ def get_employee_detail(db: Session, *, token: str, employee_id: int) -> dict | 
         ),
         "specialties": ", ".join(specialty_names),
     }
+
+
+def filter_employee_directory(
+    rows: list[dict], *, search: str = "", role: str = "todos"
+) -> list[dict]:
+    """Filter an already authorized employee directory without mutating records."""
+    term = search.strip().casefold()
+    return [
+        row for row in rows
+        if (role == "todos" or row["role"] == role)
+        and (
+            not term
+            or any(
+                term in str(row[field]).casefold()
+                for field in ("name", "email", "role_label")
+            )
+        )
+    ]
