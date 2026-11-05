@@ -5,6 +5,7 @@ import reflex as rx
 from vitta_one.appointment_scheduling.domain import AvailabilitySlotStatus, ConsultationStatus
 from vitta_one.appointment_scheduling.state import AdminAvailabilityState, ReceptionAgendaState
 from vitta_one.ui.components import empty_state, feedback_region, field_label, section_panel
+from vitta_one.ui.calendar_components import month_calendar
 from vitta_one.ui.queue_components import priority_select
 
 
@@ -207,41 +208,6 @@ def _weekday_select(*, control_id: str, value, on_change) -> rx.Component:
     )
 
 
-def _admin_calendar_day(day) -> rx.Component:
-    """Calendar cell: empty dates are inspectable, adjacent-month dates are not."""
-    return rx.button(
-        rx.vstack(
-            rx.text(day["day"], font_weight="700", size="3"),
-            rx.cond(
-                day["has_slots"],
-                rx.text(day["slot_count"], size="1",
-                        class_name="vitta-calendar-day-count"),
-                rx.fragment(),
-            ),
-            spacing="1", align="center", justify="center",
-        ),
-        type="button",
-        class_name=rx.cond(
-            day["is_selected"],
-            "vitta-calendar-date is-selected",
-            rx.cond(
-                day["has_slots"],
-                "vitta-calendar-date has-slots",
-                rx.cond(
-                    day["is_current_month"],
-                    "vitta-calendar-date is-empty",
-                    "vitta-calendar-date is-unavailable",
-                ),
-            ),
-        ),
-        disabled=~day["is_current_month"],
-        on_click=AdminAvailabilityState.select_calendar_day(day["date_label"]),
-        aria_label=day["aria_label"],
-        aria_pressed=day["is_selected"],
-        width="100%",
-    )
-
-
 def admin_calendar_view() -> rx.Component:
     """Compact month navigation and single-day drill-down, not a 500-row list."""
     return rx.vstack(
@@ -256,32 +222,14 @@ def admin_calendar_view() -> rx.Component:
             direction=rx.breakpoints(initial="column", lg="row"),
             justify="between", align="center", gap="4", width="100%",
         ),
-        rx.box(
-            rx.flex(
-                rx.button(rx.icon("chevron_left", size=19), type="button", variant="ghost",
-                          on_click=AdminAvailabilityState.move_calendar_month(-1),
-                          aria_label="Mês anterior", disabled=AdminAvailabilityState.is_loading),
-                rx.heading(AdminAvailabilityState.calendar_month_title, size="4"),
-                rx.button(rx.icon("chevron_right", size=19), type="button", variant="ghost",
-                          on_click=AdminAvailabilityState.move_calendar_month(1),
-                          aria_label="Próximo mês", disabled=AdminAvailabilityState.is_loading),
-                align="center", justify="between", width="100%",
-                class_name="vitta-calendar-header",
-            ),
-            rx.grid(
-                *[rx.center(rx.text(name, size="2", font_weight="700"))
-                  for name in ("Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb")],
-                columns="7", gap="1", class_name="vitta-calendar-weekdays",
-            ),
-            rx.cond(
-                AdminAvailabilityState.is_loading,
-                rx.center(rx.spinner(size="3"), min_height="15rem", width="100%"),
-                rx.grid(
-                    rx.foreach(AdminAvailabilityState.calendar_days, _admin_calendar_day),
-                    columns="7", gap="1", class_name="vitta-calendar-grid",
-                ),
-            ),
-            class_name="vitta-availability-calendar",
+        month_calendar(
+            month_title=AdminAvailabilityState.calendar_month_title,
+            days=AdminAvailabilityState.calendar_days,
+            is_loading=AdminAvailabilityState.is_loading,
+            on_previous=AdminAvailabilityState.move_calendar_month(-1),
+            on_next=AdminAvailabilityState.move_calendar_month(1),
+            on_select_day=AdminAvailabilityState.select_calendar_day,
+            allow_empty=True,
         ),
         rx.cond(
             AdminAvailabilityState.selected_calendar_day != "",
