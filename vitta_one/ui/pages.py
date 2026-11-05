@@ -26,7 +26,7 @@ from vitta_one.ui.admin_directory_components import (
     specialties_management_workspace,
     professionals_management_workspace,
 )
-from vitta_one.ui.appointment_components import admin_availability_panel, reception_agenda_panel
+from vitta_one.ui.appointment_components import admin_availability_panel, reception_agenda_panel, reception_agenda_dialogs
 from vitta_one.ui.admin_preview_components import (
     agenda_preview,
     clinical_preview,
@@ -505,6 +505,7 @@ def reception_patient_edit_page() -> rx.Component:
     return protected_workspace(
         Role.RECEPCIONISTA,
         patient_edit_workspace(),
+        reception_agenda_dialogs(),
         active="pacientes",
         verified_path="/recepcao/pacientes/[patient_id]/editar",
     )

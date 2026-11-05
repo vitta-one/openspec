@@ -735,6 +735,8 @@ class ReceptionAgendaState(rx.State):
     focus_booking_on_next_load: bool = False
 
     booking_dialog_open: bool = False
+    booking_locked_patient_id: int = 0
+    booking_origin: str = ""
     booking_discard_open: bool = False
     booking_step: int = 1
     booking_patient_query: str = ""
@@ -1187,6 +1189,8 @@ class ReceptionAgendaState(rx.State):
             self.selected_patient_id = 0
             self.selected_patient_name = ""
         self.booking_dialog_open = False
+        self.booking_origin = ""
+        self.booking_locked_patient_id = 0
         self.booking_discard_open = False
         self.booking_step = 1
         self.booking_patient_query = ""
@@ -1293,6 +1297,8 @@ class ReceptionAgendaState(rx.State):
 
     @rx.event
     async def search_booking_patients(self, form_data: dict[str, Any]):
+        if self.booking_locked_patient_id:
+            return
         self.booking_patient_query = str(
             form_data.get("query", self.booking_patient_query) or ""
         )[:100]
@@ -1327,6 +1333,8 @@ class ReceptionAgendaState(rx.State):
 
     @rx.event
     async def select_booking_patient(self, patient_id: int):
+        if self.booking_locked_patient_id:
+            return
         self.booking_error_message = ""
         try:
             token = await self._token()
@@ -1349,6 +1357,8 @@ class ReceptionAgendaState(rx.State):
 
     @rx.event
     def clear_booking_patient(self) -> None:
+        if self.booking_locked_patient_id:
+            return
         self.selected_patient_id = 0
         self.selected_patient_name = ""
         self.booking_error_message = ""
@@ -1469,7 +1479,7 @@ class ReceptionAgendaState(rx.State):
     @rx.event
     def booking_back(self) -> None:
         if not self.is_submitting:
-            self.booking_step = max(1, self.booking_step - 1)
+            self.booking_step = max(2 if self.booking_locked_patient_id else 1, self.booking_step - 1)
             self.booking_error_message = ""
 
     @rx.event
@@ -1489,6 +1499,9 @@ class ReceptionAgendaState(rx.State):
             )
             if (slot is None or str(slot["professional_id"]) != self.booking_professional):
                 raise SchedulingValidationError("Revise médico, data e horário antes de confirmar.")
+            if (self.booking_locked_patient_id
+                    and self.selected_patient_id != self.booking_locked_patient_id):
+                raise SchedulingValidationError("O paciente da ficha não pode ser alterado nesta reserva.")
             token = await self._token()
             with rx.session() as db:
                 reception_schedule_consultation(
@@ -1496,6 +1509,7 @@ class ReceptionAgendaState(rx.State):
                     patient_id=self.selected_patient_id,
                     slot_id=self.booking_slot_id,
                 )
+            origin = self.booking_origin
             booked_date_iso = datetime.strptime(self.booking_date, "%d/%m/%Y").date().isoformat()
             if self.filter_professional not in ("__all__", self.booking_professional):
                 self.filter_professional = self.booking_professional
@@ -1507,6 +1521,8 @@ class ReceptionAgendaState(rx.State):
             self._reset_booking()
             self.success_message = "Consulta agendada com sucesso"
             yield rx.toast.success(self.success_message, position="top-right")
+            if origin == "patient":
+                yield ReceptionQueueState.load_patient_detail
             try:
                 self._load_with_token(token)
             except Exception:

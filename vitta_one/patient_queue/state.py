@@ -45,6 +45,7 @@ from vitta_one.patient_queue.application import (
     doctor_waiting_count,
     reception_create_patient,
     reception_get_patient_identity,
+    reception_get_patient_operational_summary,
     reception_search_patients,
     reception_list_patient_directory,
     reception_enqueue,
@@ -104,6 +105,21 @@ class PatientDirectoryRow(TypedDict):
     name: str
     phone: str
     href: str
+
+
+class PatientOperationalConsultationRow(TypedDict):
+    id: int
+    scheduled_at: str
+    professional_name: str
+    status: str
+    status_label: str
+
+
+class PatientOperationalQueueRow(TypedDict):
+    id: int
+    priority_label: str
+    status_label: str
+    entered_at: str
 
 
 class QueueFormData(TypedDict):
@@ -336,6 +352,20 @@ class ReceptionQueueState(rx.State):
     selected_patient_name: str = ""
     selected_patient_phone: str = ""
     selected_patient_portal_status: str = ""
+    selected_patient_cpf_masked: str = ""
+    patient_upcoming_consultations: list[PatientOperationalConsultationRow] = []
+    patient_history_consultations: list[PatientOperationalConsultationRow] = []
+    patient_history_page: int = 1
+    patient_history_pages: int = 1
+    patient_history_total: int = 0
+    patient_has_active_entry: bool = False
+    patient_active_entry: PatientOperationalQueueRow = {
+        "id": 0, "priority_label": "", "status_label": "", "entered_at": "",
+    }
+    patient_queue_history: list[PatientOperationalQueueRow] = []
+    patient_detail_loading: bool = False
+    patient_detail_loaded: bool = False
+    patient_detail_error: str = ""
     qa_local_enabled: bool = False
     is_loading_queue: bool = False
     is_submitting: bool = False
@@ -455,6 +485,7 @@ class ReceptionQueueState(rx.State):
         self.selected_patient_name = ""
         self.selected_patient_phone = ""
         self.selected_patient_portal_status = ""
+        self._clear_patient_operational_data()
         self.new_patient_name = ""
         self.new_patient_cpf = ""
         self.new_patient_phone = ""
@@ -469,6 +500,52 @@ class ReceptionQueueState(rx.State):
         self.is_quick_searching = False
         self._reset_reassess()
         self._reset_withdraw()
+
+    def _clear_patient_operational_data(self) -> None:
+        self.selected_patient_cpf_masked = ""
+        self.patient_upcoming_consultations = []
+        self.patient_history_consultations = []
+        self.patient_history_page = 1
+        self.patient_history_pages = 1
+        self.patient_history_total = 0
+        self.patient_has_active_entry = False
+        self.patient_active_entry = {
+            "id": 0, "priority_label": "", "status_label": "", "entered_at": "",
+        }
+        self.patient_queue_history = []
+        self.patient_detail_loaded = False
+        self.patient_detail_error = ""
+
+    def _load_patient_profile_with_token(self, token: str, patient_id: int) -> bool:
+        with rx.session() as db:
+            profile = reception_get_patient_operational_summary(
+                db, token=token, patient_id=patient_id,
+                history_page=self.patient_history_page,
+            )
+            if profile is None:
+                return False
+            portal_status = reception_get_patient_portal_status(
+                db, token=token, patient_id=patient_id,
+            )
+        self.selected_patient_id = profile["id"]
+        self.selected_patient_name = profile["name"]
+        self.selected_patient_phone = format_patient_phone_input(profile["phone"])
+        self.selected_patient_cpf_masked = profile["cpf_masked"]
+        self.selected_patient_portal_status = portal_status.label
+        self.patient_upcoming_consultations = profile["upcoming"]
+        self.patient_history_consultations = profile["history"]
+        self.patient_history_page = profile["history_page"]
+        self.patient_history_pages = profile["history_pages"]
+        self.patient_history_total = profile["history_total"]
+        active = profile["active_queue"]
+        self.patient_has_active_entry = active is not None
+        self.patient_active_entry = active or {
+            "id": 0, "priority_label": "", "status_label": "", "entered_at": "",
+        }
+        self.patient_queue_history = profile["queue_history"]
+        self.qa_local_enabled = local_qa_enabled()
+        self.patient_detail_loaded = True
+        return True
 
     def _load_queue_with_token(self, token: str) -> None:
         with rx.session() as db:
@@ -575,32 +652,45 @@ class ReceptionQueueState(rx.State):
 
     @rx.event
     async def load_patient_detail(self):
-        """Resolve patient ID under server-side RBAC on every request."""
+        """Load authorized operational fields; never include clinical history."""
+        self.patient_detail_loading = True
+        self.patient_detail_loaded = False
+        self.patient_detail_error = ""
+        yield
         try:
-            raw_id = self.router.page.params.get("patient_id", "")
-            if not str(raw_id).isdigit():
-                yield rx.redirect("/recepcao/pacientes")
+            raw_id = str(self.router.page.params.get("patient_id", ""))
+            if not raw_id.isdigit() or len(raw_id) > 18 or int(raw_id) <= 0:
+                self._clear_sensitive_view()
+                self.patient_detail_error = "Paciente não encontrado."
                 return
+            patient_id = int(raw_id)
+            if self.selected_patient_id != patient_id:
+                self.patient_history_page = 1
+            self.selected_patient_id = 0
+            self.selected_patient_name = ""
+            self.selected_patient_phone = ""
             token = await self._token()
-            with rx.session() as db:
-                patient = reception_get_patient_identity(db, token=token, patient_id=int(raw_id))
-                if patient is None:
-                    yield rx.redirect("/recepcao/pacientes")
-                    return
-                status = reception_get_patient_portal_status(
-                    db, token=token, patient_id=patient.id,
-                )
-            self.selected_patient_id = patient.id
-            self.selected_patient_name = patient.name
-            self.selected_patient_phone = format_patient_phone_input(patient.phone)
-            self.selected_patient_portal_status = status.label
-            self.qa_local_enabled = local_qa_enabled()
+            if not self._load_patient_profile_with_token(token, patient_id):
+                self._clear_sensitive_view()
+                self.patient_detail_error = "Paciente não encontrado."
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
-            yield rx.toast.error("Não foi possível abrir a ficha do paciente.")
-            yield rx.redirect("/recepcao/pacientes")
+            self._clear_sensitive_view()
+            self.patient_detail_error = "Não foi possível carregar a ficha do paciente."
+        finally:
+            self.patient_detail_loading = False
+            yield
+
+    @rx.event
+    def change_patient_history_page(self, delta: int):
+        if not self.patient_detail_loaded or self.selected_patient_id <= 0:
+            return
+        self.patient_history_page = max(
+            1, min(self.patient_history_page + delta, self.patient_history_pages)
+        )
+        return ReceptionQueueState.load_patient_detail
 
     @rx.event
     async def load(self):
@@ -1010,7 +1100,7 @@ class ReceptionQueueState(rx.State):
 
     @rx.event
     async def open_selected_patient_agenda(self):
-        """Keep the selected patient when Reception switches from registration to booking."""
+        """Open the shared modal with server-validated patient context."""
         if self.selected_patient_id <= 0:
             self.error_message = "Localize um paciente antes de agendar."
             return
@@ -1025,15 +1115,22 @@ class ReceptionQueueState(rx.State):
                 return
             from vitta_one.appointment_scheduling.state import ReceptionAgendaState
             agenda = await self.get_state(ReceptionAgendaState)
-            agenda.selected_patient_id = self.selected_patient_id
+            agenda._reset_booking()
+            agenda.booking_origin = "patient"
+            agenda.booking_locked_patient_id = patient.id
+            agenda.selected_patient_id = patient.id
             agenda.selected_patient_name = patient.name
-            agenda.patient_cpf = ""
-            agenda.focus_booking_on_next_load = True
-            return rx.redirect("/recepcao/agenda")
+            agenda.booking_step = 2
+            agenda._clear_feedback()
+            agenda._load_booking_professionals_with_token(token)
+            agenda.booking_dialog_open = True
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             if isinstance(exc, AuthenticationRequiredError):
                 return rx.redirect("/login")
             return rx.redirect("/acesso-negado")
+        except Exception:
+            self.error_message = "Não foi possível abrir o agendamento agora."
+            return rx.toast.error(self.error_message, position="top-right")
 
     @rx.event
     async def enqueue(self, form_data: QueueFormData):

@@ -265,3 +265,59 @@ def test_concurrent_walk_in_submissions_create_one_active_entry() -> None:
                 if patient is not None:
                     db.delete(patient)
                     db.commit()
+
+
+@pytest.mark.skipif(
+    not _DATABASE_URL.startswith("postgresql"),
+    reason="Concurrent reception enqueue requires PostgreSQL row locks.",
+)
+def test_concurrent_walkin_enqueue_rejects_second_active_entry() -> None:
+    """Two simultaneously submitted walk-ins produce only one active passage."""
+    engine = create_engine(_DATABASE_URL, pool_pre_ping=True)
+    patient_id = 0
+    try:
+        with Session(engine) as db:
+            patient = create_patient(
+                db, name="Paciente Sem Duplicação", cpf=_random_cpf()
+            )
+            patient_id = patient.id
+            assert patient_id is not None
+
+        def enqueue_once(position: int) -> int | str:
+            with Session(engine) as db:
+                try:
+                    entry = create_queue_entry(
+                        db, patient_id=patient_id,
+                        symptoms=f"Relato de concorrência {position}",
+                        priority="VERDE",
+                    )
+                    assert entry.id is not None
+                    return entry.id
+                except QueueValidationError:
+                    return "already-active"
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            outcomes = list(pool.map(enqueue_once, range(2)))
+
+        assert len([outcome for outcome in outcomes if isinstance(outcome, int)]) == 1
+        assert outcomes.count("already-active") == 1
+        with Session(engine) as db:
+            rows = db.exec(
+                select(QueueEntry).where(QueueEntry.patient_id == patient_id)
+            ).all()
+            assert len(rows) == 1
+            assert rows[0].status == "AGUARDANDO"
+    finally:
+        if patient_id:
+            with Session(engine) as db:
+                rows = db.exec(
+                    select(QueueEntry).where(QueueEntry.patient_id == patient_id)
+                ).all()
+                for row in rows:
+                    db.delete(row)
+                db.commit()
+                patient = db.get(Patient, patient_id)
+                if patient is not None:
+                    db.delete(patient)
+                    db.commit()
+        engine.dispose()

@@ -906,8 +906,12 @@ def _booking_patient_step() -> rx.Component:
                 rx.hstack(rx.icon("check_circle", size=18),
                           rx.text(ReceptionAgendaState.selected_patient_name,
                                   font_weight="700", size="2"), spacing="2"),
-                rx.button("Trocar", type="button", variant="ghost", size="2",
-                          on_click=ReceptionAgendaState.clear_booking_patient),
+                rx.cond(
+                    ReceptionAgendaState.booking_locked_patient_id > 0,
+                    rx.fragment(),
+                    rx.button("Trocar", type="button", variant="ghost", size="2",
+                              on_click=ReceptionAgendaState.clear_booking_patient),
+                ),
                 justify="between", align="center", width="100%", gap="2",
                 flex_wrap="wrap", class_name="vitta-selection-bar",
             ),
@@ -931,6 +935,17 @@ def _booking_patient_step() -> rx.Component:
 
 def _booking_professional_step() -> rx.Component:
     return rx.vstack(
+        rx.cond(
+            ReceptionAgendaState.booking_locked_patient_id > 0,
+            rx.box(
+                rx.text("Paciente desta ficha", size="2", color="var(--vitta-text-muted)"),
+                rx.text(ReceptionAgendaState.selected_patient_name, font_weight="700"),
+                rx.text("O paciente selecionado não poderá ser alterado nesta reserva.",
+                        size="2", color="var(--vitta-text-muted)"),
+                class_name="vitta-info-strip",
+            ),
+            rx.fragment(),
+        ),
         rx.text("Selecione o profissional que realizará a consulta.",
                 color="var(--vitta-text-muted)", size="2"),
         field_label("Médico", "booking-professional"),

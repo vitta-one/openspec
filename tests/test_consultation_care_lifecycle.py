@@ -16,6 +16,7 @@ from vitta_one.appointment_scheduling.service import (
 )
 from vitta_one.auth.roles import Role
 from vitta_one.consultation_care.service import (
+    CareLifecycleConflictError,
     CareLifecycleTransitionError,
     CareLifecycleValidationError,
     confirm_arrival,
@@ -159,6 +160,32 @@ def test_confirm_arrival_is_atomic_and_preserves_patient(db: Session) -> None:
     assert entry.status == QueueStatus.AGUARDANDO.value
     assert entry.priority == QueuePriority.AMARELO.value
     assert db.get(ProfessionalAvailabilitySlot, slot.id).status == AvailabilitySlotStatus.BOOKED.value
+
+
+
+def test_scheduled_arrival_does_not_duplicate_active_walkin(db: Session) -> None:
+    base = datetime(2026, 10, 1, 12, tzinfo=timezone.utc)
+    doctor = _doctor(db, "doctor-active-walkin@example.com")
+    _, patient, _, consultation = _scheduled(
+        db, suffix="ACTIVE-WALKIN", patient_prefix="246813579",
+        doctor_user_id=doctor.id, base=base,
+    )
+    walkin = create_queue_entry(
+        db, patient_id=patient.id, symptoms="Relato inicial", priority="VERDE"
+    )
+    with pytest.raises(CareLifecycleConflictError, match="entrada ativa"):
+        confirm_arrival(
+            db, consultation_id=consultation.id,
+            symptoms="Outra chegada", priority="AMARELO", now=base,
+        )
+    assert db.get(Consultation, consultation.id).status == ConsultationStatus.AGENDADA.value
+    withdraw_queue_entry(db, entry_id=walkin.id, reason="Saída registrada")
+    scheduled_entry = confirm_arrival(
+        db, consultation_id=consultation.id,
+        symptoms="Chegada após encerramento", priority="VERDE", now=base,
+    )
+    assert scheduled_entry.patient_id == patient.id
+    assert scheduled_entry.consultation_id == consultation.id
 
 
 @pytest.mark.parametrize(
