@@ -119,3 +119,29 @@ def admin_agenda_snapshot(
             for consultation_id, doctor_id, doctor_name, scheduled_at, status in consultations
         ),
     )
+
+def get_preview_patient_identity(
+    db: Session, *, token: str, patient_id: int
+) -> Patient | None:
+    """Authorize a QA patient read before resolving any resource by ID."""
+    require_local_admin_preview(db, token)
+    if patient_id < 1:
+        return None
+    return db.get(Patient, patient_id)
+
+
+def get_preview_patient_detail(
+    db: Session, *, token: str, patient_id: int
+) -> tuple[Patient | None, list[QueueEntry]]:
+    """Return only this patient's identity and operational events, never clinical data."""
+    patient = get_preview_patient_identity(db, token=token, patient_id=patient_id)
+    if patient is None:
+        return None, []
+    entries = list(
+        db.exec(
+            select(QueueEntry)
+            .where(QueueEntry.patient_id == patient_id)
+            .order_by(QueueEntry.entered_at.desc())
+        ).all()
+    )
+    return patient, entries

@@ -13,6 +13,8 @@ from vitta_one.auth.roles import Role
 from vitta_one.admin_preview.service import (
     LocalAdminPreviewDisabledError,
     require_local_admin_preview,
+    get_preview_patient_detail,
+    get_preview_patient_identity,
 )
 from vitta_one.auth.state import AuthState
 from vitta_one.clinical_care.application import admin_preview_patient_history
@@ -34,6 +36,16 @@ class PreviewPatientRow(TypedDict):
     id: int
     name: str
     cpf_masked: str
+
+
+class PreviewPatientOperationRow(TypedDict):
+    id: int
+    entered_at: str
+    symptoms: str
+    priority: str
+    priority_label: str
+    status: str
+    status_label: str
 
 
 class PreviewPrescriptionItemRow(TypedDict):
@@ -161,6 +173,19 @@ _QUEUE_STATUS_LABELS = {
     "RETIRADO": "Retirado",
 }
 
+def _serialize_patient_operation(item: QueueEntry) -> PreviewPatientOperationRow:
+    """Project only non-clinical queue fields, in the configured clinic timezone."""
+    return {
+        "id": item.id or 0,
+        "entered_at": format_clinic_datetime(item.entered_at),
+        "symptoms": item.symptoms,
+        "priority": item.priority,
+        "priority_label": _PRIORITY_LABELS.get(item.priority, item.priority.title()),
+        "status": item.status,
+        "status_label": _QUEUE_STATUS_LABELS.get(item.status, item.status.title()),
+    }
+
+
 PATIENT_PAGE_SIZE = 8
 
 
@@ -219,6 +244,9 @@ class AdminPreviewState(rx.State):
     selected_patient_id: int = 0
     selected_patient_name: str = ""
     selected_patient_cpf: str = ""
+    detail_queue_rows: list[PreviewPatientOperationRow] = []
+    detail_status: str = "idle"
+    active_patient_tab: str = "operacional"
     selected_clinical_history: list[PreviewClinicalHistoryRow] = []
     clinical_history_page: int = 1
     clinical_history_total_pages: int = 1
@@ -249,7 +277,11 @@ class AdminPreviewState(rx.State):
         self.selected_patient_id = 0
         self.selected_patient_name = ""
         self.selected_patient_cpf = ""
+        self.detail_queue_rows = []
+        self.detail_status = "idle"
+        self.active_patient_tab = "operacional"
         self.selected_clinical_history = []
+        self.is_loading_clinical_history = False
         self.clinical_history_page = 1
         self.clinical_history_total_pages = 1
         self.clinical_history_total_count = 0
@@ -303,14 +335,8 @@ class AdminPreviewState(rx.State):
         )
 
     @rx.var
-    def selected_patient_history(self) -> list[PreviewQueueRow]:
-        if not self.selected_patient_id:
-            return []
-        return [
-            row
-            for row in self.queue_rows
-            if row["patient_id"] == self.selected_patient_id
-        ]
+    def selected_patient_history(self) -> list[PreviewPatientOperationRow]:
+        return self.detail_queue_rows if self.detail_status == "ready" else []
 
     @rx.var
     def active_clinical_rows(self) -> list[PreviewQueueRow]:
@@ -336,7 +362,11 @@ class AdminPreviewState(rx.State):
         self.selected_patient_id = 0
         self.selected_patient_name = ""
         self.selected_patient_cpf = ""
+        self.detail_queue_rows = []
+        self.detail_status = "idle"
+        self.active_patient_tab = "operacional"
         self._clear_clinical_history()
+        self.is_loading_clinical_history = False
 
     def _load_selected_clinical_history_with_token(
         self,
@@ -348,6 +378,10 @@ class AdminPreviewState(rx.State):
             self._clear_clinical_history()
             return
         with rx.session() as db:
+            if get_preview_patient_identity(
+                db, token=token, patient_id=self.selected_patient_id
+            ) is None:
+                raise LookupError("Paciente não encontrado.")
             history = admin_preview_patient_history(
                 db,
                 token=token,
@@ -374,27 +408,30 @@ class AdminPreviewState(rx.State):
         self._clear_patient_selection()
 
     @rx.event
-    async def toggle_patient_selection(
-        self,
-        patient_id: int,
-        name: str,
-        cpf_masked: str,
-        checked: bool,
-    ):
-        self.error_message = ""
-        if not checked:
-            if self.selected_patient_id == patient_id:
-                self._clear_patient_selection()
-            return
+    def show_operational_history(self) -> None:
+        """Discard clinical data when leaving its QA-only section."""
+        self.active_patient_tab = "operacional"
+        self._clear_clinical_history()
 
-        self.selected_patient_id = patient_id
-        self.selected_patient_name = name
-        self.selected_patient_cpf = cpf_masked
+    @rx.event
+    async def show_clinical_history(self):
+        """Lazy-load completed records only after a fresh server authorization."""
+        if self.detail_status != "ready" or self.selected_patient_id < 1:
+            return
+        requested_patient_id = self.selected_patient_id
+        self.active_patient_tab = "clinico"
         self.is_loading_clinical_history = True
+        self.error_message = ""
         self._clear_clinical_history()
         yield
         try:
             token = await self._token()
+            if (
+                self.detail_status != "ready"
+                or self.active_patient_tab != "clinico"
+                or self.selected_patient_id != requested_patient_id
+            ):
+                return
             self._load_selected_clinical_history_with_token(token, page=1)
         except LocalAdminPreviewDisabledError:
             self._clear_patient_selection()
@@ -405,18 +442,15 @@ class AdminPreviewState(rx.State):
         except RoleForbiddenError:
             self._clear_patient_selection()
             yield rx.redirect("/acesso-negado")
+        except LookupError:
+            self._clear_patient_selection()
+            self.detail_status = "not_found"
         except Exception:
             self._clear_clinical_history()
-            self.error_message = (
-                "Não foi possível carregar o histórico clínico deste paciente agora."
-            )
+            self.error_message = "Não foi possível carregar o histórico clínico. Tente novamente."
         finally:
             self.is_loading_clinical_history = False
             yield
-
-    @rx.event
-    def clear_patient_selection(self) -> None:
-        self._clear_patient_selection()
 
     @rx.event
     def previous_patient_page(self) -> None:
@@ -436,7 +470,12 @@ class AdminPreviewState(rx.State):
 
     @rx.event
     async def previous_clinical_history_page(self):
-        if not self.selected_patient_id or self.clinical_history_page <= 1:
+        if (
+            self.detail_status != "ready"
+            or self.active_patient_tab != "clinico"
+            or not self.selected_patient_id
+            or self.clinical_history_page <= 1
+        ):
             return
         self.is_loading_clinical_history = True
         yield
@@ -464,7 +503,9 @@ class AdminPreviewState(rx.State):
     @rx.event
     async def next_clinical_history_page(self):
         if (
-            not self.selected_patient_id
+            self.detail_status != "ready"
+            or self.active_patient_tab != "clinico"
+            or not self.selected_patient_id
             or self.clinical_history_page >= self.clinical_history_total_pages
         ):
             return
@@ -492,8 +533,99 @@ class AdminPreviewState(rx.State):
             yield
 
     @rx.event
+    async def load_patient_list(self):
+        """Fetch patient identities only; histories never enter the list state."""
+        query, page = self.patient_query, self.patient_page
+        self._clear()
+        self.patient_query, self.patient_page = query, page
+        self.is_loading = True
+        self.error_message = ""
+        yield
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                require_local_admin_preview(db, token)
+                patients = db.exec(select(Patient).order_by(Patient.name)).all()
+                self.patients = [
+                    {"id": item.id, "name": item.name, "cpf_masked": _mask_cpf(item.cpf)}
+                    for item in patients
+                    if item.id is not None
+                ]
+            self.patient_page = min(
+                max(self.patient_page, 1),
+                _patient_page_count(
+                    len(_filter_patient_rows(self.patients, self.patient_query)),
+                    self.patient_page_size,
+                ),
+            )
+        except LocalAdminPreviewDisabledError:
+            self._clear()
+            yield rx.redirect(Role.ADMINISTRADOR.dashboard_path)
+        except AuthenticationRequiredError:
+            self._clear()
+            yield rx.redirect("/login")
+        except RoleForbiddenError:
+            self._clear()
+            yield rx.redirect("/acesso-negado")
+        except Exception:
+            self._clear()
+            self.error_message = "Não foi possível carregar os pacientes. Tente novamente."
+        finally:
+            self.is_loading = False
+            yield
+
+    @rx.event
+    async def load_patient_detail(self):
+        """Resolve a route identifier under QA RBAC, scoped to one persisted patient."""
+        query, page = self.patient_query, self.patient_page
+        self._clear()
+        self.patient_query, self.patient_page = query, page
+        self.error_message = ""
+        self.detail_status = "loading"
+        yield
+
+        raw_id = str(self.router.page.params.get("patient_id", ""))
+        if not raw_id.isascii() or not raw_id.isdigit() or len(raw_id) > 18 or int(raw_id) < 1:
+            self.detail_status = "not_found"
+            yield
+            return
+
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                patient, entries = get_preview_patient_detail(
+                    db, token=token, patient_id=int(raw_id)
+                )
+                if patient is None:
+                    self.detail_status = "not_found"
+                else:
+                    self.selected_patient_id = patient.id or 0
+                    self.selected_patient_name = patient.name
+                    self.selected_patient_cpf = _mask_cpf(patient.cpf)
+                    self.detail_queue_rows = [
+                        _serialize_patient_operation(item) for item in entries
+                    ]
+                    self.detail_status = "ready"
+        except LocalAdminPreviewDisabledError:
+            self._clear_patient_selection()
+            yield rx.redirect(Role.ADMINISTRADOR.dashboard_path)
+        except AuthenticationRequiredError:
+            self._clear_patient_selection()
+            yield rx.redirect("/login")
+        except RoleForbiddenError:
+            self._clear_patient_selection()
+            yield rx.redirect("/acesso-negado")
+        except Exception:
+            self._clear_patient_selection()
+            self.detail_status = "error"
+            self.error_message = "Não foi possível consultar a ficha do paciente."
+        finally:
+            yield
+
+    @rx.event
     async def load(self):
         """Load only persisted data after both local-mode and Administrator checks."""
+        self._clear_patient_selection()
         self.is_loading = True
         self.error_message = ""
         yield

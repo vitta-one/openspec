@@ -51,6 +51,7 @@ from vitta_one.ui.pages import (
     admin_specialties_page,
     admin_professionals_page,
     admin_patients_preview_page,
+    admin_patient_detail_preview_page,
     admin_reception_preview_page,
     doctor_page,
     doctor_agenda_page,
@@ -216,7 +217,13 @@ app.add_page(
     admin_patients_preview_page,
     route="/admin/pacientes",
     title="Pacientes · Preview local | Vitta-One",
-    on_load=[AuthState.load_admin_preview, AdminPreviewState.load],
+    on_load=[AuthState.load_admin_preview, AdminPreviewState.load_patient_list],
+)
+app.add_page(
+    admin_patient_detail_preview_page,
+    route="/admin/pacientes/[patient_id]",
+    title="Ficha do paciente · Preview local | Vitta-One",
+    on_load=[AuthState.load_admin_preview, AdminPreviewState.load_patient_detail],
 )
 app.add_page(
     admin_finance_preview_page,
