@@ -111,207 +111,27 @@ def patient_selection_summary() -> rx.Component:
 
 
 def selected_patient_operations() -> rx.Component:
+    """Use the patient profile as the single owner of identity and portal actions."""
     return rx.cond(
         ReceptionQueueState.selected_patient_id > 0,
-        rx.vstack(
-            section_panel(
-                rx.vstack(
-                    rx.heading("Próximas ações", size="4"),
-                    rx.text(
-                        "Continue com o paciente selecionado, sem precisar pesquisar novamente.",
-                        size="2", color="var(--vitta-text-muted)",
-                    ),
-                    rx.button(
-                        rx.icon("calendar_plus", size=17),
-                        "Agendar consulta para este paciente",
-                        type="button", color_scheme="teal", high_contrast=True,
-                        min_height="2.75rem",
-                        on_click=ReceptionQueueState.open_selected_patient_agenda,
-                        disabled=ReceptionQueueState.is_submitting,
-                    ),
-                    spacing="3", align="stretch", width="100%",
-                )
-            ),
-            section_panel(
-                rx.vstack(
-                    rx.heading("Cadastro operacional", size="4"),
-                    rx.text(
-                        "Atualize somente nome e telefone. O CPF e o vínculo do portal não podem ser alterados aqui.",
-                        size="2",
-                        color="var(--vitta-text-muted)",
-                        line_height="1.5",
-                    ),
-                    rx.el.form(
-                        rx.flex(
-                            rx.box(
-                                field_label("Nome completo", "patient-edit-name"),
-                                rx.el.input(
-                                    id="patient-edit-name",
-                                    name="name",
-                                    value=ReceptionQueueState.selected_patient_name,
-                                    on_change=ReceptionQueueState.update_selected_patient_name,
-                                    required=True,
-                                    max_length=160,
-                                    class_name="vitta-input",
-                                    margin_top="0.4rem",
-                                ),
-                                width="100%",
-                            ),
-                            rx.box(
-                                field_label("Telefone", "patient-edit-phone"),
-                                rx.el.input(
-                                    id="patient-edit-phone",
-                                    name="phone",
-                                    type="tel",
-                                    value=ReceptionQueueState.selected_patient_phone,
-                                    on_change=ReceptionQueueState.update_selected_patient_phone,
-                                    max_length=15,
-                                    input_mode="tel",
-                                    pattern=r"\([0-9]{2}\) [0-9]{4,5}-[0-9]{4}",
-                                    title="Informe o DDD e o telefone: (11) 99999-9999",
-                                    class_name="vitta-input",
-                                    margin_top="0.4rem",
-                                ),
-                                width="100%",
-                            ),
-                            direction=rx.breakpoints(initial="column", md="row"),
-                            gap="3",
-                            width="100%",
-                        ),
-                        rx.button(
-                            "Salvar cadastro",
-                            type="submit",
-                            variant="outline",
-                            color_scheme="teal",
-                            disabled=ReceptionQueueState.is_submitting,
-                            loading=ReceptionQueueState.is_submitting,
-                        ),
-                        on_submit=ReceptionQueueState.update_selected_patient,
-                        width="100%",
-                    ),
-                    spacing="3",
-                    width="100%",
-                    align="stretch",
-                )
-            ),
-            section_panel(
-                rx.vstack(
-                    rx.heading("Acesso ao portal", size="4"),
-                    rx.text(
-                        ReceptionQueueState.selected_patient_portal_status,
-                        role="status",
-                        aria_live="polite",
-                        color="var(--vitta-primary)",
-                        font_weight="700",
-                    ),
-                    rx.text(
-                        rx.cond(
-                            ReceptionQueueState.qa_local_enabled,
-                            "QA local: habilite o login abaixo com consentimento. O convite por e-mail continua disponível para testar o Resend.",
-                            "O cadastro não cria uma conta. Envie um convite somente após confirmar consentimento com o paciente.",
-                        ),
-                        size="2",
-                        color="var(--vitta-text-muted)",
-                        line_height="1.5",
-                    ),
-                    rx.cond(
-                        ReceptionQueueState.qa_local_enabled
-                        & (ReceptionQueueState.selected_patient_portal_status != "Acesso ao portal ativo"),
-                        rx.el.form(
-                            rx.box(
-                                field_label("E-mail do paciente (QA local)", "patient-qa-email"),
-                                rx.el.input(
-                                    id="patient-qa-email", name="email", type="email",
-                                    required=True, max_length=320, class_name="vitta-input",
-                                    margin_top="0.4rem", auto_complete="off",
-                                    placeholder="paciente@example.invalid",
-                                ),
-                                width="100%",
-                            ),
-                            rx.box(
-                                field_label("Senha do paciente (12+ caracteres)", "patient-qa-password"),
-                                rx.el.input(
-                                    id="patient-qa-password", name="password", type="password",
-                                    required=True, min_length=12, max_length=128,
-                                    auto_complete="new-password", class_name="vitta-input",
-                                    margin_top="0.4rem",
-                                ),
-                                width="100%",
-                            ),
-                            rx.flex(
-                                rx.el.input(
-                                    id="patient-qa-consent", name="consent_confirmed",
-                                    type="checkbox", value="true", required=True,
-                                    aria_label="Consentimento para ativação local de QA",
-                                ),
-                                rx.text("Confirmo que o paciente consentiu com o acesso de demonstração.",
-                                        size="2", line_height="1.5"),
-                                gap="2", align="start",
-                            ),
-                            rx.button(
-                                "Habilitar login do paciente (QA)", type="submit",
-                                color_scheme="teal", high_contrast=True,
-                                disabled=ReceptionQueueState.is_submitting,
-                                loading=ReceptionQueueState.is_submitting,
-                            ),
-                            on_submit=ReceptionQueueState.activate_local_qa_patient,
-                            width="100%",
-                        ),
-                        rx.fragment(),
-                    ),
-                    rx.el.form(
-                        rx.box(
-                            field_label("E-mail para login", "patient-portal-email"),
-                            rx.el.input(
-                                id="patient-portal-email",
-                                name="email",
-                                type="email",
-                                auto_complete="email",
-                                required=True,
-                                max_length=320,
-                                class_name="vitta-input",
-                                margin_top="0.4rem",
-                            ),
-                            width="100%",
-                        ),
-                        rx.flex(
-                            rx.el.input(
-                                id="patient-portal-consent",
-                                name="consent_confirmed",
-                                type="checkbox",
-                                value="true",
-                                required=True,
-                                aria_label="Consentimento confirmado",
-                            ),
-                            rx.text(
-                                "Confirmo que o paciente consentiu em receber o convite de ativação.",
-                                size="2",
-                                line_height="1.5",
-                            ),
-                            gap="2",
-                            align="start",
-                        ),
-                        rx.button(
-                            "Enviar convite de ativação",
-                            type="submit",
-                            min_height="2.75rem",
-                            color_scheme="teal",
-                            high_contrast=True,
-                            disabled=ReceptionQueueState.is_submitting
-                            | (ReceptionQueueState.selected_patient_portal_status == "Acesso ao portal ativo"),
-                            loading=ReceptionQueueState.is_submitting,
-                        ),
-                        on_submit=ReceptionQueueState.issue_patient_portal_invitation,
-                        width="100%",
-                    ),
-                    spacing="3",
-                    width="100%",
-                    align="stretch",
-                )
-            ),
-            spacing="4",
-            width="100%",
-            align="stretch",
+        section_panel(
+            rx.flex(
+                rx.text(
+                    "Para editar o cadastro ou administrar o portal, abra a ficha do paciente.",
+                    size="2",
+                    color="var(--vitta-text-muted)",
+                ),
+                rx.link(
+                    "Abrir ficha do paciente",
+                    href="/recepcao/pacientes/" + ReceptionQueueState.selected_patient_id.to(str),
+                    class_name="vitta-context-link",
+                ),
+                justify="between",
+                gap="3",
+                flex_wrap="wrap",
+                align="center",
+                width="100%",
+            )
         ),
         rx.fragment(),
     )
