@@ -62,6 +62,9 @@ from vitta_one.patient_queue.service import (
     DoctorAlreadyAttendingError,
     PatientAlreadyExistsError,
     PatientValidationError,
+    is_valid_cpf,
+    normalize_patient_name,
+    normalize_patient_phone,
     QueueEmptyError,
     QueueOwnershipError,
     QueueTransitionError,
@@ -170,6 +173,56 @@ def format_patient_phone_input(value: str | None) -> str:
     return str(value or "")[:20]
 
 
+
+def format_patient_cpf_input(value: str | None) -> str:
+    """Format digits progressively; paste with or without punctuation is supported."""
+    digits = "".join(char for char in str(value or "") if char.isdigit())[:11]
+    if len(digits) > 9:
+        return f"{digits[:3]}.{digits[3:6]}.{digits[6:9]}-{digits[9:]}"
+    if len(digits) > 6:
+        return f"{digits[:3]}.{digits[3:6]}.{digits[6:]}"
+    if len(digits) > 3:
+        return f"{digits[:3]}.{digits[3:]}"
+    return digits
+
+
+def format_new_patient_phone_input(value: str | None) -> str:
+    """Progressively format optional 10/11-digit Brazilian phone numbers."""
+    digits = "".join(char for char in str(value or "") if char.isdigit())[:11]
+    if not digits:
+        return ""
+    if len(digits) > 10:
+        return f"({digits[:2]}) {digits[2:7]}-{digits[7:]}"
+    if len(digits) > 6:
+        return f"({digits[:2]}) {digits[2:6]}-{digits[6:]}"
+    if len(digits) > 2:
+        return f"({digits[:2]}) {digits[2:]}"
+    return f"({digits}"
+
+
+def validate_patient_registration_form(
+    name: str, cpf: str, phone: str | None
+) -> tuple[str, str, str]:
+    """Return field errors for the registration UX; domain service revalidates."""
+    normalized_name = normalize_patient_name(name)
+    name_error = (
+        "Informe o nome completo."
+        if not normalized_name
+        else "O nome excede 160 caracteres." if len(normalized_name) > 160 else ""
+    )
+    cpf_error = (
+        "Informe o CPF."
+        if not str(cpf or "").strip()
+        else "Informe um CPF válido." if not is_valid_cpf(cpf) else ""
+    )
+    phone_error = ""
+    try:
+        normalize_patient_phone(phone)
+    except PatientValidationError as exc:
+        phone_error = str(exc)
+    return name_error, cpf_error, phone_error
+
+
 def _format_patient_contact(value: str | None) -> str:
     return format_patient_phone_input(value) or "Telefone não informado"
 
@@ -252,6 +305,14 @@ class ReceptionQueueState(rx.State):
     qa_local_enabled: bool = False
     is_loading_queue: bool = False
     is_submitting: bool = False
+    new_patient_name: str = ""
+    new_patient_cpf: str = ""
+    new_patient_phone: str = ""
+    new_patient_name_error: str = ""
+    new_patient_cpf_error: str = ""
+    new_patient_phone_error: str = ""
+    new_patient_duplicate_id: int = 0
+    new_patient_created_id: int = 0
     error_message: str = ""
     success_message: str = ""
     quick_search_query: str = ""
@@ -322,6 +383,14 @@ class ReceptionQueueState(rx.State):
         self.selected_patient_name = ""
         self.selected_patient_phone = ""
         self.selected_patient_portal_status = ""
+        self.new_patient_name = ""
+        self.new_patient_cpf = ""
+        self.new_patient_phone = ""
+        self.new_patient_name_error = ""
+        self.new_patient_cpf_error = ""
+        self.new_patient_phone_error = ""
+        self.new_patient_duplicate_id = 0
+        self.new_patient_created_id = 0
         self.quick_search_query = ""
         self.quick_search_results = []
         self.quick_search_error = ""
@@ -567,23 +636,87 @@ class ReceptionQueueState(rx.State):
             return
 
     @rx.event
+    def prepare_new_patient(self) -> None:
+        """Clear only the new-patient form on entering its dedicated page."""
+        self.new_patient_name = ""
+        self.new_patient_cpf = ""
+        self.new_patient_phone = ""
+        self.new_patient_name_error = ""
+        self.new_patient_cpf_error = ""
+        self.new_patient_phone_error = ""
+        self.new_patient_duplicate_id = 0
+        self.new_patient_created_id = 0
+        self._clear_feedback()
+
+    @rx.event
+    def update_new_patient_name(self, value: str) -> None:
+        self.new_patient_name = str(value or "")[:160]
+        self.new_patient_name_error = ""
+        self.error_message = ""
+
+    @rx.event
+    def update_new_patient_cpf(self, value: str) -> None:
+        self.new_patient_cpf = format_patient_cpf_input(value)
+        self.new_patient_cpf_error = ""
+        self.new_patient_duplicate_id = 0
+        self.error_message = ""
+
+    @rx.event
+    def update_new_patient_phone(self, value: str) -> None:
+        self.new_patient_phone = format_new_patient_phone_input(value)
+        self.new_patient_phone_error = ""
+        self.error_message = ""
+
+    @rx.event
     async def create_patient(self, form_data: PatientFormData):
-        """Create and select a patient for the next queue-entry operation."""
+        """Persist once, show recoverable errors, then open the authorized patient profile."""
+        if self.is_submitting or self.new_patient_created_id > 0:
+            return
         self.is_submitting = True
         self._clear_feedback()
+        self.new_patient_duplicate_id = 0
+
+        raw_name = str(form_data.get("name", ""))
+        raw_cpf = str(form_data.get("cpf", ""))
+        raw_phone = str(form_data.get("phone", ""))
+        self.new_patient_name = raw_name[:160]
+        self.new_patient_cpf = format_patient_cpf_input(raw_cpf)
+        self.new_patient_phone = format_new_patient_phone_input(raw_phone)
+        (
+            self.new_patient_name_error,
+            self.new_patient_cpf_error,
+            self.new_patient_phone_error,
+        ) = validate_patient_registration_form(raw_name, raw_cpf, raw_phone)
         yield
         try:
+            if any((
+                self.new_patient_name_error,
+                self.new_patient_cpf_error,
+                self.new_patient_phone_error,
+            )):
+                self.error_message = "Revise os campos destacados para cadastrar o paciente."
+                first_invalid = (
+                    "patient-create-name" if self.new_patient_name_error
+                    else "patient-create-cpf" if self.new_patient_cpf_error
+                    else "patient-create-phone"
+                )
+                yield rx.call_script(
+                    f"document.getElementById('{first_invalid}')?.focus()"
+                )
+                return
+
             token = await self._token()
             with rx.session() as db:
                 patient = reception_create_patient(
                     db,
                     token=token,
-                    name=str(form_data.get("name", "")),
-                    cpf=str(form_data.get("cpf", "")),
-                    phone=str(form_data.get("phone", "")),
+                    name=raw_name,
+                    cpf=raw_cpf,
+                    phone=raw_phone,
                 )
             if patient.id is None:
                 raise RuntimeError("Paciente criado sem identificador.")
+            self.new_patient_created_id = patient.id
             self.selected_patient_id = patient.id
             self.selected_patient_name = patient.name
             self.selected_patient_phone = format_patient_phone_input(patient.phone)
@@ -591,18 +724,25 @@ class ReceptionQueueState(rx.State):
             self.success_message = "Paciente cadastrado com sucesso."
             yield rx.toast.success(self.success_message, position="top-right")
             yield rx.redirect(f"/recepcao/pacientes/{patient.id}")
-        except PatientAlreadyExistsError:
-            self.error_message = "Não foi possível concluir o cadastro. Confira os dados ou localize o paciente."
-            yield rx.toast.error(self.error_message, position="top-right")
+        except PatientAlreadyExistsError as exc:
+            self.new_patient_cpf_error = "Este CPF já está cadastrado."
+            self.new_patient_duplicate_id = exc.patient_id or 0
+            self.error_message = "Utilize o cadastro existente em vez de criar outro."
+            yield rx.call_script("document.getElementById('patient-create-cpf')?.focus()")
         except PatientValidationError as exc:
             self.error_message = str(exc)
-            yield rx.toast.error(self.error_message, position="top-right")
+            # Domain validation is authoritative even if a UI event is bypassed.
+            if "CPF" in self.error_message.upper():
+                self.new_patient_cpf_error = self.error_message
+            elif "telefone" in self.error_message.lower():
+                self.new_patient_phone_error = self.error_message
+            elif "nome" in self.error_message.lower():
+                self.new_patient_name_error = self.error_message
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
         except Exception:
-            self.error_message = "Não foi possível cadastrar o paciente agora."
-            yield rx.toast.error(self.error_message, position="top-right")
+            self.error_message = "Não foi possível cadastrar o paciente agora. Tente novamente."
         finally:
             self.is_submitting = False
             yield

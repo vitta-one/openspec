@@ -244,7 +244,7 @@ def create_patient(
         raise PatientValidationError("Informe o nome do paciente.")
     if len(normalized_name) > 160:
         raise PatientValidationError("O nome do paciente excede o limite permitido.")
-    if not is_valid_cpf(normalized_cpf):
+    if not is_valid_cpf(cpf):
         raise PatientValidationError("Informe um CPF válido.")
 
     existing = db.exec(select(Patient).where(Patient.cpf == normalized_cpf)).first()
@@ -260,7 +260,9 @@ def create_patient(
     except IntegrityError as exc:
         db.rollback()
         existing = db.exec(select(Patient).where(Patient.cpf == normalized_cpf)).first()
-        raise PatientAlreadyExistsError(existing.id if existing else None) from exc
+        if existing is not None:
+            raise PatientAlreadyExistsError(existing.id) from exc
+        raise
     db.refresh(patient)
     return patient
 

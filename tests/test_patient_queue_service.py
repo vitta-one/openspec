@@ -71,6 +71,17 @@ def test_patient_rejects_invalid_and_duplicate_cpf(db: Session) -> None:
     assert duplicate.value.patient_id == first.id
 
 
+
+def test_patient_creation_rejects_invalid_characters_before_cpf_normalization(db: Session) -> None:
+    """Digits inside an invalid string must not silently become a valid CPF."""
+    with pytest.raises(PatientValidationError, match="CPF válido"):
+        create_patient(db, name="Paciente Teste", cpf="529abc98224725")
+
+    with pytest.raises(PatientValidationError, match="CPF válido"):
+        create_patient(db, name="Paciente Teste", cpf="<529.982.247-25>")
+
+
+
 def test_waiting_queue_orders_priority_then_entry_time_and_id(db: Session) -> None:
     p1 = create_patient(db, name="Verde Antigo", cpf="52998224725")
     p2 = create_patient(db, name="Amarelo", cpf="16899535009")
