@@ -78,7 +78,7 @@ def test_specialty_create_rename_uniqueness_and_activation(db: Session) -> None:
     ]
 
 
-def test_professional_allows_optional_specialty_and_deduplicates_associations(db: Session) -> None:
+def test_professional_specialty_optional_and_deduplicates_associations(db: Session) -> None:
     cardiology = create_specialty(db, name="Cardiologia")
     pediatrics = create_specialty(db, name="Pediatria")
 
@@ -88,12 +88,8 @@ def test_professional_allows_optional_specialty_and_deduplicates_associations(db
         registration_identifier="REG-0",
         specialty_ids=[],
     )
-    assert without_specialty.id is not None
-    assert db.exec(
-        __import__("sqlmodel").select(ProfessionalSpecialty).where(
-            ProfessionalSpecialty.professional_id == without_specialty.id
-        )
-    ).all() == []
+    initial = next(item for item in list_professionals(db) if item.id == without_specialty.id)
+    assert initial.specialties == ()
 
     professional = create_professional(
         db,
@@ -111,6 +107,42 @@ def test_professional_allows_optional_specialty_and_deduplicates_associations(db
     ).all()
     assert {row.specialty_id for row in rows} == {cardiology.id, pediatrics.id}
     assert len(rows) == 2
+
+
+def test_edit_can_remove_all_specialties_without_changing_identity(db: Session) -> None:
+    specialty = create_specialty(db, name="Clínica Geral")
+    doctor = _user(db, Role.MEDICO, "linked@example.invalid")
+    professional = create_professional(
+        db, name="Dra. Editável", registration_identifier="REG-S",
+        specialty_ids=[specialty.id], user_id=doctor.id,
+    )
+    updated = update_professional(
+        db, professional_id=professional.id, name="Dra. Editada",
+        registration_identifier="REG-S", specialty_ids=[], user_id=doctor.id,
+    )
+    assert updated.user_id == doctor.id
+    item = next(row for row in list_professionals(db) if row.id == professional.id)
+    assert item.name == "Dra. Editada"
+    assert item.specialties == ()
+
+
+def test_professional_status_confirmation_rejects_stale_state(db: Session) -> None:
+    specialty = create_specialty(db, name="Cardiologia")
+    professional = create_professional(
+        db, name="Dr. Situação", registration_identifier="REG-STATUS",
+        specialty_ids=[specialty.id],
+    )
+    disabled = set_professional_active(
+        db, professional_id=professional.id, is_active=False, expected_active=True,
+    )
+    assert disabled.is_active is False
+    with pytest.raises(DirectoryConflictError, match="situação"):
+        set_professional_active(
+            db, professional_id=professional.id, is_active=False, expected_active=True,
+        )
+    assert next(
+        item for item in list_professionals(db) if item.id == professional.id
+    ).is_active is False
 
 
 def test_professionals_can_share_specialties_but_registration_is_unique(db: Session) -> None:

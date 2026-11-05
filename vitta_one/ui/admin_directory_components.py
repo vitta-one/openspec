@@ -388,7 +388,7 @@ def _professional_form_fields() -> rx.Component:
                 type="email",
                 value=AdminDirectoryState.professional_email,
                 on_change=AdminDirectoryState.update_professional_email,
-                required=True,
+                required=~AdminDirectoryState.is_editing_professional,
                 max_length=320,
                 auto_complete="email",
                 read_only=AdminDirectoryState.is_editing_professional,
@@ -473,7 +473,11 @@ def professional_dialog() -> rx.Component:
         rx.dialog.content(
             rx.dialog.title(AdminDirectoryState.professional_form_title),
             rx.dialog.description(
-                "Informe nome, e-mail e especialidades. O sistema prepara o acesso do médico.",
+                rx.cond(
+                    AdminDirectoryState.is_editing_professional,
+                    "Atualize os dados profissionais e os vínculos de especialidade.",
+                    "Informe nome e e-mail. As especialidades podem ser vinculadas depois.",
+                ),
                 margin_top="0.35rem",
                 margin_bottom="1rem",
             ),
@@ -528,118 +532,172 @@ def professional_dialog() -> rx.Component:
     )
 
 
-def professional_row(row) -> rx.Component:
-    return rx.box(
-        rx.vstack(
-            rx.flex(
-                rx.box(
-                    rx.text(row["name"], font_weight="760", size="3"),
-                ),
-                status_badge(row["is_active"], "Ativo", "Inativo"),
-                justify="between",
-                align="start",
-                gap="0.75rem",
-                width="100%",
+def _professional_specialties(row) -> rx.Component:
+    """Show the first specialty and disclose every persisted association on demand."""
+    return rx.hstack(
+        rx.text(
+            row["specialty_primary"],
+            size="2",
+            color=rx.cond(
+                row["specialty_more_count"] > 0,
+                "var(--vitta-text)",
+                "var(--vitta-text-muted)",
             ),
-            rx.box(
-                rx.text(
-                    "Especialidades",
-                    size="1",
-                    font_weight="700",
-                    color="var(--vitta-text-muted)",
+        ),
+        rx.cond(
+            row["specialty_more_count"] > 0,
+            rx.popover.root(
+                rx.popover.trigger(
+                    rx.button(
+                        "+", row["specialty_more_count"],
+                        rx.text(
+                            " especialidades de ", row["name"],
+                            class_name="vitta-sr-only",
+                        ),
+                        type="button",
+                        size="1",
+                        variant="soft",
+                        color_scheme="gray",
+                    ),
                 ),
-                rx.text(
-                    row["specialty_names"],
+                rx.popover.content(
+                    rx.text("Especialidades vinculadas", size="2", weight="bold"),
+                    rx.text(row["specialty_names"], size="2", margin_top="0.5rem"),
+                    max_width="20rem",
+                    align="start",
+                ),
+            ),
+            rx.fragment(),
+        ),
+        align="center",
+        gap="2",
+        flex_wrap="wrap",
+    )
+
+
+def _professional_actions(row) -> rx.Component:
+    """Shared actions for table and narrow layout; secondary actions live in a menu."""
+    return rx.hstack(
+        rx.button(
+            "Editar",
+            type="button",
+            size="2",
+            variant="outline",
+            color_scheme="teal",
+            on_click=AdminDirectoryState.begin_professional_edit(
+                row["id"],
+                row["name"],
+                row["registration_identifier"],
+                row["user_id"],
+                row["specialty_ids"],
+                row["user_email"],
+            ),
+            disabled=AdminDirectoryState.is_submitting,
+        ),
+        rx.dropdown_menu.root(
+            rx.dropdown_menu.trigger(
+                rx.button(
+                    rx.icon("ellipsis", size=18),
+                    rx.text(
+                        "Mais ações para ", row["name"],
+                        class_name="vitta-sr-only",
+                    ),
+                    type="button",
                     size="2",
-                    line_height="1.5",
-                    margin_top="0.2rem",
+                    variant="outline",
+                    color_scheme="gray",
+                    disabled=AdminDirectoryState.is_submitting,
                 ),
-                width="100%",
             ),
-            rx.cond(
-                row["has_inactive_specialty"],
-                rx.text(
-                    "Este profissional possui ao menos um vínculo histórico com especialidade inativa.",
-                    size="1",
-                    color="var(--vitta-text-muted)",
-                    line_height="1.45",
-                ),
-                rx.fragment(),
-            ),
-            rx.box(
-                rx.text("E-mail de acesso", size="1", font_weight="700",
-                        color="var(--vitta-text-muted)"),
-                rx.text(row["user_email"], size="2", margin_top="0.2rem"),
+            rx.dropdown_menu.content(
                 rx.cond(
-                    row["onboarding_email_status"] == "NOT_CONFIGURED",
-                    rx.text("E-mail de acesso ainda não enviado.", size="1",
-                            color="var(--vitta-warning)", margin_top="0.25rem"),
-                    rx.cond(
-                        row["onboarding_email_status"] == "ACCEPTED",
-                        rx.text("E-mail aceito pelo provedor.", size="1",
-                                color="var(--vitta-success)", margin_top="0.25rem"),
-                        rx.cond(
-                            (row["onboarding_email_status"] == "FAILED") |
-                            (row["onboarding_email_status"] == "UNKNOWN"),
-                            rx.text("Envio não confirmado. Verifique antes de reenviar.",
-                                    size="1", color="var(--vitta-warning)"),
-                            rx.fragment(),
+                    row["can_reissue_access"],
+                    rx.dropdown_menu.item(
+                        row["reissue_action_label"],
+                        on_select=AdminDirectoryState.begin_medical_reissue(
+                            row["id"], row["onboarding_email_status"]
                         ),
                     ),
+                    rx.fragment(),
                 ),
-                width="100%",
-            ),
-            rx.cond(
-                (row["onboarding_email_status"] == "FAILED") |
-                (row["onboarding_email_status"] == "UNKNOWN") |
-                (row["onboarding_email_status"] == "NOT_CONFIGURED"),
-                rx.button(
-                    "Reenviar acesso", type="button", variant="outline",
-                    on_click=AdminDirectoryState.begin_medical_reissue(row["id"]),
-                    disabled=AdminDirectoryState.is_submitting,
+                rx.cond(
+                    row["can_reissue_access"],
+                    rx.dropdown_menu.separator(),
+                    rx.fragment(),
                 ),
-                rx.fragment(),
-            ),
-            rx.flex(
-                rx.button(
-                    "Editar",
-                    type="button",
-                    variant="outline",
-                    color_scheme="teal",
-                    on_click=AdminDirectoryState.begin_professional_edit(
-                        row["id"],
-                        row["name"],
-                        row["registration_identifier"],
-                        row["user_id"],
-                        row["specialty_ids"],
-                        row["user_email"],
-                    ),
-                    disabled=AdminDirectoryState.is_submitting,
-                ),
-                rx.button(
+                rx.dropdown_menu.item(
                     rx.cond(row["is_active"], "Desativar", "Reativar"),
-                    type="button",
-                    variant="ghost",
-                    color_scheme=rx.cond(row["is_active"], "gray", "teal"),
-                    on_click=AdminDirectoryState.toggle_professional_active(
-                        row["id"], row["is_active"]
+                    on_select=AdminDirectoryState.begin_professional_status_change(
+                        row["id"], row["name"], row["is_active"]
                     ),
-                    disabled=AdminDirectoryState.is_submitting,
                 ),
-                gap="0.5rem",
-                direction=rx.breakpoints(initial="column", sm="row"),
-                width="100%",
+                align="end",
             ),
-            spacing="3",
-            width="100%",
-            align="stretch",
         ),
+        align="center",
+        gap="2",
+        justify="end",
+    )
+
+
+def professional_row(row) -> rx.Component:
+    """Semantic, compact administrative table row."""
+    return rx.table.row(
+        rx.table.row_header_cell(
+            rx.vstack(
+                rx.text(row["name"], size="2", weight="bold"),
+                rx.text(
+                    row["user_email"], size="1",
+                    color="var(--vitta-text-muted)",
+                    overflow_wrap="anywhere",
+                ),
+                spacing="1",
+                align="start",
+            ),
+            min_width="11rem",
+        ),
+        rx.table.cell(_professional_specialties(row)),
+        rx.table.cell(
+            status_badge(row["is_active"], "Ativo", "Inativo"),
+        ),
+        rx.table.cell(
+            rx.text(row["access_label"], size="2", color="var(--vitta-text-muted)"),
+        ),
+        rx.table.cell(_professional_actions(row)),
+        align="center",
+    )
+
+
+def professional_mobile_row(row) -> rx.Component:
+    """Compact, non-card mobile directory item with every action retained."""
+    return rx.vstack(
+        rx.flex(
+            rx.vstack(
+                rx.text(row["name"], size="3", weight="bold"),
+                rx.text(
+                    row["user_email"], size="2",
+                    color="var(--vitta-text-muted)", overflow_wrap="anywhere",
+                ),
+                spacing="1", align="start", min_width="0", flex="1",
+            ),
+            status_badge(row["is_active"], "Ativo", "Inativo"),
+            justify="between", align="start", gap="2", width="100%",
+        ),
+        _professional_specialties(row),
+        rx.flex(
+            rx.text(
+                row["access_label"], size="1",
+                color="var(--vitta-text-muted)", flex="1",
+            ),
+            _professional_actions(row),
+            justify="between", align="center",
+            width="100%", gap="2", flex_wrap="wrap",
+        ),
+        spacing="3",
         width="100%",
-        padding="1rem",
-        border="1px solid var(--vitta-border)",
-        border_radius="var(--vitta-radius-control)",
-        background="var(--vitta-surface)",
-        role="listitem",
+        align="stretch",
+        padding="0.9rem 0",
+        border_bottom="1px solid var(--vitta-border)",
     )
 
 
@@ -877,10 +935,16 @@ def medical_reissue_dialog() -> rx.Component:
     """Explicitly confirm rotation before reissuing a failed/unknown credential."""
     return rx.dialog.root(
         rx.dialog.content(
-            rx.dialog.title("Reenviar acesso médico"),
+            rx.dialog.title(
+                rx.cond(
+                    AdminDirectoryState.reissue_is_unsent,
+                    "Enviar instruções de acesso",
+                    "Reemitir acesso médico",
+                )
+            ),
             rx.dialog.description(
-                "Uma nova senha temporária substituirá a anterior, inclusive se outro e-mail "
-                "tiver sido entregue. Confirme somente depois de verificar a situação do envio.",
+                "Uma nova senha temporária substituirá a anterior, mesmo que alguma mensagem "
+                "anterior tenha chegado. A ação requer Resend configurado e não garante entrega.",
                 margin_top="0.5rem",
             ),
             rx.cond(
@@ -895,7 +959,12 @@ def medical_reissue_dialog() -> rx.Component:
                     disabled=AdminDirectoryState.is_submitting,
                 ),
                 rx.button(
-                    "Confirmar reenvio", type="button", color_scheme="teal",
+                    rx.cond(
+                        AdminDirectoryState.reissue_is_unsent,
+                        "Gerar acesso e enviar",
+                        "Confirmar reemissão",
+                    ),
+                    type="button", color_scheme="teal",
                     loading=AdminDirectoryState.is_submitting,
                     disabled=AdminDirectoryState.is_submitting,
                     on_click=AdminDirectoryState.confirm_medical_reissue,
@@ -1066,43 +1135,216 @@ def specialties_management_workspace() -> rx.Component:
 
 
 def professionals_management_workspace() -> rx.Component:
-    """All professionals live on a dedicated authenticated management page."""
+    """Full administrative directory, responsive table and real persisted filters."""
     return rx.vstack(
+        breadcrumb(("Administração", "/admin"), ("Profissionais", None)),
         page_header(
             "Administração", "Todos os profissionais",
             "Encontre, cadastre e organize a equipe da clínica.",
-            rx.button("Novo profissional", type="button", color_scheme="teal",
-                      on_click=AdminDirectoryState.start_new_professional),
+            rx.button(
+                rx.icon("plus", size=17),
+                "Novo profissional",
+                type="button",
+                color_scheme="teal",
+                high_contrast=True,
+                on_click=AdminDirectoryState.start_new_professional,
+                disabled=AdminDirectoryState.is_submitting,
+            ),
         ),
-        rx.link("← Voltar ao painel", href="/admin", class_name="vitta-text-link"),
-        feedback_region(AdminDirectoryState.error_message, AdminDirectoryState.success_message),
+        feedback_region(
+            AdminDirectoryState.error_message,
+            AdminDirectoryState.success_message,
+        ),
         section_panel(
             rx.vstack(
                 _directory_filters(is_professional=True),
+                rx.flex(
+                    rx.text(
+                        AdminDirectoryState.professional_results_count,
+                        " profissional(is) encontrado(s)",
+                        size="2",
+                        color="var(--vitta-text-muted)",
+                        role="status",
+                    ),
+                    rx.cond(
+                        AdminDirectoryState.professional_filters_active,
+                        rx.button(
+                            "Limpar filtros",
+                            type="button",
+                            variant="ghost",
+                            color_scheme="teal",
+                            size="2",
+                            on_click=AdminDirectoryState.clear_professional_filters,
+                        ),
+                        rx.fragment(),
+                    ),
+                    justify="between",
+                    align="center",
+                    width="100%",
+                    flex_wrap="wrap",
+                    gap="2",
+                ),
                 rx.cond(
                     AdminDirectoryState.is_loading,
-                    rx.center(rx.spinner(size="3"), min_height="8rem", width="100%"),
-                    rx.cond(
-                        AdminDirectoryState.has_filtered_professionals,
+                    rx.center(
                         rx.vstack(
-                            rx.foreach(AdminDirectoryState.paged_professionals, professional_row),
-                            spacing="3", align="stretch", width="100%", role="list",
+                            rx.spinner(size="3"),
+                            rx.text("Carregando profissionais…", size="2"),
+                            spacing="2", align="center",
                         ),
+                        min_height="9rem", width="100%",
+                        role="status", aria_live="polite",
+                    ),
+                    rx.cond(
+                        AdminDirectoryState.directory_load_failed,
                         rx.center(
-                            rx.text("Nenhum profissional encontrado. Ajuste a busca ou os filtros.",
-                                    color="var(--vitta-text-muted)", text_align="center"),
-                            min_height="8rem", width="100%",
+                            rx.vstack(
+                                rx.text("Não foi possível carregar os profissionais."),
+                                rx.button(
+                                    "Tentar novamente",
+                                    variant="outline",
+                                    on_click=AdminDirectoryState.load,
+                                ),
+                                spacing="3", align="center",
+                            ),
+                            min_height="9rem", width="100%",
+                        ),
+                        rx.cond(
+                            AdminDirectoryState.has_filtered_professionals,
+                            rx.fragment(
+                                rx.box(
+                                    rx.table.root(
+                                        rx.table.header(
+                                            rx.table.row(
+                                                rx.table.column_header_cell("Profissional"),
+                                                rx.table.column_header_cell("Especialidades"),
+                                                rx.table.column_header_cell("Situação"),
+                                                rx.table.column_header_cell("Acesso"),
+                                                rx.table.column_header_cell("Ações"),
+                                            ),
+                                        ),
+                                        rx.table.body(
+                                            rx.foreach(
+                                                AdminDirectoryState.paged_professionals,
+                                                professional_row,
+                                            )
+                                        ),
+                                        width="100%", size="2", variant="ghost",
+                                    ),
+                                    width="100%",
+                                    overflow_x="auto",
+                                    display=rx.breakpoints(initial="none", md="block"),
+                                    role="region",
+                                    aria_label="Tabela de profissionais",
+                                ),
+                                rx.box(
+                                    rx.vstack(
+                                        rx.foreach(
+                                            AdminDirectoryState.paged_professionals,
+                                            professional_mobile_row,
+                                        ),
+                                        width="100%", spacing="0", align="stretch",
+                                    ),
+                                    display=rx.breakpoints(initial="block", md="none"),
+                                    width="100%",
+                                ),
+                            ),
+                            rx.center(
+                                rx.vstack(
+                                    rx.text(
+                                        rx.cond(
+                                            AdminDirectoryState.has_professionals,
+                                            "Nenhum profissional encontrado para os filtros selecionados.",
+                                            "Nenhum profissional cadastrado.",
+                                        ),
+                                        color="var(--vitta-text-muted)",
+                                        text_align="center",
+                                    ),
+                                    rx.cond(
+                                        AdminDirectoryState.professional_filters_active,
+                                        rx.button(
+                                            "Limpar filtros",
+                                            type="button",
+                                            variant="outline",
+                                            on_click=AdminDirectoryState.clear_professional_filters,
+                                        ),
+                                        rx.button(
+                                            "Cadastrar primeiro profissional",
+                                            type="button",
+                                            color_scheme="teal",
+                                            on_click=AdminDirectoryState.start_new_professional,
+                                        ),
+                                    ),
+                                    spacing="3", align="center",
+                                ),
+                                min_height="10rem", width="100%",
+                            ),
                         ),
                     ),
                 ),
                 _directory_pagination(is_professional=True),
                 spacing="4", align="stretch", width="100%",
-            )
+            ),
         ),
         professional_dialog(),
         specialty_dialog(),
         medical_reissue_dialog(),
+        professional_status_dialog(),
         spacing="4", align="stretch", width="100%",
+    )
+
+
+def professional_status_dialog() -> rx.Component:
+    """Require a second explicit action for changes to operational eligibility."""
+    return rx.dialog.root(
+        rx.dialog.content(
+            rx.dialog.title(
+                rx.cond(
+                    AdminDirectoryState.status_professional_active,
+                    "Desativar profissional",
+                    "Reativar profissional",
+                ),
+            ),
+            rx.dialog.description(
+                "Confirme a alteração de situação de ",
+                AdminDirectoryState.status_professional_name,
+                ". O cadastro e seus vínculos serão preservados. "
+                "Esta ação não desativa a conta de login vinculada.",
+                margin_top="0.5rem",
+            ),
+            rx.cond(
+                AdminDirectoryState.error_message != "",
+                error_banner(AdminDirectoryState.error_message, "professional-status-error"),
+                rx.fragment(),
+            ),
+            rx.flex(
+                rx.button(
+                    "Cancelar", type="button", variant="ghost",
+                    on_click=AdminDirectoryState.cancel_professional_status_change,
+                    disabled=AdminDirectoryState.is_submitting,
+                ),
+                rx.button(
+                    rx.cond(
+                        AdminDirectoryState.status_professional_active,
+                        "Confirmar desativação",
+                        "Confirmar reativação",
+                    ),
+                    type="button",
+                    color_scheme=rx.cond(
+                        AdminDirectoryState.status_professional_active, "red", "teal"
+                    ),
+                    high_contrast=True,
+                    loading=AdminDirectoryState.is_submitting,
+                    disabled=AdminDirectoryState.is_submitting,
+                    on_click=AdminDirectoryState.confirm_professional_status_change,
+                ),
+                justify="end", gap="3", flex_wrap="wrap",
+                margin_top="1.25rem",
+            ),
+            class_name="vitta-dialog-content",
+        ),
+        open=AdminDirectoryState.status_dialog_open,
+        on_open_change=AdminDirectoryState.set_professional_status_dialog_open,
     )
 
 
