@@ -12,6 +12,7 @@ from vitta_one.appointment_scheduling.service import (
 )
 from vitta_one.appointment_scheduling.temporal import clinic_date_range_to_utc
 from vitta_one.models.appointment import Consultation
+from vitta_one.models.patient_queue import Patient, QueueEntry
 from vitta_one.models.professional import Professional
 from vitta_one.auth.authorization import require_role
 from vitta_one.auth.roles import Role
