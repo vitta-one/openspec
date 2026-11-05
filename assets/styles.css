@@ -2675,6 +2675,33 @@ button:disabled,
 }
 .vitta-queue-patient-row > div { gap: 1rem; }
 
+/* Reception day station: compact metrics and controls, with bounded content. */
+.vitta-reception-operations {
+  min-width: 0;
+  max-width: 100%;
+}
+.vitta-reception-operations .vitta-overview-card {
+  min-height: 7.25rem;
+  padding: 0.85rem 1rem;
+}
+.vitta-reception-operations .vitta-overview-card:hover {
+  transform: none;
+}
+.vitta-reception-operations .vitta-reception-day-title {
+  max-width: none;
+}
+.vitta-reception-operations .vitta-reception-day-toolbar,
+.vitta-reception-operations .vitta-reception-day-professional-filter {
+  min-width: 0;
+}
+@media (max-width: 42rem) {
+  .vitta-reception-operations .vitta-reception-day-header,
+  .vitta-reception-operations .vitta-reception-day-header > div {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
 
 /* Administration: compact task hub, grouped links and distinct QA navigation. */
 .vitta-admin-hub {
