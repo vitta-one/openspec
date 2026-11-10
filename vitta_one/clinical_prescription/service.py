@@ -11,6 +11,7 @@ from vitta_one.appointment_scheduling.temporal import ensure_utc
 from vitta_one.models.appointment import Consultation
 from vitta_one.models.clinical_care import ClinicalCareRecord
 from vitta_one.models.clinical_prescription import Prescription, PrescriptionItem
+from vitta_one.models.digital_signature import PrescriptionSignatureRequest
 from vitta_one.models.patient_queue import Patient, QueueEntry
 from vitta_one.patient_queue.domain import QueueStatus
 from vitta_one.models.professional import Professional
@@ -242,6 +243,16 @@ def _prescription_context(
         raise PrescriptionAuthorizationError(
             "A Prescrição não pertence ao Atendimento autenticado."
         )
+    if editable and prescription.id is not None:
+        signature_request = db.exec(
+            select(PrescriptionSignatureRequest.id).where(
+                PrescriptionSignatureRequest.prescription_id == prescription.id
+            )
+        ).first()
+        if signature_request is not None:
+            raise PrescriptionTransitionError(
+                "A Prescrição não pode ser alterada depois do envio para assinatura."
+            )
     return prescription, record, consultation, professional
 
 
@@ -655,4 +666,5 @@ def get_printable_prescription(
         ),
         scheduled_at=_as_utc(episode_time),
     )
+
 

@@ -1321,34 +1321,40 @@ def reception_agenda_panel() -> rx.Component:
                         class_name="vitta-tabular", margin_top="0.3rem",
                     ),
                 ),
-                rx.hstack(
+                rx.flex(
                     rx.button(
                         rx.icon("calendar_plus", size=17),
                         "Nova consulta",
                         type="button", color_scheme="teal", high_contrast=True,
                         on_click=ReceptionAgendaState.open_booking,
                         disabled=ReceptionAgendaState.is_submitting,
+                        class_name="vitta-reception-agenda-new",
                     ),
-                    rx.button(
-                        rx.icon("chevron_left", size=18),
-                        type="button", variant="outline", color_scheme="teal",
-                        aria_label="Sete dias anteriores",
-                        on_click=ReceptionAgendaState.move_agenda_week(-1),
-                        disabled=ReceptionAgendaState.is_loading,
+                    rx.hstack(
+                        rx.button(
+                            rx.icon("chevron_left", size=18),
+                            type="button", variant="outline", color_scheme="teal",
+                            aria_label="Sete dias anteriores",
+                            on_click=ReceptionAgendaState.move_agenda_week(-1),
+                            disabled=ReceptionAgendaState.is_loading,
+                        ),
+                        rx.button(
+                            "Hoje", type="button", variant="outline", color_scheme="teal",
+                            on_click=ReceptionAgendaState.go_to_agenda_today,
+                            disabled=ReceptionAgendaState.is_loading,
+                        ),
+                        rx.button(
+                            rx.icon("chevron_right", size=18),
+                            type="button", variant="outline", color_scheme="teal",
+                            aria_label="Próximos sete dias",
+                            on_click=ReceptionAgendaState.move_agenda_week(1),
+                            disabled=ReceptionAgendaState.is_loading,
+                        ),
+                        spacing="2", align="center",
+                        class_name="vitta-reception-agenda-nav",
                     ),
-                    rx.button(
-                        "Hoje", type="button", variant="outline", color_scheme="teal",
-                        on_click=ReceptionAgendaState.go_to_agenda_today,
-                        disabled=ReceptionAgendaState.is_loading,
-                    ),
-                    rx.button(
-                        rx.icon("chevron_right", size=18),
-                        type="button", variant="outline", color_scheme="teal",
-                        aria_label="Próximos sete dias",
-                        on_click=ReceptionAgendaState.move_agenda_week(1),
-                        disabled=ReceptionAgendaState.is_loading,
-                    ),
-                    spacing="2", align="center",
+                    gap="2", align="center", flex_wrap="wrap",
+                    class_name="vitta-reception-agenda-actions",
                 ),
                 justify="between", align="center", gap="3",
                 flex_wrap="wrap", width="100%",
@@ -1535,5 +1541,6 @@ def reception_agenda_panel() -> rx.Component:
             spacing="4", align="stretch", width="100%",
         ),
     )
+
 
 

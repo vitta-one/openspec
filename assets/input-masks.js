@@ -52,10 +52,16 @@
   }
 
   function refreshValidity(input, kind) {
-    if (kind !== "cpf") return;
     const count = digitsOnly(input.value, 11).length;
-    input.setCustomValidity(count === 11 && !validCpf(input.value)
-      ? "CPF inválido. Confira os dígitos informados." : "");
+    if (kind === "cpf") {
+      input.setCustomValidity(count === 11 && !validCpf(input.value)
+        ? "CPF inválido. Confira os dígitos informados." : "");
+      return;
+    }
+    if (kind === "phone") {
+      input.setCustomValidity(count > 0 && count < 10
+        ? "Telefone incompleto. Informe o DDD e o número." : "");
+    }
   }
 
   function applyMask(input) {
@@ -88,3 +94,4 @@
     }
   }, true);
 })();
+

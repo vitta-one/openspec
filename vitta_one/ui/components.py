@@ -634,6 +634,7 @@ def authenticated_topbar(role: Role) -> rx.Component:
             class_name="vitta-hamburger-mobile",
         ),
         rx.text(area, class_name="vitta-topbar-context"),
+        _reception_topbar_search(),
         rx.box(flex="1"),
         class_name="vitta-topbar",
     )
@@ -882,3 +883,4 @@ def admin_preview_workspace(
         _product_shell(Role.ADMINISTRADOR, active, *children),
         loading_surface(),
     )
+

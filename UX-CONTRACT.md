@@ -183,7 +183,7 @@ Regras:
 - Ao finalizar, perder autorização ou encerrar sessão, o State remove formulário e histórico clínico sensível.
 - O Admin QA local pode projetar histórico clínico persistido e Atendimento ativo somente em modo explicitamente habilitado e sem ações de edição.
 - Conteúdo clínico não é colocado em URL, log, mensagem de erro, toast detalhado ou telemetria.
-- Prescrições são uma seção própria do Atendimento; exames, anexos, assinatura digital e financeiro permanecem em capabilities separadas.
+- Prescrições e anexos são seções próprias do Atendimento; assinatura e financeiro preservam states e serviços separados, sem misturar credenciais externas ao contexto clínico.
 
 ## 12. Prescrições e impressão
 
@@ -198,9 +198,21 @@ Regras:
 - Prescrições de Consultas concluídas aparecem no histórico como conteúdo somente leitura e ficam recolhidas por padrão para evitar expansão excessiva.
 - A visualização de impressão vive em rota protegida, sem shell operacional, e pode ser reaberta pelo Médico autor depois da conclusão.
 - A versão imprimível exibe paciente, profissional, registro profissional, data/hora do atendimento (instante agendado para Consulta, chamada real para pronto-socorro), itens e observações gerais.
-- A versão imprimível sempre informa **“Documento sem assinatura digital nesta etapa.”** e não mostra selo, QR Code ou indicadores ZapSign.
+- Antes do envio, a versão imprimível informa **“Documento sem assinatura digital.”**. Após o envio, mostra o estado persistido; apenas `SIGNED` oferece acesso ao documento final, sem selo ou QR Code inventado.
 - O Admin QA local projeta Prescrições reais em Atendimento/histórico somente leitura; fora da flag local não existe API clínica geral para Administrador.
 - Conteúdo de Prescrição não entra em URL, logs, mensagens de erro detalhadas ou telemetria.
+
+## 12.1 Anexos clínicos e integrações financeiras
+
+- O Médico anexa um PDF/JPEG/PNG ao Atendimento ativo com título, categoria e data opcional; formatos e tamanho são validados também no servidor.
+- Todo anexo inicia restrito. A liberação e a revogação do portal são ações explícitas e auditadas.
+- O Paciente visualiza somente documentos próprios, ativos e liberados; o link de download é gerado no momento do acesso e expira.
+- Excluir anexo exige confirmação dentro da aplicação e mantém estado recuperável quando o provedor está indisponível.
+- Enviar uma Prescrição para assinatura bloqueia itens, observações e exclusão no servidor e na interface.
+- O Financeiro cadastra e ativa/desativa serviços, emite contas, pesquisa por Paciente/status, gera cobrança e acompanha reconciliação.
+- Valores são exibidos em moeda local, mas calculados/persistidos em centavos. O preço da conta não muda quando o catálogo é alterado depois.
+- Operações externas exibem loading, erro seguro e sucesso confirmado. `NOT_CONFIGURED`, timeout ou resultado incerto nunca são mostrados como sucesso.
+- Cancelamento de cobrança e remoção de documento não dependem de botão oculto como mecanismo de autorização.
 
 ## 13. Acessibilidade e estabilidade
 
@@ -239,3 +251,4 @@ Regras:
 - Todas as novas subrotas exigem `AuthState.load_protected` e `protected_workspace` com `verified_path`; autorização de negócio permanece no servidor.
 - Campos, placeholders, selects, menus portaled, badges e mensagens devem manter texto legível com contraste normal de pelo menos 4,5:1 e controles com foco visível. Estados desabilitados permanecem distinguíveis sem depender exclusivamente da cor.
 - Tarefas são verificadas em 320, 375, 768 e 1280 px com foco, navegação por teclado, ausência de overflow e fluxos reais. Testes estáticos e `reflex compile --dry` não substituem QA visual.
+

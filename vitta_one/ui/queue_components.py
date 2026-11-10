@@ -1433,7 +1433,8 @@ def _prescription_item_editor_row(item, prescription) -> rx.Component:
                         item["instructions"],
                         item["notes"],
                     ),
-                    disabled=DoctorQueueState.is_prescription_submitting,
+                    disabled=DoctorQueueState.is_prescription_submitting
+                    | prescription["signature_locked"],
                 ),
                 rx.button(
                     "Remover",
@@ -1447,7 +1448,8 @@ def _prescription_item_editor_row(item, prescription) -> rx.Component:
                         item["medication_or_item"],
                     ),
                     disabled=(prescription["item_count"] <= 1)
-                    | DoctorQueueState.is_prescription_submitting,
+                    | DoctorQueueState.is_prescription_submitting
+                    | prescription["signature_locked"],
                     title="Remover item. A Prescrição deve manter pelo menos um item persistido.",
                 ),
                 spacing="1",
@@ -1479,6 +1481,13 @@ def _current_prescription_card(row) -> rx.Component:
                     ),
                 ),
                 rx.hstack(
+                    rx.match(
+                        row["signature_status"],
+                        ("SIGNED", rx.badge(row["signature_status_label"], color_scheme="green", high_contrast=True)),
+                        ("PENDING", rx.badge(row["signature_status_label"], color_scheme="amber", high_contrast=True)),
+                        ("RECONCILIATION_REQUIRED", rx.badge(row["signature_status_label"], color_scheme="red", high_contrast=True)),
+                        rx.badge(row["signature_status_label"], color_scheme="gray", variant="soft"),
+                    ),
                     rx.badge(
                         row["item_count"],
                         " itens",
@@ -1546,7 +1555,8 @@ def _current_prescription_card(row) -> rx.Component:
                         color_scheme="teal",
                         size="2",
                         on_click=DoctorQueueState.begin_add_prescription_item(row["id"]),
-                        disabled=DoctorQueueState.is_prescription_submitting,
+                        disabled=DoctorQueueState.is_prescription_submitting
+                        | row["signature_locked"],
                     ),
                     rx.button(
                         "Editar observações gerais",
@@ -1558,25 +1568,66 @@ def _current_prescription_card(row) -> rx.Component:
                             row["id"],
                             row["general_notes"],
                         ),
-                        disabled=DoctorQueueState.is_prescription_submitting,
+                        disabled=DoctorQueueState.is_prescription_submitting
+                        | row["signature_locked"],
                     ),
                     spacing="2",
                     flex_wrap="wrap",
                 ),
-                rx.button(
-                    "Excluir prescrição",
-                    type="button",
-                    variant="ghost",
-                    color_scheme="red",
-                    size="2",
-                    on_click=DoctorQueueState.begin_delete_prescription(row["id"]),
-                    disabled=DoctorQueueState.is_prescription_submitting,
+                rx.hstack(
+                    rx.cond(
+                        row["can_open_signed_document"],
+                        rx.button(
+                            "Abrir documento assinado",
+                            type="button",
+                            variant="outline",
+                            color_scheme="green",
+                            size="2",
+                            on_click=DoctorQueueState.open_signed_prescription(row["id"]),
+                            disabled=DoctorQueueState.is_prescription_submitting,
+                        ),
+                        rx.cond(
+                            ~row["signature_locked"],
+                            rx.button(
+                                "Enviar para assinatura",
+                                type="button",
+                                color_scheme="teal",
+                                high_contrast=True,
+                                size="2",
+                                on_click=DoctorQueueState.request_prescription_signature(row["id"]),
+                                disabled=DoctorQueueState.is_prescription_submitting,
+                            ),
+                            rx.fragment(),
+                        ),
+                    ),
+                    rx.button(
+                        "Excluir prescrição",
+                        type="button",
+                        variant="ghost",
+                        color_scheme="red",
+                        size="2",
+                        on_click=DoctorQueueState.begin_delete_prescription(row["id"]),
+                        disabled=DoctorQueueState.is_prescription_submitting
+                        | row["signature_locked"],
+                    ),
+                    spacing="2",
+                    flex_wrap="wrap",
                 ),
                 direction=rx.breakpoints(initial="column", md="row"),
                 justify="between",
                 align=rx.breakpoints(initial="stretch", md="center"),
                 gap="0.6rem",
                 width="100%",
+            ),
+            rx.cond(
+                row["signature_locked"],
+                rx.text(
+                    "A Prescrição foi bloqueada para manter o conteúdo idêntico ao documento enviado para assinatura.",
+                    size="1",
+                    color="var(--vitta-text-muted)",
+                    role="status",
+                ),
+                rx.fragment(),
             ),
             spacing="3",
             align="stretch",
@@ -1593,7 +1644,7 @@ def prescription_panel() -> rx.Component:
             rx.box(
                 rx.heading("Prescrições", size="4"),
                 rx.text(
-                    "Crie documentos simples com itens e orientações. Assinatura digital entra em uma etapa posterior.",
+                    "Registre os itens, revise o documento e envie para assinatura digital. Após o envio, o conteúdo fica bloqueado.",
                     size="2",
                     color="var(--vitta-text-muted)",
                     line_height="1.55",
@@ -1642,6 +1693,185 @@ def prescription_panel() -> rx.Component:
         class_name="vitta-prescription-workspace",
         width="100%",
         margin_top="1.25rem",
+    )
+
+
+def _attachment_row(row) -> rx.Component:
+    return rx.box(
+        rx.flex(
+            rx.box(
+                rx.text(row["title"], font_weight="800", size="2", overflow_wrap="anywhere"),
+                rx.text(
+                    row["category"], " · Exame: ", row["exam_date"],
+                    size="1", color="var(--vitta-text-muted)", margin_top="0.2rem",
+                ),
+                rx.text(
+                    row["original_filename"], " · ", row["size_label"],
+                    size="1", color="var(--vitta-text-subtle)", margin_top="0.15rem",
+                    overflow_wrap="anywhere",
+                ),
+                min_width="0",
+            ),
+            rx.hstack(
+                rx.badge(
+                    rx.cond(row["patient_visible"], "Visível ao paciente", "Restrito à equipe"),
+                    color_scheme=rx.cond(row["patient_visible"], "green", "gray"),
+                    variant="soft",
+                ),
+                rx.button(
+                    "Abrir", type="button", size="1", variant="outline", color_scheme="teal",
+                    on_click=DoctorQueueState.open_clinical_attachment(row["id"]),
+                    disabled=DoctorQueueState.is_attachment_submitting,
+                ),
+                rx.button(
+                    rx.cond(row["patient_visible"], "Revogar acesso", "Liberar no portal"),
+                    type="button", size="1", variant="ghost", color_scheme="teal",
+                    on_click=DoctorQueueState.set_attachment_patient_visibility(
+                        row["id"], ~row["patient_visible"]
+                    ),
+                    disabled=DoctorQueueState.is_attachment_submitting,
+                ),
+                rx.button(
+                    "Remover", type="button", size="1", variant="ghost", color_scheme="red",
+                    on_click=DoctorQueueState.begin_remove_attachment(row["id"], row["title"]),
+                    disabled=DoctorQueueState.is_attachment_submitting,
+                ),
+                spacing="1", flex_wrap="wrap",
+            ),
+            direction=rx.breakpoints(initial="column", lg="row"),
+            justify="between",
+            align=rx.breakpoints(initial="stretch", lg="center"),
+            gap="0.75rem",
+            width="100%",
+        ),
+        class_name="vitta-prescription-item",
+        role="listitem",
+    )
+
+
+def _attachment_delete_dialog() -> rx.Component:
+    return rx.alert_dialog.root(
+        rx.alert_dialog.content(
+            rx.alert_dialog.title("Remover documento clínico?"),
+            rx.alert_dialog.description(
+                "O arquivo será removido do armazenamento e deixará de aparecer no prontuário e no portal do paciente.",
+                margin_top="0.4rem",
+            ),
+            rx.text(
+                DoctorQueueState.attachment_delete_title,
+                font_weight="750", margin_top="0.75rem", overflow_wrap="anywhere",
+            ),
+            rx.flex(
+                rx.button(
+                    "Cancelar", type="button", variant="outline", color_scheme="gray",
+                    on_click=DoctorQueueState.set_attachment_delete_dialog_open(False),
+                    disabled=DoctorQueueState.is_attachment_submitting,
+                ),
+                rx.button(
+                    "Remover documento", type="button", color_scheme="red", high_contrast=True,
+                    on_click=DoctorQueueState.confirm_remove_attachment,
+                    disabled=DoctorQueueState.is_attachment_submitting,
+                    loading=DoctorQueueState.is_attachment_submitting,
+                ),
+                direction=rx.breakpoints(initial="column-reverse", sm="row"),
+                justify="end", gap="0.65rem", width="100%", margin_top="1.25rem",
+            ),
+            class_name="vitta-dialog-content",
+            max_width="34rem",
+        ),
+        open=DoctorQueueState.attachment_delete_dialog_open,
+        on_open_change=DoctorQueueState.set_attachment_delete_dialog_open,
+    )
+
+
+def clinical_attachments_panel() -> rx.Component:
+    upload_id = "clinical-attachment-upload"
+    return rx.box(
+        rx.heading("Exames e documentos", size="4"),
+        rx.text(
+            "Anexe PDF, JPEG ou PNG ao atendimento. O paciente só terá acesso após liberação explícita.",
+            size="2", color="var(--vitta-text-muted)", line_height="1.55", margin_top="0.25rem",
+        ),
+        rx.grid(
+            rx.box(
+                field_label("Título do documento", "attachment-title"),
+                rx.input(
+                    id="attachment-title", value=DoctorQueueState.attachment_title,
+                    on_change=DoctorQueueState.update_attachment_title,
+                    max_length=160, placeholder="Ex.: Hemograma completo", width="100%",
+                    disabled=DoctorQueueState.is_attachment_submitting,
+                    margin_top="0.4rem",
+                ),
+            ),
+            rx.box(
+                field_label("Categoria", "attachment-category"),
+                rx.select(
+                    ["EXAME", "LAUDO", "IMAGEM", "OUTRO"],
+                    id="attachment-category",
+                    value=DoctorQueueState.attachment_category,
+                    on_change=DoctorQueueState.update_attachment_category,
+                    disabled=DoctorQueueState.is_attachment_submitting,
+                    width="100%", margin_top="0.4rem",
+                ),
+            ),
+            rx.box(
+                field_label("Data do exame (opcional)", "attachment-exam-date"),
+                rx.input(
+                    id="attachment-exam-date", type="date",
+                    value=DoctorQueueState.attachment_exam_date,
+                    on_change=DoctorQueueState.update_attachment_exam_date,
+                    disabled=DoctorQueueState.is_attachment_submitting,
+                    width="100%", margin_top="0.4rem",
+                ),
+            ),
+            columns=rx.breakpoints(initial="1", md="3"),
+            gap="3", width="100%", margin_top="1rem",
+        ),
+        rx.upload(
+            rx.vstack(
+                rx.text("Selecione ou arraste um arquivo", font_weight="750", size="2"),
+                rx.text("PDF, JPEG ou PNG · máximo configurado pelo ambiente", size="1", color="var(--vitta-text-muted)"),
+                rx.foreach(rx.selected_files(upload_id), lambda filename: rx.text(filename, size="1", color="var(--vitta-primary)")),
+                spacing="1", align="center",
+            ),
+            id=upload_id,
+            accept={"application/pdf": [".pdf"], "image/jpeg": [".jpg", ".jpeg"], "image/png": [".png"]},
+            max_files=1,
+            multiple=False,
+            disabled=DoctorQueueState.is_attachment_submitting,
+            border="1px dashed var(--vitta-border-strong)",
+            border_radius="var(--vitta-radius-control)",
+            padding="1rem", width="100%", margin_top="0.85rem",
+        ),
+        rx.flex(
+            rx.button(
+                "Limpar seleção", type="button", variant="ghost", color_scheme="gray",
+                on_click=rx.clear_selected_files(upload_id),
+                disabled=DoctorQueueState.is_attachment_submitting,
+            ),
+            rx.button(
+                "Anexar documento", type="button", color_scheme="teal", high_contrast=True,
+                on_click=DoctorQueueState.upload_clinical_attachment(rx.upload_files(upload_id=upload_id)),
+                disabled=(DoctorQueueState.attachment_title == "") | DoctorQueueState.is_attachment_submitting,
+                loading=DoctorQueueState.is_attachment_submitting,
+            ),
+            direction=rx.breakpoints(initial="column-reverse", sm="row"),
+            justify="end", gap="0.5rem", width="100%", margin_top="0.75rem",
+        ),
+        rx.cond(
+            DoctorQueueState.clinical_attachments.length() > 0,
+            rx.vstack(
+                rx.foreach(DoctorQueueState.clinical_attachments, _attachment_row),
+                spacing="2", align="stretch", width="100%", role="list", margin_top="1rem",
+            ),
+            empty_state(
+                "file_text", "Nenhum documento anexado",
+                "Os documentos enviados neste atendimento aparecerão aqui.",
+            ),
+        ),
+        _attachment_delete_dialog(),
+        class_name="vitta-prescription-workspace",
+        width="100%", margin_top="1.25rem",
     )
 
 
@@ -2124,6 +2354,7 @@ def clinical_care_form() -> rx.Component:
             margin_top="1rem",
         ),
         prescription_panel(),
+        clinical_attachments_panel(),
         clinical_history_panel(),
         class_name="vitta-clinical-workspace",
         width="100%",
@@ -2357,4 +2588,5 @@ def doctor_active_panel() -> rx.Component:
             )
         ),
     )
+
 

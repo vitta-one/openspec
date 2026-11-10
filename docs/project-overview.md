@@ -107,13 +107,16 @@ O projeto será desenvolvido incrementalmente com OpenSpec. A visão global do d
 
 Não implementar todo o banco, todas as telas ou todos os módulos antecipadamente. Cada mudança deve possuir escopo verificável e estratégia de validação.
 
-## 10. Pontos ainda em aberto
+## 10. Capacidades externas implementadas
+
+As seguintes capacidades possuem change, modelos e adapters próprios:
+
+- anexos clínicos privados no Cloudinary, com metadados locais, auditoria e liberação explícita ao Paciente;
+- assinatura digital de Prescrições via ZapSign, com bloqueio pós-envio, webhook idempotente e acesso protegido ao documento final;
+- catálogo, contas e cobranças via Asaas Sandbox, com valores em centavos, reconciliação e pagamentos idempotentes.
 
 Permanecem para refinamento em changes específicas:
 
-- assinatura digital das Prescrições via ZapSign sandbox;
-- fluxo de exames, resultados e anexos Cloudinary;
-- regras financeiras e integração Asaas;
 - Atendimento clínico para walk-ins sem Consulta;
 - dashboards e demais projeções gerenciais;
 - ações de capabilities futuras que ainda não possuem especificação.
@@ -128,3 +131,4 @@ Esses pontos não devem ser preenchidos por suposição.
 - `openspec/config.yaml`: contexto permanente dos workflows;
 - `openspec/specs/`: comportamento consolidado após changes arquivadas;
 - `openspec/changes/`: mudanças em planejamento ou implementação.
+

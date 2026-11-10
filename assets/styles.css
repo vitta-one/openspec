@@ -2964,6 +2964,24 @@ button:disabled,
 .vitta-reception-consultation-table td {
   vertical-align: middle;
 }
+@media (max-width: 480px) {
+  .vitta-reception-agenda-actions {
+    width: 100%;
+    align-items: stretch;
+  }
+  .vitta-reception-agenda-new {
+    width: 100%;
+  }
+  .vitta-reception-agenda-nav {
+    display: grid !important;
+    grid-template-columns: 3rem minmax(0, 1fr) 3rem;
+    width: 100%;
+  }
+  .vitta-reception-agenda-nav > button {
+    width: 100%;
+    min-width: 0;
+  }
+}
 @media (max-width: 959px) {
   .vitta-reception-week-day { min-height: 5.8rem; }
   .vitta-reception-week-entry { display: none; }
@@ -3236,3 +3254,4 @@ button:disabled,
 @media (prefers-reduced-motion: reduce) {
   .vitta-staff-form .vitta-specialty-choice { transition: none; }
 }
+

@@ -5,7 +5,7 @@ import reflex as rx
 from vitta_one.clinical_prescription.state import PrintPrescriptionState
 from vitta_one.ui.components import brand_logo, loading_surface
 
-NO_DIGITAL_SIGNATURE_NOTICE = "Documento sem assinatura digital nesta etapa."
+NO_DIGITAL_SIGNATURE_NOTICE = "Documento sem assinatura digital."
 
 
 def _print_item(item) -> rx.Component:
@@ -120,9 +120,17 @@ def _print_document() -> rx.Component:
             rx.fragment(),
         ),
         rx.box(
-            rx.icon("shield_alert", size=18),
+            rx.cond(
+                PrintPrescriptionState.signature_status == "SIGNED",
+                rx.icon("shield_check", size=18),
+                rx.icon("shield_alert", size=18),
+            ),
             rx.text(
-                NO_DIGITAL_SIGNATURE_NOTICE,
+                rx.cond(
+                    PrintPrescriptionState.signature_status == "NOT_SENT",
+                    NO_DIGITAL_SIGNATURE_NOTICE,
+                    PrintPrescriptionState.signature_status_label,
+                ),
                 font_weight="750",
                 size="2",
             ),
@@ -172,6 +180,17 @@ def prescription_print_page() -> rx.Component:
                             high_contrast=True,
                             on_click=rx.call_script("window.print()"),
                         ),
+                        rx.cond(
+                            PrintPrescriptionState.can_open_signed_document,
+                            rx.button(
+                                "Abrir documento assinado",
+                                type="button",
+                                variant="outline",
+                                color_scheme="green",
+                                on_click=PrintPrescriptionState.open_signed_document,
+                            ),
+                            rx.fragment(),
+                        ),
                         justify="between",
                         align="center",
                         gap="0.75rem",
@@ -212,3 +231,4 @@ def prescription_print_page() -> rx.Component:
         background="var(--vitta-canvas)",
         class_name="vitta-print-page",
     )
+
