@@ -13,6 +13,15 @@ from vitta_one.clinical_prescription.service import (
     PrescriptionNotFoundError,
     PrescriptionTransitionError,
 )
+from vitta_one.digital_signature.application import doctor_signed_document_url
+from vitta_one.digital_signature.service import (
+    SignatureAuthorizationError,
+    SignatureError,
+    SignatureNotConfiguredError,
+    SignatureNotFoundError,
+    get_signature,
+)
+from vitta_one.integrations.zapsign import ZapSignUnavailableError
 
 
 class PrintablePrescriptionItemRow(TypedDict):
@@ -34,6 +43,9 @@ class PrintPrescriptionState(rx.State):
     scheduled_at: str = ""
     general_notes: str = ""
     items: list[PrintablePrescriptionItemRow] = []
+    signature_status: str = "NOT_SENT"
+    signature_status_label: str = "Não enviada para assinatura"
+    can_open_signed_document: bool = False
 
     def _clear(self) -> None:
         self.loaded = False
@@ -45,6 +57,9 @@ class PrintPrescriptionState(rx.State):
         self.scheduled_at = ""
         self.general_notes = ""
         self.items = []
+        self.signature_status = "NOT_SENT"
+        self.signature_status_label = "Não enviada para assinatura"
+        self.can_open_signed_document = False
 
     @rx.event
     async def load(self):
@@ -63,6 +78,7 @@ class PrintPrescriptionState(rx.State):
                     token=auth.session_token,
                     prescription_id=prescription_id,
                 )
+                signature = get_signature(db, prescription_id=prescription_id)
             self.loaded_prescription_id = prescription_id
             self.patient_name = view.patient_name
             self.professional_name = view.professional_name
@@ -77,6 +93,18 @@ class PrintPrescriptionState(rx.State):
                 }
                 for item in view.prescription.items
             ]
+            if signature is not None:
+                self.signature_status = signature.status
+                self.signature_status_label = {
+                    "CREATING": "Preparando envio para assinatura",
+                    "PENDING": "Aguardando assinatura digital",
+                    "SIGNED": "Documento assinado digitalmente",
+                    "REFUSED": "Assinatura recusada",
+                    "EXPIRED": "Solicitação de assinatura expirada",
+                    "CANCELLED": "Solicitação de assinatura cancelada",
+                    "RECONCILIATION_REQUIRED": "Envio pendente de verificação",
+                }.get(signature.status, "Status da assinatura indisponível")
+                self.can_open_signed_document = signature.can_open_signed_document
             self.loaded = True
         except AuthenticationRequiredError:
             self._clear()
@@ -91,3 +119,34 @@ class PrintPrescriptionState(rx.State):
         finally:
             self.is_loading = False
             yield
+
+    @rx.event
+    async def open_signed_document(self):
+        self.error_message = ""
+        try:
+            if not self.loaded_prescription_id:
+                raise SignatureNotFoundError("O documento assinado ainda não está disponível.")
+            auth = await self.get_state(AuthState)
+            with rx.session() as db:
+                url = doctor_signed_document_url(
+                    db,
+                    token=auth.session_token,
+                    prescription_id=self.loaded_prescription_id,
+                )
+            yield rx.redirect(url)
+        except AuthenticationRequiredError:
+            self._clear()
+            yield rx.redirect("/login")
+        except (RoleForbiddenError, SignatureAuthorizationError):
+            self._clear()
+            yield rx.redirect("/acesso-negado")
+        except (
+            SignatureError,
+            SignatureNotConfiguredError,
+            SignatureNotFoundError,
+            ZapSignUnavailableError,
+        ) as exc:
+            self.error_message = str(exc)
+        except Exception:
+            self.error_message = "Não foi possível abrir o documento assinado agora."
+

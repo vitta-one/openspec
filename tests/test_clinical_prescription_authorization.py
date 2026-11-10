@@ -114,7 +114,7 @@ def test_missing_and_expired_sessions_are_rejected_before_prescription_lookup(
 
 
 def test_print_contract_exposes_explicit_unsigned_notice() -> None:
-    assert NO_DIGITAL_SIGNATURE_NOTICE == "Documento sem assinatura digital nesta etapa."
+    assert NO_DIGITAL_SIGNATURE_NOTICE == "Documento sem assinatura digital."
 
 
 def test_print_requires_session_before_lookup(db: Session) -> None:
@@ -156,3 +156,4 @@ def test_admin_qa_prescription_projection_requires_admin_role(
             token=token,
             clinical_care_record_ids=[999999],
         )
+

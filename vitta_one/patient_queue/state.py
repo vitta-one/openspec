@@ -1,6 +1,6 @@
 """Reflex states for the patient reception queue capability."""
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any, TypedDict
 
 import reflex as rx
@@ -38,6 +38,34 @@ from vitta_one.clinical_prescription.service import (
     PrescriptionTransitionError,
     PrescriptionValidationError,
 )
+from vitta_one.clinical_documents.application import (
+    doctor_attachment_download,
+    doctor_list_attachments,
+    doctor_remove_attachment,
+    doctor_set_attachment_visibility,
+    doctor_upload_attachment,
+)
+from vitta_one.clinical_documents.service import (
+    AttachmentAuthorizationError,
+    AttachmentConflictError,
+    AttachmentError,
+    AttachmentNotConfiguredError,
+    AttachmentNotFoundError,
+)
+from vitta_one.digital_signature.application import (
+    doctor_request_signature,
+    doctor_signed_document_url,
+)
+from vitta_one.digital_signature.service import (
+    SignatureAuthorizationError,
+    SignatureConflictError,
+    SignatureError,
+    SignatureNotConfiguredError,
+    SignatureNotFoundError,
+    get_signature,
+)
+from vitta_one.integrations.cloudinary import CloudinaryUnavailableError
+from vitta_one.integrations.zapsign import ZapSignUnavailableError
 from vitta_one.patient_queue.application import (
     doctor_active_queue_entry,
     doctor_claim_next,
@@ -167,6 +195,23 @@ class PrescriptionRow(TypedDict):
     created_at: str
     items: list[PrescriptionItemRow]
     item_count: int
+    signature_status: str
+    signature_status_label: str
+    signature_locked: bool
+    can_open_signed_document: bool
+
+
+class AttachmentRow(TypedDict):
+    id: int
+    title: str
+    category: str
+    exam_date: str
+    original_filename: str
+    content_type: str
+    size_label: str
+    patient_visible: bool
+    status: str
+    created_at: str
 
 
 class ClinicalHistoryRow(TypedDict):
@@ -280,10 +325,23 @@ def _serialize_prescription_item(item) -> PrescriptionItemRow:
     }
 
 
-def _serialize_prescription(item) -> PrescriptionRow:
+_SIGNATURE_LABELS = {
+    "NOT_SENT": "Não enviada",
+    "CREATING": "Preparando envio",
+    "PENDING": "Aguardando assinatura",
+    "SIGNED": "Assinada",
+    "REFUSED": "Recusada",
+    "EXPIRED": "Expirada",
+    "CANCELLED": "Cancelada",
+    "RECONCILIATION_REQUIRED": "Verificação necessária",
+}
+
+
+def _serialize_prescription(item, signature=None) -> PrescriptionRow:
     serialized_items = [
         _serialize_prescription_item(child) for child in item.items
     ]
+    signature_status = signature.status if signature is not None else "NOT_SENT"
     return {
         "id": item.id,
         "clinical_care_record_id": item.clinical_care_record_id,
@@ -292,6 +350,30 @@ def _serialize_prescription(item) -> PrescriptionRow:
         "created_at": format_clinic_datetime(item.created_at),
         "items": serialized_items,
         "item_count": len(serialized_items),
+        "signature_status": signature_status,
+        "signature_status_label": _SIGNATURE_LABELS.get(
+            signature_status, "Status indisponível"
+        ),
+        "signature_locked": signature is not None,
+        "can_open_signed_document": bool(
+            signature is not None and signature.can_open_signed_document
+        ),
+    }
+
+
+def _serialize_attachment(item) -> AttachmentRow:
+    size_kb = max(1, (item.byte_size + 1023) // 1024)
+    return {
+        "id": item.id,
+        "title": item.title,
+        "category": item.category.replace("_", " ").title(),
+        "exam_date": item.exam_date.strftime("%d/%m/%Y") if item.exam_date else "Não informada",
+        "original_filename": item.original_filename,
+        "content_type": item.content_type,
+        "size_label": f"{size_kb} KB",
+        "patient_visible": item.patient_visible,
+        "status": item.status,
+        "created_at": format_clinic_datetime(item.created_at),
     }
 
 
@@ -1503,6 +1585,15 @@ class DoctorQueueState(rx.State):
     prescriptions: list[PrescriptionRow] = []
     is_prescription_submitting: bool = False
 
+    clinical_attachments: list[AttachmentRow] = []
+    attachment_title: str = ""
+    attachment_category: str = "EXAME"
+    attachment_exam_date: str = ""
+    is_attachment_submitting: bool = False
+    attachment_delete_dialog_open: bool = False
+    attachment_delete_id: int = 0
+    attachment_delete_title: str = ""
+
     new_prescription_dialog_open: bool = False
     new_prescription_medication: str = ""
     new_prescription_instructions: str = ""
@@ -1609,6 +1700,16 @@ class DoctorQueueState(rx.State):
         self._reset_remove_item()
         self.is_prescription_submitting = False
 
+    def _clear_attachments(self) -> None:
+        self.clinical_attachments = []
+        self.attachment_title = ""
+        self.attachment_category = "EXAME"
+        self.attachment_exam_date = ""
+        self.is_attachment_submitting = False
+        self.attachment_delete_dialog_open = False
+        self.attachment_delete_id = 0
+        self.attachment_delete_title = ""
+
     def _clear_clinical(self) -> None:
         self.clinical_record_id = 0
         self.clinical_chief_complaint = ""
@@ -1624,6 +1725,7 @@ class DoctorQueueState(rx.State):
         self.clinical_history_total_pages = 1
         self.clinical_history_total_count = 0
         self._clear_prescriptions()
+        self._clear_attachments()
 
     def _clear_active(self) -> None:
         self.finish_dialog_open = False
@@ -1673,8 +1775,26 @@ class DoctorQueueState(rx.State):
         self.persisted_diagnosis = item.diagnosis
         self.persisted_conduct_notes = item.conduct_notes
 
-    def _set_prescriptions(self, items) -> None:
-        self.prescriptions = [_serialize_prescription(item) for item in items]
+    def _set_prescriptions(self, items, signatures: dict[int, object] | None = None) -> None:
+        signature_map = signatures or {}
+        self.prescriptions = [
+            _serialize_prescription(item, signature_map.get(item.id)) for item in items
+        ]
+
+    def _set_attachments(self, items) -> None:
+        self.clinical_attachments = [_serialize_attachment(item) for item in items]
+
+    def _load_attachments_with_token(self, token: str) -> None:
+        if not self.clinical_record_id:
+            self.clinical_attachments = []
+            return
+        with rx.session() as db:
+            items = doctor_list_attachments(
+                db,
+                token=token,
+                clinical_care_record_id=self.clinical_record_id,
+            )
+        self._set_attachments(items)
 
     def _set_clinical_history(self, page) -> None:
         self.clinical_history = [_serialize_history_item(item) for item in page.items]
@@ -1692,7 +1812,12 @@ class DoctorQueueState(rx.State):
                 token=token,
                 clinical_care_record_id=self.clinical_record_id,
             )
-        self._set_prescriptions(items)
+            signatures = {
+                item.id: signature
+                for item in items
+                if (signature := get_signature(db, prescription_id=item.id)) is not None
+            }
+        self._set_prescriptions(items, signatures)
 
     def _load_clinical_with_token(self, token: str, *, page: int = 1) -> None:
         if not self.has_active or not self.active_entry_id:
@@ -1715,9 +1840,20 @@ class DoctorQueueState(rx.State):
                 token=token,
                 clinical_care_record_id=record.id,
             )
+            signatures = {
+                item.id: signature
+                for item in prescriptions
+                if (signature := get_signature(db, prescription_id=item.id)) is not None
+            }
+            attachments = doctor_list_attachments(
+                db,
+                token=token,
+                clinical_care_record_id=record.id,
+            )
         self._set_clinical_record(record)
         self._set_clinical_history(history)
-        self._set_prescriptions(prescriptions)
+        self._set_prescriptions(prescriptions, signatures)
+        self._set_attachments(attachments)
 
     def _load_history_with_token(self, token: str, *, page: int) -> None:
         if not self.has_active or not self.active_entry_id:
@@ -1895,6 +2031,267 @@ class DoctorQueueState(rx.State):
     @rx.event
     def open_prescription_print(self, prescription_id: int):
         return rx.redirect(f"/medico/prescricao/{prescription_id}")
+
+    @rx.event
+    async def request_prescription_signature(self, prescription_id: int):
+        if self.is_prescription_submitting:
+            return
+        self.is_prescription_submitting = True
+        self._clear_feedback()
+        yield
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                signature = doctor_request_signature(
+                    db,
+                    token=token,
+                    prescription_id=prescription_id,
+                )
+            self._load_prescriptions_with_token(token)
+            self.success_message = (
+                "Prescrição assinada e disponível."
+                if signature.status == "SIGNED"
+                else "Prescrição enviada para assinatura. A edição foi bloqueada para preservar o documento."
+            )
+        except (
+            SignatureError,
+            SignatureAuthorizationError,
+            SignatureNotConfiguredError,
+            SignatureNotFoundError,
+            SignatureConflictError,
+            ZapSignUnavailableError,
+        ) as exc:
+            self.error_message = str(exc)
+            if isinstance(exc, ZapSignUnavailableError):
+                self.error_message = (
+                    "O provedor de assinatura não confirmou o envio. "
+                    "A Prescrição foi bloqueada para verificação segura."
+                )
+            try:
+                token = await self._token()
+                self._load_prescriptions_with_token(token)
+            except Exception:
+                pass
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.error_message = "Não foi possível enviar a Prescrição para assinatura."
+        finally:
+            self.is_prescription_submitting = False
+            yield
+
+    @rx.event
+    async def open_signed_prescription(self, prescription_id: int):
+        self._clear_feedback()
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                url = doctor_signed_document_url(
+                    db,
+                    token=token,
+                    prescription_id=prescription_id,
+                )
+            yield rx.redirect(url)
+        except (
+            SignatureError,
+            SignatureAuthorizationError,
+            SignatureNotConfiguredError,
+            SignatureNotFoundError,
+            ZapSignUnavailableError,
+        ) as exc:
+            self.error_message = str(exc)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.error_message = "Não foi possível abrir o documento assinado agora."
+
+    @rx.event
+    def update_attachment_title(self, value: str) -> None:
+        self.attachment_title = value[:160]
+
+    @rx.event
+    def update_attachment_category(self, value: str) -> None:
+        self.attachment_category = value[:40]
+
+    @rx.event
+    def update_attachment_exam_date(self, value: str) -> None:
+        self.attachment_exam_date = value[:10]
+
+    @rx.event
+    async def upload_clinical_attachment(self, files: list[rx.UploadFile]):
+        if self.is_attachment_submitting:
+            return
+        self.is_attachment_submitting = True
+        self._clear_feedback()
+        yield
+        try:
+            if len(files) != 1:
+                raise AttachmentError("Selecione exatamente um arquivo para enviar.")
+            if not self.clinical_record_id:
+                raise AttachmentNotFoundError("Não há Atendimento clínico ativo.")
+            upload = files[0]
+            content = await upload.read()
+            parsed_exam_date = (
+                date.fromisoformat(self.attachment_exam_date)
+                if self.attachment_exam_date
+                else None
+            )
+            token = await self._token()
+            with rx.session() as db:
+                doctor_upload_attachment(
+                    db,
+                    token=token,
+                    clinical_care_record_id=self.clinical_record_id,
+                    title=self.attachment_title,
+                    category=self.attachment_category,
+                    exam_date=parsed_exam_date,
+                    filename=upload.filename or "",
+                    content_type=upload.content_type or "application/octet-stream",
+                    content=content,
+                )
+            self._load_attachments_with_token(token)
+            self.attachment_title = ""
+            self.attachment_category = "EXAME"
+            self.attachment_exam_date = ""
+            self.success_message = "Documento clínico anexado com acesso restrito."
+            yield rx.clear_selected_files("clinical-attachment-upload")
+        except (
+            AttachmentError,
+            AttachmentAuthorizationError,
+            AttachmentConflictError,
+            AttachmentNotConfiguredError,
+            AttachmentNotFoundError,
+            CloudinaryUnavailableError,
+            ValueError,
+        ) as exc:
+            self.error_message = str(exc)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.error_message = "Não foi possível enviar o documento clínico agora."
+        finally:
+            self.is_attachment_submitting = False
+            yield
+
+    @rx.event
+    async def open_clinical_attachment(self, attachment_id: int):
+        self._clear_feedback()
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                url = doctor_attachment_download(
+                    db,
+                    token=token,
+                    attachment_id=attachment_id,
+                )
+            yield rx.redirect(url)
+        except (
+            AttachmentError,
+            AttachmentAuthorizationError,
+            AttachmentNotConfiguredError,
+            AttachmentNotFoundError,
+            CloudinaryUnavailableError,
+        ) as exc:
+            self.error_message = str(exc)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.error_message = "Não foi possível abrir o documento agora."
+
+    @rx.event
+    async def set_attachment_patient_visibility(self, attachment_id: int, visible: bool):
+        if self.is_attachment_submitting:
+            return
+        self.is_attachment_submitting = True
+        self._clear_feedback()
+        yield
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                doctor_set_attachment_visibility(
+                    db,
+                    token=token,
+                    attachment_id=attachment_id,
+                    visible=visible,
+                )
+            self._load_attachments_with_token(token)
+            self.success_message = (
+                "Documento liberado no portal do paciente."
+                if visible
+                else "Acesso do paciente ao documento revogado."
+            )
+        except (
+            AttachmentError,
+            AttachmentAuthorizationError,
+            AttachmentConflictError,
+            AttachmentNotFoundError,
+        ) as exc:
+            self.error_message = str(exc)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.error_message = "Não foi possível atualizar o acesso ao documento."
+        finally:
+            self.is_attachment_submitting = False
+            yield
+
+    @rx.event
+    def begin_remove_attachment(self, attachment_id: int, title: str) -> None:
+        self._clear_feedback()
+        self.attachment_delete_id = attachment_id
+        self.attachment_delete_title = title
+        self.attachment_delete_dialog_open = True
+
+    @rx.event
+    def set_attachment_delete_dialog_open(self, is_open: bool) -> None:
+        if self.is_attachment_submitting and not is_open:
+            return
+        self.attachment_delete_dialog_open = is_open
+        if not is_open:
+            self.attachment_delete_id = 0
+            self.attachment_delete_title = ""
+
+    @rx.event
+    async def confirm_remove_attachment(self):
+        if self.is_attachment_submitting or not self.attachment_delete_id:
+            return
+        self.is_attachment_submitting = True
+        self._clear_feedback()
+        yield
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                doctor_remove_attachment(
+                    db,
+                    token=token,
+                    attachment_id=self.attachment_delete_id,
+                )
+            self._load_attachments_with_token(token)
+            self.attachment_delete_dialog_open = False
+            self.attachment_delete_id = 0
+            self.attachment_delete_title = ""
+            self.success_message = "Documento removido do prontuário."
+        except (
+            AttachmentError,
+            AttachmentAuthorizationError,
+            AttachmentNotConfiguredError,
+            AttachmentNotFoundError,
+            CloudinaryUnavailableError,
+        ) as exc:
+            self.error_message = str(exc)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            async for event in self._authorization_redirect(exc):
+                yield event
+        except Exception:
+            self.error_message = "Não foi possível remover o documento agora."
+        finally:
+            self.is_attachment_submitting = False
+            yield
 
     @rx.event
     def begin_new_prescription(self) -> None:
@@ -2359,4 +2756,5 @@ class DoctorQueueState(rx.State):
         finally:
             self.is_submitting = False
             yield
+
 

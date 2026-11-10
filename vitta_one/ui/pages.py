@@ -13,7 +13,9 @@ from vitta_one.auth.state import AuthState
 from vitta_one.doctor_workspace.state import DoctorWorkspaceState
 from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
 from vitta_one.patient_portal.state import PatientPortalState
+from vitta_one.finance.state import FinanceState
 from vitta_one.ui.patient_booking_components import patient_booking_workspace
+from vitta_one.ui.patient_portal_components import patient_documents_panel, patient_financial_panel
 from vitta_one.ui.patient_directory_components import (
     patient_directory_workspace, patient_create_workspace, patient_detail_workspace,
     patient_edit_workspace,
@@ -50,6 +52,7 @@ from vitta_one.ui.components import (
     section_panel,
 )
 from vitta_one.ui.prescription_components import prescription_print_page
+from vitta_one.ui.finance_components import finance_workspace
 from vitta_one.ui.queue_components import (
     active_queue_panel,
     doctor_active_panel,
@@ -757,16 +760,29 @@ def patient_portal_page() -> rx.Component:
         patient_clinic_location(),
         patient_calendar(),
         patient_consultation_list(),
+        patient_documents_panel(),
+        patient_financial_panel(),
         active="consultas-paciente",
         verified_path="/paciente",
     )
 
 
 def finance_page() -> rx.Component:
-    return dashboard_shell(
+    return protected_workspace(
         Role.FINANCEIRO,
-        "Financeiro",
-        "O acesso financeiro está validado. Pagamentos, valores e integração com Asaas sandbox serão implementados em change própria.",
+        page_header(
+            "Financeiro",
+            "Contas e cobranças",
+            "Emita contas, gere cobranças no Asaas Sandbox e acompanhe recebimentos conciliados.",
+        ),
+        feedback_region(FinanceState.error_message, FinanceState.success_message, "finance-feedback"),
+        rx.cond(
+            FinanceState.is_loading,
+            loading_surface("Carregando dados financeiros…"),
+            finance_workspace(),
+        ),
+        active="financeiro",
+        verified_path="/financeiro",
     )
 
 
@@ -878,3 +894,4 @@ def forbidden_page() -> rx.Component:
         content,
         loading_surface(),
     )
+

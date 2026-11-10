@@ -243,6 +243,7 @@ def test_print_route_state_does_not_copy_cpf_or_put_it_in_url(
         return source_view
 
     monkeypatch.setattr(prescription_state, "doctor_get_printable_prescription", load_prescription)
+    monkeypatch.setattr(prescription_state, "get_signature", lambda db, *, prescription_id: None)
     monkeypatch.setattr(prescription_state.rx, "session", lambda: nullcontext(object()))
     asyncio.run(_collect(PrintPrescriptionState.load.fn(state)))
     assert state.loaded is True
@@ -252,3 +253,4 @@ def test_print_route_state_does_not_copy_cpf_or_put_it_in_url(
     assert state.router.page.params == {"prescription_id": "77"}
     assert secret_cpf not in repr(vars(state))
     assert all("cpf" not in key.lower() for key in vars(state))
+

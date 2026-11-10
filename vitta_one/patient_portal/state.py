@@ -17,6 +17,9 @@ from vitta_one.clinic_settings.service import (
     get_clinic_location, save_clinic_location,
 )
 from vitta_one.auth.state import AuthState
+from vitta_one.clinical_documents.application import patient_attachment_download, patient_list_attachments
+from vitta_one.digital_signature.application import patient_signature_requests, patient_signed_document_url
+from vitta_one.finance.application import patient_financial_accounts
 
 
 class PatientConsultationRow(TypedDict):
@@ -31,6 +34,39 @@ class PatientConsultationRow(TypedDict):
 class CalendarCell(TypedDict):
     day: str
     count: int
+
+
+class PatientDocumentRow(TypedDict):
+    id: int
+    title: str
+    category: str
+    date: str
+    size: str
+
+
+class PatientPrescriptionRow(TypedDict):
+    id: int
+    status: str
+    date: str
+    can_open: bool
+
+
+class PatientFinancialRow(TypedDict):
+    id: int
+    due_date: str
+    total: str
+    balance: str
+    status: str
+    charge_status: str
+    invoice_url: str
+
+
+def _money(cents: int) -> str:
+    return f"R$ {cents / 100:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def _size(value: int) -> str:
+    return f"{value / 1024:.1f} KB" if value < 1024 * 1024 else f"{value / (1024 * 1024):.1f} MB"
 
 
 def _month_shift(value: str, offset: int) -> str:
@@ -63,6 +99,9 @@ class PatientPortalState(rx.State):
     month_label: str = ""
     consultation_rows: list[PatientConsultationRow] = []
     calendar_cells: list[CalendarCell] = []
+    document_rows: list[PatientDocumentRow] = []
+    prescription_rows: list[PatientPrescriptionRow] = []
+    financial_rows: list[PatientFinancialRow] = []
     clinic_name: str = ""
     clinic_address: str = ""
     location_configured: bool = False
@@ -73,6 +112,14 @@ class PatientPortalState(rx.State):
     def has_consultations(self) -> bool:
         return bool(self.consultation_rows)
 
+    @rx.var
+    def has_documents(self) -> bool:
+        return bool(self.document_rows or self.prescription_rows)
+
+    @rx.var
+    def has_financial_accounts(self) -> bool:
+        return bool(self.financial_rows)
+
     async def _token(self) -> str:
         auth = await self.get_state(AuthState)
         return auth.session_token
@@ -80,6 +127,9 @@ class PatientPortalState(rx.State):
     def _clear(self) -> None:
         self.consultation_rows = []
         self.calendar_cells = []
+        self.document_rows = []
+        self.prescription_rows = []
+        self.financial_rows = []
         self.clinic_name = ""
         self.clinic_address = ""
         self.location_configured = False
@@ -105,6 +155,9 @@ class PatientPortalState(rx.State):
                     end_date=f"{self.month}-{last_day:02d}",
                 )
                 location = get_clinic_location(db)
+                documents = patient_list_attachments(db, token=token)
+                signatures = patient_signature_requests(db, token=token)
+                accounts = patient_financial_accounts(db, token=token)
             self.location_configured = location.configured
             self.clinic_name = location.name if location.configured else ""
             self.clinic_address = location.address if location.configured else ""
@@ -128,7 +181,33 @@ class PatientPortalState(rx.State):
                 )
             self.consultation_rows = rows
             self.calendar_cells = _calendar_cells(self.month, rows)
-        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            self.document_rows = [
+                {
+                    "id": item.id, "title": item.title,
+                    "category": item.category.replace("_", " ").title(),
+                    "date": (item.exam_date or item.created_at.date()).strftime("%d/%m/%Y"),
+                    "size": _size(item.byte_size),
+                }
+                for item in documents
+            ]
+            self.prescription_rows = [
+                {
+                    "id": item.prescription_id, "status": item.status,
+                    "date": item.created_at.strftime("%d/%m/%Y"),
+                    "can_open": item.can_open_signed_document,
+                }
+                for item in signatures
+            ]
+            self.financial_rows = [
+                {
+                    "id": item.id, "due_date": item.due_date.strftime("%d/%m/%Y"),
+                    "total": _money(item.total_cents), "balance": _money(item.balance_cents),
+                    "status": item.status, "charge_status": item.charge_status,
+                    "invoice_url": item.invoice_url,
+                }
+                for item in accounts
+            ]
+        except (AuthenticationRequiredError, RoleForbiddenError, PasswordChangeRequiredError) as exc:
             self._clear()
             if isinstance(exc, AuthenticationRequiredError):
                 yield rx.redirect("/login")
@@ -136,7 +215,7 @@ class PatientPortalState(rx.State):
                 yield rx.redirect("/acesso-negado")
         except Exception:
             self._clear()
-            self.error_message = "Não foi possível carregar sua agenda agora. Atualize a página e tente novamente."
+            self.error_message = "Não foi possível carregar o portal agora. Atualize a página e tente novamente."
         finally:
             self.is_loading = False
             yield
@@ -158,6 +237,32 @@ class PatientPortalState(rx.State):
             self.month = clinic_today_iso()[:7]
         async for event in self.load():
             yield event
+
+    @rx.event
+    async def open_attachment(self, attachment_id: int):
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                url = patient_attachment_download(db, token=token, attachment_id=attachment_id)
+            yield rx.redirect(url)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            yield rx.redirect("/login" if isinstance(exc, AuthenticationRequiredError) else "/acesso-negado")
+        except Exception:
+            self.error_message = "Não foi possível abrir o documento agora. Tente novamente."
+            yield
+
+    @rx.event
+    async def open_signed_prescription(self, prescription_id: int):
+        try:
+            token = await self._token()
+            with rx.session() as db:
+                url = patient_signed_document_url(db, token=token, prescription_id=prescription_id)
+            yield rx.redirect(url)
+        except (AuthenticationRequiredError, RoleForbiddenError) as exc:
+            yield rx.redirect("/login" if isinstance(exc, AuthenticationRequiredError) else "/acesso-negado")
+        except Exception:
+            self.error_message = "A prescrição assinada ainda não está disponível."
+            yield
 
 
 class AdminClinicConfigurationState(rx.State):
@@ -267,3 +372,4 @@ class AdminClinicConfigurationState(rx.State):
         finally:
             self.is_saving = False
             yield
+

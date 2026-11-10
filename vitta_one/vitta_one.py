@@ -7,26 +7,39 @@ from vitta_one.admin_preview.agenda_state import AdminAgendaPreviewState
 from vitta_one.admin_preview.reception_state import AdminReceptionPreviewState
 from vitta_one.appointment_scheduling.state import AdminAvailabilityState, ReceptionAgendaState
 from vitta_one.doctor_workspace.state import DoctorWorkspaceState
+from vitta_one.finance.state import FinanceState
 from vitta_one.auth.roles import Role
 from vitta_one.auth.state import AuthState
 from vitta_one.auth.staff_state import AdminStaffState
 from vitta_one.clinical_prescription.state import PrintPrescriptionState
 from vitta_one.models import (
     AuthSession,
+    BillingCharge,
+    BillingCustomer,
+    BillingWebhookEvent,
+    ClinicalAttachment,
+    ClinicalAttachmentAudit,
     ClinicalCareRecord,
     ClinicConfiguration,
     ClinicConfigurationChange,
     Consultation,
     ConsultationScheduleChange,
+    FinancialAudit,
+    FinancialService,
     Patient,
     PatientPortalInvitation,
+    PatientAccount,
+    PatientAccountItem,
+    PaymentRecord,
     Prescription,
     PrescriptionItem,
+    PrescriptionSignatureRequest,
     Professional,
     ProfessionalAvailabilitySlot,
     ProfessionalWeeklySchedule,
     ProfessionalSpecialty,
     QueueEntry,
+    SignatureWebhookEvent,
     Specialty,
     User,
 )
@@ -97,6 +110,18 @@ _PERSISTENT_MODELS = (
     PrescriptionItem,
     ConsultationScheduleChange,
     PatientPortalInvitation,
+    ClinicalAttachment,
+    ClinicalAttachmentAudit,
+    PrescriptionSignatureRequest,
+    SignatureWebhookEvent,
+    FinancialService,
+    PatientAccount,
+    PatientAccountItem,
+    BillingCustomer,
+    BillingCharge,
+    PaymentRecord,
+    BillingWebhookEvent,
+    FinancialAudit,
 )
 
 app = rx.App(
@@ -327,7 +352,7 @@ app.add_page(
     finance_page,
     route=Role.FINANCEIRO.dashboard_path,
     title="Painel financeiro | Vitta-One",
-    on_load=AuthState.load_protected,
+    on_load=[AuthState.load_protected, FinanceState.load],
 )
 app.add_page(
     prescription_print_page,
@@ -341,3 +366,4 @@ app.add_page(
     title="Acesso não autorizado | Vitta-One",
     on_load=AuthState.prepare_forbidden,
 )
+
