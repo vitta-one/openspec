@@ -248,15 +248,18 @@ def test_admin_staff_role_selection_is_accessible_and_guarded(page: Page) -> Non
     expect(page).to_have_url(re.compile(r"/admin/funcionarios/novo/?$"), timeout=30000)
     choice = page.locator("#staff-create-role")
     expect(choice).to_be_visible()
+    expect(page.locator("#staff-create-email")).to_be_visible()
+    expect(page.locator("#staff-reception-password")).to_have_count(0)
     choice.click()
     page.get_by_role("option", name="Recepcionista", exact=True).click()
-    expect(page.locator("#staff-email")).to_be_visible(timeout=30000)
-    expect(page.locator("#staff-password")).to_be_visible()
-    expect(page.locator("#professional-name")).to_have_count(0)
+    expect(page.locator("#staff-reception-password")).to_be_visible(timeout=30000)
     choice.click()
     page.get_by_role("option", name="Médico", exact=True).click()
-    expect(page.locator("#professional-name")).to_be_visible(timeout=30000)
-    expect(page.locator("#staff-password")).to_have_count(0)
+    expect(page.get_by_role("heading", name="Dados profissionais")).to_be_visible(
+        timeout=30000
+    )
+    expect(page.locator("#staff-create-name")).to_be_visible()
+    expect(page.locator("#staff-reception-password")).to_have_count(0)
 
 
 def test_non_admin_cannot_open_admin_directory_subroutes(page: Page) -> None:
@@ -307,8 +310,8 @@ def test_admin_registers_medical_professional_without_resend_and_prevents_duplic
     page.locator("#staff-create-role").click()
     page.get_by_role("option", name="Médico", exact=True).click()
     expect(page.get_by_role("heading", name="Dados profissionais")).to_be_visible(timeout=30000)
-    page.locator("#professional-name").fill("Dra. Onboarding QA")
-    page.locator("#professional-email").fill("onboarding-qa@example.invalid")
+    page.locator("#staff-create-name").fill("Dra. Onboarding QA")
+    page.locator("#staff-create-email").fill("onboarding-qa@example.invalid")
     checkbox = page.get_by_role("checkbox", name="Especialidade QA Extra 2")
     checkbox.click()
     expect(checkbox).to_be_checked(timeout=15000)
@@ -324,8 +327,8 @@ def test_admin_registers_medical_professional_without_resend_and_prevents_duplic
 
     page.goto(BASE + "/admin/funcionarios/medico", wait_until="domcontentloaded")
     expect(page.get_by_role("heading", name="Cadastrar médico")).to_be_visible(timeout=30000)
-    page.locator("#professional-name").fill("Dra. Duplicada QA")
-    page.locator("#professional-email").fill("ONBOARDING-QA@example.invalid")
+    page.locator("#staff-create-name").fill("Dra. Duplicada QA")
+    page.locator("#staff-create-email").fill("ONBOARDING-QA@example.invalid")
     checkbox = page.get_by_role("checkbox", name="Especialidade QA Extra 2")
     checkbox.click()
     expect(checkbox).to_be_checked(timeout=15000)
@@ -575,7 +578,7 @@ def test_reception_booking_modal_is_shared_and_keyboard_responsive(page: Page) -
 
     # The Agenda provides the same modal without a second booking screen.
     page.goto(BASE + "/recepcao/agenda", wait_until="domcontentloaded")
-    page.get_by_role("button", name="+ Agendar consulta").click()
+    page.get_by_role("button", name="Agendar consulta", exact=True).click()
     expect(page.get_by_role("dialog", name="Agendar consulta")).to_be_visible(
         timeout=30000
     )
@@ -863,9 +866,9 @@ def test_patient_books_own_appointment_and_both_staff_agendas_update(page: Page)
                 login(role_page, email)
             role_page.goto(BASE + route, wait_until="domcontentloaded")
             if route.startswith("/recepcao"):
-                expect(role_page.get_by_role("tab", name="Consultas do período")).to_have_attribute(
-                    "data-state", "active", timeout=30000
-                )
+                expect(
+                    role_page.get_by_role("heading", name="Consultas do período")
+                ).to_be_visible(timeout=30000)
             expect(role_page.get_by_text(FIXTURE["booking_patient_name"], exact=True).first).to_be_visible(
                 timeout=30000
             )
@@ -889,11 +892,11 @@ def test_reception_registers_patient_then_opens_its_agenda(page: Page) -> None:
     expect(page.get_by_role("button", name="Agendar consulta", exact=True)).to_be_visible()
     page.screenshot(path="qa-artifacts/recepcao-paciente-cadastrado.png", full_page=True)
     page.get_by_role("button", name="Agendar consulta", exact=True).click()
-    expect(page).to_have_url(re.compile(r"/recepcao/agenda/?$"), timeout=30000)
-    expect(page.get_by_role("tab", name="Agendar consulta")).to_have_attribute(
-        "data-state", "active", timeout=30000
-    )
-    expect(page.get_by_text("Paciente QA Cadastro Novo", exact=True).first).to_be_visible(
+    expect(page).to_have_url(re.compile(r"/recepcao/pacientes/[0-9]+/?$"))
+    dialog = page.get_by_role("dialog", name="Agendar consulta")
+    expect(dialog).to_be_visible(timeout=30000)
+    expect(dialog.get_by_text("Etapa 2 de 5")).to_be_visible()
+    expect(dialog.get_by_text("Paciente QA Cadastro Novo", exact=True)).to_be_visible(
         timeout=30000
     )
 
@@ -985,23 +988,22 @@ def test_patient_activation_rejects_incomplete_form_before_submitting(page: Page
     page.screenshot(path="qa-artifacts/ativacao-senha-incompleta.png", full_page=True)
 
 
-def test_reception_agenda_cpf_mask_does_not_discard_selected_patient(page: Page) -> None:
+def test_reception_agenda_identity_search_keeps_selected_patient(page: Page) -> None:
     login_as_reception(page)
     page.goto(BASE + "/recepcao/agenda", wait_until="domcontentloaded")
     expect(page.get_by_role("heading", name="Agenda e check-in")).to_be_visible(timeout=30000)
-    expect(page.get_by_role("tab", name="Consultas do período")).to_have_attribute(
-        "data-state", "active", timeout=30000
-    )
-    page.get_by_role("tab", name="Agendar consulta").click()
-    expect(page.get_by_role("tab", name="Agendar consulta")).to_have_attribute(
-        "data-state", "active", timeout=30000
-    )
-    page.wait_for_function("window.__vittaInputMasksInstalled === true", timeout=30000)
-    search = page.locator("#agenda-patient-cpf")
+    page.get_by_role("button", name="Agendar consulta", exact=True).click()
+    dialog = page.get_by_role("dialog", name="Agendar consulta")
+    expect(dialog).to_be_visible(timeout=30000)
+    search = dialog.locator("#booking-patient-query")
     search.fill("53817624964")
-    expect(search).to_have_value("538.176.249-64")
-    page.get_by_role("button", name="Localizar paciente").click()
-    expect(page.get_by_text(FIXTURE["booking_patient_name"], exact=True).first).to_be_visible(
+    dialog.get_by_role("button", name="Buscar", exact=True).click()
+    result = dialog.get_by_role(
+        "button", name=re.compile(re.escape(FIXTURE["booking_patient_name"]))
+    ).first
+    expect(result).to_be_visible(timeout=30000)
+    result.click()
+    expect(dialog.get_by_text(FIXTURE["booking_patient_name"], exact=True)).to_be_visible(
         timeout=30000
     )
     page.screenshot(path="qa-artifacts/agenda-cpf-validado.png", full_page=True)
