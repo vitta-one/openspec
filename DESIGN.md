@@ -172,6 +172,15 @@ A Prescrição imprimível é uma superfície documental, não um segundo shell 
 - blocos de item, observações e aviso de assinatura evitam quebra interna quando possível;
 - ausência de assinatura digital é comunicada em texto, nunca por inferência visual.
 
+### Anexos, assinatura e financeiro
+
+- upload de documento usa área pontilhada compacta, label visível e lista persistida logo abaixo;
+- acesso do Paciente é um estado textual explícito, nunca inferido apenas por cor;
+- Prescrição enviada exibe status e bloqueio de edição; o botão do PDF final só aparece quando o servidor confirma `SIGNED`;
+- o Financeiro prioriza emissão, saldo e situação da cobrança, com filtros simples e catálogo gerenciável;
+- estados externos incertos mostram ação de verificação, sem repetir automaticamente operações de escrita;
+- URLs hospedadas abrem em nova aba com `noopener noreferrer`; credenciais e identificadores internos não aparecem na interface.
+
 ### Iconography
 
 Ícones Lucide via `rx.icon` são permitidos quando comunicam função reconhecível. Ícone nunca substitui texto na navegação principal. Controles somente de ícone recebem nome acessível.
@@ -195,3 +204,4 @@ Nunca preencher dashboard, histórico clínico ou financeiro com conteúdo de de
 - **Don't:** inventar horários, históricos, diagnósticos ou valores.
 - **Don't:** comunicar prioridade apenas por cor.
 - **Don't:** esconder scrollbars por estética.
+

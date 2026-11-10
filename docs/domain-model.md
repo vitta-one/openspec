@@ -166,9 +166,9 @@ Representa um documento produzido pelo Médico durante um Atendimento clínico.
 - após `CONCLUIDA`, Prescrição e itens tornam-se histórico somente leitura;
 - a visualização atual é HTML/CSS pronta para impressão e não gera PDF persistido.
 
-### Integração futura
+### Assinatura digital
 
-A assinatura digital será realizada por meio do ZapSign em ambiente sandbox em change própria. A versão atual da Prescrição **não possui assinatura digital** e não apresenta selo, QR Code ou status de assinatura.
+Cada Prescrição pode possuir no máximo uma solicitação local de assinatura. O envio ao ZapSign usa identidade externa estável e bloqueia qualquer alteração de conteúdo. O status é atualizado por webhook idempotente; somente `SIGNED` permite consultar o link final temporário do provedor. A impressão local sem assinatura continua identificada explicitamente, sem selo ou QR Code falso.
 
 ## 11. Exame
 
@@ -184,7 +184,8 @@ Representa um exame relacionado ao atendimento.
 
 ### Integração e restrições
 
-- anexos serão armazenados/gerenciados no Cloudinary;
+- anexos são armazenados de forma privada no Cloudinary e seus metadados, vínculo clínico e auditoria permanecem no PostgreSQL;
+- o Médico autor controla a liberação no portal; o Paciente acessa somente documentos próprios, ativos e liberados;
 - não haverá integração com laboratórios ou sistemas externos de exames.
 
 ## 12. Pagamento
@@ -197,11 +198,11 @@ Permitir registro, consulta e acompanhamento básico a médio de pagamentos e va
 
 ### Relacionamentos
 
-Um pagamento pode estar associado a uma consulta.
+Uma conta pertence a um Paciente e pode estar associada a uma Consulta desse mesmo Paciente. Seus itens preservam descrição, quantidade e preço do momento da emissão. Cobranças e pagamentos são registros separados para manter histórico e idempotência.
 
 ### Integração
 
-O processamento associado aos pagamentos utilizará Asaas em ambiente sandbox.
+O processamento utiliza Asaas Sandbox. Clientes e cobranças possuem referências externas estáveis; webhooks deduplicados atualizam pagamentos e saldos. Produção exige opt-in explícito e revisão operacional.
 
 ## 13. Dashboard
 
@@ -226,7 +227,7 @@ Não definir neste documento:
 - chaves primárias e estrangeiras;
 - ORM ou estratégia de migração;
 - cardinalidades ainda não confirmadas pelos requisitos;
-- modelagem de exames, assinatura digital de prescrições e pagamentos;
 - telas e ações ainda não especificadas das capabilities futuras.
 
 Esses detalhes devem ser especificados nas changes em que se tornarem necessários.
+

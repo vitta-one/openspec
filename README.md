@@ -752,13 +752,23 @@ Os valores acima são placeholders, **não credenciais funcionais**. O remetente
 - `/ativar-paciente`: ativação por e-mail, código de uso único e senha escolhida pelo paciente;
 - `/recepcao`: agenda de Consultas, confirmação de chegada, cadastro/localização de pacientes, entrada avulsa, reavaliação, retirada e acompanhamento da fila ativa;
 - `/medico`: fila elegível, registro clínico, múltiplas Prescrições com itens e histórico concluído do paciente;
-- `/medico/prescricao/[prescription_id]`: visualização protegida e pronta para impressão da Prescrição do Médico autor, sem assinatura digital nesta etapa;
-- `/financeiro`: shell protegido do Financeiro;
+- `/medico/prescricao/[prescription_id]`: visualização protegida da Prescrição do Médico autor, com estado da assinatura e acesso ao documento final quando disponível;
+- `/financeiro`: catálogo, contas, cobranças Asaas Sandbox, conciliação e indicadores protegidos do Financeiro;
 - `/acesso-negado`: estado autenticado para tentativa de acesso a uma role incompatível.
 
-Financeiro ainda permanece shell. Administrador executa a gestão do diretório e Recepção/Médico executam a capability de fila; prioridade é sempre informada pela operação (`VERMELHO`, `AMARELO`, `VERDE`) e nunca é calculada ou elevada automaticamente pelo Vitta-One. A autorização é revalidada no backend e não depende apenas de componentes escondidos no frontend.
+Administrador executa a gestão do diretório, Recepção/Médico executam a capability de fila e o Financeiro gerencia catálogo, contas e cobranças. A prioridade clínica é sempre informada pela operação (`VERMELHO`, `AMARELO`, `VERDE`) e nunca é calculada ou elevada automaticamente pelo Vitta-One. A autorização é revalidada no backend e não depende apenas de componentes escondidos no frontend.
 
-Uma Consulta agendada continua fora da fila até a Recepção usar **Confirmar chegada**. Quando o Médico marcado chama o paciente, nasce um único `ClinicalCareRecord`. Durante `EM_ANDAMENTO`, o Médico pode salvar o registro clínico e criar uma ou mais Prescrições com itens. Ao finalizar, Consulta/fila passam para `CONCLUIDA`/`FINALIZADO`; Atendimento e Prescrições tornam-se somente leitura e passam a integrar o histórico. A Prescrição possui visualização HTML/CSS para impressão, mas **a assinatura ZapSign ainda não está implementada**. Atendimentos avulsos de pronto-socorro não criam uma Consulta agendada: o registro clínico e as prescrições são vinculados diretamente à passagem da fila, com histórico preservado após finalização. O fluxo de autogendamento não altera a classificação da fila.
+Uma Consulta agendada continua fora da fila até a Recepção usar **Confirmar chegada**. Quando o Médico marcado chama o paciente, nasce um único `ClinicalCareRecord`. Durante `EM_ANDAMENTO`, o Médico pode salvar o registro clínico, anexar documentos e criar uma ou mais Prescrições com itens. A solicitação ZapSign bloqueia a Prescrição para preservar o conteúdo enviado. Ao finalizar, Consulta/fila passam para `CONCLUIDA`/`FINALIZADO`; Atendimento e Prescrições tornam-se somente leitura e passam a integrar o histórico. Atendimentos avulsos de pronto-socorro não criam uma Consulta agendada: o registro clínico e as prescrições são vinculados diretamente à passagem da fila, com histórico preservado após finalização. O fluxo de autogendamento não altera a classificação da fila.
+
+## Cloudinary, ZapSign e Asaas
+
+As integrações são opcionais na inicialização e nunca simulam sucesso quando ausentes. Credenciais parciais são rejeitadas, segredos ficam no servidor e os webhooks exigem token próprio. Copie apenas os nomes de [`.env.example`](.env.example) e consulte o guia [Integrações clínicas e financeiras](docs/integrations-cloudinary-zapsign-asaas.md).
+
+- anexos clínicos: upload privado no Cloudinary, acesso temporário e liberação explícita ao Paciente;
+- Prescrições: documento ZapSign idempotente, bloqueio pós-envio, webhook deduplicado e PDF final protegido;
+- Financeiro: catálogo, conta com preço histórico, cobrança Asaas Sandbox, reconciliação e pagamento por webhook;
+- endpoints: `POST /api/webhooks/zapsign` e `POST /api/webhooks/asaas`;
+- produção Asaas permanece bloqueada sem `VITTA_ONE_ALLOW_ASAAS_PRODUCTION=true`.
 
 ## Fluxo de desenvolvimento
 
@@ -778,3 +788,4 @@ O cadastro operacional da recepção em `/recepcao/pacientes` permite enviar con
 **Caminho sintético de demonstração:** recepcionista cadastra paciente, confirma consentimento e envia convite; paciente ativa e entra; escolhe especialidade, médico, data/hora e confirma; entra como médico para verificar a agenda; recepção confirma chegada para inserir o agendamento na fila; médico chama e finaliza. A confirmação real de entrega dos e-mails via Resend depende de credenciais e remetente verificado configurados na implantação, e não é verificada pelo CI. O Chromium usa ativação/usuários sintéticos no banco descartável. Não execute o seed de QA em produção.
 
 O ambiente de desenvolvimento não deve mostrar prescrições ou dados pessoais reais nas capturas. Para homologação de migração e e-mail no ambiente final: faça backup PostgreSQL, valide `alembic upgrade head` no destino controlado, confirme recebimento efetivo no endereço de testes, ativação única e login, e só então habilite a demonstração pública.
+
