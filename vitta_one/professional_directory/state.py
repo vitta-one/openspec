@@ -607,6 +607,7 @@ class AdminDirectoryState(rx.State):
                     name=result.name, email=result.email,
                     temporary_password=result.temporary_password,
                     professional_id=result.professional_id,
+                    token=token,
                 )
             except Exception:
                 # O provedor pode ter recebido a requisição: nunca reenviar automaticamente.
@@ -1036,6 +1037,7 @@ class AdminDirectoryState(rx.State):
                         email=registration.email,
                         temporary_password=registration.temporary_password,
                         professional_id=registration.professional_id,
+                        token=token,
                     )
                 except Exception:
                     # Treat unexpected transport/runtime errors as unknown, never

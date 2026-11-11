@@ -22,7 +22,7 @@ VIEWPORTS = {"desktop": (1440, 900), "tablet": (768, 1024), "mobile": (375, 812)
 # (slug, route, visible heading) — aligns with vitta_one/vitta_one.py routes.
 SCREENS = {
     "public": [
-        ("login", "/login", "Bem-vindo de volta."),
+        ("login", "/login", "Acesse sua conta"),
         ("ativacao-paciente", "/ativar-paciente", "Ative seu portal"),
     ],
     "administrador": [
@@ -39,10 +39,10 @@ SCREENS = {
         ("admin-previa-agenda", "/admin/agenda", "Agenda clínica"),
         ("admin-previa-atendimento", "/admin/atendimento", "Atendimento clínico"),
         ("admin-previa-pacientes", "/admin/pacientes", "Pacientes"),
-        ("admin-previa-financeiro", "/admin/financeiro", "Financeiro"),
+        ("admin-financeiro", "/admin/financeiro", "Financeiro"),
     ],
     "recepcionista": [
-        ("painel-recepcao", "/recepcao", "Recepção — Operação do Dia"),
+        ("painel-recepcao", "/recepcao", "Recepção"),
         ("agenda-recepcao", "/recepcao/agenda", "Agenda e check-in"),
         ("lista-pacientes", "/recepcao/pacientes", "Lista de pacientes"),
         ("cadastro-pacientes", "/recepcao/pacientes/novo", "Novo paciente"),

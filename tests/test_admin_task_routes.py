@@ -21,6 +21,7 @@ _ADMIN_TASK_ROUTES = (
     "/admin/funcionarios/recepcionista",
     "/admin/horarios",
     "/admin/configuracoes",
+    "/admin/financeiro",
     "/admin/especialidades",
     "/admin/profissionais",
 )

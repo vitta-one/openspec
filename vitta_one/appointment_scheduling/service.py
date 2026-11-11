@@ -430,6 +430,8 @@ def schedule_consultation(
     db.add(slot)
     db.add(consultation)
     try:
+        from vitta_one.notifications.service import enqueue_booking
+        enqueue_booking(db, consultation, "booking_confirmed")
         db.commit()
     except IntegrityError as exc:
         db.rollback()
@@ -530,18 +532,20 @@ def reschedule_consultation(
     consultation.availability_slot_id = new_slot.id
     consultation.scheduled_at = ensure_utc(new_slot.starts_at)
     consultation.updated_at = timestamp
-    db.add(
-        ConsultationScheduleChange(
+    schedule_change = ConsultationScheduleChange(
             consultation_id=consultation.id,
             previous_scheduled_at=previous_scheduled_at,
             new_scheduled_at=next_scheduled_at,
             changed_by_user_id=changed_by_user_id,
             changed_at=timestamp,
         )
-    )
+    db.add(schedule_change)
     db.add(new_slot)
     db.add(consultation)
     try:
+        db.flush()
+        from vitta_one.notifications.service import enqueue_booking
+        enqueue_booking(db, consultation, "booking_rescheduled", schedule_change.id)
         db.commit()
     except IntegrityError as exc:
         db.rollback()
@@ -574,6 +578,8 @@ def cancel_consultation(
     consultation.updated_at = timestamp
     release_reserved_slot(db, slot, now=timestamp)
     db.add(consultation)
+    from vitta_one.notifications.service import enqueue_booking
+    enqueue_booking(db, consultation, "booking_cancelled")
     db.commit()
     db.refresh(consultation)
     return consultation
