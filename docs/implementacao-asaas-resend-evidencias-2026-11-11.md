@@ -47,7 +47,7 @@ Migrations aditivas: `f031a5aa5001_add_asaas_financial.py` e `f031a5aa5002_add_t
 | Ambiente | Resultado |
 |---|---|
 | Contratos simulados e SQLite | verificados conforme testes acima |
-| PostgreSQL real | não disponível localmente; testes preparados, execução pendente |
+| PostgreSQL real | migrações e suite automatizada aprovadas no CI; servidor local não disponível |
 | Asaas Sandbox real | não executado; aguarda credenciais e configuração de webhook |
 | Resend real | não executado; aguarda chave, remetente e destinatário de teste autorizado |
 | Navegador desktop/mobile | compilação concluída; fluxo visual/E2E ainda não validado |
@@ -58,7 +58,7 @@ Uma tentativa inicial de executar a suite completa foi interrompida ao chegar ao
 ## Pendências antes do aceite
 
 1. Configurar variáveis no backend do ambiente de teste e aplicar migrations revisadas; configurar um worker supervisionado ou agendamento de cinco minutos.
-2. Executar suite integral, concorrência/leases/outbox e migrations em PostgreSQL descartável. A nova suite exige também `VITTA_ONE_QA_DISPOSABLE_DATABASE=yes` e usa schema temporário próprio.
+2. Concluir cenários específicos de reinício/leases e downgrade PostgreSQL ainda abertos nas tasks. A suite integral e as migrations upgrade já passaram no CI PostgreSQL; os testes novos exigem `VITTA_ONE_QA_DISPOSABLE_DATABASE=yes` e usam schema temporário próprio.
 3. Validar UI desktop/mobile, teclado, confirmações, preferências, pesquisa/paginação e fluxo login → paciente → reserva → cobrança → webhook → notificação/histórico em navegador.
 4. Homologar APIs e webhooks reais no Asaas Sandbox e Resend, com dados sintéticos e destinatário autorizado; revisar limitações efetivas da conta para Pix/boleto/estorno.
 5. Completar as verificações específicas ainda abertas em tasks, comparar implementação com specs, sincronizar e arquivar oficialmente apenas após aceite comprovado.
@@ -68,3 +68,91 @@ Cartão, recuperação pública de senha, aviso de vencimento e documento fiscal
 ## Git e revisão
 
 PR em rascunho: [#351](https://github.com/vitta-one/openspec/pull/351), base `develop`, branch `feat/asaas-resend-openspec`. Commits por etapa: `6b1cd5e` (auditoria e OpenSpec), `ecb1810` (backend e persistência), `6ce5a3d` (interface Reflex) e `c13fbea` (testes e operação), além da atualização final deste relatório. Nenhum merge/deploy efetuado.
+
+## Evidência adicional no ambiente remoto
+
+[Validate Vitta-One](https://github.com/vitta-one/openspec/actions/runs/43024998845) concluiu com sucesso no commit `de268a3`: migração no PostgreSQL descartável, suite integral Pytest, validação OpenSpec e compilação Reflex. A configuração desse workflow habilita os testes PostgreSQL e `VITTA_ONE_QA_DISPOSABLE_DATABASE=yes`. Assim, a limitação de PostgreSQL local foi suprida pelo CI para os cenários automatizados presentes. Isso não cobre automaticamente todos os cenários específicos ainda abertos nas tasks nem substitui homologação dos provedores ou E2E das novas telas.
+
+O quadro anterior descreve a disponibilidade local no momento da execução; PostgreSQL foi posteriormente verificado no ambiente remoto. Downgrade das novas revisions em PostgreSQL e cenários adicionais de reinício/leases continuam com tarefas próprias abertas.
+
+## Manifesto de arquivos da branch
+
+| Situação | Arquivo |
+|---|---|
+| Criado | `.env.example` |
+| Alterado | `.gitignore` |
+| Criado | `alembic/versions/f031a5aa5001_add_asaas_financial.py` |
+| Criado | `alembic/versions/f031a5aa5002_add_transactional_notifications.py` |
+| Criado | `docs/asaas-resend-operacao.md` |
+| Criado | `docs/auditoria-asaas-resend-2026-11-11.md` |
+| Criado | `docs/implementacao-asaas-resend-evidencias-2026-11-11.md` |
+| Criado | `docs/revisao-asaas-resend-2026-11-11.md` |
+| Criado | `openspec/changes/extend-resend-email/.openspec.yaml` |
+| Criado | `openspec/changes/extend-resend-email/design.md` |
+| Criado | `openspec/changes/extend-resend-email/proposal.md` |
+| Criado | `openspec/changes/extend-resend-email/specs/appointment-email-notifications/spec.md` |
+| Criado | `openspec/changes/extend-resend-email/specs/email-delivery/spec.md` |
+| Criado | `openspec/changes/extend-resend-email/specs/transactional-email/spec.md` |
+| Criado | `openspec/changes/extend-resend-email/tasks.md` |
+| Criado | `openspec/changes/integrate-asaas-financial/.openspec.yaml` |
+| Criado | `openspec/changes/integrate-asaas-financial/design.md` |
+| Criado | `openspec/changes/integrate-asaas-financial/proposal.md` |
+| Criado | `openspec/changes/integrate-asaas-financial/specs/asaas-payments/spec.md` |
+| Criado | `openspec/changes/integrate-asaas-financial/specs/financial-management/spec.md` |
+| Criado | `openspec/changes/integrate-asaas-financial/specs/payment-notifications/spec.md` |
+| Criado | `openspec/changes/integrate-asaas-financial/tasks.md` |
+| Alterado | `reflex.lock/package.json` |
+| Alterado | `requirements.txt` |
+| Alterado | `tests/test_admin_task_routes.py` |
+| Criado | `tests/test_asaas_contract.py` |
+| Criado | `tests/test_financial_notifications.py` |
+| Criado | `tests/test_integration_migrations.py` |
+| Alterado | `tests/test_shell_navigation.py` |
+| Alterado | `vitta_one/appointment_scheduling/service.py` |
+| Alterado | `vitta_one/auth/state.py` |
+| Criado | `vitta_one/financial/__init__.py` |
+| Criado | `vitta_one/financial/application.py` |
+| Criado | `vitta_one/financial/asaas.py` |
+| Criado | `vitta_one/financial/components.py` |
+| Criado | `vitta_one/financial/service.py` |
+| Criado | `vitta_one/financial/state.py` |
+| Criado | `vitta_one/integration_api.py` |
+| Criado | `vitta_one/integration_worker.py` |
+| Alterado | `vitta_one/models/__init__.py` |
+| Criado | `vitta_one/models/financial.py` |
+| Criado | `vitta_one/models/notification.py` |
+| Criado | `vitta_one/notifications/__init__.py` |
+| Criado | `vitta_one/notifications/operations.py` |
+| Criado | `vitta_one/notifications/resend.py` |
+| Criado | `vitta_one/notifications/service.py` |
+| Criado | `vitta_one/notifications/state.py` |
+| Criado | `vitta_one/notifications/templates.py` |
+| Alterado | `vitta_one/patient_portal/service.py` |
+| Alterado | `vitta_one/professional_directory/email_sender.py` |
+| Alterado | `vitta_one/professional_directory/state.py` |
+| Alterado | `vitta_one/ui/components.py` |
+| Alterado | `vitta_one/ui/pages.py` |
+| Alterado | `vitta_one/ui/patient_directory_components.py` |
+| Alterado | `vitta_one/vitta_one.py` |
+
+## Resultado final das verificações remotas
+
+- [Validate Vitta-One](https://github.com/vitta-one/openspec/actions/runs/43024998845): **529 testes aprovados, 1 ignorado**, migrations PostgreSQL e compilação aprovadas no commit de268a3.
+- [Chromium](https://github.com/vitta-one/openspec/actions/runs/43024998828): **16 aprovados e 19 com falha**, em 565,70s. A etapa de agenda administrativa e a captura completa não executaram após a falha. Não há aceite E2E completo.
+- Artefatos da execução: [evidências sintéticas](https://github.com/vitta-one/openspec/actions/runs/43024998828/artifacts/13857596478).
+
+### Diagnóstico das falhas Chromium
+
+Os logs apontam expectativas incompatíveis com a UI existente. A comparação estática com develop confirmou:
+
+| Expectativa do teste | Código atual já existente na base | Evidência de escopo |
+|---|---|---|
+| Heading Recepção — Operação do Dia | `reception/dashboard/components.py:399` exibe Recepção | arquivo sem diff nesta branch |
+| Botão Abrir ou fechar navegação | `ui/components.py:622,631` usa Recolher/Expandir e Abrir/Fechar navegação | diff desse arquivo altera somente o item financeiro no menu |
+| Criar funcionário abre /admin/funcionarios | `ui/admin_hub_components.py:58` direciona a /admin/funcionarios/novo | arquivo sem diff nesta branch |
+| Especialidades como role=listitem | diretório utiliza tabela, não a antiga lista | `ui/admin_directory_components.py` sem diff nesta branch |
+| Link Especialidades único em toda a página | há link de navegação e link de conteúdo | seletor sem escopo causou strict mode violation |
+
+Isso fundamenta a necessidade de atualizar a suite em relação às changes de UI anteriores, mas não é uma execução comparativa de navegador da develop. Portanto, não se declara automaticamente que todas as 19 falhas são preexistentes ou irrelevantes. Os testes não foram removidos, enfraquecidos ou marcados como sucesso. A interface deve passar por revisão E2E específica antes do aceite.
+
+O único skip da suite integral é registrado no log do CI; a contagem local 491/24 descreve outra seleção de ambiente e não deve ser somada à contagem remota. O PR permanece em rascunho e as duas changes permanecem ativas.

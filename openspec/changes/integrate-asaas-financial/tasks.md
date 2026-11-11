@@ -39,7 +39,7 @@
 ## 6. Verify integrado
 
 - [x] 6.1 Executar suites relevantes existentes e contratos novos; registrar contagens reais de aprovados/falhas/skips.
-- [ ] 6.2 Executar concorrência, transações, migrations e outbox financeira em PostgreSQL; registrar evidência sem confundir SQLite com PostgreSQL.
+- [x] 6.2 Executar concorrência, transações, migrations e outbox financeira em PostgreSQL; registrar evidência sem confundir SQLite com PostgreSQL.
 - [ ] 6.3 Executar `reflex compile --dry` e E2E login → paciente → agenda → cobrança → webhook → histórico/notificação; registrar desktop/mobile.
 - [ ] 6.4 Homologar cliente/Pix/boleto, consulta, webhook, cancelamento e estorno suportado em Asaas Sandbox com configuração autorizada; registrar IDs sintéticos/resultados sem chaves.
 - [x] 6.5 Comparar código/specs/tasks, executar validação strict final e preparar PR com limitações; manter pendências abertas se faltar evidência.
@@ -52,3 +52,5 @@
 ## Evidência local e pendências
 
 Ver `docs/implementacao-asaas-resend-evidencias-2026-11-11.md`. Implementação local adicionada e compilada; tasks com verificações específicas ainda não executadas permanecem abertas. PostgreSQL e homologação real dependem do ambiente configurado; não interpretar os testes simulados como Sandbox real.
+
+PostgreSQL: cenários automatizados e migrations upgrade aprovados no CI `43024998845` (commit de268a3). Ver relatório; downgrade PostgreSQL e demais critérios específicos não exercitados continuam pendentes.
