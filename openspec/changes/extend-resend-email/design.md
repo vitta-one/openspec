@@ -24,6 +24,7 @@ Onboarding continua síncrono no trecho em que segredo existe: registrar intenç
 | EmailNotification | tipo, referência/revisão do evento, patient/professional quando aplicável, chave de destinatário, estado, datas | UNIQUE evento + destinatário; sem corpo HTML, código ou senha |
 | EmailAttempt | notificação, sequência, idempotency key UUID, estado, provider=resend, message id, código de erro seguro, timestamps | UNIQUE notificação + sequência; chave/message id UNIQUE quando presentes |
 | EmailWebhookEvent | svix id, tipo, email id, timestamp, estado de vínculo/processamento | svix id UNIQUE; sem corpo integral |
+| EmailRetryRequest | notificação, autor, motivo, revisão de incerteza e data | auditoria durável de cada solicitação manual |
 
 Chave de destinatário é hash do e-mail normalizado no registro da intenção, com resolução do endereço em User/Invitation no envio; não duplicar endereço em várias tabelas. Troca de contato invalida intenção antiga e exige evento autorizado novo. Associar preferências à conta/paciente com autorização server-side; não assumir consentimento de ativação como permissão geral. Auditoria de alteração conserva antes/depois e autor em registro de eventos de preferência, ou estrutura equivalente na mesma entidade de auditoria de notificação; escolher uma representação sem perder histórico.
 

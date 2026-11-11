@@ -37,6 +37,8 @@ Não copiar nome, CPF ou prontuário para tabelas financeiras. Patient deriva da
 
 Não afirmar que `externalReference` é chave de idempotência da API. Não assumir header de idempotência Asaas sem contrato homologado. GETs podem ser retomados com backoff limitado e Retry-After; POST/DELETE não têm retry automático. Cancelamento e estorno usam intenção persistida e releitura do pagamento antes da chamada; repetição bloqueada enquanto incerta. Alternativa de manter lock de banco durante todo HTTP foi rejeitada para não sustentar transações longas.
 
+Na implementação, resposta autenticada de DELETE com `deleted=true` confirma cancelamento e é registrada diretamente; não depender de GET posterior de recurso excluído, que pode não estar disponível. Timeout continua exigindo conciliação, sem inferir exclusão de um 404 isolado. Busca prévia por CPF também bloqueia criação quando já existe cliente externo sem vínculo inequívoco. Retry-After do provedor pode aumentar o intervalo de backoff local.
+
 ### 4. Inbox e conciliação
 
 POST proposto `/api/webhooks/asaas` integrado à API Reflex existente. Comparação constante do token separado de 32–255 caracteres, body máximo 256 KiB, schema mínimo. Inserção com UNIQUE; 200 depois de commit inclusive duplicados, 401 token inválido, 503 sem configuração/banco, 400 malformado e 413 excedente. Nenhum envio Resend nesse caminho.
