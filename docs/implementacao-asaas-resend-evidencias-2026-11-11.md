@@ -180,3 +180,11 @@ A mesma rodada revelou controles semanais da agenda sem quebra de linha e valida
 [Execução 43064476549](https://github.com/vitta-one/openspec/actions/runs/43064476549), commit `dd25815`: **34 aprovados, 2 falhas**, em 193,26s. Passou o novo cenário financeiro: valor/paciente persistidos no PostgreSQL, detalhe/histórico, Financeiro sem estorno, Administrador com controle de estorno, Médico/Recepção impedidos de acessar o financeiro e preferências inicialmente false, gravadas no portal com confirmação explícita. Screenshots de 320/390/1440px sem overflow. A gravação das preferências foi conferida diretamente no PostgreSQL. Nenhuma cobrança foi emitida no provedor.
 
 As duas falhas restantes eram seletores de testes: nome do paciente repetido no heading e no texto da ficha, e botão antigo “Salvar cadastro”, hoje “Salvar alterações”. Os testes foram ajustados para o heading exato e o botão atual, mantendo as verificações de identidade, telefone persistido, teclado e largura. As etapas seguintes de agenda administrativa e captura completa aguardam a rodada final.
+
+### Rodada final de cenários no commit f3cfc3a
+
+- [Validação 43065488716](https://github.com/vitta-one/openspec/actions/runs/43065488716): **537 aprovados, 2 skips**, em 48,94s; OpenSpec **32/32**, compilação **7,923s**.
+- [Chromium 43065488717](https://github.com/vitta-one/openspec/actions/runs/43065488717): **36 cenários aprovados**, em 137,55s; **5 cenários de agenda administrativa aprovados**, em 17,51s.
+- Captura visual: **90/93 telas/formatos aprovados**. As três falhas foram a mesma expectativa de título da página de login em desktop/tablet/mobile: o roteiro esperava “Bem-vindo de volta.”, enquanto a implementação já usa “Acesse sua conta”. Ajuste restrito ao manifesto de captura, sem mudança no login.
+
+Os cenários aprovados incluem controles de acesso, teclado, máscaras/validação de identidade, reserva pelo paciente refletida nas agendas, fluxo médico rastreado, painel financeiro persistido e preferências específicas. Não exercitam APIs reais dos provedores nem substituem o fluxo de homologação externa.

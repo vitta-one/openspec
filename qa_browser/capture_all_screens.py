@@ -22,7 +22,7 @@ VIEWPORTS = {"desktop": (1440, 900), "tablet": (768, 1024), "mobile": (375, 812)
 # (slug, route, visible heading) — aligns with vitta_one/vitta_one.py routes.
 SCREENS = {
     "public": [
-        ("login", "/login", "Bem-vindo de volta."),
+        ("login", "/login", "Acesse sua conta"),
         ("ativacao-paciente", "/ativar-paciente", "Ative seu portal"),
     ],
     "administrador": [
