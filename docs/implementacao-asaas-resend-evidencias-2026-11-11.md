@@ -188,3 +188,22 @@ As duas falhas restantes eram seletores de testes: nome do paciente repetido no 
 - Captura visual: **90/93 telas/formatos aprovados**. As três falhas foram a mesma expectativa de título da página de login em desktop/tablet/mobile: o roteiro esperava “Bem-vindo de volta.”, enquanto a implementação já usa “Acesse sua conta”. Ajuste restrito ao manifesto de captura, sem mudança no login.
 
 Os cenários aprovados incluem controles de acesso, teclado, máscaras/validação de identidade, reserva pelo paciente refletida nas agendas, fluxo médico rastreado, painel financeiro persistido e preferências específicas. Não exercitam APIs reais dos provedores nem substituem o fluxo de homologação externa.
+
+## Fechamento desta etapa — CI aprovado
+
+Commit de código e testes validado: `c5ff0f7`.
+
+| Verificação | Execução | Resultado |
+|---|---|---|
+| PostgreSQL e suite integral | [43066942137](https://github.com/vitta-one/openspec/actions/runs/43066942137) | **537 aprovados, 2 skips, 0 falhas**, 49,60s |
+| OpenSpec strict | mesma execução | **32/32**, sem falhas |
+| Compilação Reflex | mesma execução | aprovada em **5,442s** |
+| Cenários Chromium gerais | [43066942075](https://github.com/vitta-one/openspec/actions/runs/43066942075) | **36/36**, 176,47s |
+| Agenda administrativa Chromium | mesma execução | **5/5**, 24,10s, larguras 320/390/768/1024/1440px |
+| Captura visual completa | mesma execução | **93/93 telas/formatos**, desktop/tablet/mobile |
+
+Workflow Chromium completo aprovado. [Artefatos sintéticos da rodada final](https://github.com/vitta-one/openspec/actions/runs/43066942075/artifacts/13876378088). Os erros de navegador e de captura das rodadas anteriores estão resolvidos nesta execução; permanecem registrados acima como histórico. Capturas móveis do financeiro foram também inspecionadas visualmente nesta sessão.
+
+Commit `dd25815` corrige a largura dos controles e validade visual de telefone; `f3cfc3a` corrige seletores de ficha e registra PostgreSQL; `c5ff0f7` alinha o título de login do manifesto de captura. A atualização documental posterior não altera código executável.
+
+As changes continuam ativas: Financeiro **14/26** tarefas marcadas; Resend **18/24**. Os itens abertos mantêm critérios específicos não comprovados integralmente, inclusive fluxo completo com provedores e homologação real. O sucesso dos cenários automatizados não transforma esses itens em concluídos. Não houve emissão externa, envio real, merge, deploy, sincronização de specs canônicas nem Archive. A configuração do deploy e as credenciais serão preenchidas pelo usuário conforme sua orientação.
