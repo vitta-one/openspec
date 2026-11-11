@@ -147,13 +147,20 @@ def create_patient_invitation(
     db.refresh(invitation)
 
     activation_url = patient_activation_url()
+    from vitta_one.notifications.service import begin_access, finish_access
+    email_record, attempt = begin_access(db, kind="patient_access", event_key=f"patient_access/{invitation.id}",
+                        entity_id=invitation.id, email=normalized_email, patient_id=patient.id)
+    if attempt is None:
+        return invitation, EmailDelivery(email_record.status)
     delivery = send_patient_portal_invitation(
         name=patient.name,
         email=normalized_email,
         code=code,
         activation_url=activation_url,
         invitation_id=invitation.id,
+        idempotency_key=attempt.idempotency_key,
     )
+    finish_access(db, email_record, attempt, delivery)
     invitation.delivery_status = delivery.status
     invitation.provider_message_id = delivery.message_id
     if delivery.status == "ACCEPTED":
