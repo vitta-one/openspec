@@ -39,10 +39,10 @@ SCREENS = {
         ("admin-previa-agenda", "/admin/agenda", "Agenda clínica"),
         ("admin-previa-atendimento", "/admin/atendimento", "Atendimento clínico"),
         ("admin-previa-pacientes", "/admin/pacientes", "Pacientes"),
-        ("admin-previa-financeiro", "/admin/financeiro", "Financeiro"),
+        ("admin-financeiro", "/admin/financeiro", "Financeiro"),
     ],
     "recepcionista": [
-        ("painel-recepcao", "/recepcao", "Recepção — Operação do Dia"),
+        ("painel-recepcao", "/recepcao", "Recepção"),
         ("agenda-recepcao", "/recepcao/agenda", "Agenda e check-in"),
         ("lista-pacientes", "/recepcao/pacientes", "Lista de pacientes"),
         ("cadastro-pacientes", "/recepcao/pacientes/novo", "Novo paciente"),

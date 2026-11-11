@@ -250,6 +250,7 @@ def test_admin_staff_role_selection_is_accessible_and_guarded(page: Page) -> Non
     choice.click()
     page.get_by_role("option", name="Médico", exact=True).click()
     expect(page.locator("#staff-create-name")).to_be_visible(timeout=30000)
+    expect(page.get_by_role("heading", name="Dados profissionais", exact=True)).to_be_visible()
     expect(page.locator("#staff-reception-password")).to_have_count(0)
 
 
@@ -998,6 +999,9 @@ def test_reception_booking_cpf_search_retains_selected_patient(page: Page) -> No
     expect(dialog.get_by_text(FIXTURE["booking_patient_name"], exact=True)).to_be_visible()
     dialog.get_by_role("button", name="Continuar").click()
     expect(dialog.get_by_text("Etapa 2 de 5")).to_be_visible(timeout=30000)
+    expect(dialog.locator("#booking-professional")).to_be_visible()
+    dialog.get_by_role("button", name="Voltar", exact=True).click()
+    expect(dialog.get_by_text("Etapa 1 de 5")).to_be_visible(timeout=30000)
     expect(dialog.get_by_text(FIXTURE["booking_patient_name"], exact=True)).to_be_visible()
     page.screenshot(path="qa-artifacts/agenda-cpf-validado.png", full_page=True)
 
@@ -1057,6 +1061,7 @@ def test_final_visual_audit_admin_workspace_routes(page: Page) -> None:
             "/admin", "/admin/funcionarios", "/admin/funcionarios/novo", "/admin/funcionarios/medico",
             "/admin/funcionarios/recepcionista", "/admin/horarios",
             "/admin/configuracoes", "/admin/especialidades", "/admin/profissionais",
+            "/admin/financeiro",
         )
     )
 
