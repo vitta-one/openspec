@@ -596,7 +596,7 @@ def test_reception_global_patient_search_uses_identity_only(page: Page) -> None:
     assert "Histórico clínico" not in result.inner_text()
     result.get_by_role("link", name=re.compile("^Ver detalhes de")).click()
     expect(page).to_have_url(re.compile(r"/recepcao/pacientes/[0-9]+/?$"), timeout=30000)
-    expect(page.get_by_text(FIXTURE["day_first_patient_name"], exact=True)).to_be_visible(
+    expect(page.get_by_role("heading", name=FIXTURE["day_first_patient_name"], exact=True)).to_be_visible(
         timeout=30000
     )
 
@@ -951,7 +951,7 @@ def test_patient_identity_input_masks_and_client_validation(page: Page) -> None:
     edit_phone = editor.locator("#patient-edit-phone")
     edit_phone.fill("11988881234")
     expect(edit_phone).to_have_value("(11) 98888-1234")
-    editor.get_by_role("button", name="Salvar cadastro").click()
+    editor.get_by_role("button", name="Salvar alterações", exact=True).click()
     expect(editor).to_be_hidden(timeout=30000)
     page.reload(wait_until="domcontentloaded")
     expect(page.get_by_role("heading", name="Ficha do paciente")).to_be_visible(timeout=30000)

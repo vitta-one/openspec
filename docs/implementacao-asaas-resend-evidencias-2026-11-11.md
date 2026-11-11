@@ -50,7 +50,7 @@ Migrations aditivas: `f031a5aa5001_add_asaas_financial.py` e `f031a5aa5002_add_t
 | PostgreSQL real | migrações e suite automatizada aprovadas no CI; servidor local não disponível |
 | Asaas Sandbox real | não executado; aguarda credenciais e configuração de webhook |
 | Resend real | não executado; aguarda chave, remetente e destinatário de teste autorizado |
-| Navegador desktop/mobile | compilação concluída; fluxo visual/E2E ainda não validado |
+| Navegador desktop/mobile | painel financeiro persistido, RBAC e preferências aprovados em 320/390/1440px; fluxo externo completo ainda não homologado |
 | Produção | nenhuma alteração ou operação executada |
 
 Uma tentativa inicial de executar a suite completa foi interrompida ao chegar aos testes que exigem PostgreSQL, pois a URL usada para importação/compilação apontava apenas para um endereço local de teste sem servidor. O resultado válido acima exclui explicitamente esses arquivos. Não se converteu falha de conexão em sucesso nem se usou SQLite como prova de locks PostgreSQL.
@@ -58,7 +58,7 @@ Uma tentativa inicial de executar a suite completa foi interrompida ao chegar ao
 ## Pendências antes do aceite
 
 1. Configurar variáveis no backend do ambiente de teste e aplicar migrations revisadas; configurar um worker supervisionado ou agendamento de cinco minutos.
-2. Concluir cenários específicos de reinício/leases e downgrade PostgreSQL ainda abertos nas tasks. A suite integral e as migrations upgrade já passaram no CI PostgreSQL; os testes novos exigem `VITTA_ONE_QA_DISPOSABLE_DATABASE=yes` e usam schema temporário próprio.
+2. Revisar os critérios específicos ainda abertos nas tasks. Reinício SENDING → UNKNOWN, disputa entre dois consumidores e upgrade/downgrade PostgreSQL foram aprovados na continuação; os testes exigem `VITTA_ONE_QA_DISPOSABLE_DATABASE=yes` e usam schema temporário próprio.
 3. Validar UI desktop/mobile, teclado, confirmações, preferências, pesquisa/paginação e fluxo login → paciente → reserva → cobrança → webhook → notificação/histórico em navegador.
 4. Homologar APIs e webhooks reais no Asaas Sandbox e Resend, com dados sintéticos e destinatário autorizado; revisar limitações efetivas da conta para Pix/boleto/estorno.
 5. Completar as verificações específicas ainda abertas em tasks, comparar implementação com specs, sincronizar e arquivar oficialmente apenas após aceite comprovado.
@@ -73,7 +73,7 @@ PR em rascunho: [#351](https://github.com/vitta-one/openspec/pull/351), base `de
 
 [Validate Vitta-One](https://github.com/vitta-one/openspec/actions/runs/43024998845) concluiu com sucesso no commit `de268a3`: migração no PostgreSQL descartável, suite integral Pytest, validação OpenSpec e compilação Reflex. A configuração desse workflow habilita os testes PostgreSQL e `VITTA_ONE_QA_DISPOSABLE_DATABASE=yes`. Assim, a limitação de PostgreSQL local foi suprida pelo CI para os cenários automatizados presentes. Isso não cobre automaticamente todos os cenários específicos ainda abertos nas tasks nem substitui homologação dos provedores ou E2E das novas telas.
 
-O quadro anterior descreve a disponibilidade local no momento da execução; PostgreSQL foi posteriormente verificado no ambiente remoto. Downgrade das novas revisions em PostgreSQL e cenários adicionais de reinício/leases continuam com tarefas próprias abertas.
+O quadro anterior descreve a disponibilidade local no momento da execução; PostgreSQL foi posteriormente verificado no ambiente remoto. Na continuação, downgrade das novas revisions em PostgreSQL e cenários adicionais de reinício/concorrência também foram aprovados, conforme evidência abaixo.
 
 ## Manifesto de arquivos da branch
 
@@ -156,3 +156,27 @@ Os logs apontam expectativas incompatíveis com a UI existente. A comparação e
 Isso fundamenta a necessidade de atualizar a suite em relação às changes de UI anteriores, mas não é uma execução comparativa de navegador da develop. Portanto, não se declara automaticamente que todas as 19 falhas são preexistentes ou irrelevantes. Os testes não foram removidos, enfraquecidos ou marcados como sucesso. A interface deve passar por revisão E2E específica antes do aceite.
 
 O único skip da suite integral é registrado no log do CI; a contagem local 491/24 descreve outra seleção de ambiente e não deve ser somada à contagem remota. O PR permanece em rascunho e as duas changes permanecem ativas.
+
+## Continuação — evidências no commit 6d0b941
+
+[Validate Vitta-One, execução 43062255648](https://github.com/vitta-one/openspec/actions/runs/43062255648): **537 aprovados, 2 skips, 0 falhas**, PostgreSQL descartável, OpenSpec **32/32**, compilação Reflex aprovada em 3,817s. As contagens anteriores permanecem como histórico e não devem ser somadas. Os dois skips são as variantes SQLite de concorrência que exigem locks PostgreSQL; as variantes PostgreSQL executaram.
+
+Foram acrescentados testes de upgrade/downgrade das duas migrations em schema PostgreSQL temporário, recuperação de envio abandonado para UNKNOWN sem novo HTTP, auditoria/permissão de reenvio, recuperação de inbox financeira após falha de rede e dois consumidores concorrentes enviando uma única mensagem. Os adaptadores externos permanecem simulados.
+
+A continuação também corrigiu o fluxo canônico de criação de médico em `auth/staff_state.py`, passando a sessão autorizada ao envio rastreado. Os testes de navegador foram atualizados para os formulários, tabelas, navegação e modal de reserva atuais, preservando os cenários de negócio. Foi adicionado cenário financeiro com cobrança sintética persistida e preferências separadas, sem operação nos provedores.
+
+Commits da continuação: `25e4619`, `c48963c` e `6d0b941`. Arquivos adicionais ao manifesto inicial: `vitta_one/auth/staff_state.py`, `qa_browser/prescription_browser.py` e `qa_browser/capture_all_screens.py`.
+
+### Rodada Chromium após revisão dos seletores
+
+[Execução 43062255632](https://github.com/vitta-one/openspec/actions/runs/43062255632), commit `6d0b941`: **25 aprovados e 11 falhas**, em 293,52s. Entre as falhas, o novo cenário revelou overflow do cabeçalho financeiro em 320px. O cabeçalho foi corrigido no commit `dd25815`, sem ocultar conteúdo nem relaxar a verificação de largura.
+
+A mesma rodada revelou controles semanais da agenda sem quebra de linha e validade visual permissiva para telefone incompleto. Foram feitas correções pequenas nesses pontos, para permitir a verificação dos fluxos existentes usados na integração. Os seletores passaram a usar “Nova consulta”, o diretório de pacientes atual, o heading de consultas (sem antiga aba) e a confirmação real da troca de perfil. Após as correções, **20 testes de regressão locais aprovados** e compilação Reflex aprovada em **12,922s**. Nova rodada de CI: `43064476577` (validação) e `43064476549` (Chromium).
+
+[Validação após correções, 43064476577](https://github.com/vitta-one/openspec/actions/runs/43064476577), commit `dd25815`: **537 aprovados, 2 skips, 0 falhas**, em 48,29s; OpenSpec **32/32** e compilação Reflex aprovada em **7,648s**.
+
+### Resultado Chromium com correção de largura
+
+[Execução 43064476549](https://github.com/vitta-one/openspec/actions/runs/43064476549), commit `dd25815`: **34 aprovados, 2 falhas**, em 193,26s. Passou o novo cenário financeiro: valor/paciente persistidos no PostgreSQL, detalhe/histórico, Financeiro sem estorno, Administrador com controle de estorno, Médico/Recepção impedidos de acessar o financeiro e preferências inicialmente false, gravadas no portal com confirmação explícita. Screenshots de 320/390/1440px sem overflow. A gravação das preferências foi conferida diretamente no PostgreSQL. Nenhuma cobrança foi emitida no provedor.
+
+As duas falhas restantes eram seletores de testes: nome do paciente repetido no heading e no texto da ficha, e botão antigo “Salvar cadastro”, hoje “Salvar alterações”. Os testes foram ajustados para o heading exato e o botão atual, mantendo as verificações de identidade, telefone persistido, teclado e largura. As etapas seguintes de agenda administrativa e captura completa aguardam a rodada final.

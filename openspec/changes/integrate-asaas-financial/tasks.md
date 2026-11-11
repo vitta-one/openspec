@@ -11,7 +11,7 @@
 
 - [x] 2.1 Preparar Python 3.12/venv e dependências existentes conforme instruções Reflex; verificar versões e imports sem modificar framework.
 - [x] 2.2 Criar modelos de cliente, cobrança, histórico e inbox com unicidade/valor/FKs; testar constraints e serialização sem segredos.
-- [ ] 2.3 Escrever migration aditiva encadeada e registrar modelos; verificar upgrade/downgrade em PostgreSQL descartável e Alembic heads.
+- [x] 2.3 Escrever migration aditiva encadeada e registrar modelos; verificar upgrade/downgrade em PostgreSQL descartável e Alembic heads.
 - [x] 2.4 Implementar guard financeiro para sessão, roles e troca inicial; testar todas as roles, token ausente/expirado e chamada direta.
 
 ## 3. Contratos Asaas
@@ -53,4 +53,4 @@
 
 Ver `docs/implementacao-asaas-resend-evidencias-2026-11-11.md`. Implementação local adicionada e compilada; tasks com verificações específicas ainda não executadas permanecem abertas. PostgreSQL e homologação real dependem do ambiente configurado; não interpretar os testes simulados como Sandbox real.
 
-PostgreSQL: cenários automatizados e migrations upgrade aprovados no CI `43024998845` (commit de268a3). Ver relatório; downgrade PostgreSQL e demais critérios específicos não exercitados continuam pendentes.
+PostgreSQL: suite integral, concorrência, recuperação de inbox e upgrade/downgrade das duas migrations aprovados no CI `43062255648` (commit `6d0b941`): 537 aprovados, 2 skips. Homologação real e demais critérios específicos não exercitados continuam pendentes.
