@@ -380,6 +380,7 @@ class AdminStaffState(rx.State):
                             email=registration.email,
                             temporary_password=registration.temporary_password,
                             professional_id=registration.professional_id,
+                            token=token,
                         )
                     except Exception:
                         delivery = EmailDelivery(status="UNKNOWN")

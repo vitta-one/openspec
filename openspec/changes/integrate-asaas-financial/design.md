@@ -84,4 +84,8 @@ Migration aditiva sobre cabeça real revalidada (atual `e9d3a8c2b170`), seguida 
 
 ## Revisão e decisões
 
+### Continuação da verificação E2E
+
+Após o CI registrar 19 falhas Chromium, a inspeção comparou seletores com a UI já existente na base. A continuação autorizada pelo usuário inclui alinhar seletores de headings, navegação, formulários de equipe e linhas tabulares, preservando os cenários de negócio, segurança, persistência e responsividade. Isso é manutenção da verificação, sem alterar o comportamento de telas fora destas changes. Não remover cenários, não substituir ações reais por mocks e não considerar o novo fluxo financeiro homologado apenas pela correção dos seletores antigos.
+
 Em 11/11/2026 o usuário aprovou Administrador/Financeiro emitirem e cancelarem, estorno restrito ao Administrador, demais roles sem acesso financeiro, uma cobrança ativa por Consulta, valor definido pelo operador e promoção de `/admin/financeiro` para área administrativa normal. Pix/boleto entram no escopo; cartão permanece pendente de homologação. Estorno integral será habilitado apenas no Pix suportado; boleto não usa endpoint não homologado.

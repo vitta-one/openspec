@@ -76,4 +76,6 @@ Migration aditiva autônoma, sem FKs obrigatórias em tabelas financeiras para p
 
 ## Revisão e decisões
 
+Na continuação da verificação, alinhar os seletores E2E de onboarding aos campos comuns do cadastro unificado já existente, mantendo os cenários de criação, estado de envio ausente e bloqueio de e-mail duplicado. Asserções devem usar a interface atual e continuar verificando persistência e ausência de falsa entrega. Os fluxos reais Resend permanecem pendentes de credenciais.
+
 Em 11/11/2026 usuário aprovou novos gatilhos com autorização de comunicação registrada, lembrete 24h, confirmação na reserva e exclusão temporária de recuperação de senha/cartão. Janela de tolerância de uma hora limita envios atrasados sem mudar antecedência nominal. Escolhas de assunto, espaçamento e ícone seguem o design system, sem afetar contrato. Nenhum envio real está autorizado sem destinatário de teste informado.
