@@ -69,6 +69,7 @@ _ADMIN_TASK_NAV = (
     ("Especialidades", "/admin/especialidades", "list_filter", "especialidades"),
     ("Horários", "/admin/horarios", "calendar_clock", "horarios"),
     ("Configurações", "/admin/configuracoes", "settings", "configuracoes"),
+    ("Financeiro", "/admin/financeiro", "wallet", "financeiro"),
 )
 
 _ADMIN_MANAGEMENT_NAV = _ADMIN_TASK_NAV[1:]
@@ -79,7 +80,6 @@ _ADMIN_PREVIEW_NAV = (
     ("Agenda", "/admin/agenda", "calendar", "agenda"),
     ("Atendimento clínico", "/admin/atendimento", "stethoscope", "atendimento"),
     ("Pacientes", "/admin/pacientes", "user", "pacientes"),
-    ("Financeiro", "/admin/financeiro", "wallet", "financeiro"),
 )
 
 

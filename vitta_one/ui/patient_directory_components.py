@@ -1,5 +1,6 @@
 """Focused patient directory, onboarding and detail surfaces for Reception."""
 import reflex as rx
+from vitta_one.notifications.state import preference_panel
 
 from vitta_one.patient_queue.state import ReceptionQueueState as S
 from vitta_one.ui.appointment_components import consultation_status_badge, reception_agenda_dialogs
@@ -589,6 +590,7 @@ def _patient_detail_sections() -> rx.Component:
                 justify="between", gap="3", width="100%",
             ),
         ),
+        section_panel(preference_panel(S.selected_patient_id)),
         spacing="4", align="stretch", width="100%",
     )
 

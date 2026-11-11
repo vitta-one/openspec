@@ -23,6 +23,7 @@ def test_admin_management_contains_only_existing_administrative_destinations() -
         "/admin/especialidades",
         "/admin/horarios",
         "/admin/configuracoes",
+        "/admin/financeiro",
     }
     assert {item[3] for item in _ADMIN_MANAGEMENT_NAV} == {
         "funcionarios",
@@ -30,6 +31,7 @@ def test_admin_management_contains_only_existing_administrative_destinations() -
         "especialidades",
         "horarios",
         "configuracoes",
+        "financeiro",
     }
 
 

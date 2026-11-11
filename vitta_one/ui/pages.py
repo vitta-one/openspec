@@ -439,9 +439,11 @@ def admin_professionals_page() -> rx.Component:
 
 def reception_page() -> rx.Component:
     """Reception's operational home; no patient clinical data is exposed here."""
+    from vitta_one.notifications.operations import operations_panel
     return protected_workspace(
         Role.RECEPCIONISTA,
         reception_dashboard(),
+        section_panel(operations_panel()),
         active="recepcao",
     )
 
@@ -737,6 +739,7 @@ def patient_booking_page() -> rx.Component:
 
 
 def patient_portal_page() -> rx.Component:
+    from vitta_one.notifications.state import preference_panel
     return protected_workspace(
         Role.PACIENTE,
         page_header(
@@ -755,6 +758,7 @@ def patient_portal_page() -> rx.Component:
         ),
         feedback_region(PatientPortalState.error_message, "", "patient-portal-feedback"),
         patient_clinic_location(),
+        section_panel(preference_panel()),
         patient_calendar(),
         patient_consultation_list(),
         active="consultas-paciente",
@@ -763,11 +767,8 @@ def patient_portal_page() -> rx.Component:
 
 
 def finance_page() -> rx.Component:
-    return dashboard_shell(
-        Role.FINANCEIRO,
-        "Financeiro",
-        "O acesso financeiro está validado. Pagamentos, valores e integração com Asaas sandbox serão implementados em change própria.",
-    )
+    from vitta_one.financial.components import finance_content
+    return protected_workspace(Role.FINANCEIRO, finance_content(), active="financeiro")
 
 
 def admin_reception_preview_page() -> rx.Component:
@@ -811,11 +812,8 @@ def admin_patient_detail_preview_page() -> rx.Component:
 
 
 def admin_finance_preview_page() -> rx.Component:
-    return admin_preview_workspace(
-        "/admin/financeiro",
-        "financeiro",
-        finance_preview(),
-    )
+    from vitta_one.financial.components import finance_content
+    return protected_workspace(Role.ADMINISTRADOR, finance_content(), active="financeiro", verified_path="/admin/financeiro")
 
 
 def forbidden_page() -> rx.Component:

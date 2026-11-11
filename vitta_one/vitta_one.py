@@ -99,8 +99,15 @@ _PERSISTENT_MODELS = (
     PatientPortalInvitation,
 )
 
+from vitta_one.integration_api import provider_routes
+from vitta_one.financial.state import FinancialState
+from vitta_one.notifications.state import NotificationState
+from vitta_one.notifications.operations import EmailOperationsState
+from starlette.applications import Starlette
+backend_api = Starlette(routes=[*activation_api.routes, *provider_routes], debug=False)
+
 app = rx.App(
-    api_transformer=activation_api,
+    api_transformer=backend_api,
     theme=rx.theme(
         appearance="light",
         accent_color="teal",
@@ -228,8 +235,8 @@ app.add_page(
 app.add_page(
     admin_finance_preview_page,
     route="/admin/financeiro",
-    title="Financeiro · Preview local | Vitta-One",
-    on_load=[AuthState.load_admin_preview, AdminPreviewState.load],
+    title="Financeiro | Vitta-One",
+    on_load=[AuthState.load_protected, FinancialState.load],
 )
 
 app.add_page(
@@ -327,7 +334,7 @@ app.add_page(
     finance_page,
     route=Role.FINANCEIRO.dashboard_path,
     title="Painel financeiro | Vitta-One",
-    on_load=AuthState.load_protected,
+    on_load=[AuthState.load_protected, FinancialState.load],
 )
 app.add_page(
     prescription_print_page,

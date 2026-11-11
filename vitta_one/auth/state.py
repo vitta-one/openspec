@@ -41,6 +41,7 @@ _ROLE_BY_ROUTE = {
     "/admin/funcionarios/recepcionista": Role.ADMINISTRADOR,
     "/admin/horarios": Role.ADMINISTRADOR,
     "/admin/configuracoes": Role.ADMINISTRADOR,
+    "/admin/financeiro": Role.ADMINISTRADOR,
     "/recepcao/agenda": Role.RECEPCIONISTA,
     "/recepcao/agenda/nova": Role.RECEPCIONISTA,
     "/recepcao/pacientes": Role.RECEPCIONISTA,
@@ -61,7 +62,6 @@ _ADMIN_PREVIEW_ROUTES = frozenset(
         "/admin/atendimento",
         "/admin/pacientes",
         "/admin/pacientes/[patient_id]",
-        "/admin/financeiro",
     }
 )
 
@@ -154,6 +154,15 @@ class AuthState(rx.State):
         reception_preview = await self.get_state(AdminReceptionPreviewState)
         reception_preview._clear_data()
         reception_preview.error_message = ""
+        from vitta_one.financial.state import FinancialState
+        financial = await self.get_state(FinancialState)
+        financial._clear()
+        from vitta_one.notifications.state import NotificationState
+        notifications = await self.get_state(NotificationState)
+        notifications._clear()
+        from vitta_one.notifications.operations import EmailOperationsState
+        email_operations = await self.get_state(EmailOperationsState)
+        email_operations._clear()
 
     @rx.var
     def role_label(self) -> str:
