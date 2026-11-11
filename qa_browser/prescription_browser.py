@@ -224,7 +224,7 @@ def test_admin_specialty_search_and_professional_routes_at_mobile_width(page: Pa
         page.locator("#specialty-directory-search").fill("")
         page.get_by_role("navigation", name="Trilha de navegação").get_by_role("link", name="Administração", exact=True).click()
         expect(page).to_have_url(re.compile(r"/admin/?$"), timeout=30000)
-        page.get_by_role("link", name=re.compile("^Gerenciar médicos")).click()
+        page.get_by_role("main").get_by_role("link", name=re.compile("^Profissionais")).click()
         expect(page).to_have_url(re.compile(r"/admin/profissionais/?$"), timeout=30000)
         expect(page.get_by_role("heading", name="Todos os profissionais")).to_be_visible(timeout=30000)
         assert page.evaluate(
@@ -249,6 +249,9 @@ def test_admin_staff_role_selection_is_accessible_and_guarded(page: Page) -> Non
     expect(page.locator("#professional-name")).to_have_count(0)
     choice.click()
     page.get_by_role("option", name="Médico", exact=True).click()
+    change = page.get_by_role("dialog", name="Alterar perfil do funcionário?")
+    expect(change).to_be_visible(timeout=15000)
+    change.get_by_role("button", name="Alterar perfil", exact=True).click()
     expect(page.locator("#staff-create-name")).to_be_visible(timeout=30000)
     expect(page.get_by_role("heading", name="Dados profissionais", exact=True)).to_be_visible()
     expect(page.locator("#staff-reception-password")).to_have_count(0)
@@ -575,7 +578,7 @@ def test_reception_booking_modal_is_shared_and_keyboard_responsive(page: Page) -
 
     # The Agenda provides the same modal without a second booking screen.
     page.goto(BASE + "/recepcao/agenda", wait_until="domcontentloaded")
-    page.get_by_role("button", name="+ Agendar consulta").click()
+    page.get_by_role("button", name="Nova consulta", exact=True).click()
     expect(page.get_by_role("dialog", name="Agendar consulta")).to_be_visible(
         timeout=30000
     )
@@ -583,15 +586,15 @@ def test_reception_booking_modal_is_shared_and_keyboard_responsive(page: Page) -
 
 def test_reception_global_patient_search_uses_identity_only(page: Page) -> None:
     login_as_reception(page)
-    search = page.locator("#topbar-patient-search")
+    page.goto(BASE + "/recepcao/pacientes", wait_until="domcontentloaded")
+    search = page.locator("#patient-directory-search")
     search.fill(FIXTURE["day_first_patient_name"])
-    search.press("Enter")
-    result = page.get_by_role(
-        "button",
-        name=f"Selecionar paciente {FIXTURE['day_first_patient_name']}",
-    )
+    page.get_by_role("button", name="Buscar", exact=True).click()
+    result = page.locator(".vitta-patient-directory-row").filter(has_text=FIXTURE["day_first_patient_name"])
     expect(result).to_be_visible(timeout=30000)
-    result.click()
+    expect(result.get_by_role("link", name=re.compile("^Ver detalhes de"))).to_be_visible()
+    assert "Histórico clínico" not in result.inner_text()
+    result.get_by_role("link", name=re.compile("^Ver detalhes de")).click()
     expect(page).to_have_url(re.compile(r"/recepcao/pacientes/[0-9]+/?$"), timeout=30000)
     expect(page.get_by_text(FIXTURE["day_first_patient_name"], exact=True)).to_be_visible(
         timeout=30000
@@ -863,9 +866,7 @@ def test_patient_books_own_appointment_and_both_staff_agendas_update(page: Page)
                 login(role_page, email)
             role_page.goto(BASE + route, wait_until="domcontentloaded")
             if route.startswith("/recepcao"):
-                expect(role_page.get_by_role("tab", name="Consultas do período")).to_have_attribute(
-                    "data-state", "active", timeout=30000
-                )
+                expect(role_page.get_by_role("heading", name="Consultas do período")).to_be_visible(timeout=30000)
             expect(role_page.get_by_text(FIXTURE["booking_patient_name"], exact=True).first).to_be_visible(
                 timeout=30000
             )
@@ -987,7 +988,7 @@ def test_reception_booking_cpf_search_retains_selected_patient(page: Page) -> No
     """CPF lookup through the shared modal retains identity across booking steps."""
     login_as_reception(page)
     page.goto(BASE + "/recepcao/agenda", wait_until="domcontentloaded")
-    page.get_by_role("button", name="+ Agendar consulta").click()
+    page.get_by_role("button", name="Nova consulta", exact=True).click()
     dialog = page.get_by_role("dialog", name="Agendar consulta")
     expect(dialog).to_be_visible(timeout=30000)
     search = dialog.locator("#booking-patient-query")

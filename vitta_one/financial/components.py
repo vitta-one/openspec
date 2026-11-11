@@ -57,7 +57,7 @@ def finance_content():
                 direction={"initial": "column", "lg": "row"}, gap="3", align="end", width="100%"), on_submit=S.issue, width="100%"),
             spacing="3", width="100%")),
         section_panel(rx.vstack(
-            rx.hstack(rx.heading("Cobranças", size="4"), rx.text(S.total.to_string(), " no período"), rx.spacer(), rx.button("Atualizar", on_click=S.load, disabled=S.busy)),
+            rx.hstack(rx.heading("Cobranças", size="4"), rx.text(S.total.to_string(), " no período"), rx.spacer(), rx.button("Atualizar", on_click=S.load, disabled=S.busy), flex_wrap="wrap", width="100%"),
             rx.cond(S.busy, rx.spinner()),
             rx.cond(S.rows.length() == 0, rx.text("Nenhuma cobrança encontrada para os filtros."), rx.foreach(S.rows, charge_row)),
             rx.hstack(rx.button("Anterior", on_click=S.change_page(-1), disabled=S.busy | (S.page <= 1)),

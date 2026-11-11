@@ -52,8 +52,12 @@
   }
 
   function refreshValidity(input, kind) {
-    if (kind !== "cpf") return;
     const count = digitsOnly(input.value, 11).length;
+    if (kind === "phone") {
+      input.setCustomValidity(count > 0 && count !== 10 && count !== 11
+        ? "Telefone inválido. Informe DDD e número completo." : "");
+      return;
+    }
     input.setCustomValidity(count === 11 && !validCpf(input.value)
       ? "CPF inválido. Confira os dígitos informados." : "");
   }

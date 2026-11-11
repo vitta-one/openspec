@@ -1348,7 +1348,7 @@ def reception_agenda_panel() -> rx.Component:
                         on_click=ReceptionAgendaState.move_agenda_week(1),
                         disabled=ReceptionAgendaState.is_loading,
                     ),
-                    spacing="2", align="center",
+                    spacing="2", align="center", flex_wrap="wrap", max_width="100%",
                 ),
                 justify="between", align="center", gap="3",
                 flex_wrap="wrap", width="100%",
