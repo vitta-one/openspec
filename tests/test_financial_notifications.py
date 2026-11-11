@@ -470,3 +470,89 @@ def test_tracked_medical_access_never_persists_secret_or_repeats(setup,monkeypat
     assert len(calls)==1
     record=db.exec(select(EmailNotification).where(EmailNotification.kind=='medical_access')).one()
     assert 'transient-secret-test-only' not in str(record.model_dump())
+
+
+def test_abandoned_send_becomes_unknown_without_new_attempt(setup, monkeypatch):
+    db,tokens,patient,consultation,_=setup
+    mail.set_preferences(db,token=tokens[Role.PACIENTE],patient_id=patient.id,agenda=True,financial=False,confirmed=True)
+    row=mail.enqueue_booking(db,consultation,'booking_confirmed')
+    row.status='SENDING'
+    db.add(row)
+    db.flush()
+    attempt=EmailAttempt(notification_id=row.id,started_at=datetime.now(timezone.utc)-timedelta(minutes=3))
+    db.add(attempt)
+    db.commit()
+    def forbidden(**kwargs):
+        raise AssertionError('A crashed send must never be blindly repeated')
+    monkeypatch.setattr(mail.resend,'send',forbidden)
+    assert mail.process_outbox(db)==0
+    assert row.status=='UNKNOWN' and attempt.status=='UNKNOWN'
+    assert len(db.exec(select(EmailAttempt)).all())==1
+
+
+def test_manual_retry_is_authorized_and_audited(setup):
+    from vitta_one.models.notification import EmailRetryRequest
+    db,tokens,patient,consultation,_=setup
+    mail.set_preferences(db,token=tokens[Role.PACIENTE],patient_id=patient.id,agenda=True,financial=False,confirmed=True)
+    row=mail.enqueue_booking(db,consultation,'booking_confirmed')
+    row.status='FAILED'
+    db.add(row)
+    db.commit()
+    with pytest.raises(PermissionError):
+        mail.manual_retry(db,token=tokens[Role.FINANCEIRO],notification_id=row.id,reason='Revisão de teste')
+    mail.manual_retry(db,token=tokens[Role.RECEPCIONISTA],notification_id=row.id,reason='Revisão autorizada de teste')
+    assert row.status=='PENDING'
+    audit=db.exec(select(EmailRetryRequest)).one()
+    assert audit.reason=='Revisão autorizada de teste'
+    row.status='ACCEPTED'
+    db.add(row)
+    db.commit()
+    with pytest.raises(ValueError):
+        mail.manual_retry(db,token=tokens[Role.RECEPCIONISTA],notification_id=row.id,reason='Não pode repetir')
+
+
+def test_financial_network_failure_retains_inbox_for_recovery(setup):
+    db,tokens,patient,consultation,_=setup
+    provider=Provider()
+    charge=issue(setup,provider)
+    event=FinancialWebhookEvent(event_id='evt_recover',event_type='PAYMENT_RECEIVED',payment_id='pay_test')
+    db.add(event)
+    db.commit()
+    def timeout(request):
+        raise httpx.ReadTimeout('Controlled provider outage')
+    broken=AsaasClient('test-only',transport=httpx.MockTransport(timeout))
+    assert financial.process_events(db,client=broken,limit=1)==0
+    assert event.status=='PENDING' and event.attempts==1
+    assert charge.status=='PENDING' and consultation.status=='AGENDADA'
+    event.next_attempt_at=datetime.now(timezone.utc)-timedelta(seconds=1)
+    db.add(event)
+    db.commit()
+    provider.payments[0]['status']='RECEIVED'
+    assert financial.process_events(db,client=provider.client(),limit=1)==1
+    assert event.status=='PROCESSED' and charge.status=='RECEIVED'
+
+
+def test_postgres_two_outbox_workers_send_once(setup, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier, Lock
+    db,tokens,patient,consultation,engine=setup
+    if engine.dialect.name!='postgresql':
+        pytest.skip('Concurrent queue consumers require PostgreSQL row locks.')
+    mail.set_preferences(db,token=tokens[Role.PACIENTE],patient_id=patient.id,agenda=True,financial=False,confirmed=True)
+    mail.enqueue_booking(db,consultation,'booking_confirmed')
+    db.commit()
+    barrier,lock=Barrier(2),Lock()
+    calls=[]
+    def send(**kwargs):
+        with lock:
+            calls.append(kwargs['idempotency_key'])
+        return EmailDelivery('ACCEPTED','concurrent_outbox_test')
+    monkeypatch.setattr(mail.resend,'send',send)
+    def work(_):
+        with Session(engine) as worker_db:
+            barrier.wait(timeout=10)
+            return mail.process_outbox(worker_db,limit=1)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results=list(pool.map(work,range(2)))
+    assert sum(results)==1 and len(calls)==1
+    assert len(db.exec(select(EmailAttempt)).all())==1
