@@ -40,7 +40,7 @@
 - [ ] 6.2 Exercitar concorrência, outbox, preferências e reinício em PostgreSQL; registrar evidências sem inferir suporte pelo SQLite.
 - [ ] 6.3 Executar `reflex compile --dry` e E2E de preferências → evento → tentativa → entrega simulada, em desktop/mobile.
 - [ ] 6.4 Validar Resend real com remetente verificado, destinatário de teste explicitamente autorizado e webhook assinado; separar aceitação de entrega.
-- [ ] 6.5 Comparar implementação/specs, validar OpenSpec strict e preparar PR com resultados e pendências.
+- [x] 6.5 Comparar implementação/specs, validar OpenSpec strict e preparar PR com resultados e pendências.
 
 ## Workflow follow-up
 

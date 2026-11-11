@@ -64,3 +64,7 @@ Uma tentativa inicial de executar a suite completa foi interrompida ao chegar ao
 5. Completar as verificações específicas ainda abertas em tasks, comparar implementação com specs, sincronizar e arquivar oficialmente apenas após aceite comprovado.
 
 Cartão, recuperação pública de senha, aviso de vencimento e documento fiscal continuam fora do escopo homologado, conforme aprovação. Registros SENDING/UNKNOWN e vínculos externos ambíguos devem ser revisados, nunca liberados para novo POST por suposição. Esta entrega não satisfaz ainda os critérios de integração real e E2E exigidos para considerar as changes concluídas.
+
+## Git e revisão
+
+PR em rascunho: [#351](https://github.com/vitta-one/openspec/pull/351), base `develop`, branch `feat/asaas-resend-openspec`. Commits por etapa: `6b1cd5e` (auditoria e OpenSpec), `ecb1810` (backend e persistência), `6ce5a3d` (interface Reflex) e `c13fbea` (testes e operação), além da atualização final deste relatório. Nenhum merge/deploy efetuado.

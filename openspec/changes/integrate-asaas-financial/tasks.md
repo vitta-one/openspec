@@ -42,7 +42,7 @@
 - [ ] 6.2 Executar concorrência, transações, migrations e outbox financeira em PostgreSQL; registrar evidência sem confundir SQLite com PostgreSQL.
 - [ ] 6.3 Executar `reflex compile --dry` e E2E login → paciente → agenda → cobrança → webhook → histórico/notificação; registrar desktop/mobile.
 - [ ] 6.4 Homologar cliente/Pix/boleto, consulta, webhook, cancelamento e estorno suportado em Asaas Sandbox com configuração autorizada; registrar IDs sintéticos/resultados sem chaves.
-- [ ] 6.5 Comparar código/specs/tasks, executar validação strict final e preparar PR com limitações; manter pendências abertas se faltar evidência.
+- [x] 6.5 Comparar código/specs/tasks, executar validação strict final e preparar PR com limitações; manter pendências abertas se faltar evidência.
 
 ## Workflow follow-up
 
