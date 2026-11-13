@@ -64,6 +64,8 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
+      - name: Sintaxe dos scripts de deploy
+        run: bash -n scripts/deploy/bootstrap-vps.sh scripts/deploy/poll-prod.sh
       - name: Validação OpenSpec strict
         run: npx --yes @fission-ai/openspec validate --all --strict
       - name: Migrations em PostgreSQL 16 descartável
