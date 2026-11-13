@@ -59,15 +59,16 @@ raise SystemExit(0 if ok else 1)
   exit 0
 fi
 
-# Nunca atualizar banco automaticamente. Uma migration nova exige revisão separada.
-set -a
-# O arquivo de ambiente já existe na VPS e não sai dela.
-# shellcheck disable=SC1090
-source "$ENV_FILE"
-set +a
-[[ -n "${DATABASE_URL:-}" ]] || { echo 'DATABASE_URL ausente'; exit 1; }
-[[ "${VITTA_ONE_LOCAL_ADMIN_PREVIEW:-false}" != "true" ]] || {
-  echo 'Preview de administrador QA não pode estar ativo em produção.'; exit 1;
+# Credenciais de produção só entram no ambiente após instalar dependências.
+load_runtime_env() {
+  set -a
+  # shellcheck disable=SC1090
+  source "$ENV_FILE"
+  set +a
+  [[ -n "${DATABASE_URL:-}" ]] || { echo 'DATABASE_URL ausente'; exit 1; }
+  [[ "${VITTA_ONE_LOCAL_ADMIN_PREVIEW:-false}" != "true" ]] || {
+    echo 'Preview de administrador QA não pode estar ativo em produção.'; exit 1;
+  }
 }
 
 WORK=''
@@ -102,6 +103,7 @@ if [[ ! -f "$RELEASE/.ready" ]]; then
   as_app "$WORK/.venv/bin/python" -m pip install --disable-pip-version-check \
     -r "$WORK/requirements.txt"
   pushd "$WORK" >/dev/null
+  load_runtime_env
   as_app "$WORK/.venv/bin/alembic" current --check-heads
   as_app "$WORK/.venv/bin/reflex" compile --dry
   popd >/dev/null
@@ -111,6 +113,7 @@ if [[ ! -f "$RELEASE/.ready" ]]; then
 fi
 
 # Migração pode ter ocorrido entre a validação e o swap: confira de novo.
+load_runtime_env
 pushd "$RELEASE" >/dev/null
 as_app "$RELEASE/.venv/bin/alembic" current --check-heads
 popd >/dev/null
