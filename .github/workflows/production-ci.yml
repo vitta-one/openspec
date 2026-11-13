@@ -2,7 +2,7 @@ name: Vitta One | CI Produção
 
 on:
   pull_request:
-    branches: [prod]
+    branches: [develop, prod]
   push:
     branches: [prod]
   workflow_dispatch:
