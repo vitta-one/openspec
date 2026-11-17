@@ -7,7 +7,7 @@ Rastrear intenções e tentativas de envio ao Resend com estados verdadeiros, co
 ## ADDED Requirements
 
 ### Requirement: Endereços sintéticos e remetente inválido não chegam ao Resend
-O sistema MUST recusar destinatários com domínios reservados para teste ou inválidos, incluindo `.invalid`, `.test`, `.example`, `.localhost` e `.local`, antes de qualquer chamada HTTP ao Resend. `RESEND_FROM_EMAIL` MUST conter uma única caixa postal sintaticamente válida, opcionalmente com nome de exibição, e MUST recusar domínios reservados. Ausência ou sintaxe inválida do remetente MUST produzir `NOT_CONFIGURED` sem chamada HTTP. A verificação de que o domínio está habilitado na conta permanece responsabilidade do provedor; rejeição explícita do Resend MUST ser registrada como falha, não como entrega.
+O sistema MUST bloquear destinatários de domínios reservados ou inválidos antes de chamar o Resend. `RESEND_FROM_EMAIL` MUST conter uma única caixa postal válida, com nome de exibição opcional e domínio não reservado. Remetente ausente ou inválido MUST produzir `NOT_CONFIGURED` sem chamada HTTP. A habilitação do domínio é verificada pelo provedor; rejeição explícita do Resend MUST ser registrada como falha, nunca como entrega.
 
 #### Scenario: Destinatário de teste
 - **WHEN** um envio de onboarding ou notificação usa endereço com domínio `.invalid`, `.test`, `.example`, `.localhost` ou `.local`
