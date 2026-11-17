@@ -16,6 +16,10 @@ Extrair transporte httpx em `notifications/resend.py`, mantendo `EmailDelivery` 
 
 Onboarding continua síncrono no trecho em que segredo existe: registrar intenção/tentativa antes do envio, enviar uma vez, atualizar metadados. Se crash após registrar SENDING, marcar UNKNOWN ao recuperar, exigindo reemissão de segredo pelo fluxo original. Nunca reconstituir segredo perdido de armazenamento. Manter status legados nos registros existentes para compatibilidade e associar message id à tentativa.
 
+### 1.1 Validação de endereços antes do transporte
+
+O transporte valida um único remetente com sintaxe de caixa postal e bloqueia destinatários/remetentes dos domínios reservados `.invalid`, `.test`, `.example`, `.localhost` e `.local`. Configuração sem remetente válido vira NOT_CONFIGURED antes do HTTP; destinatário sintético é inelegível e não alcança o provedor. Essa checagem não prova que o domínio foi verificado na conta Resend; apenas uma rejeição retornada pelo provedor estabelece essa falha operacional.
+
 ### 2. Persistência mínima
 
 | Entidade | Campos propostos | Integridade |

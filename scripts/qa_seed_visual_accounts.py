@@ -10,9 +10,9 @@ import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from sqlalchemy.engine import make_url
 from sqlmodel import Session, create_engine, select
 
+from qa_browser.playwright_support import validate_disposable_database_url
 from vitta_one.auth.roles import Role
 from vitta_one.auth.security import hash_password
 from vitta_one.models.auth import User
@@ -22,10 +22,11 @@ from vitta_one.models.patient_queue import Patient
 def main() -> None:
     if os.environ.get("VITTA_ONE_QA_DISPOSABLE_DATABASE") != "yes":
         raise RuntimeError("A criação de contas QA exige banco descartável")
-    url = make_url(os.environ["DATABASE_URL"])
-    if (url.drivername != "postgresql+psycopg" or url.host not in ("localhost", "127.0.0.1")
-            or url.port != 5432 or url.database != "vitta_one" or url.username != "postgres"):
-        raise RuntimeError("O banco não corresponde ao PostgreSQL isolado do GitHub Actions")
+    validate_disposable_database_url(
+        os.environ["DATABASE_URL"],
+        enabled=os.environ.get("VITTA_ONE_QA_DISPOSABLE_DATABASE", ""),
+        database_id=os.environ.get("VITTA_ONE_QA_DISPOSABLE_DATABASE_ID", ""),
+    )
 
     fixture_file = Path("qa-artifacts/fixture.json")
     fixture = json.loads(fixture_file.read_text(encoding="utf-8"))

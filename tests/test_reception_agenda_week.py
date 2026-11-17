@@ -5,8 +5,11 @@ from datetime import date, timedelta
 import pytest
 
 from vitta_one.appointment_scheduling.reception_calendar import (
+    build_calendar_hour_rows,
     build_week_days,
+    count_calendar_outside_business_hours,
     filter_consultations_for_day,
+    monday_of_week,
     week_bounds,
 )
 
@@ -27,6 +30,12 @@ def test_week_bounds_are_inclusive_and_cross_month_year():
     assert week_bounds("2026-12-30") == ("2026-12-30", "2027-01-05")
     with pytest.raises(ValueError):
         week_bounds("2026-02-30")
+
+
+def test_monday_of_week_aligns_any_day_without_using_browser_timezone():
+    assert monday_of_week("2026-11-17") == "2026-11-16"
+    assert monday_of_week("2026-11-22") == "2026-11-16"
+    assert monday_of_week("2026-11-23") == "2026-11-23"
 
 
 def test_empty_week_contains_seven_small_zero_count_days():
@@ -65,3 +74,44 @@ def test_selected_day_filters_same_authorized_rows_without_mutating_source():
     assert [r["id"] for r in filter_consultations_for_day(rows, "2026-11-01")] == [2]
     assert filter_consultations_for_day(rows, "2026-11-02") == []
     assert len(rows) == 2
+
+
+def test_hour_grid_places_real_appointments_in_their_local_day_and_time():
+    rows = [
+        _consultation(3, "17/11/2026", "08:30", "CONFIRMADA"),
+        _consultation(1, "16/11/2026", "09:00", "EM_ANDAMENTO"),
+        _consultation(2, "22/11/2026", "20:15", "AGENDADA"),
+        _consultation(4, "23/11/2026", "10:00"),
+    ]
+
+    grid = build_calendar_hour_rows(rows, "2026-11-16")
+
+    assert grid[0]["time_label"] == "07:00"
+    row_by_hour = {row["time_label"]: row for row in grid}
+    assert row_by_hour["09:00"]["cells"][0]["appointments"][0]["status"] == "EM_ANDAMENTO"
+    assert row_by_hour["08:00"]["cells"][1]["appointments"][0]["time"] == "08:30"
+    assert count_calendar_outside_business_hours(rows, "2026-11-16") == 1
+    assert not any(
+        appointment["patient_name"] == "Paciente 4"
+        for row in grid
+        for cell in row["cells"]
+        for appointment in cell["appointments"]
+    )
+
+
+def test_empty_hour_grid_keeps_reference_business_hours_without_fake_appointments():
+    grid = build_calendar_hour_rows([], "2026-11-16")
+
+    assert [row["time_label"] for row in grid] == [f"{hour:02d}:00" for hour in range(7, 19)]
+    assert all(not cell["appointments"] for row in grid for cell in row["cells"])
+
+
+def test_daily_hour_grid_contains_only_the_selected_day():
+    rows = [
+        _consultation(1, "16/11/2026", "09:00"),
+        _consultation(2, "17/11/2026", "10:00"),
+    ]
+    grid = build_calendar_hour_rows(rows, "2026-11-16", "2026-11-17")
+    assert all(len(row["cells"]) == 1 for row in grid)
+    assert grid[3]["cells"][0]["appointments"][0]["patient_name"] == "Paciente 2"
+    assert count_calendar_outside_business_hours(rows, "2026-11-16", "2026-11-17") == 0

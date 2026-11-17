@@ -9,6 +9,7 @@ import hashlib
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from qa_browser.playwright_support import validate_disposable_database_url
 from sqlmodel import Session, create_engine
 
 from vitta_one.appointment_scheduling.service import create_availability_slot, schedule_consultation
@@ -39,8 +40,11 @@ def main() -> None:
     if os.environ.get("VITTA_ONE_QA_DISPOSABLE_DATABASE") != "yes":
         raise RuntimeError("QA only permitted on an explicitly declared disposable database")
     database_url = os.environ["DATABASE_URL"]
-    if not database_url.startswith("postgresql+psycopg://") or "localhost:5432/vitta_one" not in database_url:
-        raise RuntimeError("Refusing QA fixture creation outside local CI PostgreSQL")
+    validate_disposable_database_url(
+        database_url,
+        enabled=os.environ.get("VITTA_ONE_QA_DISPOSABLE_DATABASE", ""),
+        database_id=os.environ.get("VITTA_ONE_QA_DISPOSABLE_DATABASE_ID", ""),
+    )
     password = os.environ["VITTA_ONE_QA_PASSWORD"]
     now = datetime.now(timezone.utc)
     engine = create_engine(database_url)

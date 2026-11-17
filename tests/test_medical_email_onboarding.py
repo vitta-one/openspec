@@ -18,6 +18,7 @@ from vitta_one.auth.service import (
 )
 from vitta_one.models.auth import User
 from vitta_one.models.professional import Professional, ProfessionalSpecialty
+from vitta_one.notifications.resend import valid_sender
 from vitta_one.professional_directory.email_sender import send_medical_welcome
 from vitta_one.professional_directory.service import (
     DirectoryConflictError,
@@ -176,6 +177,65 @@ def test_resend_missing_env_does_not_call_provider(monkeypatch):
     assert result.status == "NOT_CONFIGURED"
 
 
+@pytest.mark.parametrize("domain", [".invalid", ".test", ".example", ".localhost", ".local"])
+def test_resend_rejects_reserved_recipient_without_provider_call(monkeypatch, domain):
+    monkeypatch.setenv("RESEND_API_KEY", "fake-unit-test-only")
+    monkeypatch.setenv("RESEND_FROM_EMAIL", "Vitta QA <no-reply@vitta-clinic.com>")
+    captured = {"calls": 0}
+
+    class FakeClient:
+        def __init__(self, **kwargs):
+            pass
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+        def post(self, *args, **kwargs):
+            captured["calls"] += 1
+            return httpx.Response(200, json={"id": "should-not-be-used"})
+
+    monkeypatch.setattr(httpx, "Client", FakeClient)
+    result = send_medical_welcome(
+        name="QA", email=f"qa@vitta{domain}", temporary_password="test-only",
+        professional_id=10,
+    )
+
+    assert result.status == "FAILED"
+    assert captured["calls"] == 0
+
+
+@pytest.mark.parametrize("sender", ["no-reply@clinic.invalid", "not a mailbox"])
+def test_resend_requires_a_valid_non_synthetic_sender(monkeypatch, sender):
+    monkeypatch.setenv("RESEND_API_KEY", "fake-unit-test-only")
+    monkeypatch.setenv("RESEND_FROM_EMAIL", sender)
+    captured = {"calls": 0}
+
+    class FakeClient:
+        def __init__(self, **kwargs):
+            pass
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+        def post(self, *args, **kwargs):
+            captured["calls"] += 1
+            return httpx.Response(200, json={"id": "should-not-be-used"})
+
+    monkeypatch.setattr(httpx, "Client", FakeClient)
+    result = send_medical_welcome(
+        name="QA", email="qa@vitta-clinic.com", temporary_password="test-only",
+        professional_id=10,
+    )
+
+    assert result.status == "NOT_CONFIGURED"
+    assert captured["calls"] == 0
+
+
+def test_resend_sender_allows_quoted_comma_display_name_but_one_mailbox_only():
+    assert valid_sender('"Vitta, Clínica" <no-reply@vitta-clinic.com>')
+    assert not valid_sender("no-reply@vitta-clinic.com, other@another-clinic.com")
+
+
 @pytest.mark.parametrize("response_status,has_id,expected", [
     (200, True, "ACCEPTED"), (422, False, "FAILED"),
     (429, False, "FAILED"), (500, False, "FAILED"), (200, False, "UNKNOWN"),
@@ -184,7 +244,7 @@ def test_resend_reports_only_actual_provider_acceptance(
     monkeypatch, response_status, has_id, expected
 ):
     monkeypatch.setenv("RESEND_API_KEY", "fake-unit-test-only")
-    monkeypatch.setenv("RESEND_FROM_EMAIL", "qa@example.invalid")
+    monkeypatch.setenv("RESEND_FROM_EMAIL", "Vitta QA <no-reply@vitta-clinic.com>")
     captured = {}
     class FakeClient:
         def __init__(self, **kwargs):
@@ -201,7 +261,7 @@ def test_resend_reports_only_actual_provider_acceptance(
             )
     monkeypatch.setattr(httpx, "Client", FakeClient)
     result = send_medical_welcome(
-        name="<Test>", email="qa@example.invalid",
+        name="<Test>", email="qa@vitta-clinic.com",
         temporary_password="dummy-test-only", professional_id=10,
     )
     assert result.status == expected
@@ -212,7 +272,7 @@ def test_resend_reports_only_actual_provider_acceptance(
 
 def test_timeout_is_unknown_not_a_false_failed_or_success(monkeypatch):
     monkeypatch.setenv("RESEND_API_KEY", "fake-unit-test-only")
-    monkeypatch.setenv("RESEND_FROM_EMAIL", "qa@example.invalid")
+    monkeypatch.setenv("RESEND_FROM_EMAIL", "Vitta QA <no-reply@vitta-clinic.com>")
     class TimeoutClient:
         def __init__(self, **kwargs): pass
         def __enter__(self): return self
@@ -221,7 +281,7 @@ def test_timeout_is_unknown_not_a_false_failed_or_success(monkeypatch):
             raise httpx.TimeoutException("fake timeout")
     monkeypatch.setattr(httpx, "Client", TimeoutClient)
     result = send_medical_welcome(
-        name="QA", email="qa@example.invalid",
+        name="QA", email="qa@vitta-clinic.com",
         temporary_password="dummy", professional_id=5,
     )
     assert result.status == "UNKNOWN"

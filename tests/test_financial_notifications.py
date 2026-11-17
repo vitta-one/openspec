@@ -37,6 +37,9 @@ from vitta_one.integration_api import provider_routes
 def setup(monkeypatch, request):
     monkeypatch.setenv("VITTA_ONE_CLINIC_TIMEZONE", "America/Sao_Paulo")
     monkeypatch.setenv("VITTA_ONE_PUBLIC_URL", "https://vitta.example.test")
+    # Keep provider tests offline even when a developer has local credentials.
+    monkeypatch.delenv("RESEND_API_KEY", raising=False)
+    monkeypatch.delenv("RESEND_FROM_EMAIL", raising=False)
     if request.param == "postgresql":
         url = os.getenv("DATABASE_URL", "")
         if not url.startswith("postgresql") or os.getenv("VITTA_ONE_QA_DISPOSABLE_DATABASE") != "yes":
@@ -56,7 +59,8 @@ def setup(monkeypatch, request):
     with Session(engine) as db:
         tokens, users = {}, {}
         for role in Role:
-            user = User(email=f"{role.value.lower()}@example.test", password_hash="test-no-login", role=role.value)
+            email = "patient@vitta-clinic.com" if role == Role.PACIENTE else f"{role.value.lower()}@example.test"
+            user = User(email=email, password_hash="test-no-login", role=role.value)
             db.add(user)
             db.flush()
             users[role] = user.id
@@ -152,6 +156,26 @@ def test_issue_duplicate_and_persisted_details(setup, method):
         issue(setup, provider, method)
     assert provider.calls.count(("POST", "/v3/payments")) == 1
     assert len(db.exec(select(FinancialCustomer)).all()) == 1
+
+
+def test_finance_evolution_bar_uses_persisted_received_amount(setup):
+    from vitta_one.financial.application import snapshot
+
+    db,tokens,_,_,_ = setup
+    charge = issue(setup, Provider())
+    charge.status = "RECEIVED"
+    charge.received_at = datetime(2026, 11, 10, 15, 0, tzinfo=timezone.utc)
+    db.add(charge)
+    db.commit()
+
+    result = snapshot(
+        db, token=tokens[Role.FINANCEIRO], start=date(2026, 11, 1),
+        end=date(2026, 11, 30),
+    )
+
+    assert result["evolution"] == [
+        {"day": "2026-11-10", "value": "R$ 100,00", "bar_percent": 100}
+    ]
 
 
 def test_timeout_blocks_reissue_and_reconciles_existing_external_charge(setup):

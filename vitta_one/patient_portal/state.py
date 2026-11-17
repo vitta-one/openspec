@@ -184,6 +184,13 @@ class AdminClinicConfigurationState(rx.State):
         self.clinic_address = ""
         self.configured = False
         self.revision = 0
+        self.is_loading = False
+        self.is_saving = False
+        self.load_failed = False
+        self.name_error = ""
+        self.address_error = ""
+        self.error_message = ""
+        self.success_message = ""
 
     @rx.event
     def set_clinic_name(self, value: str):

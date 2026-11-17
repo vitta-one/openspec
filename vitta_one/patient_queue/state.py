@@ -339,6 +339,7 @@ class ReceptionQueueState(rx.State):
     queue_priority_filter: str = "TODAS"
     queue_last_updated_at: str = ""
     queue_load_error: str = ""
+    queue_has_loaded: bool = False
     patient_directory: list[PatientDirectoryRow] = []
     patient_directory_query: str = ""
     patient_directory_applied_query: str = ""
@@ -415,6 +416,10 @@ class ReceptionQueueState(rx.State):
         return len(self.queue_rows)
 
     @rx.var
+    def queue_preview_rows(self) -> list[QueueRow]:
+        return self.queue_rows[:5]
+
+    @rx.var
     def red_waiting_count(self) -> int:
         return sum(row["priority"] == "VERMELHO" for row in self.queue_rows)
 
@@ -482,6 +487,7 @@ class ReceptionQueueState(rx.State):
     def _clear_sensitive_view(self) -> None:
         self.qa_local_enabled = False
         self.queue_rows = []
+        self.queue_has_loaded = False
         self.queue_search_query = ""
         self.queue_priority_filter = "TODAS"
         self.queue_last_updated_at = ""
@@ -580,6 +586,7 @@ class ReceptionQueueState(rx.State):
         self.queue_rows = [_serialize_queue_item(item, now=now) for item in items]
         self.queue_last_updated_at = format_clinic_datetime(now)
         self.queue_load_error = ""
+        self.queue_has_loaded = True
 
     async def _authorization_redirect(self, exc: Exception):
         self._clear_sensitive_view()
@@ -745,6 +752,7 @@ class ReceptionQueueState(rx.State):
                 "Não foi possível carregar a fila agora. Atualize a página e tente novamente."
             )
             self.queue_load_error = self.error_message
+            self.queue_has_loaded = True
         finally:
             self.is_loading_queue = False
             yield
