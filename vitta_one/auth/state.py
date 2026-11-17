@@ -127,12 +127,38 @@ class AuthState(rx.State):
         from vitta_one.admin_preview.reception_state import AdminReceptionPreviewState
         from vitta_one.clinical_prescription.state import PrintPrescriptionState
         from vitta_one.doctor_workspace.state import DoctorWorkspaceState
-        from vitta_one.patient_portal.state import PatientPortalState
+        from vitta_one.patient_portal.state import (
+            AdminClinicConfigurationState, PatientPortalState,
+        )
         from vitta_one.patient_portal.booking_state import PatientBookingState
         from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
+        from vitta_one.reception.dashboard.state import ReceptionDashboardState
+        from vitta_one.admin_dashboard.state import AdminDashboardState
+        from vitta_one.admin_preview.agenda_state import AdminAgendaPreviewState
+        from vitta_one.appointment_scheduling.state import (
+            AdminAvailabilityState, ReceptionAgendaState,
+        )
+        from vitta_one.auth.staff_state import AdminStaffState
+        from vitta_one.professional_directory.state import AdminDirectoryState
 
         queue = await self.get_state(ReceptionQueueState)
         queue._clear_sensitive_view()
+        agenda = await self.get_state(ReceptionAgendaState)
+        agenda._clear_sensitive()
+        staff = await self.get_state(AdminStaffState)
+        staff._clear_sensitive_data()
+        directory = await self.get_state(AdminDirectoryState)
+        directory._clear_sensitive_data()
+        admin_agenda_preview = await self.get_state(AdminAgendaPreviewState)
+        admin_agenda_preview._clear_sensitive_data()
+        admin_availability = await self.get_state(AdminAvailabilityState)
+        admin_availability._clear_sensitive()
+        admin_dashboard = await self.get_state(AdminDashboardState)
+        admin_dashboard._clear()
+        clinic_configuration = await self.get_state(AdminClinicConfigurationState)
+        clinic_configuration._clear()
+        reception_dashboard = await self.get_state(ReceptionDashboardState)
+        reception_dashboard._clear_data()
         doctor = await self.get_state(DoctorQueueState)
         doctor._clear_active()
         workspace = await self.get_state(DoctorWorkspaceState)
@@ -381,6 +407,12 @@ class AuthState(rx.State):
             role=identity.role,
             verified_path=self.router.route_id,
         )
+        from vitta_one.ui.components import SidebarState
+
+        sidebar = await self.get_state(SidebarState)
+        if sidebar.active_profile != identity.role.value:
+            sidebar.active_profile = identity.role.value
+            sidebar.user_changed_desktop = False
         self.auth_checked = True
         yield
 
@@ -579,6 +611,11 @@ class AuthState(rx.State):
 
         self.session_token = ""
         self._clear_identity()
+        from vitta_one.ui.components import SidebarState
+
+        sidebar = await self.get_state(SidebarState)
+        sidebar.active_profile = ""
+        sidebar.user_changed_desktop = False
         self.auth_checked = True
         yield rx.remove_cookie(SESSION_COOKIE_NAME)
         yield rx.redirect("/login")

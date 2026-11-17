@@ -10,6 +10,7 @@ from vitta_one.ui.components import (
     field_label,
     page_header,
     section_panel,
+    summary_metric,
 )
 
 
@@ -1272,6 +1273,26 @@ def specialties_management_workspace() -> rx.Component:
             ),
         ),
         breadcrumb(("Administração", "/admin"), ("Especialidades", None)),
+        rx.cond(
+            AdminDirectoryState.directory_load_failed,
+            rx.fragment(),
+            rx.cond(
+                AdminDirectoryState.is_loading,
+                rx.center(
+                    rx.spinner(size="2"),
+                    rx.text("Carregando especialidades…", size="2",
+                            color="var(--vitta-text-muted)"),
+                    gap="3", min_height="5rem", width="100%", role="status",
+                ),
+                rx.grid(
+                    summary_metric("Total de especialidades", AdminDirectoryState.specialty_count, "stethoscope"),
+                    summary_metric("Ativas", AdminDirectoryState.active_specialty_count, "circle_check"),
+                    summary_metric("Inativas", AdminDirectoryState.inactive_specialty_count, "circle_x"),
+                    columns=rx.breakpoints(initial="1", sm="3"),
+                    gap="3", width="100%", class_name="vitta-directory-summary",
+                ),
+            ),
+        ),
         feedback_region(
             AdminDirectoryState.error_message, AdminDirectoryState.success_message
         ),

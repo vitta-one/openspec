@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 250" fill="none" role="presentation">
+  <defs>
+    <linearGradient id="sky" x1="40" y1="25" x2="650" y2="230" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8FCFC"/>
+      <stop offset="1" stop-color="#D8F1EC"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="446" y1="74" x2="658" y2="216" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B7E6DE"/>
+      <stop offset="1" stop-color="#E9F7F4"/>
+    </linearGradient>
+    <linearGradient id="wall" x1="274" y1="78" x2="689" y2="213" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF"/>
+      <stop offset="1" stop-color="#ECF8F6"/>
+    </linearGradient>
+  </defs>
+  <path d="M0 0h720v250H0z" fill="url(#sky)"/>
+  <path d="M0 170c89-7 112-54 196-48 77 5 112 45 185 26 70-18 117-53 190-33 63 18 89 6 149-12v147H0z" fill="#E7F6F3"/>
+  <path d="M294 68h335l63 24v122H279V89z" fill="url(#wall)" stroke="#A9D6CD" stroke-width="3"/>
+  <path d="m294 68-20 19 4 7 17-15" fill="#FFF" stroke="#A9D6CD" stroke-width="3"/>
+  <path d="M459 95h190v119H459z" fill="url(#glass)" stroke="#6DAFA3" stroke-width="4"/>
+  <path d="M521 96v117m65-117v117M461 153h186" stroke="#76B9AC" stroke-width="4"/>
+  <path d="M674 98v115" stroke="#B5DED7" stroke-width="5"/>
+  <path d="M346 118c0-13 10-23 23-23 8 0 15 4 19 10 4-6 11-10 19-10 13 0 23 10 23 23 0 25-42 49-42 49s-42-24-42-49Z" stroke="#0F766E" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M64 207h147" stroke="#B5DCD5" stroke-width="3"/>
+  <path d="M84 195h112l-9-21H93z" fill="#74B9A9"/>
+  <path d="M96 170v-30m38 30v-30m38 30v-30" stroke="#458F82" stroke-width="5" stroke-linecap="round"/>
+  <path d="M79 140h150" stroke="#4C9B8D" stroke-width="7" stroke-linecap="round"/>
+  <path d="M101 195v14m80-14v14" stroke="#458F82" stroke-width="4" stroke-linecap="round"/>
+  <path d="M24 224h672" stroke="#B5DCD5" stroke-width="3"/>
+  <path d="M250 214c9-23 19-30 27-31-4 15-10 25-27 31Zm10-12c1-24-5-34-12-39-2 16 0 27 12 39Zm5-2c15-18 27-21 36-19-9 13-18 20-36 19Z" fill="#70B9A7"/>
+  <path d="M245 214h25l-3 11h-19z" fill="#B7D9D2"/>
+</svg>

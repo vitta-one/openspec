@@ -10,16 +10,17 @@ from pathlib import Path
 
 import pytest
 from playwright.sync_api import Page, expect, sync_playwright
+from qa_browser.playwright_support import launch_chromium, validate_loopback_base_url
 
 
-BASE = os.getenv("QA_BASE_URL", "http://127.0.0.1:3000")
+BASE = validate_loopback_base_url(os.getenv("QA_BASE_URL", "http://127.0.0.1:3000"))
 FIXTURE = json.loads(Path("qa-artifacts/fixture.json").read_text(encoding="utf-8"))
 
 
 @pytest.fixture(scope="module")
 def browser():
     with sync_playwright() as playwright:
-        instance = playwright.chromium.launch(headless=True)
+        instance = launch_chromium(playwright)
         yield instance
         instance.close()
 
@@ -199,7 +200,7 @@ def test_admin_dashboard_is_compact_and_routes_to_complete_directory(page: Page)
     expect(page.get_by_role("link", name=re.compile("^Gerenciar horários"))).to_be_visible()
     expect(page.locator("#admin-slot-date")).to_have_count(0)
     expect(page.locator("#staff-password")).to_have_count(0)
-    link = page.get_by_role("main").get_by_role("link", name=re.compile("^Especialidades"))
+    link = page.get_by_role("main").get_by_role("link", name="Especialidades", exact=True)
     assert link.evaluate("(el) => getComputedStyle(el).cursor") == "pointer"
     link.focus()
     link.press("Enter")
@@ -224,7 +225,7 @@ def test_admin_specialty_search_and_professional_routes_at_mobile_width(page: Pa
         page.locator("#specialty-directory-search").fill("")
         page.get_by_role("navigation", name="Trilha de navegação").get_by_role("link", name="Administração", exact=True).click()
         expect(page).to_have_url(re.compile(r"/admin/?$"), timeout=30000)
-        page.get_by_role("main").get_by_role("link", name=re.compile("^Profissionais")).click()
+        page.get_by_role("main").get_by_role("link", name="Profissionais", exact=True).click()
         expect(page).to_have_url(re.compile(r"/admin/profissionais/?$"), timeout=30000)
         expect(page.get_by_role("heading", name="Todos os profissionais")).to_be_visible(timeout=30000)
         assert page.evaluate(
@@ -424,6 +425,23 @@ def login_as_reception(page: Page) -> None:
     expect(page.locator(".vitta-reception-day-table")).to_be_visible(timeout=30000)
 
 
+def expect_patient_in_paginated_agenda(page: Page, patient_name: str) -> None:
+    """Visit later pages because the reception agenda intentionally paginates."""
+    page_label = page.get_by_text(re.compile(r"^Página \d+ de \d+$"))
+    for _ in range(5):
+        patient = page.get_by_text(patient_name, exact=True).first
+        if patient.count():
+            expect(patient).to_be_visible(timeout=15000)
+            return
+        next_page = page.get_by_role("button", name="Próxima", exact=True)
+        if not next_page.count() or not next_page.is_enabled():
+            break
+        previous_page = page_label.inner_text()
+        next_page.click()
+        expect(page_label).not_to_have_text(previous_page, timeout=15000)
+    raise AssertionError(f"Paciente não apareceu na paginação da agenda: {patient_name}")
+
+
 def test_reception_daily_operations_table_and_filters(page: Page) -> None:
     """Reception works from real daily appointments, not an abstract KPI dashboard."""
     login_as_reception(page)
@@ -578,7 +596,7 @@ def test_reception_booking_modal_is_shared_and_keyboard_responsive(page: Page) -
 
     # The Agenda provides the same modal without a second booking screen.
     page.goto(BASE + "/recepcao/agenda", wait_until="domcontentloaded")
-    page.get_by_role("button", name="Nova consulta", exact=True).click()
+    page.get_by_role("button", name="Agendar consulta", exact=True).click()
     expect(page.get_by_role("dialog", name="Agendar consulta")).to_be_visible(
         timeout=30000
     )
@@ -867,9 +885,11 @@ def test_patient_books_own_appointment_and_both_staff_agendas_update(page: Page)
             role_page.goto(BASE + route, wait_until="domcontentloaded")
             if route.startswith("/recepcao"):
                 expect(role_page.get_by_role("heading", name="Consultas do período")).to_be_visible(timeout=30000)
-            expect(role_page.get_by_text(FIXTURE["booking_patient_name"], exact=True).first).to_be_visible(
-                timeout=30000
-            )
+                expect_patient_in_paginated_agenda(role_page, FIXTURE["booking_patient_name"])
+            else:
+                expect(
+                    role_page.get_by_text(FIXTURE["booking_patient_name"], exact=True).first
+                ).to_be_visible(timeout=30000)
             role_page.screenshot(path="qa-artifacts/" + screenshot, full_page=True)
         finally:
             context.close()
@@ -988,7 +1008,7 @@ def test_reception_booking_cpf_search_retains_selected_patient(page: Page) -> No
     """CPF lookup through the shared modal retains identity across booking steps."""
     login_as_reception(page)
     page.goto(BASE + "/recepcao/agenda", wait_until="domcontentloaded")
-    page.get_by_role("button", name="Nova consulta", exact=True).click()
+    page.get_by_role("button", name="Agendar consulta", exact=True).click()
     dialog = page.get_by_role("dialog", name="Agendar consulta")
     expect(dialog).to_be_visible(timeout=30000)
     search = dialog.locator("#booking-patient-query")

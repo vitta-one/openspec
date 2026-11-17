@@ -12,6 +12,7 @@ O adaptador Resend já envia credenciais médicas e convites do portal, mas dupl
 - Implementar confirmação da reserva, reagendamento, cancelamento e lembrete de 24 horas, com autorização de comunicação específica aprovada pelo usuário.
 - Consumir eventos financeiros após commit: cobrança disponível e pagamento efetivamente recebido.
 - Verificar webhooks assinados Resend para rastreamento de entrega, falha e reclamação; aceitar requisição não significa entrega na caixa de entrada.
+- Validar a sintaxe do remetente e impedir que domínios reservados para testes ou inválidos cheguem ao transporte externo.
 - Reenvio manual autorizado com motivo, identidade e revisão de elegibilidade; resultado incerto não dispara retry cego.
 
 ## Capabilities

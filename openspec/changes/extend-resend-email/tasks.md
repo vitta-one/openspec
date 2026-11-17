@@ -13,6 +13,7 @@
 - [ ] 2.2 Criar layout HTML/texto e templates aprovados; testar escape, URL, campos permitidos, leitura móvel e ausência de diagnóstico/recibo inventado.
 - [x] 2.3 Registrar intenção/tentativa de acesso sem persistir segredo; executar regressões médicas, convite/ativação, expiração, reemissão e QA local.
 - [x] 2.4 Atualizar documentação de configuração e limites; verificar compatibilidade das variáveis existentes e não anunciar recuperação de senha/cartão.
+- [x] 2.5 Validar sintaxe do remetente e bloquear domínios reservados em destinatário/remetente; verificar ausência de chamada HTTP com cliente simulado.
 
 ## 3. Persistência e autorização
 

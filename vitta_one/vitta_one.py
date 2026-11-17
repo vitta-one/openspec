@@ -9,6 +9,7 @@ from vitta_one.appointment_scheduling.state import AdminAvailabilityState, Recep
 from vitta_one.doctor_workspace.state import DoctorWorkspaceState
 from vitta_one.auth.roles import Role
 from vitta_one.auth.state import AuthState
+from vitta_one.admin_dashboard.state import AdminDashboardState
 from vitta_one.auth.staff_state import AdminStaffState
 from vitta_one.clinical_prescription.state import PrintPrescriptionState
 from vitta_one.models import (
@@ -144,7 +145,7 @@ app.add_page(
     admin_page,
     route=Role.ADMINISTRADOR.dashboard_path,
     title="Painel administrativo | Vitta-One",
-    on_load=AuthState.load_protected,
+    on_load=[AuthState.load_protected, AdminDashboardState.load],
 )
 app.add_page(
     admin_staff_types_page,
@@ -243,7 +244,7 @@ app.add_page(
     reception_page,
     route=Role.RECEPCIONISTA.dashboard_path,
     title="Painel de recepção | Vitta-One",
-    on_load=[AuthState.load_protected, ReceptionDashboardState.load],
+    on_load=[AuthState.load_protected, ReceptionDashboardState.load, ReceptionQueueState.load],
 )
 app.add_page(
     reception_agenda_page,

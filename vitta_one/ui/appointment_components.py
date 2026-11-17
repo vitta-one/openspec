@@ -28,7 +28,12 @@ def _professional_select(
         else ReceptionAgendaState.professionals
     )
     return rx.select.root(
-        rx.select.trigger(id=control_id, width="100%", class_name="vitta-select-trigger"),
+        rx.select.trigger(
+            id=control_id,
+            width="100%",
+            class_name="vitta-select-trigger",
+            aria_label=("Filtrar por profissional" if include_all else "Selecionar profissional"),
+        ),
         rx.select.content(
             first,
             rx.foreach(options, lambda item: rx.select.item(item["label"], value=item["value"])),
@@ -851,7 +856,7 @@ def _booking_patient_step() -> rx.Component:
         rx.cond(
             ReceptionAgendaState.selected_patient_id > 0,
             rx.flex(
-                rx.hstack(rx.icon("check_circle", size=18),
+                rx.hstack(rx.icon("circle_check", size=18),
                           rx.text(ReceptionAgendaState.selected_patient_name,
                                   font_weight="700", size="2"), spacing="2"),
                 rx.cond(
@@ -1129,7 +1134,7 @@ def _booking_dialog() -> rx.Component:
                     rx.cond(
                         ReceptionAgendaState.booking_error_message != "",
                         rx.box(
-                            rx.hstack(rx.icon("alert_circle", size=16),
+                            rx.hstack(rx.icon("triangle_alert", size=16),
                                       rx.text(ReceptionAgendaState.booking_error_message, size="2"),
                                       spacing="2"),
                             role="alert", id="booking-error",
@@ -1277,6 +1282,165 @@ def _agenda_week_day(day) -> rx.Component:
     )
 
 
+def _reception_calendar_event(appointment, extra_count=0) -> rx.Component:
+    """An actual consultation is also a shortcut to its date-filtered table."""
+    event_class = rx.match(
+        appointment["status"],
+        (
+            ConsultationStatus.CONFIRMADA.value,
+            "vitta-reception-calendar-event vitta-reception-calendar-event--confirmed",
+        ),
+        (
+            ConsultationStatus.EM_ANDAMENTO.value,
+            "vitta-reception-calendar-event vitta-reception-calendar-event--in-progress",
+        ),
+        (
+            ConsultationStatus.CONCLUIDA.value,
+            "vitta-reception-calendar-event vitta-reception-calendar-event--completed",
+        ),
+        (
+            ConsultationStatus.CANCELADA.value,
+            "vitta-reception-calendar-event vitta-reception-calendar-event--cancelled",
+        ),
+        "vitta-reception-calendar-event vitta-reception-calendar-event--scheduled",
+    )
+    return rx.button(
+        rx.vstack(
+            rx.flex(
+                rx.text(
+                    appointment["time"],
+                    font_weight="800",
+                    size="1",
+                    class_name="vitta-tabular",
+                ),
+                rx.hstack(
+                    rx.text(
+                        appointment["status_label"],
+                        size="1",
+                        font_weight="700",
+                        class_name="vitta-reception-calendar-event-status",
+                    ),
+                    rx.cond(
+                        extra_count > 0,
+                        rx.text("+", extra_count, size="1", font_weight="800"),
+                        rx.fragment(),
+                    ),
+                    spacing="0",
+                ),
+                justify="between",
+                align="center",
+                gap="1",
+                width="100%",
+            ),
+            rx.text(
+                appointment["patient_name"] + " · " + appointment["professional_name"],
+                size="1",
+                font_weight="700",
+                class_name="vitta-reception-calendar-event-name",
+            ),
+            spacing="0",
+            align="stretch",
+            width="100%",
+        ),
+        type="button",
+        on_click=ReceptionAgendaState.select_agenda_day(appointment["date_iso"]),
+        aria_label=(
+            appointment["time"] + ", " + appointment["patient_name"] + ", "
+            + appointment["status_label"] + ". Filtrar consultas desta data."
+        ),
+        disabled=ReceptionAgendaState.is_loading,
+        class_name=event_class,
+    )
+
+
+def _reception_calendar_day_heading(day) -> rx.Component:
+    return rx.button(
+        rx.flex(
+            rx.text(day["day_label"], font_weight="750", size="2"),
+            rx.text(day["date_label"], size="2", class_name="vitta-tabular"),
+            rx.cond(
+                day["is_today"],
+                rx.badge("Hoje", color_scheme="teal", variant="soft", size="1"),
+                rx.fragment(),
+            ),
+            justify="center",
+            align="center",
+            gap="3",
+            width="100%",
+        ),
+        type="button",
+        on_click=ReceptionAgendaState.select_agenda_day(day["date_iso"]),
+        aria_label=day["aria_label"],
+        aria_pressed=day["is_selected"],
+        disabled=ReceptionAgendaState.is_loading,
+        class_name=rx.cond(
+            day["is_selected"],
+            "vitta-reception-calendar-day is-selected",
+            "vitta-reception-calendar-day",
+        ),
+    )
+
+
+def _reception_calendar_cell(cell) -> rx.Component:
+    return rx.box(
+        rx.cond(
+            cell["appointment_count"] > 0,
+            _reception_calendar_event(
+                cell["display_appointment"], cell["extra_count"]
+            ),
+            rx.fragment(),
+        ),
+        role="gridcell",
+        aria_label="Consultas do dia; a lista abaixo contém todos os registros.",
+        class_name="vitta-reception-calendar-cell",
+    )
+
+
+def _reception_agenda_view_select() -> rx.Component:
+    return rx.select.root(
+        rx.select.trigger(
+            id="reception-agenda-view",
+            width="7.5rem",
+            class_name="vitta-select-trigger",
+            aria_label="Visualização da agenda",
+        ),
+        rx.select.content(
+            rx.select.item("Semana", value="week"),
+            rx.select.item("Dia", value="day"),
+            position="popper",
+        ),
+        value=ReceptionAgendaState.agenda_view_mode,
+        on_change=ReceptionAgendaState.update_agenda_view_mode,
+        disabled=ReceptionAgendaState.is_loading,
+        size="3",
+    )
+
+
+def _reception_calendar_hour_row(row) -> rx.Component:
+    return rx.grid(
+        rx.text(
+            row["time_label"],
+            size="1",
+            font_weight="700",
+            class_name="vitta-tabular vitta-reception-calendar-hour",
+            role="rowheader",
+        ),
+        rx.foreach(row["cells"], _reception_calendar_cell),
+        role="row",
+        class_name="vitta-reception-calendar-grid vitta-reception-calendar-hour-row",
+    )
+
+
+def _reception_calendar_legend(label: str, tone: str) -> rx.Component:
+    return rx.hstack(
+        rx.box(class_name=f"vitta-reception-calendar-legend-dot {tone}", aria_hidden="true"),
+        rx.text(label, size="1"),
+        spacing="2",
+        align="center",
+        class_name="vitta-reception-calendar-legend-item",
+    )
+
+
 def _consultation_table_row(row) -> rx.Component:
     """Desktop table and mobile cards intentionally share operation handlers."""
     return rx.table.row(
@@ -1309,26 +1473,11 @@ def _consultation_table_row(row) -> rx.Component:
 
 
 def reception_agenda_panel() -> rx.Component:
-    """One authorized data scope for the week calendar and consultation list."""
+    """Weekly time grid and table share the same server-authorized consultations."""
     return section_panel(
         rx.vstack(
             rx.flex(
-                rx.box(
-                    rx.heading("Visão semanal", size="4"),
-                    rx.text(
-                        ReceptionAgendaState.agenda_period_label,
-                        color="var(--vitta-text-muted)", size="2",
-                        class_name="vitta-tabular", margin_top="0.3rem",
-                    ),
-                ),
                 rx.hstack(
-                    rx.button(
-                        rx.icon("calendar_plus", size=17),
-                        "Nova consulta",
-                        type="button", color_scheme="teal", high_contrast=True,
-                        on_click=ReceptionAgendaState.open_booking,
-                        disabled=ReceptionAgendaState.is_submitting,
-                    ),
                     rx.button(
                         rx.icon("chevron_left", size=18),
                         type="button", variant="outline", color_scheme="teal",
@@ -1348,14 +1497,43 @@ def reception_agenda_panel() -> rx.Component:
                         on_click=ReceptionAgendaState.move_agenda_week(1),
                         disabled=ReceptionAgendaState.is_loading,
                     ),
+                    rx.separator(orientation="vertical", height="2rem"),
+                    rx.text(
+                        ReceptionAgendaState.agenda_period_label,
+                        color="var(--vitta-text)",
+                        font_weight="750",
+                        class_name="vitta-tabular",
+                    ),
+                    rx.cond(
+                        ReceptionAgendaState.agenda_outside_hour_count > 0,
+                        rx.badge(
+                            ReceptionAgendaState.agenda_outside_hour_count,
+                            " fora de 07h–18h",
+                            color_scheme="orange",
+                            variant="soft",
+                            size="1",
+                            aria_label="Consultas fora do horário principal, listadas na tabela abaixo",
+                        ),
+                        rx.fragment(),
+                    ),
                     spacing="2", align="center", flex_wrap="wrap", max_width="100%",
                 ),
-                justify="between", align="center", gap="3",
-                flex_wrap="wrap", width="100%",
-            ),
-            rx.grid(
-                rx.box(
-                    field_label("Profissional", "reception-agenda-professional"),
+                rx.hstack(
+                    _reception_agenda_view_select(),
+                    rx.el.input(
+                        id="reception-agenda-start",
+                        type="date", lang="pt-BR",
+                        value=ReceptionAgendaState.agenda_date_input,
+                        on_change=ReceptionAgendaState.update_agenda_date_input,
+                        class_name="vitta-input vitta-reception-agenda-date",
+                        disabled=ReceptionAgendaState.is_loading,
+                        aria_label="Data da semana exibida",
+                    ),
+                    rx.button(
+                        "Aplicar", type="button", variant="outline", color_scheme="teal",
+                        on_click=ReceptionAgendaState.apply_agenda_date,
+                        disabled=ReceptionAgendaState.is_loading,
+                    ),
                     rx.box(
                         _professional_select(
                             control_id="reception-agenda-professional",
@@ -1364,50 +1542,19 @@ def reception_agenda_panel() -> rx.Component:
                             include_all=True,
                             disabled=ReceptionAgendaState.is_loading,
                         ),
-                        margin_top="0.4rem",
-                    ),
-                    min_width="0",
-                ),
-                rx.box(
-                    field_label("Início do período (7 dias)", "reception-agenda-start"),
-                    rx.el.input(
-                        id="reception-agenda-start",
-                        type="date", lang="pt-BR",
-                        value=ReceptionAgendaState.agenda_date_input,
-                        on_change=ReceptionAgendaState.update_agenda_date_input,
-                        class_name="vitta-input",
-                        margin_top="0.4rem",
-                        disabled=ReceptionAgendaState.is_loading,
-                        aria_describedby="reception-agenda-date-help",
-                    ),
-                    rx.text(
-                        "Datas da clínica; a lista acompanha os sete dias exibidos.",
-                        id="reception-agenda-date-help", size="1",
-                        color="var(--vitta-text-subtle)", margin_top="0.35rem",
-                    ),
-                    min_width="0",
-                ),
-                rx.hstack(
-                    rx.button(
-                        "Aplicar filtros", type="button",
-                        variant="outline", color_scheme="teal",
-                        on_click=ReceptionAgendaState.apply_agenda_date,
-                        disabled=ReceptionAgendaState.is_loading,
+                        width=rx.breakpoints(initial="100%", md="15rem"),
                     ),
                     rx.button(
-                        "Limpar", type="button", variant="ghost",
-                        color_scheme="teal",
+                        "Limpar", type="button", variant="ghost", color_scheme="teal",
                         on_click=ReceptionAgendaState.clear_agenda_filters,
                         disabled=ReceptionAgendaState.is_loading,
                     ),
                     spacing="2", align="center", flex_wrap="wrap",
+                    width=rx.breakpoints(initial="100%", md="auto"),
                 ),
-                columns=rx.breakpoints(
-                    initial="1", sm="repeat(2, minmax(0, 1fr))",
-                    lg="minmax(15rem, 1fr) minmax(14rem, 1fr) auto",
-                ),
-                gap="3", align_items="end", width="100%",
-                class_name="vitta-filter-strip",
+                justify="between", align="center", gap="3",
+                flex_wrap="wrap", width="100%",
+                class_name="vitta-reception-calendar-toolbar",
             ),
             feedback_region(
                 ReceptionAgendaState.error_message,
@@ -1427,113 +1574,175 @@ def reception_agenda_panel() -> rx.Component:
                         on_click=ReceptionAgendaState.refresh,
                     ),
                     rx.vstack(
-                        rx.grid(
-                            rx.foreach(ReceptionAgendaState.agenda_week_days, _agenda_week_day),
-                            columns=rx.breakpoints(initial="2", sm="3", md="4", xl="7"),
-                            gap="2", width="100%",
-                            class_name="vitta-reception-week-grid",
-                        ),
-                        rx.separator(margin_y="0.4rem"),
-                        rx.flex(
-                            rx.box(
-                                rx.heading("Consultas do período", size="4"),
+                        rx.box(
+                            rx.vstack(
+                            rx.grid(
                                 rx.text(
-                                    ReceptionAgendaState.visible_consultations.length(),
-                                    " registro(s) no período",
-                                    color="var(--vitta-text-muted)", size="2",
-                                    margin_top="0.3rem",
+                                    "Horário", size="1", font_weight="750",
+                                    role="columnheader",
+                                ),
+                                rx.foreach(
+                                    ReceptionAgendaState.agenda_calendar_days,
+                                    _reception_calendar_day_heading,
+                                ),
+                                role="row",
+                                class_name=(
+                                    "vitta-reception-calendar-grid "
+                                    "vitta-reception-calendar-grid-header"
                                 ),
                             ),
-                            rx.cond(
-                                ReceptionAgendaState.selected_agenda_date != "",
-                                rx.button(
-                                    rx.icon("x", size=15),
-                                    "Data: ", ReceptionAgendaState.selected_agenda_day_label,
-                                    type="button", variant="outline", color_scheme="teal",
-                                    on_click=ReceptionAgendaState.clear_agenda_day,
-                                    aria_label="Remover filtro de data",
-                                ),
-                                rx.fragment(),
+                            rx.foreach(
+                                ReceptionAgendaState.agenda_calendar_hour_rows,
+                                _reception_calendar_hour_row,
                             ),
-                            justify="between", gap="3", align="center",
-                            flex_wrap="wrap", width="100%",
+                            spacing="0",
+                            align="stretch",
+                            width="100%",
+                            class_name="vitta-reception-calendar-grid-body",
+                            role="grid",
+                                aria_label=rx.cond(
+                                    ReceptionAgendaState.agenda_view_mode == "day",
+                                    "Agenda diária por horário",
+                                    "Agenda semanal por horário",
+                                ),
+                            ),
+                            role="region",
+                            aria_label=rx.cond(
+                                ReceptionAgendaState.agenda_view_mode == "day",
+                                "Grade diária; percorra horizontalmente em telas estreitas",
+                                "Grade semanal; percorra horizontalmente em telas estreitas",
+                            ),
+                            tab_index=0,
+                            class_name="vitta-reception-calendar-scroll",
+                            width="100%",
+                            max_width="100%",
+                        ),
+                    rx.flex(
+                        _reception_calendar_legend(
+                            "Agendada", "vitta-reception-calendar-legend-dot--scheduled"
+                        ),
+                        _reception_calendar_legend(
+                            "Chegada confirmada", "vitta-reception-calendar-legend-dot--confirmed"
+                        ),
+                        _reception_calendar_legend(
+                            "Em atendimento", "vitta-reception-calendar-legend-dot--in-progress"
+                        ),
+                        _reception_calendar_legend(
+                            "Concluída", "vitta-reception-calendar-legend-dot--completed"
+                        ),
+                        _reception_calendar_legend(
+                            "Cancelada", "vitta-reception-calendar-legend-dot--cancelled"
+                        ),
+                        gap="4", flex_wrap="wrap", align="center", width="100%",
+                        class_name="vitta-reception-calendar-legend",
+                    ),
+                    rx.separator(margin_y="0.25rem"),
+                    rx.flex(
+                        rx.box(
+                            rx.heading("Consultas do período", size="4"),
+                            rx.text(
+                                ReceptionAgendaState.visible_consultations.length(),
+                                " registro(s) no período",
+                                color="var(--vitta-text-muted)", size="2",
+                                margin_top="0.3rem",
+                            ),
                         ),
                         rx.cond(
-                            ReceptionAgendaState.visible_consultations.length() > 0,
-                            rx.box(
-                                rx.box(
-                                    rx.table.root(
-                                        rx.table.header(
-                                            rx.table.row(
-                                                rx.table.column_header_cell("Data e horário"),
-                                                rx.table.column_header_cell("Paciente"),
-                                                rx.table.column_header_cell("Profissional"),
-                                                rx.table.column_header_cell("Situação"),
-                                                rx.table.column_header_cell("Ações"),
-                                            )
-                                        ),
-                                        rx.table.body(
-                                            rx.foreach(
-                                                ReceptionAgendaState.paged_consultations,
-                                                _consultation_table_row,
-                                            )
-                                        ),
-                                        size="2", variant="surface",
-                                        class_name="vitta-reception-consultation-table",
-                                    ),
-                                    class_name="vitta-reception-table-wrap",
-                                    display=rx.breakpoints(initial="none", md="block"),
-                                ),
-                                rx.vstack(
-                                    rx.foreach(
-                                        ReceptionAgendaState.paged_consultations,
-                                        _consultation_row,
-                                    ),
-                                    spacing="2", align="stretch", width="100%",
-                                    display=rx.breakpoints(initial="flex", md="none"),
-                                ),
-                                width="100%",
-                            ),
-                            empty_state(
-                                "calendar_days",
-                                "Nenhuma consulta neste período",
-                                "Não encontramos consultas para as datas e o profissional selecionados.",
-                                min_height="8rem", padding="1rem",
-                            ),
-                        ),
-                        rx.cond(
-                            ReceptionAgendaState.consultation_total_pages > 1,
-                            rx.flex(
-                                rx.text(
-                                    "Página ", ReceptionAgendaState.consultation_page,
-                                    " de ", ReceptionAgendaState.consultation_total_pages,
-                                    color="var(--vitta-text-muted)", size="2",
-                                ),
-                                rx.hstack(
-                                    rx.button(
-                                        "Anterior", variant="outline",
-                                        on_click=ReceptionAgendaState.move_consultation_page(-1),
-                                        disabled=ReceptionAgendaState.consultation_page <= 1,
-                                    ),
-                                    rx.button(
-                                        "Próxima", variant="outline",
-                                        on_click=ReceptionAgendaState.move_consultation_page(1),
-                                        disabled=ReceptionAgendaState.consultation_page >= ReceptionAgendaState.consultation_total_pages,
-                                    ),
-                                    spacing="2",
-                                ),
-                                justify="between", align="center",
-                                gap="3", flex_wrap="wrap", width="100%",
+                            ReceptionAgendaState.selected_agenda_date != "",
+                            rx.button(
+                                rx.icon("x", size=15),
+                                "Data: ", ReceptionAgendaState.selected_agenda_day_label,
+                                type="button", variant="outline", color_scheme="teal",
+                                on_click=ReceptionAgendaState.clear_agenda_day,
+                                aria_label="Remover filtro de data",
                             ),
                             rx.fragment(),
                         ),
-                        spacing="4", align="stretch", width="100%",
+                        justify="between", gap="3", align="center",
+                        flex_wrap="wrap", width="100%",
                     ),
+                    rx.cond(
+                        ReceptionAgendaState.visible_consultations.length() > 0,
+                        rx.box(
+                            rx.box(
+                                rx.table.root(
+                                    rx.table.header(
+                                        rx.table.row(
+                                            rx.table.column_header_cell("Data e horário"),
+                                            rx.table.column_header_cell("Paciente"),
+                                            rx.table.column_header_cell("Profissional"),
+                                            rx.table.column_header_cell("Situação"),
+                                            rx.table.column_header_cell("Ações"),
+                                        )
+                                    ),
+                                    rx.table.body(
+                                        rx.foreach(
+                                            ReceptionAgendaState.paged_consultations,
+                                            _consultation_table_row,
+                                        )
+                                    ),
+                                    size="2", variant="surface",
+                                    class_name="vitta-reception-consultation-table",
+                                ),
+                                class_name="vitta-reception-table-wrap",
+                                display=rx.breakpoints(initial="none", md="block"),
+                            ),
+                            rx.vstack(
+                                rx.foreach(
+                                    ReceptionAgendaState.paged_consultations,
+                                    _consultation_row,
+                                ),
+                                spacing="2", align="stretch", width="100%",
+                                display=rx.breakpoints(initial="flex", md="none"),
+                            ),
+                            width="100%",
+                        ),
+                        empty_state(
+                            "calendar_days",
+                            rx.cond(
+                                ReceptionAgendaState.selected_agenda_date != "",
+                                "Nenhuma consulta nesta data",
+                                "Nenhuma consulta neste período",
+                            ),
+                            rx.cond(
+                                ReceptionAgendaState.selected_agenda_date != "",
+                                "Não encontramos consultas para a data selecionada.",
+                                "Não encontramos consultas para as datas e o profissional selecionados.",
+                            ),
+                            min_height="8rem", padding="1rem",
+                        ),
+                    ),
+                    rx.cond(
+                        ReceptionAgendaState.consultation_total_pages > 1,
+                        rx.flex(
+                            rx.text(
+                                "Página ", ReceptionAgendaState.consultation_page,
+                                " de ", ReceptionAgendaState.consultation_total_pages,
+                                color="var(--vitta-text-muted)", size="2",
+                            ),
+                            rx.hstack(
+                                rx.button(
+                                    "Anterior", variant="outline",
+                                    on_click=ReceptionAgendaState.move_consultation_page(-1),
+                                    disabled=ReceptionAgendaState.consultation_page <= 1,
+                                ),
+                                rx.button(
+                                    "Próxima", variant="outline",
+                                    on_click=ReceptionAgendaState.move_consultation_page(1),
+                                    disabled=ReceptionAgendaState.consultation_page >= ReceptionAgendaState.consultation_total_pages,
+                                ),
+                                spacing="2",
+                            ),
+                            justify="between", align="center",
+                            gap="3", flex_wrap="wrap", width="100%",
+                        ),
+                        rx.fragment(),
+                    ),
+                    spacing="3", align="stretch", width="100%",
                 ),
             ),
+            ),
             reception_agenda_dialogs(),
-            spacing="4", align="stretch", width="100%",
+            spacing="3", align="stretch", width="100%",
         ),
     )
-
-

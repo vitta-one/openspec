@@ -2,8 +2,9 @@
 
 import reflex as rx
 
-from vitta_one.ui.components import breadcrumb, error_banner, field_label, page_header, section_panel, empty_state
+from vitta_one.ui.components import breadcrumb, error_banner, field_label, page_header, section_panel, empty_state, summary_metric
 from vitta_one.auth.staff_state import AdminStaffState
+from vitta_one.admin_dashboard.state import AdminDashboardState
 from vitta_one.ui.staff_components import admin_staff_panel
 
 
@@ -42,12 +43,71 @@ def _admin_group(title: str, *destinations: rx.Component) -> rx.Component:
 
 
 def admin_hub_workspace() -> rx.Component:
-    """Compact landing page with real task links and no fictitious metrics."""
+    """Task-oriented admin landing page with server-derived aggregate metrics."""
     return rx.vstack(
         page_header(
             "Administração",
             "Gestão da clínica",
-            "Acesse as tarefas administrativas da clínica.",
+            "Controle equipe, agenda, especialidades e configurações gerais.",
+            show_art=True,
+        ),
+        rx.cond(
+            AdminDashboardState.error_message != "",
+            rx.vstack(
+                error_banner(AdminDashboardState.error_message),
+                rx.button(
+                    "Tentar novamente",
+                    type="button",
+                    variant="outline",
+                    color_scheme="teal",
+                    on_click=AdminDashboardState.load,
+                ),
+                align="start",
+                spacing="3",
+                width="100%",
+            ),
+            rx.cond(
+                AdminDashboardState.has_loaded,
+                rx.grid(
+                    _admin_metric(
+                        "Profissionais ativos",
+                        AdminDashboardState.active_professionals,
+                        "users",
+                        "/admin/profissionais",
+                    ),
+                    _admin_metric(
+                        "Especialidades",
+                        AdminDashboardState.active_specialties,
+                        "stethoscope",
+                        "/admin/especialidades",
+                    ),
+                    _admin_metric(
+                        "Consultas hoje",
+                        AdminDashboardState.consultations_today,
+                        "calendar_days",
+                        "/admin/horarios",
+                    ),
+                    _admin_metric(
+                        "Contas da equipe",
+                        AdminDashboardState.staff_accounts,
+                        "users_round",
+                        "/admin/funcionarios",
+                    ),
+                    columns=rx.breakpoints(initial="1", sm="2", xl="4"),
+                    gap="3",
+                    width="100%",
+                    class_name="vitta-admin-metrics",
+                ),
+                rx.center(
+                    rx.spinner(size="3", color="var(--vitta-primary)"),
+                    rx.text("Carregando indicadores da clínica…", size="2", color="var(--vitta-text-muted)"),
+                    gap="3",
+                    min_height="8rem",
+                    width="100%",
+                    role="status",
+                    aria_live="polite",
+                ),
+            ),
         ),
         rx.box(
             _admin_group(
@@ -83,10 +143,65 @@ def admin_hub_workspace() -> rx.Component:
             ),
             class_name="vitta-admin-hub-groups",
         ),
+        section_panel(
+            rx.flex(
+                rx.vstack(
+                    rx.heading("Acessos rápidos", size="4"),
+                    rx.text("Tarefas administrativas do dia a dia.", size="2", color="var(--vitta-text-muted)"),
+                    align="start",
+                    spacing="1",
+                ),
+                rx.flex(
+                    _admin_quick_link("Horários", "/admin/horarios", "calendar_days"),
+                    _admin_quick_link("Profissionais", "/admin/profissionais", "users_round"),
+                    _admin_quick_link("Novo funcionário", "/admin/funcionarios/novo", "user_plus"),
+                    _admin_quick_link("Configurações", "/admin/configuracoes", "settings"),
+                    gap="2",
+                    flex_wrap="wrap",
+                    justify="end",
+                ),
+                justify="between",
+                align="center",
+                gap="4",
+                flex_wrap="wrap",
+                width="100%",
+                class_name="vitta-admin-quick-access",
+            )
+        ),
         spacing="4",
         align="stretch",
         width="100%",
         class_name="vitta-admin-hub",
+    )
+
+
+def _admin_metric(label: str, value, icon: str, href: str) -> rx.Component:
+    return rx.link(
+        rx.flex(
+            rx.box(rx.icon(icon, size=22), class_name="vitta-admin-metric-icon"),
+            rx.vstack(
+                rx.text(label, size="2", color="var(--vitta-text-muted)", font_weight="650"),
+                rx.text(value, size="6", color="var(--vitta-text)", font_weight="800", class_name="vitta-tabular"),
+                align="start",
+                spacing="0",
+                min_width="0",
+            ),
+            rx.icon("chevron_right", size=19, color="var(--vitta-text-muted)"),
+            gap="3",
+            align="center",
+            width="100%",
+        ),
+        href=href,
+        class_name="vitta-admin-metric",
+        aria_label=label,
+    )
+
+
+def _admin_quick_link(label: str, href: str, icon: str) -> rx.Component:
+    return rx.link(
+        rx.hstack(rx.icon(icon, size=17), rx.text(label, font_weight="700"), gap="2", align="center"),
+        href=href,
+        class_name="vitta-admin-quick-link",
     )
 
 
@@ -229,6 +344,27 @@ def admin_staff_type_workspace() -> rx.Component:
                 class_name="vitta-primary-action vitta-staff-create-action",
                 aria_label="Cadastrar novo funcionário",
             ),
+            show_art=True,
+        ),
+        rx.cond(
+            AdminStaffState.error == "",
+            rx.cond(
+                AdminStaffState.is_loading,
+                rx.center(
+                    rx.spinner(size="2"),
+                    rx.text("Carregando indicadores da equipe…", size="2",
+                            color="var(--vitta-text-muted)"),
+                    gap="3", min_height="5rem", width="100%", role="status",
+                ),
+                rx.grid(
+                    summary_metric("Contas da equipe", AdminStaffState.employee_count, "users_round"),
+                    summary_metric("Médicos cadastrados", AdminStaffState.medical_account_count, "stethoscope"),
+                    summary_metric("Recepcionistas cadastrados", AdminStaffState.reception_account_count, "user_round"),
+                    columns=rx.breakpoints(initial="1", sm="3"),
+                    gap="3", width="100%", class_name="vitta-directory-summary",
+                ),
+            ),
+            rx.fragment(),
         ),
         section_panel(
             rx.vstack(
@@ -351,6 +487,7 @@ def admin_staff_create_workspace() -> rx.Component:
             "Equipe",
             "Novo funcionário",
             "Identifique o colaborador e defina o acesso de acordo com o perfil.",
+            show_art=True,
         ),
         admin_staff_panel(),
         spacing="4", align="stretch", width="100%",

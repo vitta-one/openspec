@@ -6,7 +6,7 @@ substitute for browser/HTTP E2E checks documented in the manual QA protocol.
 
 import asyncio
 from contextlib import nullcontext
-from types import SimpleNamespace
+from types import MethodType, SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
@@ -103,13 +103,29 @@ def test_prescription_route_rejects_non_numeric_identifier_without_db_lookup(
 def test_logout_clears_doctor_and_print_payloads_and_removes_session_cookie(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """15.11: a successful logout clears all sensitive sibling state projections."""
+    """Logout and session expiry clear all sensitive sibling state projections."""
     from vitta_one.admin_preview.state import AdminPreviewState
+    from vitta_one.admin_preview.agenda_state import AdminAgendaPreviewState
+    from vitta_one.admin_preview.reception_state import AdminReceptionPreviewState
+    from vitta_one.admin_dashboard.state import AdminDashboardState
+    from vitta_one.appointment_scheduling.state import (
+        AdminAvailabilityState, ReceptionAgendaState,
+    )
     from vitta_one.auth import state as auth_state
+    from vitta_one.auth.staff_state import AdminStaffState
     from vitta_one.auth.state import AuthState
     from vitta_one.doctor_workspace.state import DoctorWorkspaceState
-    from vitta_one.patient_portal.state import PatientPortalState
+    from vitta_one.financial.state import FinancialState
+    from vitta_one.notifications.operations import EmailOperationsState
+    from vitta_one.notifications.state import NotificationState
+    from vitta_one.patient_portal.state import (
+        AdminClinicConfigurationState, PatientPortalState,
+    )
+    from vitta_one.patient_portal.booking_state import PatientBookingState
     from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
+    from vitta_one.professional_directory.state import AdminDirectoryState
+    from vitta_one.reception.dashboard.state import ReceptionDashboardState
+    from vitta_one.ui.components import SidebarState
 
     cleared = []
 
@@ -126,37 +142,147 @@ def test_logout_clears_doctor_and_print_payloads_and_removes_session_cookie(
         def _clear_sensitive_view(self):
             cleared.append(self.name)
 
+        def _clear_data(self):
+            cleared.append(self.name)
+
+        def _reset_selection(self):
+            cleared.append(self.name)
+
+    dashboard = SimpleNamespace(
+        appointments=[{"patient_name": "SENTINEL: paciente da recepção"}],
+        upcoming_appointments=[{"patient_name": "SENTINEL: próximo atendimento"}],
+    )
+
+    def _clear_dashboard_details():
+        ReceptionDashboardState._clear_details(dashboard)
+
+    def _clear_dashboard_data():
+        ReceptionDashboardState._clear_data(dashboard)
+        cleared.append("reception-dashboard")
+
+    dashboard._clear_details = _clear_dashboard_details
+    dashboard._clear_data = _clear_dashboard_data
+
+    def _action_state(method_name, label, action):
+        def run():
+            action()
+            cleared.append(label)
+
+        return SimpleNamespace(**{method_name: run})
+
+    agenda = SimpleNamespace(
+        professionals=[{"label": "SENTINEL médico"}],
+        slots=[{"professional_name": "SENTINEL médico"}],
+        consultations=[{"patient_name": "SENTINEL paciente"}],
+        patient_cpf="SENTINEL CPF",
+        selected_patient_id=81,
+        selected_patient_name="SENTINEL paciente",
+        error_message="error",
+        success_message="success",
+    )
+    for name in (
+        "_reset_booking", "_reset_arrival", "_reset_reschedule", "_reset_cancel",
+        "_clear_feedback",
+    ):
+        setattr(agenda, name, MethodType(getattr(ReceptionAgendaState, name), agenda))
+    staff = SimpleNamespace(
+        emails=["staff@example.invalid"],
+        employees=[{"email": "staff@example.invalid", "name": "SENTINEL"}],
+        employee_detail={"email": "staff@example.invalid"},
+        new_name="SENTINEL", new_email="staff@example.invalid",
+    )
+    directory = SimpleNamespace(
+        specialties=[],
+        professionals=[{"user_email": "doctor@example.invalid"}],
+        recent_professionals=[{"user_email": "doctor@example.invalid"}],
+        medical_accounts=[{"email": "doctor@example.invalid"}],
+        professional_search="doctor@example.invalid",
+        professional_email="doctor@example.invalid",
+        status_professional_name="SENTINEL médico",
+    )
+    for name in (
+        "_reset_specialty_status_change", "_reset_specialty_edit",
+        "_reset_professional_form", "_clear_feedback",
+    ):
+        setattr(directory, name, MethodType(getattr(AdminDirectoryState, name), directory))
+    admin_agenda_preview = SimpleNamespace(
+        professionals=[{"label": "SENTINEL médico"}],
+        day_slots=[{"professional_name": "SENTINEL médico"}],
+        day_consultations=[{"professional_name": "SENTINEL médico"}],
+    )
+    admin_agenda_preview._clear_results = MethodType(
+        AdminAgendaPreviewState._clear_results, admin_agenda_preview
+    )
+    availability = SimpleNamespace(
+        professionals=[{"label": "SENTINEL médico"}],
+        slots=[{"professional_name": "SENTINEL médico"}],
+        weekly_saved_summary="SENTINEL expediente",
+        error_message="error", success_message="success",
+    )
+    availability._clear_feedback = MethodType(
+        AdminAvailabilityState._clear_feedback, availability
+    )
+    admin_dashboard = SimpleNamespace(consultations_today=12, error_message="error")
+    clinic_configuration = SimpleNamespace(
+        clinic_name="SENTINEL clínica", clinic_address="SENTINEL endereço",
+    )
+
     siblings = {
         ReceptionQueueState: _Sibling("reception"),
+        ReceptionAgendaState: _action_state(
+            "_clear_sensitive", "agenda",
+            lambda: ReceptionAgendaState._clear_sensitive(agenda),
+        ),
+        AdminStaffState: _action_state(
+            "_clear_sensitive_data", "staff",
+            lambda: AdminStaffState._clear_sensitive_data(staff),
+        ),
+        AdminDirectoryState: _action_state(
+            "_clear_sensitive_data", "directory",
+            lambda: AdminDirectoryState._clear_sensitive_data(directory),
+        ),
+        AdminAgendaPreviewState: _action_state(
+            "_clear_sensitive_data", "admin-agenda-preview",
+            lambda: AdminAgendaPreviewState._clear_sensitive_data(admin_agenda_preview),
+        ),
+        AdminAvailabilityState: _action_state(
+            "_clear_sensitive", "admin-availability",
+            lambda: AdminAvailabilityState._clear_sensitive(availability),
+        ),
+        AdminDashboardState: _action_state(
+            "_clear", "admin-dashboard", lambda: AdminDashboardState._clear(admin_dashboard),
+        ),
+        AdminClinicConfigurationState: _action_state(
+            "_clear", "clinic-configuration",
+            lambda: AdminClinicConfigurationState._clear(clinic_configuration),
+        ),
+        ReceptionDashboardState: dashboard,
         DoctorQueueState: _Sibling("doctor"),
         DoctorWorkspaceState: _Sibling("doctor-workspace"),
         PatientPortalState: _Sibling("patient"),
+        PatientBookingState: _Sibling("booking"),
         PrintPrescriptionState: _Sibling("print"),
         AdminPreviewState: _Sibling("admin"),
+        AdminReceptionPreviewState: _Sibling("admin-reception"),
+        FinancialState: _Sibling("financial"),
+        NotificationState: _Sibling("notification"),
+        EmailOperationsState: _Sibling("email-operations"),
+        SidebarState: _Sibling("sidebar"),
     }
+    siblings[SidebarState].active_profile = "MEDICO"
+    siblings[SidebarState].user_changed_desktop = True
 
     class _AuthDouble:
         session_token = "valid-test-session"
         shell_error = "previous error"
         auth_checked = False
+        router = SimpleNamespace(route_id="/recepcao")
 
         async def get_state(self, target):
             return siblings[target]
 
         async def _clear_sensitive_states(self):
-            queue = await self.get_state(ReceptionQueueState)
-            queue._clear_sensitive_view()
-            doctor = await self.get_state(DoctorQueueState)
-            doctor._clear_active()
-            workspace = await self.get_state(DoctorWorkspaceState)
-            workspace._clear()
-            patient = await self.get_state(PatientPortalState)
-            patient._clear()
-            patient.error_message = ""
-            print_state = await self.get_state(PrintPrescriptionState)
-            print_state._clear()
-            admin = await self.get_state(AdminPreviewState)
-            admin._clear()
+            await AuthState._clear_sensitive_states(self)
 
         def _clear_identity(self):
             cleared.append("identity")
@@ -172,12 +298,85 @@ def test_logout_clears_doctor_and_print_payloads_and_removes_session_cookie(
 
     assert revoked == ["valid-test-session"]
     assert cleared == [
-        "reception", "doctor", "doctor-workspace", "patient", "print", "admin", "identity"
+        "reception", "agenda", "staff", "directory", "admin-agenda-preview",
+        "admin-availability", "admin-dashboard", "clinic-configuration",
+        "reception-dashboard",
+        "doctor", "doctor-workspace", "patient",
+        "booking", "print", "admin", "admin-reception", "financial", "notification",
+        "email-operations", "identity",
     ]
+    assert agenda.professionals == []
+    assert agenda.slots == []
+    assert agenda.consultations == []
+    assert agenda.patient_cpf == ""
+    assert agenda.selected_patient_name == ""
+    assert agenda.arrival_patient_name == ""
+    assert agenda.arrival_symptoms == ""
+    assert staff.emails == []
+    assert staff.employees == []
+    assert staff.employee_detail["email"] == ""
+    assert staff.new_name == ""
+    assert staff.new_email == ""
+    assert directory.professionals == []
+    assert directory.recent_professionals == []
+    assert directory.medical_accounts == []
+    assert directory.professional_search == ""
+    assert directory.professional_email == ""
+    assert directory.status_professional_name == ""
+    assert admin_agenda_preview.professionals == []
+    assert admin_agenda_preview.day_slots == []
+    assert availability.professionals == []
+    assert availability.slots == []
+    assert availability.weekly_saved_summary == ""
+    assert admin_dashboard.consultations_today == 0
+    assert admin_dashboard.error_message == ""
+    assert clinic_configuration.clinic_name == ""
+    assert clinic_configuration.clinic_address == ""
+    assert dashboard.appointments == []
+    assert dashboard.upcoming_appointments == []
+    assert dashboard.details_patient_name == ""
     assert fake.session_token == ""
     assert fake.auth_checked is True
+    assert siblings[SidebarState].active_profile == ""
+    assert siblings[SidebarState].user_changed_desktop is False
     assert ("redirect", "/login") in events
     assert any(isinstance(event, tuple) and event[0] == "cookie" for event in events)
+
+    dashboard.upcoming_appointments = [{"patient_name": "SENTINEL: paciente após expiração"}]
+    dashboard.details_patient_name = "SENTINEL"
+    agenda.consultations = [{"patient_name": "SENTINEL após expiração"}]
+    agenda.patient_cpf = "SENTINEL CPF"
+    staff.employees = [{"email": "staff@example.invalid"}]
+    staff.new_email = "staff@example.invalid"
+    directory.professionals = [{"user_email": "doctor@example.invalid"}]
+    directory.professional_email = "doctor@example.invalid"
+    admin_agenda_preview.professionals = [{"label": "SENTINEL após expiração"}]
+    availability.professionals = [{"label": "SENTINEL após expiração"}]
+    admin_dashboard.consultations_today = 99
+    clinic_configuration.clinic_address = "SENTINEL após expiração"
+    fake.session_token = "expired-test-session"
+
+    def _expired_session(*_args, **_kwargs):
+        raise AuthenticationRequiredError("Sessão expirada")
+
+    monkeypatch.setattr(auth_state, "require_role", _expired_session)
+    expired_events = asyncio.run(_collect(AuthState.load_protected.fn(fake)))
+
+    assert dashboard.upcoming_appointments == []
+    assert dashboard.details_patient_name == ""
+    assert agenda.consultations == []
+    assert agenda.patient_cpf == ""
+    assert staff.employees == []
+    assert staff.new_email == ""
+    assert directory.professionals == []
+    assert directory.professional_email == ""
+    assert admin_agenda_preview.professionals == []
+    assert availability.professionals == []
+    assert admin_dashboard.consultations_today == 0
+    assert clinic_configuration.clinic_address == ""
+    assert fake.session_token == ""
+    assert ("redirect", "/login") in expired_events
+    assert any(isinstance(event, tuple) and event[0] == "cookie" for event in expired_events)
 
 
 

@@ -29,6 +29,26 @@ def charge_row(row):
     )
 
 
+def _evolution_row(row):
+    return rx.grid(
+        rx.text(row["day"], size="2", class_name="vitta-tabular"),
+        rx.box(
+            rx.box(
+                width=row["bar_percent"].to(str) + "%",
+                class_name="vitta-finance-chart-bar",
+            ),
+            class_name="vitta-finance-chart-track",
+            aria_hidden="true",
+        ),
+        rx.text(row["value"], size="2", font_weight="700",
+                class_name="vitta-tabular", text_align="right"),
+        columns="minmax(5rem, 6rem) minmax(0, 1fr) minmax(6rem, 8rem)",
+        gap="3", align="center", width="100%",
+        class_name="vitta-finance-chart-row",
+        role="listitem",
+    )
+
+
 def finance_content():
     return rx.vstack(
         page_header("Vitta-One", "Financeiro", "Cobranças e recebimentos · Asaas Sandbox"),
@@ -63,9 +83,22 @@ def finance_content():
             rx.hstack(rx.button("Anterior", on_click=S.change_page(-1), disabled=S.busy | (S.page <= 1)),
                       rx.text("Página ", S.page.to_string()), rx.button("Próxima", on_click=S.change_page(1), disabled=S.busy | (S.page * 20 >= S.total))),
             width="100%", align="stretch", spacing="3")),
-        section_panel(rx.vstack(rx.heading("Evolução dos recebimentos", size="4"),
-            rx.cond(S.evolution.length() == 0, rx.text("Sem recebimentos no período."), rx.foreach(S.evolution,
-                lambda row: rx.hstack(rx.text(row["day"]), rx.spacer(), rx.text(row["value"])))), width="100%")),
+        section_panel(rx.vstack(
+            rx.heading("Evolução dos recebimentos", size="4"),
+            rx.text("Valores efetivamente recebidos por data de pagamento.",
+                    size="2", color="var(--vitta-text-muted)"),
+            rx.cond(
+                S.evolution.length() == 0,
+                rx.text("Sem recebimentos no período.", size="2",
+                        color="var(--vitta-text-muted)", padding_block="1rem"),
+                rx.vstack(
+                    rx.foreach(S.evolution, _evolution_row),
+                    spacing="2", align="stretch", width="100%", role="list",
+                    aria_label="Recebimentos por dia, valores em reais",
+                ),
+            ),
+            width="100%", align="stretch", spacing="3",
+        ), class_name="vitta-finance-evolution"),
         section_panel(operations_panel()),
         rx.dialog.root(rx.dialog.content(rx.vstack(
             rx.dialog.title("Detalhes da cobrança"), rx.dialog.description(S.selected_name),

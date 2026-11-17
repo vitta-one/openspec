@@ -167,6 +167,16 @@ class AdminAgendaPreviewState(rx.State):
         self.day_slots = []
         self.day_consultations = []
 
+    def _clear_sensitive_data(self) -> None:
+        """Drop professional and schedule projections when the admin session ends."""
+        self.professionals = []
+        self.filter_professional = "__all__"
+        self.calendar_month = ""
+        self.selected_day = ""
+        self.is_loading = False
+        self.error_message = ""
+        self._clear_results()
+
     async def _token(self) -> str:
         auth = await self.get_state(AuthState)
         return auth.session_token

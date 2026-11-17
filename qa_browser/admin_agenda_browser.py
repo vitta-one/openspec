@@ -9,6 +9,7 @@ import pytest
 from playwright.sync_api import expect, sync_playwright
 
 from qa_browser.capture_all_screens import BASE, OUTPUT, FIXTURE, authenticate
+from qa_browser.playwright_support import launch_chromium
 
 
 @pytest.mark.parametrize(
@@ -17,7 +18,7 @@ from qa_browser.capture_all_screens import BASE, OUTPUT, FIXTURE, authenticate
 )
 def test_qa_admin_agenda_calendar_and_responsiveness(width, height):
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=True)
+        browser = launch_chromium(playwright)
         try:
             context = browser.new_context(
                 viewport={"width": width, "height": height},
@@ -46,9 +47,16 @@ def test_qa_admin_agenda_calendar_and_responsiveness(width, height):
             day.click()
             expect(page.get_by_role("heading", name="Disponibilidade do dia")).to_be_visible()
 
-            # Navigating months refetches persisted records rather than using fake slots.
+            # Wait for the month transition AND its async Reflex reload to finish.
+            # Merely checking that the navigation button is enabled can race the
+            # first server event and focus a button that gets disabled/replaced.
+            month_heading = page.locator(".vitta-calendar-header").get_by_role("heading")
+            previous_month_title = month_heading.inner_text()
             page.get_by_role("button", name="Mês anterior").click()
-            expect(page.get_by_role("button", name="Próximo mês")).to_be_enabled(timeout=30000)
+            expect(month_heading).not_to_have_text(previous_month_title, timeout=30000)
+            expect(page.locator(".vitta-calendar-date").first).to_be_visible(timeout=30000)
+            next_month = page.get_by_role("button", name="Próximo mês")
+            expect(next_month).to_be_enabled(timeout=30000)
 
             # A real browser layout assertion for all acceptance widths.
             horizontal_overflow = page.evaluate(
@@ -57,10 +65,9 @@ def test_qa_admin_agenda_calendar_and_responsiveness(width, height):
             assert not horizontal_overflow, f"Overflow horizontal a {width}px"
 
             # Keyboard navigation must reach an interactive control.
-            page.get_by_role("button", name="Próximo mês").focus()
-            assert page.evaluate(
-                "document.activeElement?.getAttribute('aria-label')"
-            ) == "Próximo mês"
+            next_month.focus()
+            expect(next_month).to_be_focused(timeout=10000)
+            expect(next_month).to_have_attribute("aria-label", "Próximo mês")
 
             OUTPUT.mkdir(parents=True, exist_ok=True)
             page.screenshot(

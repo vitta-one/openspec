@@ -12,10 +12,14 @@ class SidebarState(rx.State):
 
     desktop_open: bool = True
     mobile_open: bool = False
+    user_changed_desktop: bool = False
+    active_profile: str = ""
 
     @rx.event
-    def toggle_desktop(self):
-        self.desktop_open = not self.desktop_open
+    def toggle_desktop(self, default_open: bool):
+        current = self.desktop_open if self.user_changed_desktop else default_open
+        self.desktop_open = not current
+        self.user_changed_desktop = True
 
     @rx.event
     def toggle_mobile(self):
@@ -24,6 +28,11 @@ class SidebarState(rx.State):
     @rx.event
     def close_mobile(self):
         self.mobile_open = False
+
+
+def _sidebar_expanded_by_default(role: Role) -> bool:
+    """Keep the doctor/patient shells expanded; operational staff use the icon rail."""
+    return role in (Role.MEDICO, Role.PACIENTE)
 
 
 def breadcrumb(*items: tuple[str, str | None]) -> rx.Component:
@@ -614,14 +623,20 @@ def authenticated_topbar(role: Role) -> rx.Component:
         Role.PACIENTE: "Portal do paciente",
         Role.FINANCEIRO: "Financeiro",
     }[role]
+    default_open = _sidebar_expanded_by_default(role)
+    sidebar_open = rx.cond(
+        SidebarState.user_changed_desktop,
+        SidebarState.desktop_open,
+        default_open,
+    )
     return rx.el.header(
         rx.button(
             rx.icon("menu", size=21),
             type="button", variant="ghost", color_scheme="gray",
-            on_click=SidebarState.toggle_desktop,
-            aria_label=rx.cond(SidebarState.desktop_open, "Recolher navegação", "Expandir navegação"),
+            on_click=SidebarState.toggle_desktop(default_open),
+            aria_label=rx.cond(sidebar_open, "Recolher navegação", "Expandir navegação"),
             aria_controls="vitta-sidebar",
-            aria_expanded=SidebarState.desktop_open,
+            aria_expanded=sidebar_open,
             class_name="vitta-hamburger-desktop",
         ),
         rx.button(
@@ -644,8 +659,9 @@ def page_header(
     title: str,
     description: str,
     *actions: rx.Component,
+    show_art: bool = False,
 ) -> rx.Component:
-    """Canonical page heading with an optional action region."""
+    """Canonical page heading with optional decorative artwork and actions."""
     return rx.flex(
         rx.box(
             rx.text(
@@ -670,6 +686,7 @@ def page_header(
                 margin_top="0.45rem",
             ),
             min_width="0",
+            class_name="vitta-page-header-copy",
         ),
         (
             rx.hstack(
@@ -679,16 +696,34 @@ def page_header(
                 flex_wrap="wrap",
                 width=rx.breakpoints(initial="100%", md="auto"),
                 min_width="0",
+                class_name="vitta-page-header-actions",
             )
             if actions
             else rx.fragment()
+        ),
+        rx.cond(
+            show_art & (AuthState.current_role != ""),
+            rx.image(
+                src=rx.cond(
+                    AuthState.current_role == Role.MEDICO.value,
+                    "/clinic-doctor-hero.svg",
+                    "/clinic-operational-hero.svg",
+                ),
+                alt="",
+                aria_hidden="true",
+                class_name="vitta-page-header-art",
+            ),
+            rx.fragment(),
         ),
         direction=rx.breakpoints(initial="column", md="row"),
         justify="between",
         align=rx.breakpoints(initial="stretch", md="end"),
         gap="1rem",
         width="100%",
-        class_name="vitta-page-header",
+        class_name=(
+            "vitta-page-header vitta-page-header--illustrated"
+            if show_art else "vitta-page-header"
+        ),
     )
 
 
@@ -707,6 +742,24 @@ def section_panel(*children, padding=None, **props) -> rx.Component:
         border_radius="var(--vitta-radius-panel)",
         box_shadow="var(--vitta-shadow-xs)",
         **props,
+    )
+
+
+def summary_metric(label: str, value, icon_name: str, tone: str = "teal") -> rx.Component:
+    """Compact persisted-count card shared by directory screens."""
+    tone = tone if tone in {"teal", "red", "amber", "green"} else "teal"
+    return rx.flex(
+        rx.box(
+            rx.icon(icon_name, size=19),
+            class_name=f"vitta-summary-metric-icon vitta-summary-metric-icon--{tone}",
+        ),
+        rx.vstack(
+            rx.text(label, size="1", font_weight="650", color="var(--vitta-text-muted)"),
+            rx.text(value, size="5", font_weight="800", class_name="vitta-tabular"),
+            align="start", spacing="0", min_width="0",
+        ),
+        align="center", gap="3", width="100%",
+        class_name="vitta-summary-metric",
     )
 
 
@@ -788,6 +841,12 @@ def empty_state(
 
 
 def _product_shell(role: Role, active: str, *children: rx.Component) -> rx.Component:
+    default_open = _sidebar_expanded_by_default(role)
+    sidebar_open = rx.cond(
+        SidebarState.user_changed_desktop,
+        SidebarState.desktop_open,
+        default_open,
+    )
     return rx.box(
         rx.script(src="/input-masks.js"),
         rx.script(src="/shell-navigation.js"),
@@ -808,7 +867,7 @@ def _product_shell(role: Role, active: str, *children: rx.Component) -> rx.Compo
             ),
             class_name="vitta-main",
         ),
-        class_name=rx.cond(SidebarState.desktop_open,
+        class_name=rx.cond(sidebar_open,
                            rx.cond(SidebarState.mobile_open, "vitta-shell is-sidebar-open is-mobile-nav-open", "vitta-shell is-sidebar-open"),
                            rx.cond(SidebarState.mobile_open, "vitta-shell is-sidebar-closed is-mobile-nav-open", "vitta-shell is-sidebar-closed")),
     )

@@ -117,6 +117,7 @@ def patient_directory_workspace() -> rx.Component:
                 href="/recepcao/pacientes/novo",
                 class_name="vitta-primary-action vitta-patient-directory-new",
             ),
+            show_art=True,
         ),
         section_panel(
             rx.vstack(
@@ -253,7 +254,8 @@ def patient_create_workspace() -> rx.Component:
             "Pacientes", "Novo paciente",
             "Cadastre os dados básicos do paciente. Após salvar, você será direcionado à ficha.",
         ),
-        rx.box(
+        rx.grid(
+            rx.box(
             section_panel(
                 rx.el.form(
                     rx.vstack(
@@ -374,9 +376,56 @@ def patient_create_workspace() -> rx.Component:
                     no_validate=True, width="100%",
                 ),
             ),
-            max_width="44rem", width="100%",
+            width="100%",
+            ),
+            section_panel(
+                rx.vstack(
+                    rx.heading("O que acontece depois?", size="4"),
+                    rx.text(
+                        "O cadastro cria uma ficha operacional para a Recepção.",
+                        size="2", color="var(--vitta-text-muted)", line_height="1.55",
+                    ),
+                    rx.image(
+                        src="/patient-registration-guide.svg",
+                        alt="",
+                        aria_hidden="true",
+                        class_name="vitta-patient-create-illustration",
+                    ),
+                    _patient_create_tip(
+                        "badge_check", "CPF validado",
+                        "O servidor valida o número e alerta se já houver uma ficha correspondente.",
+                    ),
+                    _patient_create_tip(
+                        "phone", "Contato opcional",
+                        "Você pode incluir um telefone agora ou completar esse dado depois.",
+                    ),
+                    _patient_create_tip(
+                        "calendar_plus", "Próximo passo",
+                        "Depois de salvar, abra a ficha e use o fluxo real de agendamento.",
+                    ),
+                    align="stretch", spacing="3", width="100%",
+                ),
+                class_name="vitta-patient-create-guidance",
+            ),
+            columns=rx.breakpoints(
+                initial="1", lg="minmax(0, 1.45fr) minmax(18rem, 0.85fr)"
+            ),
+            gap="4", align="start", width="100%",
         ),
         spacing="4", align="stretch", width="100%",
+    )
+
+
+def _patient_create_tip(icon: str, title: str, description: str) -> rx.Component:
+    return rx.flex(
+        rx.box(rx.icon(icon, size=18), class_name="vitta-patient-create-tip-icon"),
+        rx.vstack(
+            rx.text(title, font_weight="750", size="2"),
+            rx.text(description, color="var(--vitta-text-muted)", size="1", line_height="1.5"),
+            align="start", spacing="1", min_width="0",
+        ),
+        align="start", gap="3", width="100%",
+        class_name="vitta-patient-create-tip",
     )
 
 

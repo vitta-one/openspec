@@ -48,6 +48,7 @@ from vitta_one.ui.components import (
     protected_workspace,
     field_label,
     section_panel,
+    summary_metric,
 )
 from vitta_one.ui.prescription_components import prescription_print_page
 from vitta_one.ui.queue_components import (
@@ -394,6 +395,7 @@ def admin_hours_page() -> rx.Component:
             "Administração / Agenda",
             "Gerenciar horários",
             "Configure e consulte a disponibilidade dos médicos, uma tarefa por vez.",
+            show_art=True,
         ),
         breadcrumb(("Administração", "/admin"), ("Horários", None)),
         admin_availability_panel(),
@@ -411,7 +413,41 @@ def admin_clinic_settings_page() -> rx.Component:
             "Mantenha atualizadas as informações exibidas no portal do paciente.",
         ),
         breadcrumb(("Administração", "/admin"), ("Configurações", None)),
-        admin_clinic_configuration(),
+        rx.grid(
+            admin_clinic_configuration(),
+            section_panel(
+                rx.vstack(
+                    rx.heading("Onde essas informações aparecem?", size="4"),
+                    rx.text(
+                        "O nome e o endereço são mostrados nos detalhes da clínica disponíveis para pacientes.",
+                        size="2", color="var(--vitta-text-muted)", line_height="1.55",
+                    ),
+                    rx.image(
+                        src="/clinic-operational-hero.svg", alt="", aria_hidden="true",
+                        class_name="vitta-clinic-settings-illustration",
+                    ),
+                    rx.separator(),
+                    rx.hstack(
+                        rx.icon("map_pin", size=18, color="var(--vitta-primary)"),
+                        rx.text("Revise o endereço antes de salvar.", size="2"),
+                        align="center", gap="2",
+                    ),
+                    rx.hstack(
+                        rx.icon("shield_check", size=18, color="var(--vitta-primary)"),
+                        rx.text("Somente informações institucionais; não inclua dados de pacientes.",
+                                size="2", line_height="1.45"),
+                        align="start", gap="2",
+                    ),
+                    align="stretch", spacing="3", width="100%",
+                ),
+                class_name="vitta-clinic-settings-guidance",
+            ),
+            columns=rx.breakpoints(
+                initial="1", lg="minmax(0, 1.4fr) minmax(18rem, 0.85fr)"
+            ),
+            gap="4", align="start", width="100%",
+            class_name="vitta-clinic-settings-layout",
+        ),
         active="configuracoes",
         verified_path="/admin/configuracoes",
     )
@@ -550,6 +586,33 @@ def reception_queue_page() -> rx.Component:
                 href="/recepcao/fila/nova",
                 class_name="vitta-primary-action",
             ),
+            show_art=True,
+        ),
+        rx.cond(
+            ReceptionQueueState.is_loading_queue,
+            rx.center(rx.spinner(size="2"),
+                      rx.text("Carregando prioridades…", size="2"),
+                      gap="3", min_height="5rem", width="100%", role="status"),
+            rx.cond(
+                ReceptionQueueState.queue_load_error != "",
+                rx.fragment(),
+                rx.cond(
+                    ReceptionQueueState.queue_has_loaded,
+                    rx.grid(
+                        summary_metric("Urgente", ReceptionQueueState.red_waiting_count,
+                                       "triangle_alert", tone="red"),
+                        summary_metric("Prioridade média", ReceptionQueueState.yellow_waiting_count,
+                                       "circle_alert", tone="amber"),
+                        summary_metric("Prioridade baixa", ReceptionQueueState.green_waiting_count,
+                                       "circle_check", tone="green"),
+                        summary_metric("Total aguardando", ReceptionQueueState.queue_count,
+                                       "users_round"),
+                        columns=rx.breakpoints(initial="1", sm="2", xl="4"),
+                        gap="3", width="100%",
+                    ),
+                    rx.fragment(),
+                ),
+            ),
         ),
         active_queue_panel(),
         rx.cond(
@@ -589,6 +652,7 @@ def doctor_page() -> rx.Component:
             "Consultório médico",
             "Visão geral do consultório",
             "Acompanhe a agenda, o pronto-socorro, os pacientes e os registros clínicos.",
+            show_art=True,
         ),
         rx.grid(
             rx.link(
@@ -669,6 +733,7 @@ def doctor_records_page() -> rx.Component:
         page_header(
             "Prontuários", "Registro clínico do paciente atual",
             "Acesso restrito ao atendimento associado à sua sessão médica.",
+            show_art=True,
         ),
         rx.cond(
             DoctorQueueState.has_active,
@@ -694,6 +759,7 @@ def doctor_agenda_page() -> rx.Component:
             "Agenda médica",
             "Minha agenda",
             "Consultas relacionadas ao profissional associado à sua conta, com datas no fuso da clínica.",
+            show_art=True,
         ),
         feedback_region(DoctorWorkspaceState.error_message, "", "doctor-agenda-feedback"),
         rx.link("Abrir fila e atendimento clínico", href="/medico", class_name="vitta-context-link"),
@@ -713,6 +779,7 @@ def doctor_patients_page() -> rx.Component:
             "Pacientes",
             "Pacientes vinculados",
             "Pessoas derivadas exclusivamente de consultas do seu cadastro profissional.",
+            show_art=True,
         ),
         feedback_region(DoctorWorkspaceState.error_message, "", "doctor-patients-feedback"),
         doctor_patient_list(),

@@ -12,8 +12,11 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from playwright.sync_api import expect, sync_playwright
+from qa_browser.playwright_support import launch_chromium, validate_loopback_base_url
 
-BASE = os.environ.get("QA_BASE_URL", "http://127.0.0.1:3000").rstrip("/")
+BASE = validate_loopback_base_url(
+    os.environ.get("QA_BASE_URL", "http://127.0.0.1:3000")
+)
 OUTPUT = Path("qa-artifacts/screenshots")
 FIXTURE = json.loads(Path("qa-artifacts/fixture.json").read_text(encoding="utf-8"))
 PASSWORD = os.environ["VITTA_ONE_QA_PASSWORD"]
@@ -142,7 +145,7 @@ def main() -> None:
     OUTPUT.mkdir(parents=True, exist_ok=True)
     manifest, failures = [], []
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=True)
+        browser = launch_chromium(playwright)
         try:
             for viewport, (width, height) in VIEWPORTS.items():
                 for role, screens in SCREENS.items():
