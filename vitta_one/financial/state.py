@@ -10,7 +10,7 @@ from .asaas import FinancialError
 
 class FinancialState(rx.State):
     rows: list[dict[str, str]] = []
-    evolution: list[dict[str, str]] = []
+    evolution: list[dict[str, str | int]] = []
     candidates: list[str] = []
     history: list[dict[str, str]] = []
     query: str = ""

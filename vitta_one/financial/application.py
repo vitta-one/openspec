@@ -52,12 +52,21 @@ def snapshot(db: Session, *, token: str, search="", status="", start: date, end:
     day = func.date(func.timezone(str(zone), FinancialCharge.received_at)) if bind.dialect.name == "postgresql" else func.date(FinancialCharge.received_at)
     evolution = db.exec(select(day.label("day"), func.sum(FinancialCharge.value)).join(Consultation, Consultation.id == FinancialCharge.consultation_id).join(Patient, Patient.id == Consultation.patient_id).where(
         *common, FinancialCharge.status == "RECEIVED", FinancialCharge.received_at >= lower, FinancialCharge.received_at < upper).group_by(day).order_by(day)).all()
+    max_received = max((Decimal(value or 0) for _, value in evolution), default=Decimal(0))
+    evolution_rows = [
+        {
+            "day": str(received_day),
+            "value": brl(value),
+            "bar_percent": int(Decimal(value or 0) * 100 / max_received) if max_received else 0,
+        }
+        for received_day, value in evolution
+    ]
     candidates = db.exec(select(Consultation, Patient).join(Patient, Patient.id == Consultation.patient_id).where(Consultation.status != "CANCELADA", *([Patient.name.ilike(f"%{search}%")] if search else [])).order_by(Consultation.scheduled_at.desc()).limit(100)).all()
     return {
         "rows": [{"id": str(c.id), "patient": p.name, "consultation": str(c.consultation_id), "value": brl(c.value),
                   "due": c.due_date.strftime("%d/%m/%Y"), "method": c.method, "status": LABELS.get(c.status, "Revisão necessária")} for c, p in rows],
         "totals": totals, "total": total, "page": page,
-        "evolution": [{"day": str(d), "value": brl(v)} for d, v in evolution],
+        "evolution": evolution_rows,
         "candidates": [f"{c.id} · {p.name} · {c.scheduled_at.astimezone(zone).strftime('%d/%m/%Y %H:%M')}" for c,p in candidates],
     }
 

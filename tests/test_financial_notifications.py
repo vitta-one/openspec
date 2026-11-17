@@ -158,6 +158,26 @@ def test_issue_duplicate_and_persisted_details(setup, method):
     assert len(db.exec(select(FinancialCustomer)).all()) == 1
 
 
+def test_finance_evolution_bar_uses_persisted_received_amount(setup):
+    from vitta_one.financial.application import snapshot
+
+    db,tokens,_,_,_ = setup
+    charge = issue(setup, Provider())
+    charge.status = "RECEIVED"
+    charge.received_at = datetime(2026, 11, 10, 15, 0, tzinfo=timezone.utc)
+    db.add(charge)
+    db.commit()
+
+    result = snapshot(
+        db, token=tokens[Role.FINANCEIRO], start=date(2026, 11, 1),
+        end=date(2026, 11, 30),
+    )
+
+    assert result["evolution"] == [
+        {"day": "2026-11-10", "value": "R$ 100,00", "bar_percent": 100}
+    ]
+
+
 def test_timeout_blocks_reissue_and_reconciles_existing_external_charge(setup):
     provider = Provider()
     provider.timeout = True
