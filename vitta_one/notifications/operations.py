@@ -88,4 +88,5 @@ def operations_panel():
             rx.form(rx.vstack(rx.input(name="reason", placeholder="Motivo, sem dados clínicos", required=True, min_length=3, max_length=240, aria_label="Motivo do reenvio"),
                 rx.checkbox("Revisei o resultado no provedor e autorizo nova tentativa", name="reviewed"),
                 rx.button("Solicitar reenvio", type="submit"), rx.dialog.close(rx.button("Voltar", variant="outline")), spacing="3"), on_submit=S.retry)),
-            open=S.retry_open, on_open_change=S.close_retry), spacing="3", align="stretch", width="100%")
+            open=S.retry_open, on_open_change=S.close_retry), spacing="3", align="stretch", width="100%",
+        id="notificacoes")

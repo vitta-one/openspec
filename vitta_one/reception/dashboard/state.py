@@ -14,7 +14,12 @@ from vitta_one.auth.authorization import (
     RoleForbiddenError,
 )
 from vitta_one.auth.state import AuthState
-from vitta_one.reception.dashboard.application import reception_day_operations, reception_overview
+from vitta_one.patient_queue.state import ReceptionQueueState
+from vitta_one.reception.dashboard.application import (
+    reception_day_operations,
+    reception_email_metrics,
+    reception_overview,
+)
 
 
 _WEEKDAYS = (
@@ -90,6 +95,15 @@ class AgendaDay(TypedDict):
     entries: list[AgendaEntry]
 
 
+class UpcomingAppointmentRow(TypedDict):
+    id: int
+    date_label: str
+    time: str
+    patient_name: str
+    professional_name: str
+    status_label: str
+
+
 class ReceptionDashboardState(rx.State):
     """Daily operational state; all reads revalidate receptionist authorization."""
 
@@ -99,7 +113,12 @@ class ReceptionDashboardState(rx.State):
     overview_attending: int = 0
     overview_pending: int = 0
     overview_completed: int = 0
+    email_accepted: int = 0
+    email_delivered: int = 0
+    email_failed: int = 0
+    email_pending: int = 0
     calendar_week: list[AgendaDay] = []
+    upcoming_appointments: list[UpcomingAppointmentRow] = []
     professional_options: list[ProfessionalOptionRow] = []
     professional_filter: str = "__all__"
     search_query: str = ""
@@ -162,11 +181,16 @@ class ReceptionDashboardState(rx.State):
     def _clear_data(self) -> None:
         self.appointments = []
         self.calendar_week = []
+        self.upcoming_appointments = []
         self.overview_scheduled = 0
         self.overview_waiting = 0
         self.overview_attending = 0
         self.overview_pending = 0
         self.overview_completed = 0
+        self.email_accepted = 0
+        self.email_delivered = 0
+        self.email_failed = 0
+        self.email_pending = 0
         self.professional_options = []
         self.total_count = 0
         self.total_pages = 1
@@ -247,6 +271,35 @@ class ReceptionDashboardState(rx.State):
             }
             for i in range(7)
         ]
+        upcoming: list[UpcomingAppointmentRow] = []
+        for appointment in overview.calendar_consultations:
+            if (appointment.scheduled_at < overview.as_of
+                    or appointment.status == ConsultationStatus.CANCELADA):
+                continue
+            local_dt = appointment.scheduled_at.astimezone(clinic_timezone())
+            days_ahead = (local_dt.date() - start).days
+            date_label = (
+                "Hoje" if days_ahead == 0
+                else "Amanhã" if days_ahead == 1
+                else local_dt.strftime("%d/%m")
+            )
+            upcoming.append({
+                "id": appointment.id,
+                "date_label": date_label,
+                "time": local_dt.strftime("%H:%M"),
+                "patient_name": appointment.patient_name,
+                "professional_name": appointment.professional_name,
+                "status_label": appointment.status.label,
+            })
+            if len(upcoming) == 5:
+                break
+        self.upcoming_appointments = upcoming
+
+    def _apply_email_metrics(self, metrics) -> None:
+        self.email_accepted = metrics.accepted
+        self.email_delivered = metrics.delivered
+        self.email_failed = metrics.failed
+        self.email_pending = metrics.pending
 
     async def _reload(self):
         self.is_loading = True
@@ -264,8 +317,10 @@ class ReceptionDashboardState(rx.State):
                     page_size=7,
                 )
                 overview = reception_overview(db, token=token)
+                email_metrics = reception_email_metrics(db, token=token)
             self._apply_snapshot(snapshot)
             self._apply_overview(overview)
+            self._apply_email_metrics(email_metrics)
         except (AuthenticationRequiredError, PasswordChangeRequiredError):
             self._clear_data()
             yield rx.redirect("/login")
@@ -330,6 +385,7 @@ class ReceptionDashboardState(rx.State):
             return
         async for event in self._reload():
             yield event
+        yield ReceptionQueueState.load
 
     @rx.event
     async def tick(self, _value: str):
@@ -338,6 +394,7 @@ class ReceptionDashboardState(rx.State):
             return
         async for event in self._reload():
             yield event
+        yield ReceptionQueueState.load
 
     @rx.event
     async def clear_filters(self):

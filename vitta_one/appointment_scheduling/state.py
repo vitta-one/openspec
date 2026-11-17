@@ -24,9 +24,13 @@ from vitta_one.appointment_scheduling.application import (
 from vitta_one.appointment_scheduling.domain import AvailabilitySlotStatus, ConsultationStatus
 from vitta_one.appointment_scheduling.ical_export import build_consultation_ics
 from vitta_one.appointment_scheduling.reception_calendar import (
+    AgendaCalendarHourRow,
     AgendaWeekDay,
+    build_calendar_hour_rows,
     build_week_days,
+    count_calendar_outside_business_hours,
     filter_consultations_for_day,
+    monday_of_week,
     week_bounds,
 )
 from vitta_one.appointment_scheduling.service import (
@@ -722,6 +726,7 @@ class ReceptionAgendaState(rx.State):
     filter_end_date: str = ""
     agenda_date_input: str = ""
     selected_agenda_date: str = ""
+    agenda_view_mode: str = "week"
 
     patient_cpf: str = ""
     selected_patient_id: int = 0
@@ -775,20 +780,63 @@ class ReceptionAgendaState(rx.State):
 
     @rx.var
     def visible_consultations(self) -> list[ConsultationRow]:
-        return filter_consultations_for_day(self.consultations, self.selected_agenda_date)
+        selected = self.selected_agenda_date
+        if not selected and self.agenda_view_mode == "day":
+            selected = self._agenda_day_for_view()
+        return filter_consultations_for_day(self.consultations, selected)
 
     @rx.var
     def agenda_week_days(self) -> list[AgendaWeekDay]:
         return build_week_days(
             self.consultations,
-            self.filter_start_date or clinic_today_iso(),
+            self.filter_start_date or monday_of_week(clinic_today_iso()),
             self.selected_agenda_date,
             clinic_today_iso(),
         )
 
     @rx.var
+    def agenda_calendar_days(self) -> list[AgendaWeekDay]:
+        days = self.agenda_week_days
+        if self.agenda_view_mode != "day":
+            return days
+        day_iso = self._agenda_day_for_view()
+        return [day for day in days if day["date_iso"] == day_iso]
+
+    @rx.var
+    def agenda_calendar_hour_rows(self) -> list[AgendaCalendarHourRow]:
+        day_iso = self._agenda_day_for_view() if self.agenda_view_mode == "day" else None
+        return build_calendar_hour_rows(
+            self.consultations,
+            self.filter_start_date or monday_of_week(clinic_today_iso()),
+            day_iso,
+        )
+
+    @rx.var
+    def agenda_outside_hour_count(self) -> int:
+        day_iso = self._agenda_day_for_view() if self.agenda_view_mode == "day" else None
+        return count_calendar_outside_business_hours(
+            self.consultations, self.filter_start_date or monday_of_week(clinic_today_iso()), day_iso
+        )
+
+    def _agenda_day_for_view(self) -> str:
+        first = date.fromisoformat(
+            self.filter_start_date or monday_of_week(clinic_today_iso())
+        )
+        last = first + timedelta(days=6)
+        selected = (
+            date.fromisoformat(self.selected_agenda_date)
+            if self.selected_agenda_date
+            else date.fromisoformat(clinic_today_iso())
+        )
+        if selected < first or selected > last:
+            selected = first
+        return selected.isoformat()
+
+    @rx.var
     def agenda_period_label(self) -> str:
-        start, end = week_bounds(self.filter_start_date or clinic_today_iso())
+        start, end = week_bounds(
+            self.filter_start_date or monday_of_week(clinic_today_iso())
+        )
         return f"{date.fromisoformat(start):%d/%m/%Y} a {date.fromisoformat(end):%d/%m/%Y}"
 
     @rx.var
@@ -862,9 +910,10 @@ class ReceptionAgendaState(rx.State):
 
     def _ensure_default_period(self) -> None:
         if not self.filter_start_date:
-            self.filter_start_date = clinic_today_iso()
-        if not self.filter_end_date:
-            self.filter_end_date = clinic_date_after_iso(7)
+            self._set_agenda_week(clinic_today_iso())
+        elif not self.filter_end_date:
+            self.filter_start_date = monday_of_week(self.filter_start_date)
+            self.filter_start_date, self.filter_end_date = week_bounds(self.filter_start_date)
 
     def _load_with_token(self, token: str) -> None:
         self._ensure_default_period()
@@ -883,7 +932,7 @@ class ReceptionAgendaState(rx.State):
         self.consultation_page = min(self.consultation_page, self.consultation_total_pages)
 
     def _set_agenda_week(self, first_day: str) -> None:
-        self.filter_start_date, self.filter_end_date = week_bounds(first_day)
+        self.filter_start_date, self.filter_end_date = week_bounds(monday_of_week(first_day))
         self.agenda_date_input = self.filter_start_date
         self.selected_agenda_date = ""
         self.consultation_page = 1
@@ -1000,7 +1049,7 @@ class ReceptionAgendaState(rx.State):
     async def load_agenda(self):
         """Load a single seven-day clinic-local window for both views."""
         try:
-            start = self.filter_start_date or clinic_today_iso()
+            start = self.filter_start_date or monday_of_week(clinic_today_iso())
             self._set_agenda_week(start)
         except (ValueError, OverflowError):
             self._set_agenda_week(clinic_today_iso())
@@ -1056,12 +1105,30 @@ class ReceptionAgendaState(rx.State):
                 return
         except ValueError:
             return
-        self.selected_agenda_date = "" if self.selected_agenda_date == day_iso else day_iso
+        self.selected_agenda_date = (
+            day_iso
+            if self.agenda_view_mode == "day" or self.selected_agenda_date != day_iso
+            else ""
+        )
+        self.consultation_page = 1
+
+    @rx.event
+    def update_agenda_view_mode(self, value: str) -> None:
+        if value not in {"day", "week"}:
+            return
+        self.agenda_view_mode = value
+        if value == "day":
+            if not self.selected_agenda_date:
+                self.selected_agenda_date = self._agenda_day_for_view()
+        else:
+            self.selected_agenda_date = ""
         self.consultation_page = 1
 
     @rx.event
     def clear_agenda_day(self) -> None:
         self.selected_agenda_date = ""
+        if self.agenda_view_mode == "day":
+            self.agenda_view_mode = "week"
         self.consultation_page = 1
 
     @rx.event
