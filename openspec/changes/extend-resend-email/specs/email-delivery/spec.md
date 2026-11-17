@@ -6,6 +6,21 @@ Rastrear intenções e tentativas de envio ao Resend com estados verdadeiros, co
 
 ## ADDED Requirements
 
+### Requirement: Endereços sintéticos e remetente inválido não chegam ao Resend
+O sistema MUST recusar destinatários com domínios reservados para teste ou inválidos, incluindo `.invalid`, `.test`, `.example`, `.localhost` e `.local`, antes de qualquer chamada HTTP ao Resend. `RESEND_FROM_EMAIL` MUST conter uma única caixa postal sintaticamente válida, opcionalmente com nome de exibição, e MUST recusar domínios reservados. Ausência ou sintaxe inválida do remetente MUST produzir `NOT_CONFIGURED` sem chamada HTTP. A verificação de que o domínio está habilitado na conta permanece responsabilidade do provedor; rejeição explícita do Resend MUST ser registrada como falha, não como entrega.
+
+#### Scenario: Destinatário de teste
+- **WHEN** um envio de onboarding ou notificação usa endereço com domínio `.invalid`, `.test`, `.example`, `.localhost` ou `.local`
+- **THEN** nenhuma chamada HTTP é feita e o sistema registra ou apresenta estado que não alegue aceitação ou entrega
+
+#### Scenario: Remetente ausente ou malformado
+- **WHEN** a chave existe mas o remetente não contém exatamente uma caixa postal válida ou usa domínio reservado
+- **THEN** o transporte não chama o Resend e informa `NOT_CONFIGURED`
+
+#### Scenario: Domínio não habilitado no provedor
+- **WHEN** o remetente tem sintaxe válida, mas o Resend rejeita o domínio configurado
+- **THEN** a tentativa é registrada como falha e nunca como `ACCEPTED` ou `DELIVERED`
+
 ### Requirement: Intenção única e tentativas rastreáveis
 O sistema MUST registrar intenção antes de enviar, com tipo, referência de evento, destinatário elegível, provedor e estado. MUST impedir intenção duplicada por evento/destinatário e processamentos simultâneos da mesma intenção. Tentativas MUST ter identificador estável e resultado persistido, sem armazenar mensagem integral ou segredo.
 

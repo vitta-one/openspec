@@ -37,6 +37,9 @@ from vitta_one.integration_api import provider_routes
 def setup(monkeypatch, request):
     monkeypatch.setenv("VITTA_ONE_CLINIC_TIMEZONE", "America/Sao_Paulo")
     monkeypatch.setenv("VITTA_ONE_PUBLIC_URL", "https://vitta.example.test")
+    # Keep provider tests offline even when a developer has local credentials.
+    monkeypatch.delenv("RESEND_API_KEY", raising=False)
+    monkeypatch.delenv("RESEND_FROM_EMAIL", raising=False)
     if request.param == "postgresql":
         url = os.getenv("DATABASE_URL", "")
         if not url.startswith("postgresql") or os.getenv("VITTA_ONE_QA_DISPOSABLE_DATABASE") != "yes":
@@ -56,7 +59,8 @@ def setup(monkeypatch, request):
     with Session(engine) as db:
         tokens, users = {}, {}
         for role in Role:
-            user = User(email=f"{role.value.lower()}@example.test", password_hash="test-no-login", role=role.value)
+            email = "patient@vitta-clinic.com" if role == Role.PACIENTE else f"{role.value.lower()}@example.test"
+            user = User(email=email, password_hash="test-no-login", role=role.value)
             db.add(user)
             db.flush()
             users[role] = user.id
