@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Dashboard apresenta métricas agregadas de e-mails da agenda
-A visão `/recepcao` MUST apresentar contagens persistidas de notificações de agenda criadas nas 30 datas locais mais recentes, incluindo hoje: aceitas pelo provedor, confirmadas como entregues, falhas e pendentes/indeterminadas. `PENDING`, `SENDING`, `UNKNOWN` e `NOT_CONFIGURED` compõem o grupo pendente/indeterminado; `SUPPRESSED` fica fora dos quatro grupos. Aceitação pelo Resend MUST ser distinguida de entrega confirmada. A consulta MUST exigir role Recepcionista no servidor e MUST retornar somente contagens, sem destinatário, conteúdo, identificador de mensagem ou dados clínicos.
+A visão `/recepcao` MUST exibir contagens persistidas de notificações de agenda criadas nas 30 datas locais mais recentes, incluindo hoje: aceitas, entregues, falhas e pendentes/indeterminadas. Aceitação pelo Resend MUST ser distinguida de entrega confirmada. A projeção MUST exigir role Recepcionista no servidor e MUST retornar somente contagens, sem destinatários, conteúdo, identificadores de mensagens ou dados clínicos.
 
 #### Scenario: Período sem notificações
 - **WHEN** não há notificações de agenda criadas nas 30 datas locais mais recentes, incluindo hoje
