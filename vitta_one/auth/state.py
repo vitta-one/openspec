@@ -130,9 +130,12 @@ class AuthState(rx.State):
         from vitta_one.patient_portal.state import PatientPortalState
         from vitta_one.patient_portal.booking_state import PatientBookingState
         from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
+        from vitta_one.reception.dashboard.state import ReceptionDashboardState
 
         queue = await self.get_state(ReceptionQueueState)
         queue._clear_sensitive_view()
+        reception_dashboard = await self.get_state(ReceptionDashboardState)
+        reception_dashboard._clear_data()
         doctor = await self.get_state(DoctorQueueState)
         doctor._clear_active()
         workspace = await self.get_state(DoctorWorkspaceState)
@@ -381,6 +384,12 @@ class AuthState(rx.State):
             role=identity.role,
             verified_path=self.router.route_id,
         )
+        from vitta_one.ui.components import SidebarState
+
+        sidebar = await self.get_state(SidebarState)
+        if sidebar.active_profile != identity.role.value:
+            sidebar.active_profile = identity.role.value
+            sidebar.user_changed_desktop = False
         self.auth_checked = True
         yield
 
@@ -579,6 +588,11 @@ class AuthState(rx.State):
 
         self.session_token = ""
         self._clear_identity()
+        from vitta_one.ui.components import SidebarState
+
+        sidebar = await self.get_state(SidebarState)
+        sidebar.active_profile = ""
+        sidebar.user_changed_desktop = False
         self.auth_checked = True
         yield rx.remove_cookie(SESSION_COOKIE_NAME)
         yield rx.redirect("/login")

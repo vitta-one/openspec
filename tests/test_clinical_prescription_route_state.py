@@ -103,13 +103,20 @@ def test_prescription_route_rejects_non_numeric_identifier_without_db_lookup(
 def test_logout_clears_doctor_and_print_payloads_and_removes_session_cookie(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """15.11: a successful logout clears all sensitive sibling state projections."""
+    """Logout and session expiry clear all sensitive sibling state projections."""
     from vitta_one.admin_preview.state import AdminPreviewState
+    from vitta_one.admin_preview.reception_state import AdminReceptionPreviewState
     from vitta_one.auth import state as auth_state
     from vitta_one.auth.state import AuthState
     from vitta_one.doctor_workspace.state import DoctorWorkspaceState
+    from vitta_one.financial.state import FinancialState
+    from vitta_one.notifications.operations import EmailOperationsState
+    from vitta_one.notifications.state import NotificationState
     from vitta_one.patient_portal.state import PatientPortalState
+    from vitta_one.patient_portal.booking_state import PatientBookingState
     from vitta_one.patient_queue.state import DoctorQueueState, ReceptionQueueState
+    from vitta_one.reception.dashboard.state import ReceptionDashboardState
+    from vitta_one.ui.components import SidebarState
 
     cleared = []
 
@@ -126,37 +133,56 @@ def test_logout_clears_doctor_and_print_payloads_and_removes_session_cookie(
         def _clear_sensitive_view(self):
             cleared.append(self.name)
 
+        def _clear_data(self):
+            cleared.append(self.name)
+
+        def _reset_selection(self):
+            cleared.append(self.name)
+
+    dashboard = SimpleNamespace(
+        appointments=[{"patient_name": "SENTINEL: paciente da recepção"}],
+        upcoming_appointments=[{"patient_name": "SENTINEL: próximo atendimento"}],
+    )
+
+    def _clear_dashboard_details():
+        ReceptionDashboardState._clear_details(dashboard)
+
+    def _clear_dashboard_data():
+        ReceptionDashboardState._clear_data(dashboard)
+        cleared.append("reception-dashboard")
+
+    dashboard._clear_details = _clear_dashboard_details
+    dashboard._clear_data = _clear_dashboard_data
+
     siblings = {
         ReceptionQueueState: _Sibling("reception"),
+        ReceptionDashboardState: dashboard,
         DoctorQueueState: _Sibling("doctor"),
         DoctorWorkspaceState: _Sibling("doctor-workspace"),
         PatientPortalState: _Sibling("patient"),
+        PatientBookingState: _Sibling("booking"),
         PrintPrescriptionState: _Sibling("print"),
         AdminPreviewState: _Sibling("admin"),
+        AdminReceptionPreviewState: _Sibling("admin-reception"),
+        FinancialState: _Sibling("financial"),
+        NotificationState: _Sibling("notification"),
+        EmailOperationsState: _Sibling("email-operations"),
+        SidebarState: _Sibling("sidebar"),
     }
+    siblings[SidebarState].active_profile = "MEDICO"
+    siblings[SidebarState].user_changed_desktop = True
 
     class _AuthDouble:
         session_token = "valid-test-session"
         shell_error = "previous error"
         auth_checked = False
+        router = SimpleNamespace(route_id="/recepcao")
 
         async def get_state(self, target):
             return siblings[target]
 
         async def _clear_sensitive_states(self):
-            queue = await self.get_state(ReceptionQueueState)
-            queue._clear_sensitive_view()
-            doctor = await self.get_state(DoctorQueueState)
-            doctor._clear_active()
-            workspace = await self.get_state(DoctorWorkspaceState)
-            workspace._clear()
-            patient = await self.get_state(PatientPortalState)
-            patient._clear()
-            patient.error_message = ""
-            print_state = await self.get_state(PrintPrescriptionState)
-            print_state._clear()
-            admin = await self.get_state(AdminPreviewState)
-            admin._clear()
+            await AuthState._clear_sensitive_states(self)
 
         def _clear_identity(self):
             cleared.append("identity")
@@ -172,12 +198,35 @@ def test_logout_clears_doctor_and_print_payloads_and_removes_session_cookie(
 
     assert revoked == ["valid-test-session"]
     assert cleared == [
-        "reception", "doctor", "doctor-workspace", "patient", "print", "admin", "identity"
+        "reception", "reception-dashboard", "doctor", "doctor-workspace", "patient",
+        "booking", "print", "admin", "admin-reception", "financial", "notification",
+        "email-operations", "identity",
     ]
+    assert dashboard.appointments == []
+    assert dashboard.upcoming_appointments == []
+    assert dashboard.details_patient_name == ""
     assert fake.session_token == ""
     assert fake.auth_checked is True
+    assert siblings[SidebarState].active_profile == ""
+    assert siblings[SidebarState].user_changed_desktop is False
     assert ("redirect", "/login") in events
     assert any(isinstance(event, tuple) and event[0] == "cookie" for event in events)
+
+    dashboard.upcoming_appointments = [{"patient_name": "SENTINEL: paciente após expiração"}]
+    dashboard.details_patient_name = "SENTINEL"
+    fake.session_token = "expired-test-session"
+
+    def _expired_session(*_args, **_kwargs):
+        raise AuthenticationRequiredError("Sessão expirada")
+
+    monkeypatch.setattr(auth_state, "require_role", _expired_session)
+    expired_events = asyncio.run(_collect(AuthState.load_protected.fn(fake)))
+
+    assert dashboard.upcoming_appointments == []
+    assert dashboard.details_patient_name == ""
+    assert fake.session_token == ""
+    assert ("redirect", "/login") in expired_events
+    assert any(isinstance(event, tuple) and event[0] == "cookie" for event in expired_events)
 
 
 
