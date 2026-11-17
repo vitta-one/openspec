@@ -5,7 +5,11 @@ Define a apresentação compartilhada das telas operacionais do Vitta-One, com v
 ## ADDED Requirements
 
 ### Requirement: Shell operacional preserva a variante visual de cada perfil
-As rotas `/recepcao`, `/recepcao/agenda`, `/recepcao/pacientes`, `/recepcao/pacientes/novo`, `/recepcao/fila`, `/admin`, `/admin/funcionarios`, `/admin/funcionarios/novo`, `/admin/especialidades`, `/admin/horarios`, `/admin/configuracoes`, `/financeiro`, `/medico`, `/medico/agenda`, `/medico/pacientes` e `/medico/prontuarios` MUST usar a identidade visual canônica e os controles do shell autenticado. No primeiro carregamento autenticado por perfil, Recepção, Administração e Financeiro MUST iniciar com navegação compacta; Médico MUST iniciar com navegação expandida e marca Vitta-One. Uma escolha manual MUST ser preservada entre rotas do mesmo perfil e MUST poder ser alterada por controle acessível.
+As 16 rotas operacionais MUST usar a identidade visual canônica e os controles do shell autenticado. No primeiro acesso, a navegação MUST iniciar compacta para Recepção, Administração e Financeiro, e expandida com marca Vitta-One para Médico. Uma escolha manual MUST ser preservada entre rotas do mesmo perfil e MUST poder ser alterada por controle acessível.
+
+#### Scenario: Abrangência das rotas operacionais
+- **WHEN** a pessoa abre qualquer uma das rotas `/recepcao`, `/recepcao/agenda`, `/recepcao/pacientes`, `/recepcao/pacientes/novo`, `/recepcao/fila`, `/admin`, `/admin/funcionarios`, `/admin/funcionarios/novo`, `/admin/especialidades`, `/admin/horarios`, `/admin/configuracoes`, `/financeiro`, `/medico`, `/medico/agenda`, `/medico/pacientes` ou `/medico/prontuarios`
+- **THEN** o shell autenticado mantém a identidade visual e os controles canônicos
 
 #### Scenario: Abertura da navegação por perfil
 - **WHEN** uma pessoa autenticada abre a primeira rota operacional de seu perfil em desktop
@@ -35,7 +39,7 @@ As telas MUST renderizar componentes e estados ligados às entidades e serviços
 - **THEN** a tela não informa sucesso e não mantém dados protegidos de uma consulta anterior incompatível
 
 ### Requirement: Superfícies operacionais permanecem utilizáveis por teclado e responsivas
-As 16 telas MUST manter rótulos semânticos, foco visível e ordem de teclado previsível. Em larguras de 320, 390, 768, 1024, 1440 e 1768 pixels, MUST evitar overflow horizontal do documento e adaptar listas e tabelas sem ocultar informações essenciais ou ações autorizadas. Movimentos não essenciais MUST respeitar `prefers-reduced-motion`. A comparação visual MUST cobrir cada uma das 16 rotas em viewport 1768×890 e registrar evidência responsiva nas larguras de 320, 390, 768, 1024 e 1440 pixels usando apenas dados sintéticos.
+As 16 telas MUST manter rótulos semânticos, foco visível e ordem de teclado previsível. MUST evitar overflow horizontal do documento e adaptar listas e tabelas sem ocultar informações essenciais ou ações autorizadas. Movimentos não essenciais MUST respeitar `prefers-reduced-motion`. A comparação visual MUST cobrir as 16 rotas e os viewports definidos no cenário de evidência, utilizando somente dados sintéticos.
 
 #### Scenario: Operação por teclado
 - **WHEN** a pessoa navega por cabeçalho, filtros, tabelas, ações e diálogos usando teclado
@@ -50,5 +54,5 @@ As 16 telas MUST manter rótulos semânticos, foco visível e ordem de teclado p
 - **THEN** transições decorativas são desativadas sem remover estados ou feedback
 
 #### Scenario: Evidência visual de todas as telas
-- **WHEN** a interface é comparada às referências locais durante a validação
-- **THEN** as 16 rotas têm captura em 1768×890, há capturas responsivas nas cinco larguras definidas e nenhuma captura contém dados reais ou imagens de referência incorporadas à aplicação
+- **WHEN** a interface é comparada às referências locais durante a validação nos viewports 1768×890, 1440×900, 1024×768, 768×1024, 390×844 e 320×740
+- **THEN** as 16 rotas têm captura em cada viewport, sem dados reais ou imagens de referência incorporadas à aplicação
