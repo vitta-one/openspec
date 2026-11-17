@@ -1,0 +1,592 @@
+{
+  "result": "PASS",
+  "routes": 16,
+  "viewports": {
+    "desktop-1768x890": 16,
+    "desktop-1440x900": 16,
+    "tablet-1024x768": 16,
+    "tablet-768x1024": 16,
+    "mobile-390x844": 16,
+    "mobile-320x740": 16
+  },
+  "captures_passed": 96,
+  "captures_failed": 0,
+  "captures": [
+    {
+      "reference": "01-dashboard-recepcao.png",
+      "route": "/recepcao",
+      "viewport": "desktop-1768x890",
+      "status": "PASS"
+    },
+    {
+      "reference": "02-agenda-recepcao.png",
+      "route": "/recepcao/agenda",
+      "viewport": "desktop-1768x890",
+      "status": "PASS"
+    },
+    {
+      "reference": "03-lista-pacientes.png",
+      "route": "/recepcao/pacientes",
+      "viewport": "desktop-1768x890",
+      "status": "PASS"
+    },
+    {
+      "reference": "04-novo-paciente.png",
+      "route": "/recepcao/pacientes/novo",
+      "viewport": "desktop-1768x890",
+      "status": "PASS"
+    },
+    {
+      "reference": "05-fila-espera.png",
+      "route": "/recepcao/fila",
+      "viewport": "desktop-1768x890",
+      "status": "PASS"
+    },
+    {
+      "reference": "06-dashboard-administracao.png",
+      "route": "/admin",
+      "viewport": "desktop-1768x890",
+      "status": "PASS"
+    },
+    {
+      "reference": "07-funcionarios.png",
+      "route": "/admin/funcionarios",
+      "viewport": "desktop-1768x890",
+      "status": "PASS"
+    },
+    {
+      "reference": "08-novo-funcionario.png",
+      "route": "/admin/funcionarios/novo",
+      "viewport": "desktop-1768x890",
+      "status": "PASS"
+    },
+    {
+      "reference": "09-especialidades.png",
+      "route": "/admin/especialidades",
+      "viewport": "desktop-1768x890",
+      "status": "PASS"
+    },
+    {
+      "reference": "10-gerenciar-horarios.png",
+      "route": "/admin/horarios",
+      "viewport": "desktop-1768x890",
+      "status": "PASS"
+    },
+    {
+      "reference": "11-configuracoes-clinica.png",
+      "route": "/admin/configuracoes",
+      "viewport": "desktop-1768x890",
+      "status": "PASS"
+    },
+    {
+      "reference": "12-financeiro-asaas.png",
+      "route": "/financeiro",
+      "viewport": "desktop-1768x890",
+      "status": "PASS"
+    },
+    {
+      "reference": "13-medico-visao-geral.png",
+      "route": "/medico",
+      "viewport": "desktop-1768x890",
+      "status": "PASS"
+    },
+    {
+      "reference": "14-medico-agenda.png",
+      "route": "/medico/agenda",
+      "viewport": "desktop-1768x890",
+      "status": "PASS"
+    },
+    {
+      "reference": "15-medico-pacientes.png",
+      "route": "/medico/pacientes",
+      "viewport": "desktop-1768x890",
+      "status": "PASS"
+    },
+    {
+      "reference": "16-medico-prontuarios.png",
+      "route": "/medico/prontuarios",
+      "viewport": "desktop-1768x890",
+      "status": "PASS"
+    },
+    {
+      "reference": "01-dashboard-recepcao.png",
+      "route": "/recepcao",
+      "viewport": "desktop-1440x900",
+      "status": "PASS"
+    },
+    {
+      "reference": "02-agenda-recepcao.png",
+      "route": "/recepcao/agenda",
+      "viewport": "desktop-1440x900",
+      "status": "PASS"
+    },
+    {
+      "reference": "03-lista-pacientes.png",
+      "route": "/recepcao/pacientes",
+      "viewport": "desktop-1440x900",
+      "status": "PASS"
+    },
+    {
+      "reference": "04-novo-paciente.png",
+      "route": "/recepcao/pacientes/novo",
+      "viewport": "desktop-1440x900",
+      "status": "PASS"
+    },
+    {
+      "reference": "05-fila-espera.png",
+      "route": "/recepcao/fila",
+      "viewport": "desktop-1440x900",
+      "status": "PASS"
+    },
+    {
+      "reference": "06-dashboard-administracao.png",
+      "route": "/admin",
+      "viewport": "desktop-1440x900",
+      "status": "PASS"
+    },
+    {
+      "reference": "07-funcionarios.png",
+      "route": "/admin/funcionarios",
+      "viewport": "desktop-1440x900",
+      "status": "PASS"
+    },
+    {
+      "reference": "08-novo-funcionario.png",
+      "route": "/admin/funcionarios/novo",
+      "viewport": "desktop-1440x900",
+      "status": "PASS"
+    },
+    {
+      "reference": "09-especialidades.png",
+      "route": "/admin/especialidades",
+      "viewport": "desktop-1440x900",
+      "status": "PASS"
+    },
+    {
+      "reference": "10-gerenciar-horarios.png",
+      "route": "/admin/horarios",
+      "viewport": "desktop-1440x900",
+      "status": "PASS"
+    },
+    {
+      "reference": "11-configuracoes-clinica.png",
+      "route": "/admin/configuracoes",
+      "viewport": "desktop-1440x900",
+      "status": "PASS"
+    },
+    {
+      "reference": "12-financeiro-asaas.png",
+      "route": "/financeiro",
+      "viewport": "desktop-1440x900",
+      "status": "PASS"
+    },
+    {
+      "reference": "13-medico-visao-geral.png",
+      "route": "/medico",
+      "viewport": "desktop-1440x900",
+      "status": "PASS"
+    },
+    {
+      "reference": "14-medico-agenda.png",
+      "route": "/medico/agenda",
+      "viewport": "desktop-1440x900",
+      "status": "PASS"
+    },
+    {
+      "reference": "15-medico-pacientes.png",
+      "route": "/medico/pacientes",
+      "viewport": "desktop-1440x900",
+      "status": "PASS"
+    },
+    {
+      "reference": "16-medico-prontuarios.png",
+      "route": "/medico/prontuarios",
+      "viewport": "desktop-1440x900",
+      "status": "PASS"
+    },
+    {
+      "reference": "01-dashboard-recepcao.png",
+      "route": "/recepcao",
+      "viewport": "tablet-1024x768",
+      "status": "PASS"
+    },
+    {
+      "reference": "02-agenda-recepcao.png",
+      "route": "/recepcao/agenda",
+      "viewport": "tablet-1024x768",
+      "status": "PASS"
+    },
+    {
+      "reference": "03-lista-pacientes.png",
+      "route": "/recepcao/pacientes",
+      "viewport": "tablet-1024x768",
+      "status": "PASS"
+    },
+    {
+      "reference": "04-novo-paciente.png",
+      "route": "/recepcao/pacientes/novo",
+      "viewport": "tablet-1024x768",
+      "status": "PASS"
+    },
+    {
+      "reference": "05-fila-espera.png",
+      "route": "/recepcao/fila",
+      "viewport": "tablet-1024x768",
+      "status": "PASS"
+    },
+    {
+      "reference": "06-dashboard-administracao.png",
+      "route": "/admin",
+      "viewport": "tablet-1024x768",
+      "status": "PASS"
+    },
+    {
+      "reference": "07-funcionarios.png",
+      "route": "/admin/funcionarios",
+      "viewport": "tablet-1024x768",
+      "status": "PASS"
+    },
+    {
+      "reference": "08-novo-funcionario.png",
+      "route": "/admin/funcionarios/novo",
+      "viewport": "tablet-1024x768",
+      "status": "PASS"
+    },
+    {
+      "reference": "09-especialidades.png",
+      "route": "/admin/especialidades",
+      "viewport": "tablet-1024x768",
+      "status": "PASS"
+    },
+    {
+      "reference": "10-gerenciar-horarios.png",
+      "route": "/admin/horarios",
+      "viewport": "tablet-1024x768",
+      "status": "PASS"
+    },
+    {
+      "reference": "11-configuracoes-clinica.png",
+      "route": "/admin/configuracoes",
+      "viewport": "tablet-1024x768",
+      "status": "PASS"
+    },
+    {
+      "reference": "12-financeiro-asaas.png",
+      "route": "/financeiro",
+      "viewport": "tablet-1024x768",
+      "status": "PASS"
+    },
+    {
+      "reference": "13-medico-visao-geral.png",
+      "route": "/medico",
+      "viewport": "tablet-1024x768",
+      "status": "PASS"
+    },
+    {
+      "reference": "14-medico-agenda.png",
+      "route": "/medico/agenda",
+      "viewport": "tablet-1024x768",
+      "status": "PASS"
+    },
+    {
+      "reference": "15-medico-pacientes.png",
+      "route": "/medico/pacientes",
+      "viewport": "tablet-1024x768",
+      "status": "PASS"
+    },
+    {
+      "reference": "16-medico-prontuarios.png",
+      "route": "/medico/prontuarios",
+      "viewport": "tablet-1024x768",
+      "status": "PASS"
+    },
+    {
+      "reference": "01-dashboard-recepcao.png",
+      "route": "/recepcao",
+      "viewport": "tablet-768x1024",
+      "status": "PASS"
+    },
+    {
+      "reference": "02-agenda-recepcao.png",
+      "route": "/recepcao/agenda",
+      "viewport": "tablet-768x1024",
+      "status": "PASS"
+    },
+    {
+      "reference": "03-lista-pacientes.png",
+      "route": "/recepcao/pacientes",
+      "viewport": "tablet-768x1024",
+      "status": "PASS"
+    },
+    {
+      "reference": "04-novo-paciente.png",
+      "route": "/recepcao/pacientes/novo",
+      "viewport": "tablet-768x1024",
+      "status": "PASS"
+    },
+    {
+      "reference": "05-fila-espera.png",
+      "route": "/recepcao/fila",
+      "viewport": "tablet-768x1024",
+      "status": "PASS"
+    },
+    {
+      "reference": "06-dashboard-administracao.png",
+      "route": "/admin",
+      "viewport": "tablet-768x1024",
+      "status": "PASS"
+    },
+    {
+      "reference": "07-funcionarios.png",
+      "route": "/admin/funcionarios",
+      "viewport": "tablet-768x1024",
+      "status": "PASS"
+    },
+    {
+      "reference": "08-novo-funcionario.png",
+      "route": "/admin/funcionarios/novo",
+      "viewport": "tablet-768x1024",
+      "status": "PASS"
+    },
+    {
+      "reference": "09-especialidades.png",
+      "route": "/admin/especialidades",
+      "viewport": "tablet-768x1024",
+      "status": "PASS"
+    },
+    {
+      "reference": "10-gerenciar-horarios.png",
+      "route": "/admin/horarios",
+      "viewport": "tablet-768x1024",
+      "status": "PASS"
+    },
+    {
+      "reference": "11-configuracoes-clinica.png",
+      "route": "/admin/configuracoes",
+      "viewport": "tablet-768x1024",
+      "status": "PASS"
+    },
+    {
+      "reference": "12-financeiro-asaas.png",
+      "route": "/financeiro",
+      "viewport": "tablet-768x1024",
+      "status": "PASS"
+    },
+    {
+      "reference": "13-medico-visao-geral.png",
+      "route": "/medico",
+      "viewport": "tablet-768x1024",
+      "status": "PASS"
+    },
+    {
+      "reference": "14-medico-agenda.png",
+      "route": "/medico/agenda",
+      "viewport": "tablet-768x1024",
+      "status": "PASS"
+    },
+    {
+      "reference": "15-medico-pacientes.png",
+      "route": "/medico/pacientes",
+      "viewport": "tablet-768x1024",
+      "status": "PASS"
+    },
+    {
+      "reference": "16-medico-prontuarios.png",
+      "route": "/medico/prontuarios",
+      "viewport": "tablet-768x1024",
+      "status": "PASS"
+    },
+    {
+      "reference": "01-dashboard-recepcao.png",
+      "route": "/recepcao",
+      "viewport": "mobile-390x844",
+      "status": "PASS"
+    },
+    {
+      "reference": "02-agenda-recepcao.png",
+      "route": "/recepcao/agenda",
+      "viewport": "mobile-390x844",
+      "status": "PASS"
+    },
+    {
+      "reference": "03-lista-pacientes.png",
+      "route": "/recepcao/pacientes",
+      "viewport": "mobile-390x844",
+      "status": "PASS"
+    },
+    {
+      "reference": "04-novo-paciente.png",
+      "route": "/recepcao/pacientes/novo",
+      "viewport": "mobile-390x844",
+      "status": "PASS"
+    },
+    {
+      "reference": "05-fila-espera.png",
+      "route": "/recepcao/fila",
+      "viewport": "mobile-390x844",
+      "status": "PASS"
+    },
+    {
+      "reference": "06-dashboard-administracao.png",
+      "route": "/admin",
+      "viewport": "mobile-390x844",
+      "status": "PASS"
+    },
+    {
+      "reference": "07-funcionarios.png",
+      "route": "/admin/funcionarios",
+      "viewport": "mobile-390x844",
+      "status": "PASS"
+    },
+    {
+      "reference": "08-novo-funcionario.png",
+      "route": "/admin/funcionarios/novo",
+      "viewport": "mobile-390x844",
+      "status": "PASS"
+    },
+    {
+      "reference": "09-especialidades.png",
+      "route": "/admin/especialidades",
+      "viewport": "mobile-390x844",
+      "status": "PASS"
+    },
+    {
+      "reference": "10-gerenciar-horarios.png",
+      "route": "/admin/horarios",
+      "viewport": "mobile-390x844",
+      "status": "PASS"
+    },
+    {
+      "reference": "11-configuracoes-clinica.png",
+      "route": "/admin/configuracoes",
+      "viewport": "mobile-390x844",
+      "status": "PASS"
+    },
+    {
+      "reference": "12-financeiro-asaas.png",
+      "route": "/financeiro",
+      "viewport": "mobile-390x844",
+      "status": "PASS"
+    },
+    {
+      "reference": "13-medico-visao-geral.png",
+      "route": "/medico",
+      "viewport": "mobile-390x844",
+      "status": "PASS"
+    },
+    {
+      "reference": "14-medico-agenda.png",
+      "route": "/medico/agenda",
+      "viewport": "mobile-390x844",
+      "status": "PASS"
+    },
+    {
+      "reference": "15-medico-pacientes.png",
+      "route": "/medico/pacientes",
+      "viewport": "mobile-390x844",
+      "status": "PASS"
+    },
+    {
+      "reference": "16-medico-prontuarios.png",
+      "route": "/medico/prontuarios",
+      "viewport": "mobile-390x844",
+      "status": "PASS"
+    },
+    {
+      "reference": "01-dashboard-recepcao.png",
+      "route": "/recepcao",
+      "viewport": "mobile-320x740",
+      "status": "PASS"
+    },
+    {
+      "reference": "02-agenda-recepcao.png",
+      "route": "/recepcao/agenda",
+      "viewport": "mobile-320x740",
+      "status": "PASS"
+    },
+    {
+      "reference": "03-lista-pacientes.png",
+      "route": "/recepcao/pacientes",
+      "viewport": "mobile-320x740",
+      "status": "PASS"
+    },
+    {
+      "reference": "04-novo-paciente.png",
+      "route": "/recepcao/pacientes/novo",
+      "viewport": "mobile-320x740",
+      "status": "PASS"
+    },
+    {
+      "reference": "05-fila-espera.png",
+      "route": "/recepcao/fila",
+      "viewport": "mobile-320x740",
+      "status": "PASS"
+    },
+    {
+      "reference": "06-dashboard-administracao.png",
+      "route": "/admin",
+      "viewport": "mobile-320x740",
+      "status": "PASS"
+    },
+    {
+      "reference": "07-funcionarios.png",
+      "route": "/admin/funcionarios",
+      "viewport": "mobile-320x740",
+      "status": "PASS"
+    },
+    {
+      "reference": "08-novo-funcionario.png",
+      "route": "/admin/funcionarios/novo",
+      "viewport": "mobile-320x740",
+      "status": "PASS"
+    },
+    {
+      "reference": "09-especialidades.png",
+      "route": "/admin/especialidades",
+      "viewport": "mobile-320x740",
+      "status": "PASS"
+    },
+    {
+      "reference": "10-gerenciar-horarios.png",
+      "route": "/admin/horarios",
+      "viewport": "mobile-320x740",
+      "status": "PASS"
+    },
+    {
+      "reference": "11-configuracoes-clinica.png",
+      "route": "/admin/configuracoes",
+      "viewport": "mobile-320x740",
+      "status": "PASS"
+    },
+    {
+      "reference": "12-financeiro-asaas.png",
+      "route": "/financeiro",
+      "viewport": "mobile-320x740",
+      "status": "PASS"
+    },
+    {
+      "reference": "13-medico-visao-geral.png",
+      "route": "/medico",
+      "viewport": "mobile-320x740",
+      "status": "PASS"
+    },
+    {
+      "reference": "14-medico-agenda.png",
+      "route": "/medico/agenda",
+      "viewport": "mobile-320x740",
+      "status": "PASS"
+    },
+    {
+      "reference": "15-medico-pacientes.png",
+      "route": "/medico/pacientes",
+      "viewport": "mobile-320x740",
+      "status": "PASS"
+    },
+    {
+      "reference": "16-medico-prontuarios.png",
+      "route": "/medico/prontuarios",
+      "viewport": "mobile-320x740",
+      "status": "PASS"
+    }
+  ]
+}
