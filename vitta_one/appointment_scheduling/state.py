@@ -383,6 +383,24 @@ class AdminAvailabilityState(rx.State):
         self.slots = []
         self.selected_professional = "__none__"
         self.selected_calendar_day = ""
+        self.weekly_start_day = "0"
+        self.weekly_end_day = "4"
+        self.weekly_start_time = "08:00"
+        self.weekly_end_time = "17:00"
+        self.weekly_slot_minutes = "30"
+        self.weekly_existing = False
+        self.weekly_saved_summary = ""
+        self.slot_datetime_local = ""
+        self.slot_date_local = ""
+        self.slot_time_local = ""
+        self.filter_professional = "__all__"
+        self.filter_start_date = ""
+        self.filter_end_date = ""
+        self.calendar_month = ""
+        self.active_operation = "search"
+        self.is_loading = False
+        self.is_submitting = False
+        self._clear_feedback()
 
     def _apply_weekly_rule(self, rule) -> None:
         self.weekly_existing = rule is not None
@@ -895,6 +913,7 @@ class ReceptionAgendaState(rx.State):
         self.professionals = []
         self.slots = []
         self.consultations = []
+        self.patient_cpf = ""
         self.selected_agenda_date = ""
         self.selected_patient_id = 0
         self.selected_patient_name = ""
@@ -904,6 +923,7 @@ class ReceptionAgendaState(rx.State):
         self._reset_arrival()
         self._reset_reschedule()
         self._reset_cancel()
+        self._clear_feedback()
 
     def _professional_filter_id(self) -> int | None:
         return None if self.filter_professional == "__all__" else int(self.filter_professional)

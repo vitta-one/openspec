@@ -354,8 +354,19 @@ class AdminDirectoryState(rx.State):
         self.professionals = []
         self.recent_specialties = []
         self.recent_professionals = []
+        self.specialty_search = ""
+        self.specialty_status = "all"
+        self.specialty_page = 1
+        self.professional_search = ""
+        self.professional_status = "all"
+        self.professional_specialty_filter = "all"
+        self.professional_page = 1
         self.medical_accounts = []
         self.specialty_options = []
+        self.is_loading = False
+        self.directory_load_failed = False
+        self.is_submitting = False
+        self._clear_feedback()
         self.specialty_dialog_open = False
         self._reset_specialty_status_change()
         self.professional_dialog_open = False

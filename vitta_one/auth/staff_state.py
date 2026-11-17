@@ -91,6 +91,31 @@ class AdminStaffState(rx.State):
     success: str = ""
     saving: bool = False
 
+    def _clear_sensitive_data(self) -> None:
+        """Drop employee identities and form data when the admin session ends."""
+        self.emails = []
+        self.employees = []
+        self.employee_detail = _EMPTY_EMPLOYEE_DETAIL.copy()
+        self.detail_status = "loading"
+        self.employee_search = ""
+        self.employee_role = "todos"
+        self.current_page = 1
+        self.creation_profile = ""
+        self.new_name = ""
+        self.new_email = ""
+        self.show_password = False
+        self.pending_profile = ""
+        self.profile_change_dialog_open = False
+        self.cancel_dialog_open = False
+        self.name_error = ""
+        self.email_error = ""
+        self.profile_error = ""
+        self.password_error = ""
+        self.error = ""
+        self.success = ""
+        self.saving = False
+        self.is_loading = False
+
     @rx.var
     def filtered_employees(self) -> list[EmployeeRow]:
         return filter_employee_directory(

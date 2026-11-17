@@ -27,6 +27,8 @@ class AdminDashboardState(rx.State):
         self.staff_accounts = 0
         self.clinic_date = ""
         self.has_loaded = False
+        self.is_loading = False
+        self.error_message = ""
 
     async def _token(self) -> str:
         return (await self.get_state(AuthState)).session_token
