@@ -9,6 +9,7 @@ import pytest
 from playwright.sync_api import expect, sync_playwright
 
 from qa_browser.capture_all_screens import BASE, OUTPUT, FIXTURE, authenticate
+from qa_browser.playwright_support import launch_chromium
 
 
 @pytest.mark.parametrize(
@@ -17,7 +18,7 @@ from qa_browser.capture_all_screens import BASE, OUTPUT, FIXTURE, authenticate
 )
 def test_qa_admin_agenda_calendar_and_responsiveness(width, height):
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=True)
+        browser = launch_chromium(playwright)
         try:
             context = browser.new_context(
                 viewport={"width": width, "height": height},
