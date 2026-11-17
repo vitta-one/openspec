@@ -228,6 +228,18 @@ class AdminDirectoryState(rx.State):
         return bool(self.specialties)
 
     @rx.var
+    def specialty_count(self) -> int:
+        return len(self.specialties)
+
+    @rx.var
+    def active_specialty_count(self) -> int:
+        return sum(item["is_active"] for item in self.specialties)
+
+    @rx.var
+    def inactive_specialty_count(self) -> int:
+        return self.specialty_count - self.active_specialty_count
+
+    @rx.var
     def has_selectable_specialties(self) -> bool:
         return bool(self.specialty_options)
 

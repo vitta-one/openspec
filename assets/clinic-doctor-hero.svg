@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 250" fill="none" role="presentation">
+  <defs>
+    <linearGradient id="room" x1="55" y1="30" x2="679" y2="232" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F5FCFA"/>
+      <stop offset="1" stop-color="#D4F0EA"/>
+    </linearGradient>
+    <linearGradient id="desk" x1="479" y1="138" x2="680" y2="219" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF"/>
+      <stop offset="1" stop-color="#EAF8F5"/>
+    </linearGradient>
+  </defs>
+  <path d="M0 0h720v250H0z" fill="url(#room)"/>
+  <path d="M0 207c86-40 157-15 224-7 73 8 114-20 181-16 81 5 125 42 315-23v89H0z" fill="#DDF4EF"/>
+  <path d="M514 43h117v148H514z" fill="#E8F6F3" stroke="#79BFB2" stroke-width="4"/>
+  <path d="M533 43v148m78-148v148M515 117h115" stroke="#A8D8CF" stroke-width="3"/>
+  <path d="M342 59h115v136H342z" fill="#F7FCFB" stroke="#70B3A6" stroke-width="4"/>
+  <path d="M399 61v134" stroke="#B2DDD5" stroke-width="3"/>
+  <path d="M366 102c0-9 7-16 16-16 6 0 11 3 14 8 3-5 8-8 14-8 9 0 16 7 16 16 0 17-30 34-30 34s-30-17-30-34Z" stroke="#0F766E" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M44 154h214c13 0 24 11 24 24v26H20v-26c0-13 11-24 24-24Z" fill="#5BB0A0"/>
+  <path d="M36 146c0-17 14-31 31-31h168c17 0 31 14 31 31v9H36z" fill="#73C1B2"/>
+  <path d="M55 204v20m197-20v20" stroke="#337F74" stroke-width="5" stroke-linecap="round"/>
+  <path d="M24 148h250" stroke="#2C9586" stroke-width="5"/>
+  <path d="M302 194c12-33 25-44 37-46-5 22-14 36-37 46Zm16-18c2-36-8-50-18-58-4 24 0 41 18 58Zm8-3c23-26 41-30 54-27-13 19-27 29-54 27Z" fill="#4D9A74"/>
+  <path d="M299 194h39l-5 28h-29z" fill="#8CC9B4"/>
+  <path d="M476 146h195l23 15v52H461v-50z" fill="url(#desk)" stroke="#7DBDAF" stroke-width="4"/>
+  <path d="M468 144h197l20 15H462z" fill="#FFF" stroke="#7DBDAF" stroke-width="4"/>
+  <path d="M487 213v12m176-12v12" stroke="#6BAF9F" stroke-width="4" stroke-linecap="round"/>
+  <path d="M554 137h51" stroke="#6CAFA1" stroke-width="6" stroke-linecap="round"/>
+  <path d="M24 231h672" stroke="#B2DED5" stroke-width="3"/>
+</svg>

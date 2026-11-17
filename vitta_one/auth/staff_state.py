@@ -111,6 +111,18 @@ class AdminStaffState(rx.State):
         return bool(self.employee_search.strip()) or self.employee_role != "todos"
 
     @rx.var
+    def employee_count(self) -> int:
+        return len(self.employees)
+
+    @rx.var
+    def medical_account_count(self) -> int:
+        return sum(employee["role"] == "MEDICO" for employee in self.employees)
+
+    @rx.var
+    def reception_account_count(self) -> int:
+        return sum(employee["role"] == "RECEPCIONISTA" for employee in self.employees)
+
+    @rx.var
     def total_pages(self) -> int:
         return max(1, (len(self.filtered_employees) + self.page_size - 1) // self.page_size)
 

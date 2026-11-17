@@ -415,5 +415,5 @@ def admin_clinic_configuration() -> rx.Component:
                 spacing="4", align="stretch", width="100%",
             ),
         ),
-        width="100%", max_width="42rem",
+        width="100%",
     )
