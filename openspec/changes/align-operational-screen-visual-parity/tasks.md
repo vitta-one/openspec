@@ -1,7 +1,7 @@
 ## 1. Projeções autorizadas
 
-- [ ] 1.1 Implementar projeção administrativa agregada com autorização server-side, fuso local e contagens definidas nos specs; verificar zero, limites de dia, inativos e roles negadas em testes.
-- [ ] 1.2 Implementar projeção de e-mails da agenda para 30 datas locais, agrupando os status especificados e excluindo `SUPPRESSED`; verificar contagens, privacidade e RBAC em testes.
+- [x] 1.1 Implementar projeção administrativa agregada com autorização server-side, fuso local e contagens definidas nos specs; verificar zero, limites de dia, inativos e roles negadas em testes.
+- [x] 1.2 Implementar projeção de e-mails da agenda para 30 datas locais, agrupando os status especificados e excluindo `SUPPRESSED`; verificar contagens, privacidade e RBAC em testes.
 
 ## 2. Painéis e shell
 
