@@ -95,21 +95,56 @@ mkdir -p "$STATE_DIR"
 chmod 700 "$STATE_DIR"
 
 RELEASE="$RELEASES/$SHA"
-if [[ ! -f "$RELEASE/.ready" ]]; then
+
+release_usable() {
+  # Pip entry points have absolute shebangs. A venv created inside a temporary
+  # directory and moved afterwards may have executables that no longer start.
+  [[ -f "$RELEASE/.ready" && -x "$RELEASE/.venv/bin/alembic" &&
+     -x "$RELEASE/.venv/bin/reflex" ]] || return 1
+  [[ "$(head -n 1 "$RELEASE/.venv/bin/alembic")" == "#!$RELEASE/.venv/bin/python" ]] || return 1
+  as_app "$RELEASE/.venv/bin/alembic" --version >/dev/null 2>&1
+}
+
+if ! release_usable; then
+  if [[ -e "$RELEASE" ]]; then
+    # Never replace the currently served release. Keep broken build artifacts
+    # for investigation instead of deleting them.
+    [[ "$RELEASE" != "$PREVIOUS" ]] || {
+      echo "Release ativa $RELEASE incompleta: intervenção manual necessária." >&2
+      exit 1
+    }
+    QUARANTINE="$RELEASES/.invalid-${SHA:0:12}-$(date +%Y%m%d%H%M%S)-$"
+    mv -T -- "$RELEASE" "$QUARANTINE"
+    echo "Release incompleta preservada em $QUARANTINE"
+  fi
+
   WORK="$(as_app mktemp -d "$RELEASES/.building-${SHA:0:12}.XXXXXXXX")"
   echo "Preparando release $SHA..."
   as_app git -C "$SOURCE" archive "$SHA" | as_app tar -xf - -C "$WORK"
-  as_app python3.12 -m venv "$WORK/.venv"
-  as_app "$WORK/.venv/bin/python" -m pip install --disable-pip-version-check \
-    -r "$WORK/requirements.txt"
-  pushd "$WORK" >/dev/null
-  load_runtime_env
-  as_app "$WORK/.venv/bin/alembic" current --check-heads
-  as_app "$WORK/.venv/bin/reflex" compile --dry
-  popd >/dev/null
-  as_app touch "$WORK/.ready"
-  mv -T "$WORK" "$RELEASE"
+
+  # Only source files move. Create the virtualenv at its permanent location
+  # so pip-installed commands keep valid interpreter paths.
+  mv -T -- "$WORK" "$RELEASE"
   WORK=''
+  as_app python3.12 -m venv "$RELEASE/.venv"
+  as_app "$RELEASE/.venv/bin/python" -m pip install --disable-pip-version-check \
+    -r "$RELEASE/requirements.txt"
+
+  # Fail before touching the live symlink if any entry point still references
+  # a staging path. The next attempt will quarantine and rebuild this release.
+  [[ "$(head -n 1 "$RELEASE/.venv/bin/alembic")" == "#!$RELEASE/.venv/bin/python" ]] || {
+    echo "O Alembic da release aponta para um interpretador incorreto." >&2
+    exit 1
+  }
+  pushd "$RELEASE" >/dev/null
+  load_runtime_env
+  as_app "$RELEASE/.venv/bin/alembic" current --check-heads
+  as_app "$RELEASE/.venv/bin/reflex" compile --dry
+  popd >/dev/null
+
+  # .ready must only exist after dependencies, schema compatibility and
+  # compilation have succeeded at the final on-disk release path.
+  as_app touch "$RELEASE/.ready"
 fi
 
 # Migração pode ter ocorrido entre a validação e o swap: confira de novo.
