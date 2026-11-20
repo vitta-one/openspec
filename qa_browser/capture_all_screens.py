@@ -36,7 +36,7 @@ SCREENS = {
         ("cadastro-recepcionista", "/admin/funcionarios/recepcionista", "Cadastrar recepcionista"),
         ("horarios-admin", "/admin/horarios", "Gerenciar horários"),
         ("configuracoes", "/admin/configuracoes", "Configurações da clínica"),
-        ("especialidades", "/admin/especialidades", "Todas as especialidades"),
+        ("especialidades", "/admin/especialidades", "Especialidades"),
         ("profissionais", "/admin/profissionais", "Todos os profissionais"),
         ("admin-previa-recepcao", "/admin/recepcao", "Recepção"),
         ("admin-previa-agenda", "/admin/agenda", "Agenda clínica"),
