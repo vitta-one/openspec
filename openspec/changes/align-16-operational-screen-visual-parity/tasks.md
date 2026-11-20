@@ -11,6 +11,7 @@
 - [x] 2.4 Ajustar composição, densidade e alinhamento das telas médicas e comparar suas capturas novas com as referências 13–16.
 - [x] 2.5 Revisar teclado, foco, nomes acessíveis, estados de loading/vazio/erro, zoom e seis viewports nas telas afetadas; registrar verificações e limitações.
 - [x] 2.6 Garantir que cada link da lista de pacientes derive a ficha do ID da mesma linha e validar no Chromium que destino e identidade exibida correspondem ao paciente selecionado.
+- [x] 2.7 Substituir gaps numéricos inválidos nas grades Reflex por unidades CSS explícitas e alinhar sidebar e formulário de pacientes às medidas dos PNGs; confirmar nas capturas DOM finais.
 
 ## 3. Evidência visual e regressão
 
@@ -18,4 +19,13 @@
 - [x] 3.2 Gerar lado a lado, overlay e diff para cada uma das 16 referências desktop sem deformar imagens; inspecionar visualmente todas as rotas e separar diferenças de dados de layout.
 - [x] 3.3 Atualizar o relatório `docs/qa/operational-screen-parity-2026-11-17.md` com matriz individual de 16 rotas, medidas, resultados, dados, acessibilidade, responsividade e discrepâncias residuais.
 - [x] 3.4 Executar regressão: `pytest -q`, `reflex compile --dry`, capturas/comparações, `git diff --check` e OpenSpec strict; registrar comandos e status reais.
-- [x] 3.5 Revisar diff integrado e estado do CI, criar commits convencionais, publicar a branch e abrir uma única PR para `develop`; verificar URL, alvo e ausência de merge/deploy.
+- [ ] 3.5 Revisar diff integrado e estado do CI, criar commits convencionais, publicar a branch e abrir uma única PR para `develop`; verificar URL, alvo e ausência de merge/deploy.
+
+## Registro da rodada final — 2026-11-20
+
+- Chromium com o bundle do HEAD: 96/96 capturas concluídas em QA10 nas seis resoluções; 16/16 comparações desktop geradas e reinspecionadas sem máscaras.
+- Geometria do Financeiro registrada pelo DOM em 1768×890 e composição final ajustada ao viewport de referência; detalhes e medidas por rota estão em `docs/qa/operational-screen-parity-2026-11-17.md`.
+- Pytest em PostgreSQL 16.16 `vitta_one_test`: 571 aprovados, 3 skips explicados no relatório. Chromium funcional/acessibilidade: 42 aprovados em QA9; reflow 2×: 16/16.
+- Corrigida a busca vazia da Recepção quando o serializer omite o campo; Pytest, compilação Reflex e Chromium foram repetidos no código final.
+- Validação OpenSpec strict: 34 aprovados, zero falhas. A aprovação visual integral permanece em 0/16: diferenças de arte e de conteúdo/fixtures estão documentadas e não foram mascaradas ou substituídas por dados clínicos fictícios.
+- PR #358 permanece destinada a `develop`; o SHA/CI pós-push será registrado quando a execução desta branch terminar.
