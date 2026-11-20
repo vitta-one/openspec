@@ -144,6 +144,16 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
         expect(page.get_by_role("heading", name=heading, exact=True).first).to_be_visible(
             timeout=30000
         )
+        page.wait_for_function(
+            "Array.from(document.images).every((image) => image.complete)",
+            timeout=10000,
+        )
+        broken_images = page.locator("img").evaluate_all(
+            "images => images.filter(image => image.naturalWidth === 0)"
+            ".map(image => image.getAttribute('src') || image.currentSrc)"
+        )
+        if broken_images:
+            raise AssertionError("Imagem não carregada: " + ", ".join(broken_images))
         if route == "/recepcao/agenda":
             expect(page.locator(".vitta-reception-calendar-event").first).to_be_visible(
                 timeout=30000
@@ -162,7 +172,7 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
             expect(headers).to_have_count(8)
             page.evaluate("document.activeElement && document.activeElement.blur()")
         if route == "/recepcao" and viewport_name == "desktop-1768x890":
-            if page.locator(".vitta-reception-preview-row").count() > 3:
+            if page.locator(".vitta-reception-upcoming-row").count() > 3:
                 raise AssertionError("A prévia do dashboard excedeu três próximos atendimentos")
             rows = page.locator(".vitta-reception-day-table tbody tr")
             first_page_row = rows.first.inner_text()
@@ -251,6 +261,12 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
               top: getComputedStyle(main).paddingTop
             } : null,
             headings,
+            images: Array.from(document.images).map((image) => ({
+              src: image.getAttribute('src') || image.currentSrc,
+              loaded: image.complete && image.naturalWidth > 0,
+              width: image.naturalWidth,
+              height: image.naturalHeight
+            })),
             patientEmptyBackground: patientEmptyStyle ? {
               image: patientEmptyStyle.backgroundImage,
               size: patientEmptyStyle.backgroundSize,
@@ -265,6 +281,32 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
             })) : []
           };
         }""")
+        if route == "/admin/especialidades":
+            geometry["specialty_filters"] = page.evaluate("""() => {
+              const measure = (selector) => {
+                const element = document.querySelector(selector);
+                if (!element) return null;
+                const box = element.getBoundingClientRect();
+                const style = getComputedStyle(element);
+                return {
+                  rect: Object.fromEntries(['x', 'y', 'width', 'height'].map((key) =>
+                    [key, Math.round(box[key] * 100) / 100]
+                  )),
+                  computed: {
+                    height: style.height,
+                    minHeight: style.minHeight,
+                    paddingTop: style.paddingTop,
+                    paddingBottom: style.paddingBottom,
+                    lineHeight: style.lineHeight,
+                    boxSizing: style.boxSizing
+                  }
+                };
+              };
+              return {
+                search: measure('#specialty-directory-search'),
+                status: measure('#specialty-status-filter')
+              };
+            }""")
     except Exception as error:  # keep the remaining routes/screens observable
         errors.append(str(error)[:500])
     finally:
