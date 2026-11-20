@@ -703,7 +703,7 @@ class ReceptionQueueState(rx.State):
         self.patient_detail_error = ""
         yield
         try:
-            raw_id = str(self.router.page.params.get("patient_id", ""))
+            raw_id = self._patient_detail_route_id()
             if not raw_id.isdigit() or len(raw_id) > 18 or int(raw_id) <= 0:
                 self._clear_sensitive_view()
                 self.patient_detail_error = "Paciente não encontrado."
@@ -1041,9 +1041,23 @@ class ReceptionQueueState(rx.State):
         self.selected_patient_portal_status = ""
         self._clear_feedback()
 
+    def _patient_detail_route_id(self) -> str:
+        """Read the patient id from the current URL for detail and edit routes."""
+        parts = self.router.url.path.strip("/").split("/")
+        if (
+            len(parts) not in (3, 4)
+            or parts[:2] != ["recepcao", "pacientes"]
+            or (len(parts) == 4 and parts[3] != "editar")
+        ):
+            return ""
+        raw_id = parts[2]
+        if not raw_id.isdigit() or len(raw_id) > 18 or int(raw_id) <= 0:
+            return ""
+        return raw_id
+
     def _matches_patient_detail_route(self) -> bool:
-        raw_id = str(self.router.page.params.get("patient_id", ""))
-        return raw_id.isdigit() and int(raw_id) == self.selected_patient_id > 0
+        raw_id = self._patient_detail_route_id()
+        return bool(raw_id) and int(raw_id) == self.selected_patient_id > 0
 
     @rx.event
     async def open_patient_edit_dialog(self):
