@@ -53,7 +53,7 @@ def _patient_row(row) -> rx.Component:
         rx.el.td(
             rx.link(
                 "Ver detalhes",
-                href=row["href"].to(str),
+                href="/recepcao/pacientes/" + row["id"].to(str),
                 aria_label="Ver detalhes de " + row["name"],
                 class_name="vitta-context-link vitta-patient-directory-detail",
             ),

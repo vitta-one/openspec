@@ -57,8 +57,7 @@ def test_directory_returns_only_persisted_identity_and_no_cpf(db):
     rows, total = reception_list_patient_directory(db, token=token)
     assert total == 2
     assert [row["id"] for row in rows] == [first.id, first.id + 1]
-    assert set(rows[0]) == {"id", "name", "phone", "href"}
-    assert rows[0]["href"] == f"/recepcao/pacientes/{first.id}"
+    assert set(rows[0]) == {"id", "name", "phone"}
     assert rows[0]["phone"] == "11987654321"
     assert rows[1]["phone"] == ""
     assert all("cpf" not in row and "symptoms" not in row for row in rows)

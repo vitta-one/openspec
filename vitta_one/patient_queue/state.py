@@ -104,7 +104,6 @@ class PatientDirectoryRow(TypedDict):
     id: int
     name: str
     phone: str
-    href: str
 
 
 class PatientOperationalConsultationRow(TypedDict):
@@ -640,7 +639,6 @@ class ReceptionQueueState(rx.State):
                 {
                     "id": item["id"], "name": item["name"],
                     "phone": _format_patient_contact(item["phone"]),
-                    "href": item["href"],
                 }
                 for item in items
             ]

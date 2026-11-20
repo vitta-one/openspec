@@ -660,15 +660,31 @@ def test_reception_global_patient_search_uses_identity_only(page: Page) -> None:
     login_as_reception(page)
     page.goto(BASE + "/recepcao/pacientes", wait_until="domcontentloaded")
     search = page.locator("#patient-directory-search")
-    search.fill(FIXTURE["day_first_patient_name"])
+    # Keep this a name-only query; the record suffix is numeric and is also
+    # present in unrelated synthetic CPFs and phone numbers.
+    search.fill(FIXTURE["day_first_patient_name"].rsplit(" ", 1)[0])
     page.get_by_role("button", name="Buscar", exact=True).click()
     result = page.locator(".vitta-patient-directory-row").filter(has_text=FIXTURE["day_first_patient_name"])
     expect(result).to_be_visible(timeout=30000)
-    expect(result.get_by_role("link", name=re.compile("^Ver detalhes de"))).to_be_visible()
+    expect(result).to_have_count(1)
+    expect(page.get_by_role("status").filter(has_text="24 pacientes encontrados")).to_be_visible(timeout=30000)
+    detail_link = result.get_by_role("link", name=re.compile("^Ver detalhes de"))
+    expect(detail_link).to_be_visible()
+    expect(detail_link).to_have_attribute(
+        "href", f"/recepcao/pacientes/{FIXTURE['day_first_patient_id']}"
+    )
     assert "Histórico clínico" not in result.inner_text()
-    result.get_by_role("link", name=re.compile("^Ver detalhes de")).click()
-    expect(page).to_have_url(re.compile(r"/recepcao/pacientes/[0-9]+/?$"), timeout=30000)
+    row_diagnostics = result.evaluate("""row => ({
+        text: row.innerText,
+        linkHref: row.querySelector('a')?.getAttribute('href'),
+        linkResolvedHref: row.querySelector('a')?.href,
+    })""")
+    detail_link.click()
     try:
+        expect(page).to_have_url(
+            re.compile(rf"/recepcao/pacientes/{FIXTURE['day_first_patient_id']}/?$"),
+            timeout=30000,
+        )
         expect(
             page.get_by_role(
                 "heading", name=FIXTURE["day_first_patient_name"], exact=True
@@ -682,6 +698,7 @@ def test_reception_global_patient_search_uses_identity_only(page: Page) -> None:
                 .map((element) => element.innerText),
             body: document.body.innerText.slice(0, 2400),
         })""")
+        debug["directoryResultBeforeNavigation"] = row_diagnostics
         print("Patient detail route failure diagnostics:", json.dumps(debug, ensure_ascii=False))
         page.screenshot(
             path="qa-artifacts/patient-detail-load-failure.png",
