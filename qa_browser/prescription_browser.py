@@ -668,9 +668,27 @@ def test_reception_global_patient_search_uses_identity_only(page: Page) -> None:
     assert "Histórico clínico" not in result.inner_text()
     result.get_by_role("link", name=re.compile("^Ver detalhes de")).click()
     expect(page).to_have_url(re.compile(r"/recepcao/pacientes/[0-9]+/?$"), timeout=30000)
-    expect(page.get_by_role("heading", name=FIXTURE["day_first_patient_name"], exact=True)).to_be_visible(
-        timeout=30000
-    )
+    try:
+        expect(
+            page.get_by_role(
+                "heading", name=FIXTURE["day_first_patient_name"], exact=True
+            )
+        ).to_be_visible(timeout=30000)
+    except AssertionError:
+        debug = page.evaluate("""() => ({
+            pathname: window.location.pathname,
+            title: document.title,
+            headings: [...document.querySelectorAll('h1,h2,h3,h4')]
+                .map((element) => element.innerText),
+            body: document.body.innerText.slice(0, 2400),
+        })""")
+        print("Patient detail route failure diagnostics:", json.dumps(debug, ensure_ascii=False))
+        page.screenshot(
+            path="qa-artifacts/patient-detail-load-failure.png",
+            full_page=True,
+            animations="disabled",
+        )
+        raise
 
 
 def test_doctor_cannot_access_reception_dashboard_or_modules(page: Page) -> None:
