@@ -2321,6 +2321,15 @@ button:disabled,
   .vitta-staff-mobile { display: flex; }
   .vitta-staff-create-action { width: 100%; }
 }
+@media (max-width: 360px) {
+  .vitta-staff-footer-controls {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    min-width: 0;
+  }
+  .vitta-staff-pagination-controls { flex: 0 0 auto; }
+}
 @media (prefers-reduced-motion: reduce) {
   .vitta-staff-details-link { transition: none; }
 }
@@ -3077,7 +3086,6 @@ button:disabled,
 }
 .vitta-agenda-date-popover { width: min(22rem, calc(100vw - 2rem)); }
 .vitta-agenda-date-popover-input { width: 100%; min-width: 0; }
-.vitta-reception-calendar-help { margin-top: -.45rem; }
 .vitta-reception-calendar-scroll {
   width: 100%;
   overflow: auto;
@@ -3650,7 +3658,8 @@ button:disabled,
 }
 .vitta-shell .vitta-page-header--illustrated:has(.vitta-page-header-actions) .vitta-page-header-art {
   right: clamp(12rem, 16vw, 18rem);
-  width: min(34vw, 30rem);
+  width: min(42vw, 42rem);
+  height: 13rem;
 }
 .vitta-shell--admin .vitta-page:has(.vitta-availability-panel) .vitta-page-header--illustrated {
   min-height: 5.25rem;
@@ -3754,7 +3763,7 @@ button:disabled,
 .vitta-specialty-directory-filters {
   align-items: end;
 }
-.vitta-shell .vitta-specialty-directory-filters .vitta-directory-search-input {
+.vitta-shell .vitta-specialty-directory-filters input.vitta-directory-search-input {
   height: 40px;
   min-height: 40px;
   padding-block: 8px;
@@ -3898,6 +3907,9 @@ button:disabled,
   min-width: 0;
   padding-block: .65rem;
   border-bottom: 1px solid var(--vitta-border);
+}
+.vitta-reception-upcoming-row {
+  padding-block: 0;
 }
 .vitta-reception-preview-row:last-child {
   border-bottom: 0;
@@ -4504,9 +4516,11 @@ button:disabled,
   .vitta-shell .vitta-page-header-copy {
     max-width: 70%;
   }
-  .vitta-shell .vitta-page-header-art {
+  .vitta-shell .vitta-page-header-art,
+  .vitta-shell .vitta-page-header--illustrated:has(.vitta-page-header-actions) .vitta-page-header-art {
     right: .5rem;
     width: 44%;
+    height: 100%;
     opacity: .48;
   }
 }
@@ -4522,7 +4536,8 @@ button:disabled,
   .vitta-shell .vitta-page-header .rt-Heading {
     font-size: 1.65rem;
   }
-  .vitta-shell .vitta-page-header-art {
+  .vitta-shell .vitta-page-header-art,
+  .vitta-shell .vitta-page-header--illustrated:has(.vitta-page-header-actions) .vitta-page-header-art {
     right: -.6rem;
     bottom: -.5rem;
     width: 60%;

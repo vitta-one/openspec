@@ -402,7 +402,7 @@ def admin_hours_page() -> rx.Component:
                 "Gerenciar horários",
                 "Configure e consulte a disponibilidade dos médicos, uma tarefa por vez.",
                 show_art=True,
-                art_source="/clinic-building-hero.svg",
+                art_source="/clinic-operational-hero.svg",
             ),
             admin_availability_panel(),
             spacing="2", align="stretch", width="100%",
@@ -431,7 +431,7 @@ def admin_clinic_settings_page() -> rx.Component:
                     section_panel(
                         rx.vstack(
                             rx.image(
-                                src="/clinic-building-guide.svg", alt="", aria_hidden="true",
+                                src="/clinic-operational-hero.svg", alt="", aria_hidden="true",
                                 class_name="vitta-clinic-settings-illustration",
                             ),
                             rx.hstack(

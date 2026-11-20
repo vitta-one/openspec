@@ -192,6 +192,11 @@ class AdminStaffState(rx.State):
     def page_label(self) -> str:
         return f"{self.current_page} de {self.total_pages}"
 
+    @rx.var
+    def page_size_value(self) -> str:
+        """Expose the numeric page size as the string expected by Radix Select."""
+        return str(self.page_size)
+
     def _clear_errors(self) -> None:
         self.name_error = ""
         self.email_error = ""

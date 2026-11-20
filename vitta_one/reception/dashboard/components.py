@@ -627,7 +627,7 @@ def _upcoming_appointments_panel() -> rx.Component:
                                 align="start", spacing="0", min_width="0",
                             ),
                             align="center", gap="2", width="100%",
-                            class_name="vitta-reception-preview-row",
+                            class_name="vitta-reception-preview-row vitta-reception-upcoming-row",
                         ),
                     ),
                     spacing="0", align="stretch", width="100%",
@@ -637,6 +637,8 @@ def _upcoming_appointments_panel() -> rx.Component:
             ),
             align="stretch", spacing="2", width="100%",
         ),
+        padding=".75rem .85rem",
+        class_name="vitta-reception-upcoming-panel",
     )
 
 
