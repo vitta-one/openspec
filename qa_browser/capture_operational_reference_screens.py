@@ -220,6 +220,26 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
             ));
           };
           const first = (selector) => rect(document.querySelector(selector));
+          const styleSnapshot = (node) => {
+            if (!node) return null;
+            const style = getComputedStyle(node);
+            return {
+              display: style.display,
+              gap: style.gap,
+              gridTemplateColumns: style.gridTemplateColumns,
+              alignItems: style.alignItems,
+              justifyContent: style.justifyContent,
+              padding: style.padding,
+              margin: style.margin,
+              fontFamily: style.fontFamily,
+              fontSize: style.fontSize,
+              fontWeight: style.fontWeight,
+              lineHeight: style.lineHeight,
+              letterSpacing: style.letterSpacing,
+              borderRadius: style.borderRadius,
+              overflowWrap: style.overflowWrap
+            };
+          };
           const landmarks = [
             '.vitta-page-header', '.vitta-page-header .rt-Heading',
             '.vitta-admin-hub-metrics', '.vitta-reception-operations',
@@ -254,6 +274,7 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
             sidebar: first('.vitta-sidebar'),
             topbar: first('.vitta-topbar'),
             page: rect(main),
+            pageComputedStyle: styleSnapshot(main),
             breadcrumb: first('.vitta-breadcrumb'),
             title: first('.vitta-page-header .rt-Heading'),
             contentPadding: main ? {
@@ -275,6 +296,16 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
             landmarks: Object.fromEntries(landmarks.map((selector) =>
               [selector, first(selector)]
             )),
+            landmarkStyles: Object.fromEntries(landmarks.map((selector) =>
+              [selector, styleSnapshot(document.querySelector(selector))]
+            )),
+            sidebarLinks: Array.from(document.querySelectorAll(
+              '.vitta-sidebar-nav .vitta-nav-link'
+            )).map((node) => ({
+              label: node.getAttribute('aria-label') || '',
+              ...rect(node),
+              computedStyle: styleSnapshot(node)
+            })),
             pageChildren: main ? Array.from(main.children).map((node) => ({
               className: typeof node.className === 'string' ? node.className.slice(0, 120) : '',
               ...rect(node)
@@ -305,6 +336,60 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
               return {
                 search: measure('#specialty-directory-search'),
                 status: measure('#specialty-status-filter')
+              };
+            }""")
+        if route == "/financeiro":
+            geometry["finance_forms"] = page.evaluate("""() => {
+              const measure = (node) => {
+                if (!node) return null;
+                const box = node.getBoundingClientRect();
+                const style = getComputedStyle(node);
+                return {
+                  rect: Object.fromEntries(['x', 'y', 'width', 'height'].map((key) =>
+                    [key, Math.round(box[key] * 100) / 100]
+                  )),
+                  computed: {
+                    display: style.display,
+                    gap: style.gap,
+                    columnGap: style.columnGap,
+                    rowGap: style.rowGap,
+                    padding: style.padding,
+                    margin: style.margin,
+                    fontSize: style.fontSize,
+                    lineHeight: style.lineHeight,
+                    height: style.height,
+                    minHeight: style.minHeight
+                  }
+                };
+              };
+              const form = (selector) => {
+                const root = document.querySelector(selector);
+                if (!root) return null;
+                return {
+                  ...measure(root),
+                  fields: Array.from(root.children).map((field) => ({
+                    label: field.querySelector('p')?.innerText?.trim() ||
+                      field.innerText.trim().slice(0, 48),
+                    ...measure(field),
+                    labelBox: measure(field.querySelector('p')),
+                    controls: Array.from(field.querySelectorAll(
+                      'input, button, [role="combobox"]'
+                    )).map((control) => ({
+                      name: control.getAttribute('name') ||
+                        control.getAttribute('aria-label') ||
+                        control.innerText.trim().slice(0, 48),
+                      ...measure(control)
+                    }))
+                  }))
+                };
+              };
+              return {
+                filtersPanel: measure(document.querySelector('.vitta-finance-filters')),
+                filterForm: form('.vitta-finance-filters-form'),
+                issuePanel: measure(document.querySelector('.vitta-finance-issue')),
+                issueLayout: measure(document.querySelector('.vitta-finance-issue-layout')),
+                issueIcon: measure(document.querySelector('.vitta-finance-issue-icon')),
+                issueForm: form('.vitta-finance-issue-form')
               };
             }""")
     except Exception as error:  # keep the remaining routes/screens observable
