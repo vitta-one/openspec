@@ -45,7 +45,7 @@ def _calendar_grid(
             rx.grid(
                 *[rx.text(day, size="1", text_align="center", color="var(--vitta-text-muted)") for day in _WEEKDAYS],
                 columns="repeat(7, minmax(0, 1fr))",
-                gap="1",
+                gap="0.25rem",
                 width="100%",
             ),
             rx.grid(
@@ -67,7 +67,7 @@ def _calendar_grid(
                     ),
                 ),
                 columns="repeat(7, minmax(0, 1fr))",
-                gap="1",
+                gap="0.25rem",
                 width="100%",
             ),
         )
@@ -139,7 +139,7 @@ def doctor_week_calendar() -> rx.Component:
             rx.box(
                 rx.grid(
                     rx.foreach(DoctorWorkspaceState.calendar_week, _doctor_week_day),
-                    columns="7", gap="2", class_name="vitta-agenda-week-grid",
+                    columns="7", gap="0.5rem", class_name="vitta-agenda-week-grid",
                 ),
                 width="100%", overflow_x="auto", class_name="vitta-agenda-week-scroll",
             ),

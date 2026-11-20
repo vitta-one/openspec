@@ -1014,11 +1014,11 @@ def _booking_calendar_step() -> rx.Component:
             rx.grid(
                 *[rx.center(rx.text(name, size="1", font_weight="700"))
                   for name in ("Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb")],
-                columns="7", gap="1", class_name="vitta-calendar-weekdays",
+                columns="7", gap="0.25rem", class_name="vitta-calendar-weekdays",
             ),
             rx.grid(
                 rx.foreach(ReceptionAgendaState.booking_calendar_days, _booking_calendar_day),
-                columns="7", gap="1", class_name="vitta-calendar-grid",
+                columns="7", gap="0.25rem", class_name="vitta-calendar-grid",
             ),
             class_name="vitta-availability-calendar vitta-booking-calendar",
         ),
@@ -1073,7 +1073,7 @@ def _booking_time_step() -> rx.Component:
             rx.grid(
                 rx.foreach(ReceptionAgendaState.booking_date_slots, _booking_hour_option),
                 columns=rx.breakpoints(initial="3", sm="4", md="5"),
-                gap="2", width="100%",
+                gap="0.5rem", width="100%",
             ),
             empty_state("clock", "Nenhum horário livre neste dia",
                         "Volte ao calendário e escolha outro dia disponível."),

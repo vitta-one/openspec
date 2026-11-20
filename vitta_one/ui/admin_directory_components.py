@@ -1338,7 +1338,7 @@ def specialties_management_workspace() -> rx.Component:
                     summary_metric("Ativas", AdminDirectoryState.active_specialty_count, "circle_check"),
                     summary_metric("Inativas", AdminDirectoryState.inactive_specialty_count, "circle_x"),
                     columns=rx.breakpoints(initial="1", sm="3"),
-                    gap="3", width="100%", class_name="vitta-directory-summary",
+                    gap="0.75rem", width="100%", class_name="vitta-directory-summary",
                 ),
             ),
         ),

@@ -1051,7 +1051,9 @@ def doctor_waiting_summary() -> rx.Component:
             align=rx.breakpoints(initial="stretch", sm="center"),
             gap="1rem",
             width="100%",
-        )
+        ),
+        padding="1rem 1.25rem",
+        class_name="vitta-doctor-waiting-summary",
     )
 
 

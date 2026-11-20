@@ -463,9 +463,9 @@ def patient_create_workspace() -> rx.Component:
                 class_name="vitta-patient-create-guidance",
             ),
             columns=rx.breakpoints(
-                initial="1", lg="minmax(0, 1.3fr) minmax(18rem, 0.85fr)"
+                initial="1", lg="minmax(0, 1.28fr) minmax(18rem, 0.85fr)"
             ),
-            gap="4", align="start", width="100%",
+            gap="1.5rem", align="start", width="100%",
         ),
         spacing="4", align="stretch", width="100%",
         class_name="vitta-patient-create-workspace",
@@ -554,7 +554,7 @@ def _patient_detail_sections() -> rx.Component:
                                 S.selected_patient_phone, "Não informado"),
                     ),
                     columns=rx.breakpoints(initial="1", md="3"),
-                    gap="4", width="100%",
+                    gap="1rem", width="100%",
                 ),
                 patient_edit_dialog(),
                 spacing="4", align="stretch", width="100%",
@@ -617,7 +617,7 @@ def _patient_detail_sections() -> rx.Component:
                 )
             ),
             columns=rx.breakpoints(initial="1", lg="minmax(0, 1.4fr) minmax(0, 1fr)"),
-            gap="4", width="100%",
+            gap="1rem", width="100%",
         ),
         section_panel(
             rx.vstack(

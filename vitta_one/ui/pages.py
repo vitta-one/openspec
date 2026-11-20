@@ -469,7 +469,7 @@ def admin_clinic_settings_page() -> rx.Component:
                     columns=rx.breakpoints(
                         initial="1", lg="minmax(0, 1.6fr) minmax(18rem, 0.85fr)"
                     ),
-                    gap="6", align="start", width="100%",
+                    gap="1.5rem", align="start", width="100%",
                     class_name="vitta-clinic-settings-layout",
                 ),
                 spacing="3", align="stretch", width="100%",
@@ -717,7 +717,7 @@ def doctor_page() -> rx.Component:
         rx.vstack(
             doctor_waiting_summary(),
             _doctor_active_workspace_panel(),
-            spacing="3",
+            spacing="4",
             align="stretch",
             width="100%",
         ),
@@ -745,7 +745,7 @@ def doctor_page() -> rx.Component:
                 "Prontuário atual", "/medico/prontuarios", value_size="4",
             ),
             columns=rx.breakpoints(initial="1", sm="2", lg="3"),
-            gap="3", width="100%", class_name="vitta-doctor-overview-grid",
+            gap="0.75rem", width="100%", class_name="vitta-doctor-overview-grid",
         ),
         rx.flex(
             rx.link(rx.icon("calendar_days", size=17), "Abrir agenda",
@@ -761,6 +761,7 @@ def doctor_page() -> rx.Component:
         rx.heading("Operação de pronto-socorro", size="5"),
         queue_workspace,
         active="atendimento",
+        page_spacing="4",
     )
 
 

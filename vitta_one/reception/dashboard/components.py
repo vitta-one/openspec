@@ -2,6 +2,7 @@
 
 import reflex as rx
 
+from vitta_one.appointment_scheduling.domain import ConsultationStatus
 from vitta_one.appointment_scheduling.state import ReceptionAgendaState
 from vitta_one.reception.dashboard.state import ReceptionDashboardState as S
 from vitta_one.ui.appointment_components import (
@@ -435,7 +436,7 @@ def _reception_day_header() -> rx.Component:
 
 
 def _reception_day_toolbar() -> rx.Component:
-    """Search and professional filter only the daily appointment list."""
+    """Search appointment identity/time and filter status in the daily list."""
     return rx.grid(
         rx.el.form(
             rx.el.label(
@@ -453,9 +454,10 @@ def _reception_day_toolbar() -> rx.Component:
                     rx.el.input(
                         id="reception-day-search", name="query", type="search",
                         value=S.search_query, on_change=S.update_search_query,
-                        placeholder="Nome, telefone ou CPF", auto_complete="off",
+                        placeholder="Paciente, profissional ou horário",
+                        auto_complete="off",
                         max_length=100, class_name="vitta-reception-day-search-input",
-                        aria_label="Buscar paciente nas consultas de hoje",
+                        aria_label="Buscar por paciente, profissional ou horário nas consultas de hoje",
                         aria_describedby="reception-day-search-help",
                     ),
                     position="relative", min_width="0",
@@ -473,29 +475,28 @@ def _reception_day_toolbar() -> rx.Component:
         ),
         rx.box(
             rx.el.label(
-                "Filtrar profissional", html_for="reception-day-professional",
+                "Filtrar situação", html_for="reception-day-status",
                 class_name="vitta-sr-only",
             ),
             rx.select.root(
                 rx.select.trigger(
-                    id="reception-day-professional", width="100%",
+                    id="reception-day-status", width="100%",
                     class_name="vitta-select-trigger",
                 ),
                 rx.select.content(
-                    rx.select.item("Todos os profissionais", value="__all__"),
-                    rx.foreach(
-                        S.professional_options,
-                        lambda item: rx.select.item(item["label"], value=item["value"]),
-                    ),
+                    rx.select.item("Todos os status", value="__all__"),
+                    *[
+                        rx.select.item(status.label, value=status.value)
+                        for status in ConsultationStatus
+                    ],
                     position="popper",
                 ),
-                value=S.professional_filter, on_change=S.update_professional,
+                value=S.status_filter, on_change=S.update_status,
                 disabled=S.is_loading, size="3",
             ),
-            class_name="vitta-reception-day-professional-filter",
+            class_name="vitta-reception-day-status-filter",
         ),
-        columns=rx.breakpoints(initial="1", md="minmax(0, 1fr) minmax(13rem, 18rem)"),
-        gap="3", width="100%", align="end",
+        width="100%", align="end",
         class_name="vitta-reception-day-toolbar",
     )
 
@@ -536,7 +537,7 @@ def reception_overview_cards() -> rx.Component:
         _reception_metric("Canceladas", S.overview_cancelled,
                           "Consultas canceladas hoje", "circle_x", "/recepcao/agenda"),
         columns=rx.breakpoints(initial="1", sm="2", lg="3", xl="6"),
-        gap="3", width="100%",
+        gap="0.75rem", width="100%",
     )
 
 
@@ -763,7 +764,7 @@ def reception_email_metrics_panel() -> rx.Component:
                 _email_metric("Pendentes / indeterminados", S.email_pending, "clock_3"),
                 _email_metric("Falhas", S.email_failed, "circle_x"),
                 columns=rx.breakpoints(initial="1", sm="2", xl="4"),
-                gap="3",
+                gap="0.75rem",
                 width="100%",
             ),
             align="stretch",
@@ -840,7 +841,7 @@ def reception_week_calendar() -> rx.Component:
             rx.box(
                 rx.grid(
                     rx.foreach(S.calendar_week, _agenda_day_card),
-                    columns="7", gap="2",
+                    columns="7", gap="0.5rem",
                     class_name="vitta-agenda-week-grid",
                 ),
                 class_name="vitta-agenda-week-scroll",
@@ -923,7 +924,7 @@ def reception_dashboard() -> rx.Component:
                     columns=rx.breakpoints(
                         initial="1", xl="minmax(0, 2fr) minmax(19rem, 0.9fr)"
                     ),
-                    gap="3", align="start", width="100%",
+                    gap="0.75rem", align="start", width="100%",
                     class_name="vitta-reception-dashboard-grid",
                     ),
                     rx.grid(
@@ -932,7 +933,7 @@ def reception_dashboard() -> rx.Component:
                         columns=rx.breakpoints(
                             initial="1", xl="minmax(0, 1fr) minmax(0, 1.15fr)"
                         ),
-                        gap="3", align="stretch", width="100%",
+                        gap="0.75rem", align="stretch", width="100%",
                         class_name="vitta-reception-dashboard-footer",
                     ),
                 ),

@@ -57,7 +57,7 @@ def _identity_fields() -> rx.Component:
             width="100%", min_width="0",
         ),
         columns=rx.breakpoints(initial="1", md="repeat(2, minmax(0, 1fr))"),
-        gap="4", width="100%", align="start",
+        gap="1rem", width="100%", align="start",
         class_name="vitta-staff-identity-grid",
     )
 

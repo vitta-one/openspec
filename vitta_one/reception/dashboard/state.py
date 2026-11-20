@@ -121,8 +121,8 @@ class ReceptionDashboardState(rx.State):
     calendar_week: list[AgendaDay] = []
     upcoming_appointments: list[UpcomingAppointmentRow] = []
     professional_options: list[ProfessionalOptionRow] = []
-    professional_filter: str = "__all__"
     search_query: str = ""
+    status_filter: str = "__all__"
     current_page: int = 1
     page_size: int = 8
     total_pages: int = 1
@@ -147,7 +147,7 @@ class ReceptionDashboardState(rx.State):
 
     @rx.var
     def has_active_filters(self) -> bool:
-        return bool(self.search_query.strip()) or self.professional_filter != "__all__"
+        return bool(self.search_query.strip()) or self.status_filter != "__all__"
 
     @rx.var
     def showing_start(self) -> int:
@@ -176,16 +176,6 @@ class ReceptionDashboardState(rx.State):
     async def _token(self) -> str:
         auth = await self.get_state(AuthState)
         return auth.session_token
-
-    def _professional_filter_id(self) -> int | None:
-        if self.professional_filter == "__all__":
-            return None
-        if not any(
-            option["value"] == self.professional_filter
-            for option in self.professional_options
-        ):
-            return None
-        return int(self.professional_filter)
 
     def _clear_data(self) -> None:
         self.appointments = []
@@ -242,11 +232,6 @@ class ReceptionDashboardState(rx.State):
             {"value": str(item.id), "label": item.name}
             for item in snapshot.professionals
         ]
-        if self.professional_filter != "__all__" and not any(
-            option["value"] == self.professional_filter
-            for option in self.professional_options
-        ):
-            self.professional_filter = "__all__"
         self.current_page = snapshot.page
         self.page_size = snapshot.page_size
         self.total_count = snapshot.total
@@ -324,8 +309,8 @@ class ReceptionDashboardState(rx.State):
                 snapshot = reception_day_operations(
                     db,
                     token=token,
-                    professional_id=self._professional_filter_id(),
                     search=self.search_query,
+                    status=self.status_filter,
                     page=self.current_page,
                     page_size=8,
                 )
@@ -360,20 +345,21 @@ class ReceptionDashboardState(rx.State):
 
     @rx.event
     async def apply_search(self, form_data: dict[str, Any]):
-        self.search_query = str(form_data.get("query", self.search_query) or "")[:100]
+        # Empty fields can be omitted by the browser's form serializer; an
+        # explicit submit must still clear the previous server-side query.
+        self.search_query = str(form_data.get("query") or "")[:100]
         self.current_page = 1
         async for event in self._reload():
             yield event
 
     @rx.event
-    async def update_professional(self, value: str):
+    async def update_status(self, value: str):
         requested = str(value or "__all__")
-        if requested == "__all__" or any(
-            option["value"] == requested for option in self.professional_options
-        ):
-            self.professional_filter = requested
-        else:
-            self.professional_filter = "__all__"
+        valid_statuses = {status.value for status in ConsultationStatus}
+        self.status_filter = (
+            requested if requested == "__all__" or requested in valid_statuses
+            else "__all__"
+        )
         self.current_page = 1
         async for event in self._reload():
             yield event
@@ -426,7 +412,7 @@ class ReceptionDashboardState(rx.State):
     @rx.event
     async def clear_filters(self):
         self.search_query = ""
-        self.professional_filter = "__all__"
+        self.status_filter = "__all__"
         self.current_page = 1
         async for event in self._reload():
             yield event
@@ -443,8 +429,8 @@ class ReceptionDashboardState(rx.State):
                 snapshot = reception_day_operations(
                     db,
                     token=token,
-                    professional_id=self._professional_filter_id(),
                     search=self.search_query,
+                    status=self.status_filter,
                     page=self.current_page,
                     page_size=8,
                 )
