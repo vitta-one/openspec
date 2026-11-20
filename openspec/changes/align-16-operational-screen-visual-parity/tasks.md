@@ -17,4 +17,4 @@
 - [x] 3.2 Gerar lado a lado, overlay e diff para cada uma das 16 referências desktop sem deformar imagens; inspecionar visualmente todas as rotas e separar diferenças de dados de layout.
 - [x] 3.3 Atualizar o relatório `docs/qa/operational-screen-parity-2026-11-17.md` com matriz individual de 16 rotas, medidas, resultados, dados, acessibilidade, responsividade e discrepâncias residuais.
 - [x] 3.4 Executar regressão: `pytest -q`, `reflex compile --dry`, capturas/comparações, `git diff --check` e OpenSpec strict; registrar comandos e status reais.
-- [ ] 3.5 Revisar diff integrado e estado do CI, criar commits convencionais, publicar a branch e abrir uma única PR para `develop`; verificar URL, alvo e ausência de merge/deploy.
+- [x] 3.5 Revisar diff integrado e estado do CI, criar commits convencionais, publicar a branch e abrir uma única PR para `develop`; verificar URL, alvo e ausência de merge/deploy.

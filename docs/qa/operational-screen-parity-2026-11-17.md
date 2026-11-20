@@ -59,6 +59,7 @@ Os comparativos individuais e manifestos detalhados permanecem em `qa-artifacts/
 - Ampliada a arte dos cabeçalhos ilustrados com ações no espaço disponível. A altura do conteúdo permanece estável e a regra responsiva restaura o tamanho relativo em tablet/mobile.
 - Compactada a lista de próximos atendimentos; o rodapé do dashboard termina em Y=880,8 px no viewport 1768×890 e permanece dentro da captura.
 - Removida uma regra de margem negativa sem componente correspondente.
+- Corrigida a expectativa de título do runner geral: a tela de especialidades publica o heading acessível “Especialidades”. A captura local completa validou 93/93 telas/formatos em PostgreSQL descartável limpo.
 
 ## Responsividade, acessibilidade e funcionamento
 
@@ -72,7 +73,9 @@ Permanecem os limites do estado funcional real documentados acima. A captura nã
 |---|---|
 | `pytest -q` em PostgreSQL descartável limpo `vitta_one_visual_tests_20261120` | **569 passed, 3 skipped**, 1 aviso de depreciação `StarletteDeprecationWarning` relacionado a `httpx` no `TestClient` |
 | `pytest qa_browser/prescription_browser.py qa_browser/admin_agenda_browser.py -q` em banco QA isolado | **42 passed**; inclui fluxo clínico/administrativo e foco/teclado |
+| `python -m qa_browser.capture_all_screens` em banco QA limpo | **93/93 PASS**; todas as rotas, perfis e viewports do runner geral |
 | `python -m qa_browser.capture_operational_reference_screens` após o CSS final | **96/96 PASS**, imagens carregadas, comparações refeitas |
+| Chromium CI #338 no SHA `a78b540` | **37 testes funcionais + 5 testes de agenda passaram; 93/93 capturas gerais; 96/96 capturas operacionais** |
 | Auditoria de viewport equivalente a zoom 200% | **16/16 PASS** em 884×445 |
 | `reflex compile --dry` com o ambiente PostgreSQL QA isolado | **PASS**, compilado em 7,348 s; há avisos preexistentes de depreciação Reflex e assinaturas de `on_submit` |
 | OpenSpec strict | **34 passed, 0 failed**, 1 nota informativa sobre target spec arquivada de `patient-portal` |
@@ -81,6 +84,10 @@ Permanecem os limites do estado funcional real documentados acima. A captura nã
 
 Uma execução anterior de Pytest contra um banco compartilhado com os fixtures visuais encontrou colisões de CPF e estado mutado por fluxo de navegador. A suíte completa foi então repetida num banco PostgreSQL limpo e isolado, com os resultados aprovados acima. Nenhum banco/container preexistente ou de produção foi alterado; as bases e contas QA são descartáveis/sintéticas.
 
-## Limitações e próximos passos de revisão
+## CI e revisão da PR
 
-A PR contém o código, relatório e manifesto sanitizado; os PNGs de referência, capturas, overlays e diffs estão fora do Git em `qa-artifacts/operational-reference/`. A CI da PR deve confirmar os gates do repositório após a publicação. Não há migration de produção, deploy ou merge nesta execução.
+Na primeira tentativa Chromium do commit `a6583de`, um teste de 37 teve timeout na navegação para ficha do paciente. A reprodução isolada e a suíte completa em banco local limpo passaram, e a repetição do job passou 37/37 testes funcionais; nessa repetição, a captura geral encontrou uma expectativa antiga de título (“Todas as especialidades”) e validou 90/93. O runner foi corrigido em `a78b540` e a captura local limpa passou em 93/93. No SHA `a78b5405309c565f689d830115dc78a96f6fab43`, os três workflows passaram: `Validate Vitta-One` #537, `Vitta One | CI Produção` #15 e `QA Prescrições com Chromium` #338. O último validou 37 testes de segurança/teclado/responsividade, 5 testes de agenda, 93/93 capturas gerais e 96/96 capturas operacionais.
+
+O artefato sintético do Chromium #338 está em [capturas e evidências do workflow](https://github.com/vitta-one/openspec/actions/runs/44789868103/artifacts/14654789975). Como os PNGs originais são mantidos fora do Git, a etapa de CI valida somente as capturas; as comparações com referências foram feitas e inspecionadas localmente, em `qa-artifacts/operational-reference/`.
+
+A PR #358 aponta para `develop`, permanece aberta e não foi mergeada. Não houve migration de produção, deploy ou alteração de banco de produção.
