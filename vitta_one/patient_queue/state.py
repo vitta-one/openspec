@@ -258,6 +258,14 @@ def format_queue_wait(minutes: int) -> str:
     return f"{hours}h {remaining:02d}min" if hours else f"{remaining} min"
 
 
+def average_queue_wait_minutes(rows: list[QueueRow]) -> int:
+    """Return the rounded mean of persisted queue waits, or zero for an empty queue."""
+    waits = [max(0, int(row["wait_minutes"])) for row in rows]
+    if not waits:
+        return 0
+    return (sum(waits) + len(waits) // 2) // len(waits)
+
+
 def filter_active_queue(
     rows: list[QueueRow], query: str, priority: str
 ) -> list[QueueRow]:
@@ -450,6 +458,10 @@ class ReceptionQueueState(rx.State):
         return format_queue_wait(max(
             (row["wait_minutes"] for row in self.queue_rows), default=0
         ))
+
+    @rx.var
+    def queue_average_wait(self) -> str:
+        return format_queue_wait(average_queue_wait_minutes(self.queue_rows))
 
     @rx.event
     def set_queue_search(self, value: str) -> None:

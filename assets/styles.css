@@ -1419,8 +1419,8 @@ button:disabled,
 
 @media (min-width: 80rem) {
   .vitta-reception-day-top {
-    grid-template-columns: minmax(18rem, 0.82fr) minmax(29rem, 1.18fr);
-    gap: 1.35rem;
+    grid-template-columns: minmax(25rem, 0.9fr) minmax(39rem, 1.1fr);
+    gap: 1rem;
   }
 
   .vitta-reception-day-toolbar {
@@ -2091,15 +2091,6 @@ button:disabled,
 }
 
 /* UX refinement — consistent spacing, readable controls and collapsible navigation. */
-.vitta-shell.is-sidebar-closed { grid-template-columns: 0 minmax(0, 1fr); }
-.vitta-shell.is-sidebar-closed .vitta-sidebar {
-  visibility: hidden;
-  opacity: 0;
-  pointer-events: none;
-  overflow: hidden;
-  padding: 0;
-  border: 0;
-}
 .vitta-hamburger-desktop, .vitta-hamburger-mobile {
   flex: 0 0 auto;
   min-width: 2.75rem;
@@ -2228,20 +2219,92 @@ button:disabled,
 }
 .vitta-staff-table :is(.rt-TableColumnHeaderCell, .rt-TableCell, .rt-TableRowHeaderCell):first-child {
   padding-left: 0.35rem;
+  width: 30%;
+}
+.vitta-staff-table :is(.rt-TableColumnHeaderCell, .rt-TableCell):nth-child(2) {
+  width: 28%;
+}
+.vitta-staff-table :is(.rt-TableColumnHeaderCell, .rt-TableCell):nth-child(3) {
+  width: 18%;
+}
+.vitta-staff-table :is(.rt-TableColumnHeaderCell, .rt-TableCell):nth-child(4) {
+  width: 14%;
+}
+.vitta-staff-table :is(.rt-TableColumnHeaderCell, .rt-TableCell):nth-child(5) {
+  width: 10%;
 }
 .vitta-staff-table :is(.rt-TableColumnHeaderCell, .rt-TableCell):last-child {
   text-align: right;
 }
 .vitta-staff-table .vitta-staff-table-row:hover { background: var(--vitta-surface-subtle); }
 .vitta-staff-toolbar { padding-bottom: 0.4rem; }
+.vitta-staff-footer {
+  min-height: 3.5rem;
+  padding: .65rem .25rem 0;
+  border-top: 1px solid var(--vitta-border);
+}
+.vitta-staff-page-control {
+  display: grid;
+  width: 2.5rem;
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+  padding: 0;
+  place-items: center;
+}
+.vitta-staff-page-control.is-current {
+  border: 1px solid var(--vitta-primary);
+  border-radius: var(--vitta-radius-control);
+  color: var(--vitta-primary);
+  background: var(--vitta-primary-soft);
+  font-weight: 700;
+}
+.vitta-staff-page-size { min-height: 2.5rem; }
+.vitta-staff-search-control,
+.vitta-directory-search-control {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+.vitta-staff-search-control > svg,
+.vitta-directory-search-control > svg {
+  position: absolute;
+  z-index: 1;
+  inset-block: 0;
+  left: .75rem;
+  margin-block: auto;
+  color: var(--vitta-text-muted);
+  pointer-events: none;
+}
+.vitta-staff-search-control input,
+.vitta-directory-search-control input {
+  width: 100%;
+  min-width: 0;
+  padding-left: 2.55rem;
+}
+.vitta-staff-table-avatar {
+  display: grid;
+  flex: 0 0 2.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border-radius: .7rem;
+  color: var(--vitta-primary);
+  background: var(--vitta-primary-soft);
+}
 .vitta-staff-details-link {
   display: inline-flex;
+  width: 2.75rem;
   align-items: center;
+  justify-content: center;
   min-height: 2.75rem;
+  padding: 0;
+  border: 1px solid var(--vitta-border-strong);
   border-radius: var(--vitta-radius-control);
-  white-space: nowrap;
+  color: var(--vitta-primary);
+  background: var(--vitta-surface);
   font-weight: 650;
 }
+.vitta-staff-details-link:hover { background: var(--vitta-primary-soft); }
 .vitta-staff-details-link:focus-visible {
   outline: 3px solid var(--vitta-focus);
   outline-offset: 2px;
@@ -2587,7 +2650,6 @@ button:disabled,
 
 /* Dashboard rhythm, readable KPI spacing, no dense or touching edges. */
 .vitta-reception-overview {
-  gap: clamp(1.25rem, 2vw, 2rem);
   max-width: 100%;
 }
 .vitta-reception-overview .vitta-overview-card {
@@ -2792,11 +2854,51 @@ button:disabled,
 
 /* Reception queue: compact, semantic operational board. */
 .vitta-queue-operational-summary {
-  padding: 0.7rem 0;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: center;
+  padding: 0.75rem 0;
   border-top: 1px solid var(--vitta-border);
   border-bottom: 1px solid var(--vitta-border);
   font-size: 0.86rem;
   line-height: 1.5;
+}
+
+.vitta-queue-summary-metric {
+  min-width: 0;
+  min-height: 3.5rem;
+  padding: .4rem .55rem;
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-control);
+  background: var(--vitta-surface);
+}
+.vitta-queue-summary-icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: .7rem;
+  color: var(--vitta-primary);
+  background: var(--vitta-primary-soft);
+}
+.vitta-queue-summary-icon--red { color: #b91c1c; background: #ffe4e6; }
+.vitta-queue-summary-icon--amber { color: #a16207; background: #fef3c7; }
+.vitta-queue-summary-icon--green { color: #15803d; background: #dcfce7; }
+.vitta-queue-summary-icon--blue { color: #0284c7; background: #e0f2fe; }
+.vitta-queue-summary-icon--average { color: var(--vitta-primary); background: transparent; }
+.vitta-queue-empty .vitta-empty-state {
+  min-height: 13.5rem;
+  border: 1px dashed var(--vitta-border-strong);
+  border-radius: var(--vitta-radius-panel);
+  background: var(--vitta-surface-subtle);
+}
+@media (max-width: 1100px) {
+  .vitta-queue-operational-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 620px) {
+  .vitta-queue-operational-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .vitta-queue-summary-metric { padding-inline: .45rem; }
 }
 
 .vitta-queue-operational-table {
@@ -2871,9 +2973,10 @@ button:disabled,
   font-weight: 750;
   background: var(--vitta-surface-subtle);
 }
-.vitta-patient-directory-table th:first-child { width: 45%; }
-.vitta-patient-directory-table th:nth-child(2) { width: 30%; }
-.vitta-patient-directory-table th:last-child { width: 25%; }
+.vitta-patient-directory-table th:first-child { width: 43%; }
+.vitta-patient-directory-table th.vitta-patient-directory-cpf-column { width: 17%; }
+.vitta-patient-directory-table th.vitta-patient-directory-phone-column { width: 22%; }
+.vitta-patient-directory-table th:last-child { width: 18%; }
 .vitta-patient-directory-table tbody tr:last-child td { border-bottom: 0; }
 .vitta-patient-directory-row:hover,
 .vitta-patient-directory-row:focus-within {
@@ -2888,6 +2991,28 @@ button:disabled,
   white-space: nowrap;
 }
 .vitta-patient-directory-mobile-phone { display: none; }
+.vitta-patient-directory-avatar {
+  display: grid;
+  flex: 0 0 3.25rem;
+  width: 3.25rem;
+  height: 3.25rem;
+  place-items: center;
+  color: var(--vitta-primary);
+  border-radius: .75rem;
+  background: var(--vitta-primary-soft);
+}
+.vitta-patient-directory-search-control { position: relative; }
+.vitta-patient-directory-search-control .vitta-input { padding-left: 2.8rem; }
+.vitta-patient-directory-search-icon {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: .85rem;
+  color: var(--vitta-text);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+.vitta-patient-directory-search-form > div:first-of-type { flex: 1 1 24rem; }
 
 @media (max-width: 640px) {
   .vitta-shell a.vitta-patient-directory-new { width: 100%; }
@@ -2895,13 +3020,42 @@ button:disabled,
     padding: 0.7rem 0.35rem;
   }
   .vitta-patient-directory-phone-column { display: none; }
+  .vitta-patient-directory-cpf-column { display: none; }
   .vitta-patient-directory-mobile-phone {
     display: block;
     margin-top: 0.22rem;
   }
-  .vitta-patient-directory-table th:first-child { width: 62%; }
-  .vitta-patient-directory-table th:last-child { width: 38%; }
+  .vitta-patient-directory-table th:first-child { width: 64%; }
+  .vitta-patient-directory-table th:last-child { width: 36%; }
+  .vitta-patient-directory-avatar { flex-basis: 2.5rem; width: 2.5rem; height: 2.5rem; }
 }
+
+.vitta-specialty-table-icon {
+  display: grid;
+  flex: 0 0 2.6rem;
+  width: 2.6rem;
+  height: 2.6rem;
+  place-items: center;
+  color: var(--vitta-primary);
+  border-radius: .65rem;
+  background: var(--vitta-primary-soft);
+}
+.vitta-specialty-table-action {
+  width: 2.35rem !important;
+  min-width: 2.35rem !important;
+  min-height: 2.35rem !important;
+  padding: 0 !important;
+}
+.vitta-specialty-table :is(.rt-TableColumnHeaderCell, .rt-TableCell, .rt-TableRowHeaderCell) {
+  padding-block: .28rem !important;
+  padding-inline: .55rem !important;
+}
+.vitta-specialty-table .rt-TableRowHeaderCell { width: 23%; }
+.vitta-specialty-table .rt-TableCell:nth-child(2) { width: 53%; }
+.vitta-specialty-table .rt-TableCell:nth-child(3) { width: 13%; }
+.vitta-specialty-table .rt-TableCell:last-child { width: 11%; }
+.vitta-availability-panel { min-height: 34rem; }
+.vitta-availability-content { min-height: 30rem; justify-content: space-between; }
 
 
 /* Recepção / Agenda: seven-day operational scope; dashboard retains its own compact read-only calendar. */
@@ -2910,7 +3064,19 @@ button:disabled,
   align-items: stretch;
 }
 .vitta-reception-calendar-toolbar { min-width: 0; }
-.vitta-reception-agenda-date { width: 9.5rem; min-width: 9.5rem; }
+.vitta-reception-period-trigger {
+  min-height: 2.5rem !important;
+  padding-inline: .35rem !important;
+  color: var(--vitta-text) !important;
+  font-weight: 750 !important;
+  white-space: nowrap;
+}
+.vitta-reception-period-trigger:focus-visible {
+  outline: 2px solid var(--vitta-focus);
+  outline-offset: 2px;
+}
+.vitta-agenda-date-popover { width: min(22rem, calc(100vw - 2rem)); }
+.vitta-agenda-date-popover-input { width: 100%; min-width: 0; }
 .vitta-reception-calendar-help { margin-top: -.45rem; }
 .vitta-reception-calendar-scroll {
   width: 100%;
@@ -3000,8 +3166,8 @@ button:disabled,
   display: block;
   width: 100%;
   min-width: 0;
-  padding: .04rem .18rem;
-  min-height: 1.8rem;
+  padding: .1rem .24rem;
+  min-height: 2.6rem;
   border: 1px solid transparent;
   border-left-width: 3px;
   border-radius: .45rem;
@@ -3014,7 +3180,11 @@ button:disabled,
 .vitta-reception-calendar-event--in-progress { border-color: #bfdbfe; border-left-color: #0ea5e9; background: #eff6ff; }
 .vitta-reception-calendar-event--completed { border-color: #d1d5db; border-left-color: #9ca3af; background: #f3f4f6; }
 .vitta-reception-calendar-event--cancelled { border-color: #e2e8f0; border-left-color: #94a3b8; background: #f8fafc; color: #475569; }
-.vitta-reception-calendar-event .rt-Text { font-size: .68rem !important; line-height: 1 !important; }
+.vitta-reception-calendar-event .rt-Text { font-size: .7rem !important; line-height: .95 !important; }
+.vitta-reception-calendar-event-content { gap: .125rem !important; }
+.vitta-reception-calendar-event-heading { gap: .3rem !important; min-width: 0; }
+.vitta-reception-calendar-event-time { flex: 0 0 auto; white-space: nowrap; }
+.vitta-reception-calendar-event-name { flex: 1 1 auto; min-width: 0; }
 .vitta-reception-calendar-event:hover:not(:disabled) { filter: brightness(.97); }
 .vitta-reception-calendar-event:focus-visible,
 .vitta-reception-calendar-day:focus-visible {
@@ -3026,10 +3196,11 @@ button:disabled,
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  line-height: 1;
+  line-height: 1.05;
 }
-.vitta-reception-calendar-event-status { white-space: nowrap; line-height: 1; }
-.vitta-reception-calendar-event > div { line-height: 1; gap: 0 !important; }
+.vitta-reception-calendar-event-status { white-space: nowrap; line-height: 1.05; }
+.vitta-reception-calendar-event-professional { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.05; }
+.vitta-reception-calendar-event-content > div { line-height: .95; }
 .vitta-reception-calendar-extra-count { padding-inline: .3rem; line-height: 1.15; }
 .vitta-reception-calendar-legend { padding: .2rem .1rem; }
 .vitta-reception-calendar-legend-item { min-height: 1.75rem; color: var(--vitta-text-muted); }
@@ -3111,10 +3282,11 @@ button:disabled,
 .vitta-reception-operations {
   min-width: 0;
   max-width: 100%;
+  gap: 1rem !important;
 }
 .vitta-reception-operations .vitta-overview-card {
-  min-height: 7.25rem;
-  padding: 0.85rem 1rem;
+  min-height: 5.75rem;
+  padding: 0.6rem 0.65rem;
 }
 .vitta-reception-operations .vitta-overview-card:hover {
   transform: none;
@@ -3219,7 +3391,25 @@ button:disabled,
     color: var(--vitta-text);
   }
 }
+@media (max-width: 640px) {
+  .vitta-patient-directory-table td { padding-block: .7rem; }
+  .vitta-patient-directory-avatar {
+    flex-basis: 2.5rem;
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  .vitta-patient-directory-detail { min-height: 2.75rem; padding-inline: .5rem; }
+  .vitta-doctor-overview-card { min-height: 6rem; padding: .75rem; gap: .75rem; }
+  .vitta-doctor-overview-icon {
+    flex-basis: 3.5rem;
+    width: 3.5rem;
+    height: 3.5rem;
+  }
+  .vitta-doctor-quick-action { flex: 1 1 auto; }
+}
 @media (max-width: 800px) {
+  .vitta-availability-panel { min-height: 0; }
+  .vitta-availability-content { min-height: 0; justify-content: flex-start; }
   .vitta-admin-hub-groups { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 520px) {
@@ -3251,6 +3441,18 @@ button:disabled,
 .vitta-sidebar-logout-button { gap: .75rem; min-height: 2.75rem; }
 .vitta-topbar-context { font-size: .86rem; font-weight: 750; color: var(--vitta-text-muted); white-space: nowrap; }
 .vitta-shell.is-sidebar-closed { grid-template-columns: 4rem minmax(0, 1fr); }
+.vitta-shell--admin.is-sidebar-closed { grid-template-columns: 5rem minmax(0, 1fr); }
+.vitta-shell--finance.is-sidebar-closed { grid-template-columns: 4.5rem minmax(0, 1fr); }
+.vitta-shell--doctor { --vitta-sidebar-width: 17.5rem; }
+@media (min-width: 1051px) {
+  .vitta-shell--doctor .vitta-topbar { min-height: 3.875rem; }
+  .vitta-shell--doctor .vitta-page { padding: .8125rem .75rem 3rem; }
+  .vitta-shell--doctor .vitta-page:has(.vitta-doctor-overview-grid) .vitta-page-header,
+  .vitta-shell--doctor .vitta-page:has(.vitta-doctor-agenda-cta) .vitta-page-header,
+  .vitta-shell--doctor .vitta-page:has(.vitta-doctor-patient-list) .vitta-page-header {
+    padding-inline: 1rem;
+  }
+}
 .vitta-shell.is-sidebar-closed .vitta-sidebar {
   visibility: visible; opacity: 1; transform: none; pointer-events: auto;
   overflow: hidden; padding: .85rem .35rem .6rem; border-right: 1px solid var(--vitta-border);
@@ -3262,6 +3464,7 @@ button:disabled,
 .vitta-shell.is-sidebar-closed .vitta-nav-group-label,
 .vitta-shell.is-sidebar-closed .vitta-nav-link-text,
 .vitta-shell.is-sidebar-closed .vitta-session-identity { display: none; }
+.vitta-shell--admin.is-sidebar-closed .vitta-nav-group--qa { display: none; }
 .vitta-shell.is-sidebar-closed .vitta-nav-children { margin-left: 0; padding-left: 0; border-left: 0; max-width: 100%; }
 .vitta-shell.is-sidebar-closed .vitta-nav-link,
 .vitta-shell.is-sidebar-closed .vitta-sidebar-logout-button { justify-content: center; padding: .65rem .3rem; }
@@ -3286,6 +3489,7 @@ button:disabled,
   .vitta-shell.is-mobile-nav-open .vitta-nav-link-text,
   .vitta-shell.is-mobile-nav-open .vitta-session-identity { display: flex; }
   .vitta-shell.is-mobile-nav-open .vitta-nav-group-label { display: block; }
+  .vitta-shell.is-mobile-nav-open .vitta-nav-group--qa { display: flex; }
   .vitta-shell.is-mobile-nav-open .vitta-nav-children {
     margin-left: .72rem; padding-left: .7rem; border-left: 1px solid var(--vitta-border);
     max-width: calc(100% - .72rem);
@@ -3369,18 +3573,54 @@ button:disabled,
 
 /* Operational screen parity: the artwork is decoration behind live controls. */
 .vitta-page {
-  width: min(100%, 96rem);
+  width: min(100%, 90rem);
+  padding: 1.5rem 1.5rem 3rem;
+}
+.vitta-shell--admin .vitta-page,
+.vitta-shell--finance .vitta-page { width: min(100%, 96rem); }
+.vitta-shell--admin .vitta-page:has(.vitta-staff-create-banner) {
+  width: min(100%, 98rem);
+  padding-top: calc(1.5rem + .375rem);
+  padding-right: 2rem;
+}
+.vitta-shell--admin .vitta-page:has(.vitta-availability-panel) {
+  width: min(100%, 99rem);
+  padding-right: 1.125rem;
+  padding-left: 2rem;
+}
+.vitta-shell--admin .vitta-page:has(.vitta-clinic-settings-workspace) {
+  width: min(100%, 98.25rem);
+  padding-right: 1.1875rem;
+  padding-left: 1.6875rem;
+}
+.vitta-shell--admin .vitta-page:has(.vitta-staff-create-banner) .vitta-staff-create-banner {
+  min-height: 6.5rem;
+}
+.vitta-shell--admin .vitta-page:has(.vitta-staff-create-banner) .vitta-staff-create-banner-icon {
+  width: 4rem;
+  height: 4rem;
+}
+.vitta-shell--admin .vitta-page:has(.vitta-staff-create-banner) .vitta-page-header .rt-Heading {
+  margin-top: .75rem;
+}
+.vitta-shell--admin .vitta-page:has(.vitta-staff-create-banner) .vitta-staff-section-icon {
+  width: 3.125rem;
+  height: 3.125rem;
+}
+.vitta-shell--admin .vitta-page:has(.vitta-staff-create-banner) .vitta-staff-actions button {
+  min-height: 3rem;
+  padding-inline: 1.25rem;
 }
 .vitta-shell .vitta-page-header--illustrated {
   position: relative;
   isolation: isolate;
-  overflow: hidden;
-  min-height: 9rem;
+  overflow: visible;
+  min-height: 8rem;
   align-items: center;
-  padding: 1.2rem clamp(1rem, 2vw, 1.7rem);
-  border: 1px solid #dce9e8;
-  border-radius: 1rem;
-  background: linear-gradient(108deg, #f8fbfd 0%, #f4f9fa 56%, #e7f5f2 100%);
+  padding: 1.5rem 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 .vitta-shell .vitta-page-header-copy,
 .vitta-shell .vitta-page-header-actions {
@@ -3392,7 +3632,7 @@ button:disabled,
 }
 .vitta-shell .vitta-page-header .rt-Heading {
   margin-top: .2rem;
-  font-size: clamp(1.65rem, 1.85vw, 2rem);
+  font-size: clamp(2rem, 2.2vw, 2.5rem);
   line-height: 1.12;
 }
 .vitta-shell .vitta-page-header-art {
@@ -3407,6 +3647,30 @@ button:disabled,
   opacity: .82;
   pointer-events: none;
   user-select: none;
+}
+.vitta-shell .vitta-page-header--illustrated:has(.vitta-page-header-actions) .vitta-page-header-art {
+  right: clamp(12rem, 16vw, 18rem);
+  width: min(34vw, 30rem);
+}
+.vitta-shell--admin .vitta-page:has(.vitta-availability-panel) .vitta-page-header--illustrated {
+  min-height: 5.25rem;
+  padding-block: .25rem;
+}
+.vitta-shell--admin .vitta-page:has(.vitta-availability-panel) .vitta-page-header-art {
+  right: 0;
+  bottom: -1.25rem;
+  width: min(42vw, 44rem);
+  height: 10rem;
+}
+.vitta-shell--admin .vitta-page:has(.vitta-clinic-settings-workspace) .vitta-page-header {
+  min-height: 0;
+  padding-block: 0;
+}
+.vitta-shell--admin .vitta-page:has(.vitta-clinic-settings-workspace) .vitta-page-header .rt-Heading {
+  margin-top: 1rem;
+}
+.vitta-shell--admin .vitta-page:has(.vitta-clinic-settings-workspace) .vitta-clinic-settings-layout {
+  column-gap: 1.5rem;
 }
 .vitta-admin-hub {
   max-width: none;
@@ -3446,6 +3710,7 @@ button:disabled,
 .vitta-admin-quick-access {
   align-items: center;
 }
+.vitta-admin-quick-panel { display: flex; align-items: center; }
 .vitta-admin-quick-link {
   display: inline-flex;
   min-height: 2.8rem;
@@ -3479,6 +3744,27 @@ button:disabled,
 }
 .vitta-directory-summary {
   align-items: stretch;
+}
+.vitta-shell--admin .vitta-page:has(.vitta-specialty-table) {
+  padding-inline: 0;
+}
+.vitta-specialty-directory-panel {
+  padding: 10px 1.5rem 1.25rem;
+}
+.vitta-specialty-directory-filters {
+  align-items: end;
+}
+.vitta-shell .vitta-specialty-directory-filters .vitta-directory-search-input {
+  height: 40px;
+  min-height: 40px;
+  padding-block: 8px;
+}
+.vitta-specialty-directory-filters .vitta-directory-status-field {
+  padding-top: .25rem;
+}
+.vitta-specialty-directory-filters .vitta-directory-status-field > label {
+  margin-bottom: 0;
+  line-height: 1rem;
 }
 .vitta-summary-metric {
   min-width: 0;
@@ -3518,18 +3804,95 @@ button:disabled,
   border-color: #d5e8e5;
   background: linear-gradient(145deg, #fff 0%, #f5fbf9 100%);
 }
+.vitta-patient-create-input-icon { position: relative; }
+.vitta-patient-create-input-icon > svg {
+  position: absolute;
+  z-index: 1;
+  inset-block: 0;
+  left: .85rem;
+  height: 1.25rem;
+  margin-block: auto;
+  color: var(--vitta-text);
+  pointer-events: none;
+}
+.vitta-patient-create-input-icon > .vitta-input { padding-left: 2.9rem; }
+.vitta-patient-create-heading-icon {
+  display: grid;
+  flex: 0 0 4.5rem;
+  width: 4.5rem;
+  height: 4rem;
+  place-items: center;
+  color: var(--vitta-primary);
+  border-radius: .85rem;
+  background: var(--vitta-primary-soft);
+}
 .vitta-patient-create-illustration {
   display: block;
   width: min(100%, 25rem);
-  max-height: 13rem;
+  max-height: 14.5rem;
   margin-inline: auto;
   object-fit: contain;
 }
 .vitta-patient-create-tip {
+  min-height: 2.5rem;
   padding-block: .2rem;
+}
+.vitta-patient-create-tip-icon {
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
 }
 .vitta-reception-dashboard-grid {
   align-items: start;
+  gap: .75rem;
+}
+.vitta-reception-dashboard-footer { gap: .75rem; }
+.vitta-reception-dashboard-footer > *,
+.vitta-reception-dashboard-grid > :first-child { min-width: 0; }
+.vitta-reception-dashboard-footer > * { padding: .65rem .85rem !important; }
+.vitta-reception-email-copy { flex: 1 1 auto; }
+.vitta-reception-email-link { flex: 0 0 auto; white-space: nowrap; }
+.vitta-reception-email-metrics { gap: .7rem !important; }
+.vitta-reception-email-metrics .vitta-email-metric { min-height: 3.8rem; padding: .4rem .55rem; }
+.vitta-reception-email-metrics .vitta-email-metric-icon { width: 2.15rem; height: 2.15rem; }
+.vitta-reception-quick-panel { padding: .55rem .65rem; }
+.vitta-reception-quick-toolbar { min-width: 0; }
+.vitta-reception-quick-heading { flex: 0 0 auto; }
+.vitta-reception-quick-actions { flex: 1 1 auto; }
+.vitta-reception-quick-link {
+  display: inline-flex;
+  min-height: 2.2rem;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  padding: .4rem .65rem;
+  border: 1px solid var(--vitta-border-strong);
+  border-radius: var(--vitta-radius-control);
+  color: var(--vitta-primary);
+  background: var(--vitta-surface);
+  font-size: .82rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.vitta-reception-quick-link:hover { background: var(--vitta-primary-soft); }
+.vitta-reception-quick-link:focus-visible { outline: 3px solid var(--vitta-focus); outline-offset: 2px; }
+.vitta-reception-quick-link--primary {
+  color: #fff;
+  background: var(--vitta-primary);
+  border-color: var(--vitta-primary);
+}
+.vitta-reception-quick-link--primary:hover { background: var(--vitta-primary-hover); }
+.vitta-reception-metric-icon {
+  display: grid;
+  width: 2.45rem;
+  height: 2.45rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: .7rem;
+  color: var(--vitta-primary);
+  background: var(--vitta-primary-soft);
 }
 .vitta-reception-preview-row {
   min-width: 0;
@@ -3538,6 +3901,220 @@ button:disabled,
 }
 .vitta-reception-preview-row:last-child {
   border-bottom: 0;
+}
+
+.vitta-doctor-week-panel .vitta-agenda-day {
+  height: 8.75rem;
+  min-height: 8.75rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.vitta-doctor-week-panel .vitta-agenda-event { padding: .45rem .5rem; }
+.vitta-doctor-overview-card {
+  display: flex;
+  align-items: center;
+  min-height: 6.75rem;
+  padding: 1rem;
+  gap: 1rem;
+}
+.vitta-doctor-overview-icon {
+  display: grid;
+  flex: 0 0 4.5rem;
+  width: 4.5rem;
+  height: 4.5rem;
+  place-items: center;
+  color: var(--vitta-primary);
+  border-radius: .85rem;
+  background: var(--vitta-primary-soft);
+}
+.vitta-doctor-overview-card .rt-Text { color: var(--vitta-primary); }
+.vitta-doctor-quick-actions { gap: .75rem; }
+.vitta-doctor-quick-action,
+.vitta-doctor-agenda-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .55rem;
+  min-height: 2.9rem;
+  padding: .6rem 1rem;
+  border: 1px solid var(--vitta-primary);
+  border-radius: var(--vitta-radius-control);
+  color: var(--vitta-primary);
+  background: var(--vitta-surface);
+  font-weight: 700;
+  line-height: 1.25;
+  text-decoration: none;
+}
+.vitta-doctor-quick-action:is(:hover, :focus-visible) {
+  background: var(--vitta-primary-soft);
+}
+.vitta-doctor-agenda-cta {
+  width: 100%;
+  min-height: 3rem;
+  color: #fff;
+  background: var(--vitta-primary);
+}
+.vitta-doctor-agenda-cta:is(:hover, :focus-visible) {
+  color: #fff;
+  background: var(--vitta-primary-hover);
+}
+.vitta-doctor-quick-action:focus-visible,
+.vitta-doctor-agenda-cta:focus-visible {
+  outline: 3px solid var(--vitta-focus);
+  outline-offset: 3px;
+}
+.vitta-shell--doctor .vitta-page:has(.vitta-doctor-agenda-cta) .vitta-page-header-copy {
+  max-width: min(86%, 78rem);
+}
+@media (min-width: 1051px) {
+  .vitta-shell--doctor .vitta-page:has(.vitta-doctor-agenda-cta) .vitta-page-header-copy > .rt-Text {
+    white-space: nowrap;
+  }
+}
+
+.vitta-staff-create-banner {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 5.25rem;
+  padding: .9rem 1rem;
+  border-radius: var(--vitta-radius-panel);
+  background: linear-gradient(110deg, var(--vitta-primary-soft), #f4fbf9 72%);
+}
+.vitta-staff-create-banner > :not(img) { position: relative; z-index: 1; }
+.vitta-staff-create-banner-icon,
+.vitta-staff-section-icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: .75rem;
+  color: var(--vitta-primary);
+  background: rgb(255 255 255 / .72);
+}
+.vitta-staff-section-icon { width: 2.8rem; height: 2.8rem; }
+.vitta-staff-create-banner-art {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  right: 0;
+  width: min(52%, 42rem);
+  height: 100%;
+  object-fit: contain;
+  object-position: right center;
+  opacity: .82;
+  pointer-events: none;
+}
+.vitta-staff-identity-grid { align-items: start; }
+.vitta-staff-actions {
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--vitta-border);
+}
+
+.vitta-finance-summary { align-items: stretch; }
+.vitta-finance-metric {
+  min-width: 0;
+  min-height: 5rem;
+  padding: .75rem .9rem;
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-panel);
+  background: var(--vitta-surface);
+  box-shadow: var(--vitta-shadow-xs);
+}
+.vitta-finance-metric-icon,
+.vitta-finance-filter-icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 2.8rem;
+  height: 2.8rem;
+  border-radius: .75rem;
+  color: var(--vitta-primary);
+  background: var(--vitta-primary-soft);
+}
+.vitta-finance-metric-icon--green { color: #166534; background: #dcfce7; }
+.vitta-finance-metric-icon--amber { color: #854d0e; background: #fef3c7; }
+.vitta-finance-metric-icon--red { color: var(--vitta-danger); background: var(--vitta-danger-soft); }
+.vitta-finance-metric-icon--blue { color: #0369a1; background: #e0f2fe; }
+.vitta-finance-filter-icon { width: 2.3rem; height: 2.3rem; }
+.vitta-finance-filters { min-width: 0; }
+.vitta-finance-filters-form,
+.vitta-finance-issue-form { min-width: 0; }
+.vitta-finance-date-range { min-width: 0; flex-wrap: nowrap; }
+.vitta-finance-date-range > .rt-TextFieldRoot {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+}
+.vitta-finance-date-range > .rt-TextFieldRoot input {
+  width: 100%;
+  min-width: 0;
+}
+.vitta-finance-date-range > p { flex: 0 0 auto; }
+.vitta-finance-filters-form > *,
+.vitta-finance-issue-form > * { min-width: 0; }
+.vitta-finance-filters-form .rt-Button,
+.vitta-finance-issue-form .rt-Button {
+  min-height: 2.8rem;
+  white-space: nowrap;
+}
+.vitta-finance-filters-form .rt-SelectTrigger,
+.vitta-finance-issue-form .rt-SelectTrigger {
+  height: 2.8rem;
+  min-height: 2.8rem;
+}
+.vitta-finance-search { position: relative; width: 100%; min-width: 0; }
+.vitta-finance-search > svg {
+  position: absolute;
+  z-index: 1;
+  inset-block: 0;
+  left: .75rem;
+  margin-block: auto;
+  color: var(--vitta-text-muted);
+  pointer-events: none;
+}
+.vitta-finance-search input { width: 100%; min-width: 0; padding-left: 2.5rem; }
+.vitta-finance-charges .vitta-empty-state { gap: .4rem; }
+.vitta-finance-charges .vitta-empty-icon { width: 2.25rem; height: 2.25rem; }
+.vitta-finance-issue { border-color: #d5e8e5; }
+.vitta-finance-evolution-layout {
+  min-height: 4rem;
+  flex-direction: column;
+  align-items: stretch;
+}
+.vitta-finance-evolution-copy,
+.vitta-finance-evolution-empty { flex: 1 1 0; }
+.vitta-finance-evolution-icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 2.65rem;
+  height: 2.65rem;
+  border-radius: .72rem;
+  color: var(--vitta-primary);
+  background: var(--vitta-primary-soft);
+}
+.vitta-doctor-queue-copy { flex: 1 1 auto; }
+.vitta-doctor-queue-icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: .85rem;
+  color: var(--vitta-primary);
+  background: var(--vitta-primary-soft);
+}
+
+@media (max-width: 620px) {
+  .vitta-staff-create-banner { padding: .75rem; }
+  .vitta-staff-create-banner-art { right: -.8rem; width: 44%; opacity: .35; }
+  .vitta-finance-metric { min-height: 4.5rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vitta-finance-metric,
+  .vitta-staff-create-banner { transition: none; }
 }
 .vitta-operational-alert-link,
 .vitta-quick-action-link {
@@ -3561,13 +4138,36 @@ button:disabled,
 .vitta-clinic-settings-guidance {
   border-color: #d5e8e5;
   background: linear-gradient(145deg, #fff 0%, #f5fbf9 100%);
+  min-height: 33.75rem;
 }
 .vitta-clinic-settings-illustration {
   display: block;
-  width: min(100%, 27rem);
+  width: min(100%, 33rem);
   max-height: 13rem;
   margin-inline: auto;
   object-fit: contain;
+}
+.vitta-clinic-settings-layout { margin-top: .7rem; }
+.vitta-clinic-settings-form .vitta-clinic-settings-icon {
+  width: 3.75rem;
+  height: 3.75rem;
+}
+.vitta-clinic-settings-actions {
+  margin-top: 1rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--vitta-border);
+}
+.vitta-clinic-settings-actions :is(a, button) {
+  min-height: 3.125rem;
+  padding-inline: 1.5rem;
+  font-size: 1rem;
+}
+.vitta-clinic-settings-form > .rt-Box { min-height: 33.75rem; }
+.vitta-clinic-settings-form .vitta-textarea { min-height: 8.25rem; }
+.vitta-staff-form > .rt-Box { padding-bottom: 1.1rem; }
+.vitta-availability-content .vitta-empty-state .rt-Text { max-width: 72ch; }
+.vitta-shell--admin .vitta-page:has(.vitta-availability-panel) .vitta-empty-state .rt-Text {
+  max-width: 72ch;
 }
 .vitta-finance-chart-row {
   min-width: 0;
@@ -3586,9 +4186,320 @@ button:disabled,
   border-radius: inherit;
   background: linear-gradient(90deg, #0f766e 0%, #38a99a 100%);
 }
+
+/* Final route refinements from the approved desktop comparisons. */
+.vitta-shell--reception .vitta-page:has(.vitta-patient-directory-workspace),
+.vitta-shell--reception .vitta-page:has(.vitta-patient-create-workspace),
+.vitta-shell--reception .vitta-page:has(.vitta-queue-active-panel) {
+  width: min(100%, 96rem);
+}
+.vitta-shell--reception .vitta-page:has(.vitta-patient-directory-workspace) .vitta-page-header {
+  margin-top: .875rem;
+  margin-bottom: 1rem;
+}
+.vitta-shell--reception .vitta-page:has(.vitta-patient-create-workspace) > .vitta-patient-create-workspace > .vitta-page-header {
+  margin-top: 1.25rem;
+  margin-bottom: 1.4rem;
+}
+.vitta-shell--reception .vitta-page:has(.vitta-patient-create-workspace) .vitta-patient-create-workspace {
+  padding-top: 1rem;
+}
+.vitta-shell--reception .vitta-page:has(.vitta-patient-create-workspace) .vitta-patient-create-form-panel > .rt-Box,
+.vitta-shell--reception .vitta-page:has(.vitta-patient-create-workspace) .vitta-patient-create-guidance {
+  min-height: 36.5rem;
+}
+.vitta-shell--reception .vitta-page:has(.vitta-patient-create-workspace) .vitta-input {
+  min-height: 3.125rem;
+  height: 3.125rem;
+}
+.vitta-patient-directory-table td { padding-block: 1rem; }
+.vitta-patient-directory-avatar {
+  flex-basis: 3.75rem;
+  width: 3.75rem;
+  height: 3.75rem;
+}
+.vitta-patient-directory-detail { min-height: 3.5rem; padding-inline: 1rem; }
+
+.vitta-shell--reception .vitta-page:has(.vitta-reception-operations) {
+  padding-top: .35rem;
+}
+@media (min-width: 1051px) {
+  .vitta-shell--reception.is-sidebar-closed:has(.vitta-reception-operations) {
+    grid-template-columns: 3rem minmax(0, 1fr);
+  }
+  .vitta-shell--reception:has(.vitta-reception-operations) .vitta-topbar {
+    min-height: 2.75rem;
+    padding: .1rem 1.25rem;
+    gap: .25rem;
+  }
+}
+
+.vitta-reception-operations .vitta-reception-day-table th {
+  padding: .35rem .6rem;
+}
+.vitta-reception-operations .vitta-reception-day-table td {
+  padding: .08rem .6rem;
+  font-size: .82rem;
+  line-height: 1.2;
+}
+.vitta-reception-operations .vitta-reception-day-title { margin: 0; }
+.vitta-reception-appointments-panel { min-width: 0; }
+.vitta-reception-day-panel-header { min-width: 0; }
+.vitta-reception-day-panel-heading { flex: 1 1 18rem; }
+.vitta-reception-day-toolbar {
+  flex: 0 1 30rem;
+  max-width: 30rem;
+}
+.vitta-reception-section-icon {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: .7rem;
+  color: var(--vitta-primary);
+  background: var(--vitta-primary-soft);
+}
+.vitta-reception-day-view-action {
+  width: 2rem;
+  min-width: 2rem;
+  min-height: 1.875rem !important;
+  height: 2rem;
+  padding: .35rem;
+}
+.vitta-reception-operations .vitta-reception-day-action {
+  width: 2rem;
+  min-width: 1.875rem !important;
+  min-height: 1.875rem !important;
+  height: 1.875rem;
+}
+.vitta-reception-operations .vitta-reception-day-pagination {
+  padding: .3rem .55rem;
+}
+.vitta-reception-operations .vitta-reception-day-pagination .rt-Button {
+  min-height: 1.8rem;
+  height: 1.8rem;
+  min-width: 2rem;
+  padding-inline: .45rem;
+}
+.vitta-reception-page-number[aria-current="page"] {
+  color: #fff !important;
+  background: var(--vitta-primary) !important;
+  border-color: var(--vitta-primary) !important;
+}
+
+.vitta-queue-summary-metric .rt-Text {
+  font-variant-numeric: tabular-nums;
+}
+
+.vitta-admin-hub-groups > .rt-Box { height: 100%; }
+.vitta-admin-hub-groups .vitta-admin-hub-group { min-height: 15rem; }
+@media (min-width: 1200px) {
+  .vitta-admin-hub .vitta-admin-metric { min-height: 5.625rem; }
+  .vitta-admin-hub .vitta-admin-hub-groups { margin-top: .625rem; }
+  .vitta-admin-hub-groups .vitta-admin-hub-group { min-height: 18.25rem; }
+  .vitta-admin-hub > .vitta-admin-quick-panel {
+    min-height: 6.3rem;
+    margin-top: .8rem;
+  }
+}
+.vitta-staff-table :is(.rt-TableColumnHeaderCell, .rt-TableCell, .rt-TableRowHeaderCell) {
+  padding-block: .55rem;
+}
+.vitta-staff-identity-grid { column-gap: 1.25rem; }
+
+.vitta-shell--finance .vitta-page-header--illustrated {
+  min-height: 5.75rem;
+  padding-block: .2rem;
+}
+.vitta-shell--finance .vitta-page { padding-top: .5rem; }
+.vitta-shell--finance .vitta-topbar {
+  min-height: 2.75rem;
+  padding-block: .1rem;
+}
+.vitta-shell--finance .vitta-page-header-art {
+  right: 0;
+  width: min(42vw, 44rem);
+  height: 7rem;
+}
+.vitta-shell--admin .vitta-page:has(.vitta-admin-hub) .vitta-page-header-art {
+  right: 0;
+  width: min(42vw, 44rem);
+  height: 10rem;
+  bottom: -1.25rem;
+}
+.vitta-shell--doctor .vitta-page-header-art {
+  right: 1.25rem;
+  width: min(44vw, 47rem);
+  height: 10rem;
+  bottom: -.5rem;
+}
+.vitta-shell--doctor .vitta-page:has(.vitta-doctor-records-workspace) .vitta-page-header-art {
+  width: min(46vw, 50rem);
+  height: 12.75rem;
+  bottom: -.5rem;
+}
+.vitta-shell--doctor .vitta-page:has(.vitta-doctor-records-workspace) .vitta-page-header .rt-Heading {
+  margin-top: .75rem;
+}
+.vitta-doctor-week-heading-icon,
+.vitta-doctor-patient-heading-icon,
+.vitta-doctor-active-empty-icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  color: var(--vitta-primary);
+  background: var(--vitta-primary-soft);
+}
+.vitta-doctor-week-heading-icon {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: .8rem;
+}
+.vitta-doctor-month-heading-icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: .8rem;
+  color: var(--vitta-primary);
+  background: var(--vitta-primary-soft);
+}
+.vitta-doctor-week-panel { padding-block: .9rem; }
+.vitta-doctor-calendar-panel,
+.vitta-doctor-patient-list { padding-block: 1rem; }
+.vitta-doctor-patient-empty .vitta-empty-state .rt-Text { max-width: none; }
+.vitta-doctor-patient-heading-icon {
+  width: 4.375rem;
+  height: 4.25rem;
+  border-radius: .9rem;
+}
+.vitta-doctor-patient-heading .rt-Heading {
+  font-size: 1.55rem;
+  line-height: 1.3;
+}
+.vitta-doctor-patient-list { min-height: 23.75rem; }
+.vitta-shell--doctor .vitta-page:has(.vitta-doctor-patient-list) .vitta-page-header--illustrated {
+  min-height: 11rem;
+}
+.vitta-shell--doctor .vitta-page:has(.vitta-doctor-patient-list) .vitta-page-header-art {
+  height: 11.5rem;
+}
+.vitta-doctor-patient-empty { position: relative; min-width: 0; }
+.vitta-doctor-patient-empty .vitta-empty-state,
+.vitta-doctor-records-empty-panel .vitta-empty-state,
+.vitta-doctor-active-empty {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background-color: #F8FBFB;
+  background-image: none;
+}
+.vitta-doctor-patient-empty .vitta-empty-state::after,
+.vitta-doctor-records-empty-panel .vitta-empty-state::after,
+.vitta-doctor-active-empty::after {
+  position: absolute;
+  z-index: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 5rem;
+  background-image: url('/doctor-empty-wave.svg');
+  background-repeat: no-repeat;
+  background-position: center bottom;
+  background-size: 100% 100%;
+  content: "";
+  pointer-events: none;
+}
+.vitta-doctor-patient-empty .vitta-empty-state > div,
+.vitta-doctor-records-empty-panel .vitta-empty-state > div,
+.vitta-doctor-active-empty > div {
+  position: relative;
+  z-index: 1;
+}
+
+@media (min-width: 1280px) {
+  .vitta-finance-evolution-layout {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+.vitta-doctor-patient-empty .vitta-empty-state {
+  min-height: 16rem;
+  padding: 1rem;
+}
+.vitta-doctor-patient-empty .vitta-empty-icon,
+.vitta-doctor-records-empty-panel .vitta-empty-icon {
+  width: 4.375rem;
+  height: 4.25rem;
+  border-radius: .9rem;
+}
+.vitta-doctor-patient-empty .vitta-empty-icon svg,
+.vitta-doctor-records-empty-panel .vitta-empty-icon svg {
+  width: 2rem;
+  height: 2rem;
+}
+.vitta-doctor-patient-empty .vitta-empty-state .rt-Heading {
+  font-size: 1.5rem;
+  line-height: 1.3;
+}
+.vitta-doctor-patient-empty .vitta-empty-state .rt-Text,
+.vitta-doctor-records-empty-panel .vitta-empty-state .rt-Text {
+  font-size: 1.125rem;
+  line-height: 1.5;
+}
+.vitta-doctor-records-empty-panel .vitta-empty-state {
+  min-height: 22.5rem;
+  padding: 1.5rem 1rem;
+}
+.vitta-doctor-records-empty-panel .vitta-empty-state .rt-Heading {
+  font-size: 1.65rem;
+  line-height: 1.3;
+}
+.vitta-doctor-records-empty-panel .vitta-context-link {
+  display: inline-flex;
+  min-height: 3.5rem;
+  align-items: center;
+  padding-inline: 1.5rem;
+  font-size: 1.1rem;
+}
+.vitta-doctor-active-empty-panel { padding: 0 !important; }
+.vitta-doctor-active-empty {
+  min-height: 12.875rem;
+  justify-content: center;
+  border-radius: var(--vitta-radius-control);
+}
+.vitta-doctor-active-empty-icon {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: .85rem;
+}
+.vitta-doctor-active-empty > div { position: relative; z-index: 1; }
+@media (max-width: 800px) {
+  .vitta-doctor-patient-list { min-height: 0; }
+  .vitta-doctor-records-empty-panel .vitta-empty-state { min-height: 19rem; }
+}
+@media (max-width: 1050px) {
+  .vitta-shell--admin .vitta-page:has(.vitta-staff-create-banner),
+  .vitta-shell--admin .vitta-page:has(.vitta-availability-panel),
+  .vitta-shell--admin .vitta-page:has(.vitta-clinic-settings-workspace) {
+    width: 100%;
+    padding-inline: 1rem;
+  }
+}
+
+@media (max-width: 1050px) {
+  .vitta-shell--reception .vitta-page:has(.vitta-patient-directory-workspace),
+  .vitta-shell--reception .vitta-page:has(.vitta-patient-create-workspace),
+  .vitta-shell--reception .vitta-page:has(.vitta-queue-active-panel) {
+    width: 100%;
+  }
+}
 @media (max-width: 800px) {
   .vitta-shell .vitta-page-header--illustrated {
-    min-height: 8rem;
+    min-height: 7rem;
+    padding-block: 1.25rem;
   }
   .vitta-shell .vitta-page-header-copy {
     max-width: 70%;
@@ -3602,8 +4513,8 @@ button:disabled,
 @media (max-width: 575px) {
   .vitta-shell .vitta-page-header--illustrated {
     align-items: flex-start;
-    min-height: 7rem;
-    padding: .9rem;
+    min-height: 6rem;
+    padding: .75rem 0;
   }
   .vitta-shell .vitta-page-header-copy {
     max-width: 100%;
@@ -3624,6 +4535,9 @@ button:disabled,
     flex: 1 1 9rem;
     white-space: normal;
   }
+  .vitta-reception-quick-panel { padding: .7rem; }
+  .vitta-reception-quick-actions { justify-content: flex-start; }
+  .vitta-reception-quick-link { flex: 1 1 8rem; white-space: normal; }
 }
 @media (prefers-reduced-motion: reduce) {
   .vitta-admin-metric,

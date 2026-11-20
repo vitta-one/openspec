@@ -73,23 +73,36 @@ def specialty_table_row(row) -> rx.Component:
     """Compact semantic row for the full specialty directory."""
     return rx.table.row(
         rx.table.row_header_cell(
-            rx.text(row["name"], font_weight="650", color="var(--vitta-text)"),
+            rx.hstack(
+                rx.box(
+                    rx.icon("stethoscope", size=19, aria_hidden="true"),
+                    class_name="vitta-specialty-table-icon",
+                    aria_hidden="true",
+                ),
+                rx.text(row["name"], font_weight="650", color="var(--vitta-text)"),
+                align="center", gap="3", min_width="0",
+            ),
         ),
+        rx.table.cell(rx.text("—", color="var(--vitta-text-muted)")),
         rx.table.cell(status_badge(row["is_active"], "Ativa", "Inativa")),
         rx.table.cell(
             rx.flex(
                 rx.button(
-                    "Editar",
+                    rx.icon("pencil", size=16, aria_hidden="true"),
                     type="button",
                     variant="outline",
                     color_scheme="teal",
                     size="2",
+                    class_name="vitta-specialty-table-action",
                     aria_label="Editar especialidade " + row["name"],
                     on_click=AdminDirectoryState.begin_specialty_edit(row["id"]),
                     disabled=AdminDirectoryState.is_submitting,
                 ),
                 rx.button(
-                    rx.cond(row["is_active"], "Desativar", "Reativar"),
+                    rx.icon(
+                        rx.cond(row["is_active"], "circle_minus", "circle_check"),
+                        size=16, aria_hidden="true",
+                    ),
                     type="button",
                     variant="outline",
                     color_scheme=rx.cond(row["is_active"], "gray", "teal"),
@@ -99,6 +112,7 @@ def specialty_table_row(row) -> rx.Component:
                         "Desativar especialidade " + row["name"],
                         "Reativar especialidade " + row["name"],
                     ),
+                    class_name="vitta-specialty-table-action",
                     on_click=AdminDirectoryState.begin_specialty_status_change(row["id"]),
                     disabled=AdminDirectoryState.is_submitting,
                 ),
@@ -120,7 +134,8 @@ def specialties_table() -> rx.Component:
             rx.table.header(
                 rx.table.row(
                     rx.table.column_header_cell("Especialidade", scope="col"),
-                    rx.table.column_header_cell("Situação", scope="col"),
+                    rx.table.column_header_cell("Descrição", scope="col"),
+                    rx.table.column_header_cell("Status", scope="col"),
                     rx.table.column_header_cell("Ações", scope="col", justify="end"),
                 )
             ),
@@ -132,6 +147,7 @@ def specialties_table() -> rx.Component:
             width="100%",
             min_width="34rem",
             summary="Especialidades cadastradas com situação e ações de manutenção",
+            class_name="vitta-specialty-table",
         ),
         width="100%",
         max_width="100%",
@@ -1199,17 +1215,43 @@ def _directory_filters(*, is_professional: bool) -> rx.Component:
     )
     return rx.grid(
         rx.box(
-            field_label("Buscar profissional" if is_professional else "Buscar especialidade", search_id),
-            rx.el.input(
-                id=search_id, type="search", value=value, on_change=update,
-                placeholder="Nome ou e-mail" if is_professional else "Nome da especialidade",
-                class_name="vitta-input", margin_top="0.4rem",
-                auto_complete="off",
+            rx.el.label(
+                "Buscar profissional" if is_professional else "Buscar especialidade",
+                html_for=search_id,
+                class_name="vitta-sr-only",
+            ),
+            rx.box(
+                rx.icon("search", size=18, aria_hidden="true"),
+                rx.el.input(
+                    id=search_id, type="search", value=value, on_change=update,
+                    placeholder=(
+                        "Buscar por nome ou e-mail..." if is_professional
+                        else "Buscar especialidade..."
+                    ),
+                    aria_label=(
+                        "Buscar profissional por nome ou e-mail" if is_professional
+                        else "Buscar especialidade"
+                    ),
+                    class_name="vitta-input vitta-directory-search-input",
+                    auto_complete="off",
+                ),
+                class_name="vitta-directory-search-control",
+            ),
+            class_name=(
+                "vitta-directory-search-field"
+                if not is_professional else ""
             ),
         ),
         rx.box(
             field_label("Situação", "professional-status-filter" if is_professional else "specialty-status-filter"),
-            rx.box(_directory_status_filter(is_professional=is_professional), margin_top="0.4rem"),
+            rx.box(
+                _directory_status_filter(is_professional=is_professional),
+                margin_top="0.4rem" if is_professional else "0",
+            ),
+            class_name=(
+                "vitta-directory-status-field"
+                if not is_professional else ""
+            ),
         ),
         *(
             [
@@ -1220,11 +1262,18 @@ def _directory_filters(*, is_professional: bool) -> rx.Component:
             ]
             if is_professional else []
         ),
-        columns=rx.breakpoints(initial="1", sm="repeat(2, minmax(0, 1fr))",
-                               lg="repeat(3, minmax(0, 1fr))" if is_professional
-                               else "repeat(2, minmax(0, 1fr))"),
+        columns=rx.breakpoints(
+            initial="1",
+            sm="repeat(2, minmax(0, 1fr))",
+            lg="repeat(3, minmax(0, 1fr))" if is_professional
+            else "minmax(0, 1.3fr) minmax(16rem, 1fr)",
+        ),
         gap="1rem",
         width="100%",
+        class_name=(
+            "vitta-specialty-directory-filters"
+            if not is_professional else ""
+        ),
     )
 
 
@@ -1259,9 +1308,10 @@ def _directory_pagination(*, is_professional: bool) -> rx.Component:
 def specialties_management_workspace() -> rx.Component:
     """Dense authenticated specialty directory, with no fabricated records."""
     return rx.vstack(
+        breadcrumb(("Administração", "/admin"), ("Especialidades", None)),
         page_header(
             "Administração",
-            "Todas as especialidades",
+            "Especialidades",
             "Pesquise, cadastre e mantenha as especialidades da clínica.",
             rx.button(
                 "Nova especialidade",
@@ -1272,7 +1322,6 @@ def specialties_management_workspace() -> rx.Component:
                 disabled=AdminDirectoryState.is_submitting,
             ),
         ),
-        breadcrumb(("Administração", "/admin"), ("Especialidades", None)),
         rx.cond(
             AdminDirectoryState.directory_load_failed,
             rx.fragment(),
@@ -1307,6 +1356,7 @@ def specialties_management_workspace() -> rx.Component:
                         color="var(--vitta-text-muted)",
                         role="status",
                         aria_live="polite",
+                        class_name="vitta-sr-only",
                     ),
                     rx.cond(
                         AdminDirectoryState.has_active_specialty_filters,
@@ -1379,6 +1429,8 @@ def specialties_management_workspace() -> rx.Component:
                 align="stretch",
                 width="100%",
             ),
+            padding="0.5rem 1.5rem 1.25rem",
+            class_name="vitta-specialty-directory-panel",
         ),
         specialty_dialog(),
         specialty_status_dialog(),

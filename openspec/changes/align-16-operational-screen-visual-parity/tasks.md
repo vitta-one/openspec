@@ -1,0 +1,20 @@
+## 1. Baseline e contrato visual
+
+- [ ] 1.1 Registrar para cada PNG dimensões, rota e marcos geométricos e confirmar visualmente as 16 referências e capturas baseline; verificar os registros no relatório de QA.
+- [ ] 1.2 Confirmar shell, tokens e estado atual de cada rota no código e estabelecer uma fixture PostgreSQL local descartável; verificar URL/porta segura e dados sintéticos antes de iniciar a aplicação.
+
+## 2. Shell e páginas
+
+- [ ] 2.1 Corrigir a geometria compartilhada de sidebar, topbar e conteúdo sem perder variantes por role ou estado manual; verificar rotas das quatro roles em desktop e drawer mobile.
+- [ ] 2.2 Ajustar composição, densidade e alinhamento das telas de Recepção e comparar suas capturas novas com as referências 01–05.
+- [ ] 2.3 Ajustar composição, densidade e alinhamento das telas administrativas e financeira e comparar suas capturas novas com as referências 06–12.
+- [ ] 2.4 Ajustar composição, densidade e alinhamento das telas médicas e comparar suas capturas novas com as referências 13–16.
+- [ ] 2.5 Revisar teclado, foco, nomes acessíveis, estados de loading/vazio/erro, zoom e seis viewports nas telas afetadas; registrar verificações e limitações.
+
+## 3. Evidência visual e regressão
+
+- [ ] 3.1 Implementar runner isolado para as 16 rotas × seis viewports; verificar 96 capturas novas e manifesto com viewport, rota, estado e resultado.
+- [ ] 3.2 Gerar lado a lado, overlay e diff para cada uma das 16 referências desktop sem deformar imagens; verificar evidências de todas as rotas e separação entre diferenças de dados e layout.
+- [ ] 3.3 Atualizar o relatório `docs/qa/operational-screen-parity-2026-11-17.md` com matriz individual de 16 rotas, medidas, resultados, dados, acessibilidade, responsividade e discrepâncias residuais.
+- [ ] 3.4 Executar regressão: `pytest -q`, `reflex compile --dry`, capturas/comparações, `git diff --check`, OpenSpec strict e Quality Gate v3 com comparação ao baseline; registrar comandos e status reais.
+- [ ] 3.5 Revisar diff integrado e estado do CI, criar commits convencionais, publicar a branch e abrir uma única PR para `develop`; verificar URL, alvo e ausência de merge/deploy.

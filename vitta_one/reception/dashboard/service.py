@@ -49,6 +49,7 @@ class ReceptionOverview:
     as_of: datetime
     clinic_date: str
     scheduled_today: int
+    cancelled_today: int
     waiting: int
     attending: int
     finished_today: int
@@ -86,6 +87,8 @@ def get_reception_overview(
             func.count(Consultation.id)
             .filter(Consultation.status != ConsultationStatus.CANCELADA.value),
             func.count(Consultation.id)
+            .filter(Consultation.status == ConsultationStatus.CANCELADA.value),
+            func.count(Consultation.id)
             .filter(Consultation.status == ConsultationStatus.CONFIRMADA.value),
             func.count(Consultation.id).filter(
                 Consultation.status == ConsultationStatus.AGENDADA.value,
@@ -93,7 +96,7 @@ def get_reception_overview(
             ),
         ).where(*day_consultations)
     ).one()
-    scheduled_today, confirmed_today, arrivals_pending = (
+    scheduled_today, cancelled_today, confirmed_today, arrivals_pending = (
         int(value or 0) for value in consultation_counts
     )
 
@@ -182,6 +185,7 @@ def get_reception_overview(
         as_of=current,
         clinic_date=clinic_date,
         scheduled_today=scheduled_today,
+        cancelled_today=cancelled_today,
         waiting=waiting,
         attending=attending,
         finished_today=finished_today,

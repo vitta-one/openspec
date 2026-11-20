@@ -179,10 +179,14 @@ def success_banner(message) -> rx.Component:
 
 def feedback_region(error, success, element_id: str = "page-feedback") -> rx.Component:
     """Render the canonical page-level error/success feedback region."""
-    return rx.box(
-        rx.cond(error != "", error_banner(error, element_id), rx.fragment()),
-        rx.cond(success != "", success_banner(success), rx.fragment()),
-        width="100%",
+    return rx.cond(
+        (error != "") | (success != ""),
+        rx.box(
+            rx.cond(error != "", error_banner(error, element_id), rx.fragment()),
+            rx.cond(success != "", success_banner(success), rx.fragment()),
+            width="100%",
+        ),
+        rx.fragment(),
     )
 
 
@@ -660,6 +664,8 @@ def page_header(
     description: str,
     *actions: rx.Component,
     show_art: bool = False,
+    art_source: str | None = None,
+    title_margin_top: str = "0.35rem",
 ) -> rx.Component:
     """Canonical page heading with optional decorative artwork and actions."""
     return rx.flex(
@@ -674,7 +680,7 @@ def page_header(
             rx.heading(
                 title,
                 size="8",
-                margin_top="0.35rem",
+                margin_top=title_margin_top,
                 letter_spacing="-0.035em",
                 font_family="var(--vitta-font-display)",
             ),
@@ -704,7 +710,7 @@ def page_header(
         rx.cond(
             show_art & (AuthState.current_role != ""),
             rx.image(
-                src=rx.cond(
+                src=art_source or rx.cond(
                     AuthState.current_role == Role.MEDICO.value,
                     "/clinic-doctor-hero.svg",
                     "/clinic-operational-hero.svg",
@@ -840,7 +846,16 @@ def empty_state(
     )
 
 
-def _product_shell(role: Role, active: str, *children: rx.Component) -> rx.Component:
+def _product_shell(
+    role: Role, active: str, *children: rx.Component, page_spacing: str = "5"
+) -> rx.Component:
+    shell_variant = {
+        Role.ADMINISTRADOR: "vitta-shell--admin",
+        Role.RECEPCIONISTA: "vitta-shell--reception",
+        Role.MEDICO: "vitta-shell--doctor",
+        Role.FINANCEIRO: "vitta-shell--finance",
+        Role.PACIENTE: "vitta-shell--patient",
+    }[role]
     default_open = _sidebar_expanded_by_default(role)
     sidebar_open = rx.cond(
         SidebarState.user_changed_desktop,
@@ -859,7 +874,7 @@ def _product_shell(role: Role, active: str, *children: rx.Component) -> rx.Compo
             rx.el.main(
                 rx.vstack(
                     *children,
-                    spacing="5",
+                    spacing=page_spacing,
                     align="stretch",
                     width="100%",
                 ),
@@ -867,9 +882,19 @@ def _product_shell(role: Role, active: str, *children: rx.Component) -> rx.Compo
             ),
             class_name="vitta-main",
         ),
-        class_name=rx.cond(sidebar_open,
-                           rx.cond(SidebarState.mobile_open, "vitta-shell is-sidebar-open is-mobile-nav-open", "vitta-shell is-sidebar-open"),
-                           rx.cond(SidebarState.mobile_open, "vitta-shell is-sidebar-closed is-mobile-nav-open", "vitta-shell is-sidebar-closed")),
+        class_name=rx.cond(
+            sidebar_open,
+            rx.cond(
+                SidebarState.mobile_open,
+                f"vitta-shell {shell_variant} is-sidebar-open is-mobile-nav-open",
+                f"vitta-shell {shell_variant} is-sidebar-open",
+            ),
+            rx.cond(
+                SidebarState.mobile_open,
+                f"vitta-shell {shell_variant} is-sidebar-closed is-mobile-nav-open",
+                f"vitta-shell {shell_variant} is-sidebar-closed",
+            ),
+        ),
     )
 
 
@@ -906,6 +931,7 @@ def protected_workspace(
     *children: rx.Component,
     active: str | None = None,
     verified_path: str | None = None,
+    page_spacing: str = "5",
 ) -> rx.Component:
     """Render an authorized operational workspace using the premium product shell."""
     active_key = active or {
@@ -916,7 +942,7 @@ def protected_workspace(
         Role.PACIENTE: "consultas-paciente",
     }[role]
 
-    protected_content = _product_shell(role, active_key, *children)
+    protected_content = _product_shell(role, active_key, *children, page_spacing=page_spacing)
 
     return rx.cond(
         AuthState.auth_checked

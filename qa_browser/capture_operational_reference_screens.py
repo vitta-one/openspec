@@ -51,7 +51,7 @@ SCREENS = [
     ("administrador", "06-dashboard-administracao", "/admin", "Gestão da clínica"),
     ("administrador", "07-funcionarios", "/admin/funcionarios", "Funcionários"),
     ("administrador", "08-novo-funcionario", "/admin/funcionarios/novo", "Novo funcionário"),
-    ("administrador", "09-especialidades", "/admin/especialidades", "Todas as especialidades"),
+    ("administrador", "09-especialidades", "/admin/especialidades", "Especialidades"),
     ("administrador", "10-gerenciar-horarios", "/admin/horarios", "Gerenciar horários"),
     ("administrador", "11-configuracoes-clinica", "/admin/configuracoes", "Configurações da clínica"),
     ("financeiro", "12-financeiro-asaas", "/financeiro", "Financeiro"),
@@ -61,10 +61,34 @@ SCREENS = [
     ("medico", "16-medico-prontuarios", "/medico/prontuarios", "Registro clínico do paciente atual"),
 ]
 
+# These labels describe only the fixture class shown in each route. They never
+# embed patient names, clinical content, counts, e-mail addresses, or identifiers.
+DATA_STATES = {
+    "01-dashboard-recepcao": "synthetic_persisted_metrics_and_appointments",
+    "02-agenda-recepcao": "synthetic_persisted_appointments",
+    "03-lista-pacientes": "synthetic_persisted_patient_directory",
+    "04-novo-paciente": "initial_patient_form",
+    "05-fila-espera": "synthetic_persisted_waiting_queue",
+    "06-dashboard-administracao": "synthetic_persisted_admin_summary",
+    "07-funcionarios": "synthetic_persisted_staff_directory",
+    "08-novo-funcionario": "initial_staff_form",
+    "09-especialidades": "synthetic_persisted_specialty_directory",
+    "10-gerenciar-horarios": "no_professional_selected",
+    "11-configuracoes-clinica": "clinic_configuration_unconfigured",
+    "12-financeiro-asaas": "no_eligible_charges",
+    "13-medico-visao-geral": "shared_synthetic_queue_without_active_doctor_record",
+    "14-medico-agenda": "doctor_without_scheduled_consultations",
+    "15-medico-pacientes": "doctor_without_linked_patients",
+    "16-medico-prontuarios": "no_active_record_for_doctor",
+}
+
 EMAILS = {
     "administrador": FIXTURE["admin_email"],
     "recepcionista": FIXTURE["reception_email"],
-    "medico": FIXTURE["doctor_a_email"],
+    # Doctor B is an existing linked QA identity with no consultations or
+    # clinical records, matching the approved empty operational states without
+    # hiding or deleting data from Doctor A.
+    "medico": FIXTURE["doctor_b_email"],
     "financeiro": FIXTURE["finance_email"],
 }
 DASHBOARDS = {
@@ -109,6 +133,7 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
     output.parent.mkdir(parents=True, exist_ok=True)
     errors: list[str] = []
     page_errors: list[str] = []
+    geometry: dict = {}
     on_page_error = lambda error: page_errors.append(str(error))
     page.on("pageerror", on_page_error)
     try:
@@ -136,6 +161,38 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
             page.get_by_role("option", name="Semana", exact=True).click()
             expect(headers).to_have_count(8)
             page.evaluate("document.activeElement && document.activeElement.blur()")
+        if route == "/recepcao" and viewport_name == "desktop-1768x890":
+            if page.locator(".vitta-reception-preview-row").count() > 3:
+                raise AssertionError("A prévia do dashboard excedeu três próximos atendimentos")
+            rows = page.locator(".vitta-reception-day-table tbody tr")
+            first_page_row = rows.first.inner_text()
+            page.get_by_role("button", name="2", exact=True).click()
+            expect(page.get_by_role("button", name="2", exact=True)).to_have_attribute(
+                "aria-current", "page", timeout=15000
+            )
+            expect(rows.first).not_to_have_text(first_page_row, timeout=15000)
+            page.get_by_role("button", name="1", exact=True).click()
+            expect(page.get_by_role("button", name="1", exact=True)).to_have_attribute(
+                "aria-current", "page", timeout=15000
+            )
+        if route == "/admin/funcionarios" and viewport_name == "desktop-1768x890":
+            page_size = page.get_by_role("combobox", name="Itens por página")
+            expect(page_size).to_be_visible()
+            page_size.click()
+            page.get_by_role("option", name="25", exact=True).click()
+            expect(page_size).to_contain_text("25")
+            page_size.click()
+            page.get_by_role("option", name="10", exact=True).click()
+            expect(page_size).to_contain_text("10")
+            expect(page.locator('.vitta-staff-page-control[aria-current="page"]')).to_have_text("1")
+            page.evaluate("document.activeElement && document.activeElement.blur()")
+        if route == "/admin/especialidades" and viewport_name == "desktop-1768x890":
+            search_box = page.locator("#specialty-directory-search").bounding_box()
+            status_box = page.locator("#specialty-status-filter").bounding_box()
+            if search_box is None or status_box is None:
+                raise AssertionError("Filtros de especialidades não foram renderizados")
+            if abs(search_box["y"] - status_box["y"]) > 2:
+                raise AssertionError("Busca e situação não estão alinhadas na grade")
         if not page.locator("body").inner_text().strip():
             raise AssertionError("A rota não renderizou conteúdo")
         if page.locator("nextjs-portal, vite-error-overlay").count():
@@ -144,6 +201,70 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
             raise AssertionError("Overflow horizontal da página")
         if page_errors:
             raise AssertionError("Erro JavaScript: " + page_errors[0][:220])
+        geometry = page.evaluate("""() => {
+          const rect = (node) => {
+            if (!node) return null;
+            const box = node.getBoundingClientRect();
+            return Object.fromEntries(['x', 'y', 'width', 'height'].map((key) =>
+              [key, Math.round(box[key] * 100) / 100]
+            ));
+          };
+          const first = (selector) => rect(document.querySelector(selector));
+          const landmarks = [
+            '.vitta-page-header', '.vitta-page-header .rt-Heading',
+            '.vitta-admin-hub-metrics', '.vitta-reception-operations',
+            '.vitta-reception-day-panel', '.vitta-patient-directory-workspace',
+            '.vitta-patient-create-workspace', '.vitta-queue-active-panel',
+            '.vitta-staff-form', '.vitta-specialty-table',
+            '.vitta-availability-panel', '.vitta-clinic-settings-layout',
+            '.vitta-clinic-settings-guidance', '.vitta-finance-filters',
+            '.vitta-finance-issue', '.vitta-finance-charges',
+            '.vitta-doctor-overview-grid', '.vitta-doctor-agenda-cta',
+            '.vitta-doctor-week', '.vitta-doctor-week-heading',
+            '.vitta-doctor-calendar', '.vitta-doctor-calendar-panel',
+            '.vitta-doctor-active-empty-panel',
+            '.vitta-doctor-patient-list', '.vitta-doctor-patient-heading',
+            '.vitta-doctor-patient-empty .vitta-empty-state',
+            '.vitta-doctor-records-empty-panel',
+            '.vitta-doctor-records-empty-panel .vitta-empty-state',
+            '.vitta-medical-history',
+            '.vitta-clinic-settings-form', '.vitta-clinic-settings-heading',
+            '.vitta-clinic-settings-actions', '#clinic-configuration-name',
+            '#clinic-configuration-address', '.vitta-page-header-art'
+          ];
+          const main = document.querySelector('main.vitta-page');
+          const headings = main ? Array.from(main.querySelectorAll('.rt-Heading')).map((node) => ({
+            text: (node.innerText || '').trim().slice(0, 72),
+            ...rect(node)
+          })) : [];
+          const patientEmpty = document.querySelector('.vitta-doctor-patient-empty .vitta-empty-state');
+          const patientEmptyStyle = patientEmpty ? getComputedStyle(patientEmpty) : null;
+          return {
+            viewport: { width: innerWidth, height: innerHeight },
+            sidebar: first('.vitta-sidebar'),
+            topbar: first('.vitta-topbar'),
+            page: rect(main),
+            breadcrumb: first('.vitta-breadcrumb'),
+            title: first('.vitta-page-header .rt-Heading'),
+            contentPadding: main ? {
+              left: getComputedStyle(main).paddingLeft,
+              top: getComputedStyle(main).paddingTop
+            } : null,
+            headings,
+            patientEmptyBackground: patientEmptyStyle ? {
+              image: patientEmptyStyle.backgroundImage,
+              size: patientEmptyStyle.backgroundSize,
+              position: patientEmptyStyle.backgroundPosition
+            } : null,
+            landmarks: Object.fromEntries(landmarks.map((selector) =>
+              [selector, first(selector)]
+            )),
+            pageChildren: main ? Array.from(main.children).map((node) => ({
+              className: typeof node.className === 'string' ? node.className.slice(0, 120) : '',
+              ...rect(node)
+            })) : []
+          };
+        }""")
     except Exception as error:  # keep the remaining routes/screens observable
         errors.append(str(error)[:500])
     finally:
@@ -156,9 +277,13 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
             "screen": slug,
             "route": route,
             "viewport": viewport_name,
+            "data_state": DATA_STATES[slug],
+            "data_origin": "disposable_synthetic_postgresql_qa",
             "file": str(output),
             "status": "FAIL" if errors else "PASS",
         }
+        if geometry:
+            record["geometry"] = geometry
         if errors:
             record["errors"] = errors
             failures.append(record)
@@ -173,8 +298,144 @@ def _data_uri(path: Path) -> str:
 def _create_comparison_images(browser, desktop_records: list[dict]) -> None:
     COMPARISON_OUTPUT.mkdir(parents=True, exist_ok=True)
     desktop = {item["screen"]: Path(item["file"]) for item in desktop_records}
+    comparison_records: list[dict] = []
     page = browser.new_page(viewport={"width": 1768, "height": 600}, device_scale_factor=1)
     try:
+        for _role, slug, _route, _heading in SCREENS:
+            reference_path = REFERENCE_DIR / f"{slug}.png"
+            capture_path = desktop.get(slug)
+            if capture_path is None or not capture_path.is_file():
+                comparison_records.append({
+                    "screen": slug,
+                    "status": "SKIP",
+                    "reason": "Captura desktop válida não disponível",
+                })
+                continue
+
+            output_dir = COMPARISON_OUTPUT / slug
+            output_dir.mkdir(parents=True, exist_ok=True)
+            reference = _data_uri(reference_path)
+            capture = _data_uri(capture_path)
+            page.set_content(
+                "<!doctype html><html><body><script>document.body.dataset.ready='1'</script></body></html>",
+                wait_until="load",
+            )
+            result = page.evaluate(
+                """async ({reference, capture}) => {
+                    const load = (src) => new Promise((resolve, reject) => {
+                      const image = new Image();
+                      image.onload = () => resolve(image);
+                      image.onerror = reject;
+                      image.src = src;
+                    });
+                    const [referenceImage, captureImage] = await Promise.all([
+                      load(reference), load(capture)
+                    ]);
+                    const width = 1768;
+                    const height = 890;
+                    if (captureImage.naturalWidth !== width || captureImage.naturalHeight !== height) {
+                      throw new Error(`Captura com dimensão inesperada: ${captureImage.naturalWidth}x${captureImage.naturalHeight}`);
+                    }
+                    const frame = document.createElement('canvas');
+                    frame.width = width;
+                    frame.height = height;
+                    const frameContext = frame.getContext('2d', {willReadFrequently: true});
+                    frameContext.fillStyle = '#f7f8fc';
+                    frameContext.fillRect(0, 0, width, height);
+                    const scale = Math.min(width / referenceImage.naturalWidth, height / referenceImage.naturalHeight);
+                    const drawWidth = referenceImage.naturalWidth * scale;
+                    const drawHeight = referenceImage.naturalHeight * scale;
+                    const offsetX = (width - drawWidth) / 2;
+                    const offsetY = (height - drawHeight) / 2;
+                    frameContext.drawImage(referenceImage, offsetX, offsetY, drawWidth, drawHeight);
+                    const alignedReference = frame.toDataURL('image/png');
+                    const referencePixels = frameContext.getImageData(0, 0, width, height).data;
+                    const actual = document.createElement('canvas');
+                    actual.width = width;
+                    actual.height = height;
+                    const actualContext = actual.getContext('2d', {willReadFrequently: true});
+                    actualContext.drawImage(captureImage, 0, 0, width, height);
+                    const actualPixels = actualContext.getImageData(0, 0, width, height).data;
+                    const overlay = document.createElement('canvas');
+                    overlay.width = width;
+                    overlay.height = height;
+                    const overlayContext = overlay.getContext('2d');
+                    overlayContext.drawImage(frame, 0, 0);
+                    overlayContext.globalAlpha = .5;
+                    overlayContext.drawImage(actual, 0, 0);
+                    overlayContext.globalAlpha = 1;
+                    const overlayPng = overlay.toDataURL('image/png');
+                    const difference = document.createElement('canvas');
+                    difference.width = width;
+                    difference.height = height;
+                    const differenceContext = difference.getContext('2d');
+                    const differencePixels = differenceContext.createImageData(width, height);
+                    let totalDifference = 0;
+                    let changedPixels = 0;
+                    for (let index = 0; index < referencePixels.length; index += 4) {
+                      let pixelDifference = 0;
+                      for (let channel = 0; channel < 3; channel += 1) {
+                        const delta = Math.abs(referencePixels[index + channel] - actualPixels[index + channel]);
+                        pixelDifference += delta;
+                        totalDifference += delta;
+                        differencePixels.data[index + channel] = Math.min(255, delta * 3);
+                      }
+                      if (pixelDifference >= 36) changedPixels += 1;
+                      differencePixels.data[index + 3] = 255;
+                    }
+                    differenceContext.putImageData(differencePixels, 0, 0);
+                    const pair = document.createElement('canvas');
+                    pair.width = width * 2;
+                    pair.height = height;
+                    const pairContext = pair.getContext('2d');
+                    pairContext.drawImage(frame, 0, 0);
+                    pairContext.drawImage(actual, width, 0);
+                    return {
+                      alignedReference,
+                      overlay: overlayPng,
+                      difference: difference.toDataURL('image/png'),
+                      sideBySide: pair.toDataURL('image/png'),
+                      referenceSize: [referenceImage.naturalWidth, referenceImage.naturalHeight],
+                      captureSize: [captureImage.naturalWidth, captureImage.naturalHeight],
+                      alignment: {scale, offsetX, offsetY, drawWidth, drawHeight},
+                      metrics: {
+                        meanAbsoluteChannelDifference: totalDifference / (width * height * 3),
+                        changedPixelPercentAt36: 100 * changedPixels / (width * height),
+                        thresholdRgbL1: 36,
+                        masksApplied: false
+                      }
+                    };
+                }""",
+                {"reference": reference, "capture": capture},
+            )
+            for key, filename in (
+                ("alignedReference", "reference-aligned.png"),
+                ("overlay", "overlay-50.png"),
+                ("difference", "diff-amplified-3x.png"),
+                ("sideBySide", "side-by-side.png"),
+            ):
+                encoded = result[key].split(",", 1)[1]
+                (output_dir / filename).write_bytes(base64.b64decode(encoded))
+            comparison_records.append({
+                "screen": slug,
+                "reference": str(reference_path),
+                "capture": str(capture_path),
+                "data_state": DATA_STATES[slug],
+                "data_origin": "disposable_synthetic_postgresql_qa",
+                "output_directory": str(output_dir),
+                "status": "GENERATED_REQUIRES_HUMAN_REVIEW",
+                "reference_size": result["referenceSize"],
+                "capture_size": result["captureSize"],
+                "alignment": result["alignment"],
+                "metrics": result["metrics"],
+                "artifacts": {
+                    "reference_aligned": str(output_dir / "reference-aligned.png"),
+                    "overlay_50": str(output_dir / "overlay-50.png"),
+                    "diff_amplified_3x": str(output_dir / "diff-amplified-3x.png"),
+                    "side_by_side": str(output_dir / "side-by-side.png"),
+                },
+            })
+
         for group_start in range(0, len(SCREENS), 4):
             group = SCREENS[group_start:group_start + 4]
             cards = []
@@ -203,6 +464,30 @@ def _create_comparison_images(browser, desktop_records: list[dict]) -> None:
             )
     finally:
         page.close()
+    (ROOT_OUTPUT / "comparison-manifest.json").write_text(
+        json.dumps({
+            "reference_directory": str(REFERENCE_DIR),
+            "frame": {"width": 1768, "height": 890, "fit": "contain", "background": "#f7f8fc"},
+            "dynamic_masks": [],
+            "comparisons": comparison_records,
+        }, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    (ROOT_OUTPUT / "fidelity-assessment.json").write_text(
+        json.dumps({
+            "status": "REVIEW_REQUIRED",
+            "note": "Pixel metrics are diagnostic only; each route needs visual review before a parity rating.",
+            "screens": [
+                {
+                    "screen": item["screen"],
+                    "data_state": item["data_state"],
+                    "assessment": "REVIEW_REQUIRED",
+                }
+                for item in comparison_records
+            ],
+        }, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
 
 
 def main() -> None:
@@ -244,6 +529,8 @@ def main() -> None:
                                 "screen": spec[1],
                                 "route": spec[2],
                                 "viewport": viewport_name,
+                                "data_state": DATA_STATES[spec[1]],
+                                "data_origin": "disposable_synthetic_postgresql_qa",
                                 "status": "BLOCKED",
                             })
                     finally:
@@ -268,6 +555,28 @@ def main() -> None:
     }
     (ROOT_OUTPUT / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    (ROOT_OUTPUT / "capture-manifest.json").write_text(
+        json.dumps({
+            "kind": "viewport-captures-and-route-smoke",
+            "base_url": BASE,
+            "fixture": "PostgreSQL descartável; registros sintéticos persistidos para QA visual",
+            "viewports": manifest["viewports"],
+            "captures": records,
+            "failures": failures,
+        }, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    (ROOT_OUTPUT / "functional-manifest.json").write_text(
+        json.dumps({
+            "kind": "browser-route-smoke",
+            "scope": "16 rotas autorizadas; URL, título, overflow horizontal, erros JS; agenda com alternância de visualização; paginação server-side da Recepção; alinhamento dos filtros de especialidades",
+            "status": "PASS" if not failures else "FAIL",
+            "checks": records,
+            "failures": failures,
+            "note": "Este manifesto não substitui pytest nem os fluxos completos de Playwright.",
+        }, ensure_ascii=False, indent=2),
+        encoding="utf-8",
     )
     passed = sum(item["status"] == "PASS" for item in records)
     mode = "com comparação local" if REFERENCE_AVAILABLE else "somente capturas; referências locais ausentes"

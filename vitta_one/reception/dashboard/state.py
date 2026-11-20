@@ -109,6 +109,7 @@ class ReceptionDashboardState(rx.State):
 
     appointments: list[ReceptionAppointmentRow] = []
     overview_scheduled: int = 0
+    overview_cancelled: int = 0
     overview_waiting: int = 0
     overview_attending: int = 0
     overview_pending: int = 0
@@ -123,7 +124,7 @@ class ReceptionDashboardState(rx.State):
     professional_filter: str = "__all__"
     search_query: str = ""
     current_page: int = 1
-    page_size: int = 7
+    page_size: int = 8
     total_pages: int = 1
     total_count: int = 0
     clinic_date_label: str = ""
@@ -164,6 +165,14 @@ class ReceptionDashboardState(rx.State):
     def page_label(self) -> str:
         return f"{self.current_page} de {self.total_pages}"
 
+    @rx.var
+    def page_numbers(self) -> list[int]:
+        """Return a bounded window of real server-side page numbers."""
+        total = max(1, self.total_pages)
+        start = max(1, min(self.current_page - 2, total - 4))
+        end = min(total, start + 4)
+        return list(range(start, end + 1))
+
     async def _token(self) -> str:
         auth = await self.get_state(AuthState)
         return auth.session_token
@@ -183,6 +192,7 @@ class ReceptionDashboardState(rx.State):
         self.calendar_week = []
         self.upcoming_appointments = []
         self.overview_scheduled = 0
+        self.overview_cancelled = 0
         self.overview_waiting = 0
         self.overview_attending = 0
         self.overview_pending = 0
@@ -248,6 +258,7 @@ class ReceptionDashboardState(rx.State):
     def _apply_overview(self, overview):
         """Build persisted real-time cards and a seven-day calendar."""
         self.overview_scheduled = overview.scheduled_today
+        self.overview_cancelled = overview.cancelled_today
         self.overview_waiting = overview.waiting
         self.overview_attending = overview.attending
         self.overview_pending = overview.arrivals_pending
@@ -291,7 +302,9 @@ class ReceptionDashboardState(rx.State):
                 "professional_name": appointment.professional_name,
                 "status_label": appointment.status.label,
             })
-            if len(upcoming) == 5:
+            # The dashboard keeps this card as a three-row preview; the full
+            # appointment list remains available from the agenda route.
+            if len(upcoming) == 3:
                 break
         self.upcoming_appointments = upcoming
 
@@ -314,7 +327,7 @@ class ReceptionDashboardState(rx.State):
                     professional_id=self._professional_filter_id(),
                     search=self.search_query,
                     page=self.current_page,
-                    page_size=7,
+                    page_size=8,
                 )
                 overview = reception_overview(db, token=token)
                 email_metrics = reception_email_metrics(db, token=token)
@@ -380,6 +393,20 @@ class ReceptionDashboardState(rx.State):
                 yield event
 
     @rx.event
+    async def go_to_page(self, requested_page: int):
+        """Change pages only within the last authorized server-side snapshot."""
+        if (
+            isinstance(requested_page, bool)
+            or not isinstance(requested_page, int)
+            or not 1 <= requested_page <= self.total_pages
+        ):
+            return
+        if requested_page != self.current_page and not self.is_loading:
+            self.current_page = requested_page
+            async for event in self._reload():
+                yield event
+
+    @rx.event
     async def refresh(self):
         if self.is_loading:
             return
@@ -419,7 +446,7 @@ class ReceptionDashboardState(rx.State):
                     professional_id=self._professional_filter_id(),
                     search=self.search_query,
                     page=self.current_page,
-                    page_size=7,
+                    page_size=8,
                 )
             self._apply_snapshot(snapshot)
             row = next(

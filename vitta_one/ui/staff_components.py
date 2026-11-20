@@ -20,7 +20,7 @@ def _field_error(message, element_id: str) -> rx.Component:
 
 
 def _identity_fields() -> rx.Component:
-    return rx.vstack(
+    return rx.grid(
         rx.box(
             field_label("Nome completo *", "staff-create-name"),
             rx.el.input(
@@ -56,7 +56,9 @@ def _identity_fields() -> rx.Component:
             _field_error(AdminStaffState.email_error, "staff-email-error"),
             width="100%", min_width="0",
         ),
-        spacing="4", width="100%", align="stretch",
+        columns=rx.breakpoints(initial="1", md="repeat(2, minmax(0, 1fr))"),
+        gap="4", width="100%", align="start",
+        class_name="vitta-staff-identity-grid",
     )
 
 
@@ -230,12 +232,38 @@ def admin_staff_panel() -> rx.Component:
         section_panel(
             rx.el.form(
                 rx.vstack(
+                    rx.flex(
+                        rx.box(
+                            rx.icon("user_round_plus", size=27),
+                            class_name="vitta-staff-create-banner-icon",
+                        ),
+                        rx.vstack(
+                            rx.heading("Cadastro de colaborador", size="5"),
+                            rx.text(
+                                "Adicione um novo membro à equipe da clínica e defina suas permissões.",
+                                size="2", color="var(--vitta-text-muted)",
+                            ),
+                            spacing="1", align="start", min_width="0",
+                        ),
+                        rx.image(
+                            src="/clinic-building-hero.svg", alt="", aria_hidden="true",
+                            class_name="vitta-staff-create-banner-art",
+                        ),
+                        align="center", gap="4", width="100%",
+                        class_name="vitta-staff-create-banner",
+                    ),
                     rx.box(
-                        rx.heading("Perfil do funcionário", size="4"),
-                        rx.text(
-                            "Selecione o perfil. Apenas dados necessários a esse acesso serão solicitados.",
-                            size="2", color="var(--vitta-text-muted)",
-                            margin_top="0.35rem",
+                        rx.hstack(
+                            rx.box(rx.icon("users_round", size=21), class_name="vitta-staff-section-icon"),
+                            rx.vstack(
+                                rx.heading("Perfil e acesso", size="4"),
+                                rx.text(
+                                    "Selecione o perfil que define o nível de acesso do colaborador.",
+                                    size="2", color="var(--vitta-text-muted)",
+                                ),
+                                spacing="1", align="start", min_width="0",
+                            ),
+                            align="center", gap="3", width="100%",
                         ),
                         width="100%",
                     ),
@@ -262,12 +290,22 @@ def admin_staff_panel() -> rx.Component:
                             on_change=AdminStaffState.select_creation_profile,
                             disabled=AdminStaffState.saving,
                             size="3",
+                            width="100%",
                         ),
                         _field_error(AdminStaffState.profile_error, "staff-role-error"),
                         width="100%",
                     ),
                     rx.separator(),
-                    rx.heading("Identificação", size="4"),
+                    rx.hstack(
+                        rx.box(rx.icon("contact", size=21), class_name="vitta-staff-section-icon"),
+                        rx.vstack(
+                            rx.heading("Identificação", size="4"),
+                            rx.text("Dados básicos do colaborador para acesso ao sistema.", size="2",
+                                    color="var(--vitta-text-muted)"),
+                            spacing="1", align="start", min_width="0",
+                        ),
+                        align="center", gap="3", width="100%",
+                    ),
                     _identity_fields(),
                     rx.cond(
                         AdminStaffState.creation_profile == "medico",
@@ -283,10 +321,7 @@ def admin_staff_panel() -> rx.Component:
                         rx.cond(
                             AdminStaffState.creation_profile == "recepcionista",
                             _reception_fields(),
-                            rx.text(
-                                "Selecione um perfil para visualizar os campos específicos.",
-                                color="var(--vitta-text-muted)", size="2",
-                            ),
+                            rx.fragment(),
                         ),
                     ),
                     rx.cond(
@@ -327,6 +362,6 @@ def admin_staff_panel() -> rx.Component:
         ),
         _profile_change_dialog(),
         _cancel_dialog(),
-        width="100%", max_width="46rem", margin="0 auto",
+        width="100%", max_width="none",
         class_name="vitta-staff-form",
     )

@@ -3,6 +3,7 @@
 from datetime import datetime, timedelta, timezone
 
 from vitta_one.patient_queue.state import (
+    average_queue_wait_minutes,
     filter_active_queue,
     format_queue_wait,
     queue_wait_minutes,
@@ -29,3 +30,11 @@ def test_filters_preserve_order_returned_by_clinical_service() -> None:
     assert [row["id"] for row in filter_active_queue(rows, "jo", "TODAS")] == [3, 1]
     assert [row["id"] for row in filter_active_queue(rows, "", "VERDE")] == [1]
     assert filter_active_queue(rows, "não existe", "TODAS") == []
+
+
+def test_average_queue_wait_uses_persisted_waits_and_handles_empty_queue() -> None:
+    assert average_queue_wait_minutes([]) == 0
+    assert average_queue_wait_minutes([
+        {"wait_minutes": 10}, {"wait_minutes": 21}, {"wait_minutes": 30},
+    ]) == 20
+    assert average_queue_wait_minutes([{"wait_minutes": -4}]) == 0
