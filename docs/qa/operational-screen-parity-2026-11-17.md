@@ -17,7 +17,8 @@ O runner `qa_browser.capture_operational_reference_screens` registrou dimensões
 | Smoke de rota e controles | **16/16 PASS** no navegador, com agenda, paginação de recepção e filtros de especialidades incluídos |
 | Comparações geradas | **16/16** com referência alinhada, lado a lado, overlay e diff; sem máscaras |
 | Comparações inspecionadas | **16/16**, após a última alteração de escala da arte |
-| Aprovação como pixel-idêntica | **0/16**; diferenças residuais de conteúdo, arte e densidade são visíveis e documentadas abaixo |
+| Aprovação visual integral | **0/16**; todas as 16 foram inspecionadas, mas ainda têm diferenças residuais de conteúdo, arte ou composição descritas abaixo |
+| Aprovação como pixel-idêntica | **0/16**; não se declara identidade visual sem comprovação |
 | Reflow equivalente a 200% | **16/16 PASS** em viewport CSS 884×445, sem overflow ou imagens quebradas |
 
 Os comparativos individuais e manifestos detalhados permanecem em `qa-artifacts/operational-reference/`. A escala de 200% foi verificada como viewport CSS reduzido à metade, não por alteração do zoom do sistema operacional.
@@ -26,21 +27,21 @@ Os comparativos individuais e manifestos detalhados permanecem em `qa-artifacts/
 
 | # / rota | Captura e navegação | Inspeção visual e diferenças residuais |
 |---|---|---|
-| 01 `/recepcao` | 6/6; rota PASS | Grade, KPIs, consultas e painéis mantêm a hierarquia da referência. O painel de próximos atendimentos foi compactado para que o rodapé completo caiba no quadro de 890 px. Contagens e quantidade de consultas vêm da fixture sintética e divergem; layout não é pixel-idêntico. Pixels alterados: 15,87%; MAE RGB: 12,77. |
-| 02 `/recepcao/agenda` | 6/6; rota PASS | Calendário semanal e navegação estão funcionais. Distribuição dos horários difere porque as consultas sintéticas se concentram em dias distintos da imagem. Pixels alterados: 13,35%; MAE: 10,48. |
-| 03 `/recepcao/pacientes` | 6/6; rota PASS | Busca, tabela e paginação renderizam. A fixture contém mais pacientes que a referência, alongando a tabela. A arte SVG disponível não reproduz exatamente a ilustração original; a arte no cabeçalho foi ampliada no espaço livre sem mover o painel. Pixels alterados: 11,14%; MAE: 12,52. |
+| 01 `/recepcao` | 6/6; rota PASS | Grade, KPIs, consultas e painéis mantêm a hierarquia da referência. O painel de próximos atendimentos foi compactado para que o rodapé completo caiba no quadro de 890 px. Contagens e quantidade de consultas vêm da fixture sintética e divergem; layout não é pixel-idêntico. Pixels alterados: 15,77%; MAE RGB: 12,73. |
+| 02 `/recepcao/agenda` | 6/6; rota PASS | Calendário semanal e navegação estão funcionais. Distribuição dos horários difere porque as consultas sintéticas se concentram em dias distintos da imagem. Pixels alterados: 13,22%; MAE: 10,32. |
+| 03 `/recepcao/pacientes` | 6/6; rota PASS | Busca, tabela e paginação renderizam. A fixture contém mais pacientes que a referência, alongando a tabela. A arte SVG disponível não reproduz exatamente a ilustração original; a arte no cabeçalho foi ampliada no espaço livre sem mover o painel. Pixels alterados: 11,12%; MAE: 12,51. |
 | 04 `/recepcao/pacientes/novo` | 6/6; rota PASS | Formulário em duas colunas, campos e dicas seguem a composição; texto auxiliar e arte são próprios da aplicação e não são idênticos aos PNGs. Pixels alterados: 12,82%; MAE: 13,31. |
-| 05 `/recepcao/fila` | 6/6; rota PASS | A referência mostra fila vazia; a fixture contém um atendimento sintético aguardando e, portanto, mostra linha e ações. A composição da fila, filtros e métricas continua utilizável; cabeçalho ilustrado ampliado sem deslocar o painel. Pixels alterados: 12,73%; MAE: 12,46. |
-| 06 `/admin` | 6/6; rota PASS | Grupos, cartões e atalhos seguem a estrutura da referência. Contagens sintéticas diferem (incluindo 22 especialidades versus 6) e a arte SVG é uma recriação própria. Pixels alterados: 13,79%; MAE: 10,35. |
-| 07 `/admin/funcionarios` | 6/6; rota PASS | Busca, tabela e paginação funcionam. Quantidade e valores de funcionários divergem da imagem. Corrigido o valor inicial do seletor Radix para tamanho de página e o rodapé agora quebra em telas de 320 px sem overflow. Pixels alterados: 10,97%; MAE: 10,06. |
+| 05 `/recepcao/fila` | 6/6; rota PASS | A referência mostra fila vazia; a fixture contém um atendimento sintético aguardando e, portanto, mostra linha e ações. A composição da fila, filtros e métricas continua utilizável; cabeçalho ilustrado ampliado sem deslocar o painel. Pixels alterados: 12,18%; MAE: 12,03. |
+| 06 `/admin` | 6/6; rota PASS | Grupos, cartões e atalhos seguem a estrutura da referência. Contagens sintéticas diferem (incluindo 13 especialidades versus 6) e a arte SVG é uma recriação própria. Pixels alterados: 13,79%; MAE: 10,33. |
+| 07 `/admin/funcionarios` | 6/6; rota PASS | Busca, tabela e paginação funcionam. Quantidade e valores de funcionários divergem da imagem. Corrigido o valor inicial do seletor Radix para tamanho de página e o rodapé agora quebra em telas de 320 px sem overflow. Pixels alterados: 9,70%; MAE: 8,71. |
 | 08 `/admin/funcionarios/novo` | 6/6; rota PASS | Hierarquia e formulário preservados. Banner usa a arte vetorial disponível, que difere da original. Pixels alterados: 8,66%; MAE: 8,66. |
-| 09 `/admin/especialidades` | 6/6; rota PASS | Pesquisa e filtro estão alinhados: ambos em Y=369,75 px, altura computada de 40 px, diferença vertical de **0 px**. A fixture tem 22 especialidades, contra 6 na referência, para exercitar paginação; os registros e a quantidade de linhas diferem. Pixels alterados: 11,34%; MAE: 10,99. |
+| 09 `/admin/especialidades` | 6/6; rota PASS | Pesquisa e filtro estão alinhados: ambos em Y=369,75 px, altura computada de 40 px, diferença vertical de **0 px**. A fixture tem 13 especialidades, contra 6 na referência; a quantidade de registros e linhas difere. Pixels alterados: 11,39%; MAE: 11,07. |
 | 10 `/admin/horarios` | 6/6; rota PASS | Estado sem profissional selecionado corresponde à composição vazia da referência. Arte decorativa é uma recriação SVG. Pixels alterados: 7,84%; MAE: 7,37. |
 | 11 `/admin/configuracoes` | 6/6; rota PASS | Layout de formulário e painel de orientação renderizado. A fixture está sem dados da clínica, então os campos aparecem vazios em vez de preenchidos como na referência; não foram inventados dados de clínica. Pixels alterados: 10,79%; MAE: 11,01. |
-| 12 `/financeiro` | 6/6; rota PASS | Filtros, emissão e recebimentos renderizam. A fixture não tem cobranças elegíveis; valores, datas e linhas são diferentes da referência. Não foram criadas cobranças para simular a imagem. Banner corrigido para o SVG existente. Pixels alterados: 12,57%; MAE: 12,56. |
-| 13 `/medico` | 6/6; rota PASS | Painel médico, atalhos e estado de atendimento funcionam. A fila sintética compartilhada exibe 1 paciente, enquanto a referência mostra fila vazia; não há atendimento ativo para esta identidade de QA. Arte não é o ativo original. Pixels alterados: 16,04%; MAE: 13,63. |
-| 14 `/medico/agenda` | 6/6; rota PASS | Calendário semanal e mensal renderizam. A identidade de QA escolhida não tem consultas agendadas, ao contrário das consultas exibidas na referência; não foram criadas consultas só para a captura. Pixels alterados: 12,86%; MAE: 11,61. |
-| 15 `/medico/pacientes` | 6/6; rota PASS | Lista e estado vazio estão funcionais. O médico de QA não tem pacientes vinculados; a referência contém registros. Não foram inventados vínculos clínicos. Pixels alterados: 13,27%; MAE: 12,25. |
+| 12 `/financeiro` | 6/6; rota PASS | Filtros, emissão e recebimentos renderizam. A fixture não tem cobranças elegíveis; valores, datas e linhas são diferentes da referência. Não foram criadas cobranças para simular a imagem. Banner corrigido para o SVG existente. Pixels alterados: 12,08%; MAE: 11,94. |
+| 13 `/medico` | 6/6; rota PASS | Painel médico, atalhos e estado de atendimento funcionam. A fila sintética compartilhada exibe 1 paciente, enquanto a referência mostra fila vazia; não há atendimento ativo para esta identidade de QA. Arte não é o ativo original. Pixels alterados: 16,03%; MAE: 13,62. |
+| 14 `/medico/agenda` | 6/6; rota PASS | Calendário semanal e mensal renderizam. A identidade de QA escolhida não tem consultas agendadas, ao contrário das consultas exibidas na referência; não foram criadas consultas só para a captura. Pixels alterados: 12,85%; MAE: 11,57. |
+| 15 `/medico/pacientes` | 6/6; rota PASS | Lista e estado vazio estão funcionais. O médico de QA não tem pacientes vinculados; a referência contém registros. Não foram inventados vínculos clínicos. Pixels alterados: 14,60%; MAE: 11,84. |
 | 16 `/medico/prontuarios` | 6/6; rota PASS | Estado sem prontuário ativo renderiza sem erros. A arte e a geometria do painel têm diferenças visíveis em relação à referência. Não foram criados prontuários/diagnósticos fictícios. Pixels alterados: 14,14%; MAE: 11,21. |
 
 ### Diferenças que permanecem
@@ -48,7 +49,7 @@ Os comparativos individuais e manifestos detalhados permanecem em `qa-artifacts/
 - As imagens ilustrativas são SVGs próprios existentes no projeto, não os ativos originais. Cinco referências quebradas para `/clinic-building-hero.svg` e `/clinic-building-guide.svg` foram corrigidas para o SVG existente `/clinic-operational-hero.svg`; a checagem de carregamento agora torna esse tipo de regressão explícito.
 - Os dados de QA não são cópias dos valores dos PNGs. As diferenças de contagem, datas, registros, estado vazio e conteúdo estão discriminadas por rota acima e não foram ocultadas com máscaras.
 - Os estados de cobrança real, envio Resend e webhook público não foram homologados: não há credenciais sandbox/providers nem endpoint HTTPS público neste ambiente. Os testes correspondentes usam os mocks existentes.
-- As comparações registram diferenças de pixels entre 7,84% e 16,04% no limiar RGB L1=36. Isso inclui conteúdo/data, texto e renderização, não isola apenas geometria. Não se declara identidade pixel a pixel nem paridade visual sem resíduos.
+- As comparações finais registram diferenças de pixels entre 7,84% e 16,03% no limiar RGB L1=36. Isso inclui conteúdo/data, texto, arte e renderização, não isola apenas geometria. Todas as 16 comparações foram inspecionadas; nenhuma recebeu aprovação visual integral ou identidade pixel a pixel, e as diferenças estruturais ainda visíveis estão discriminadas por rota.
 
 ## Correções aplicadas nesta continuação
 
@@ -60,6 +61,7 @@ Os comparativos individuais e manifestos detalhados permanecem em `qa-artifacts/
 - Compactada a lista de próximos atendimentos; o rodapé do dashboard termina em Y=880,8 px no viewport 1768×890 e permanece dentro da captura.
 - Removida uma regra de margem negativa sem componente correspondente.
 - Corrigida a expectativa de título do runner geral: a tela de especialidades publica o heading acessível “Especialidades”. A captura local completa validou 93/93 telas/formatos em PostgreSQL descartável limpo.
+- Eliminada a URL duplicada nos dados da listagem de pacientes; cada link de ficha deriva do ID persistido da linha. O Chromium aguarda os resultados de busca e confirma que `href`, URL e nome da ficha pertencem ao mesmo paciente.
 
 ## Responsividade, acessibilidade e funcionamento
 
@@ -71,23 +73,27 @@ Permanecem os limites do estado funcional real documentados acima. A captura nã
 
 | Verificação | Resultado final |
 |---|---|
-| `pytest -q` em PostgreSQL descartável limpo `vitta_one_visual_tests_20261120` | **569 passed, 3 skipped**, 1 aviso de depreciação `StarletteDeprecationWarning` relacionado a `httpx` no `TestClient` |
-| `pytest qa_browser/prescription_browser.py qa_browser/admin_agenda_browser.py -q` em banco QA isolado | **42 passed**; inclui fluxo clínico/administrativo e foco/teclado |
-| `python -m qa_browser.capture_all_screens` em banco QA limpo | **93/93 PASS**; todas as rotas, perfis e viewports do runner geral |
-| `python -m qa_browser.capture_operational_reference_screens` após o CSS final | **96/96 PASS**, imagens carregadas, comparações refeitas |
-| Chromium CI #338 no SHA `a78b540` | **37 testes funcionais + 5 testes de agenda passaram; 93/93 capturas gerais; 96/96 capturas operacionais** |
+| `pytest -q` em PostgreSQL 16 descartável limpo `vitta_one_test` | **569 passed, 3 skipped**, 1 aviso de depreciação `StarletteDeprecationWarning` relacionado a `httpx` no `TestClient` |
+| `pytest qa_browser/prescription_browser.py qa_browser/admin_agenda_browser.py -q` em `vitta_one_operational_ui_qa_20261120` | **42 passed** em 180,28 s; inclui fluxo clínico/administrativo, autorização, foco e teclado |
+| Regressão do link da ficha em Chromium | **5/5 repetições PASS** na primeira fixture; **1/1 PASS** na fixture limpa usada para a captura final; o teste confere ID esperado, URL e nome da ficha |
+| `python -m qa_browser.capture_all_screens` em `vitta_one_operational_ui_qa_2` recém-semeado | **93/93 PASS**; todas as rotas, perfis e viewports do runner geral |
+| `python -m qa_browser.capture_operational_reference_screens` com `VITTA_ONE_REFERENCE_DIR=qa-artifacts/reference` em `vitta_one_operational_ui_qa_2` | **96/96 PASS**, sem falhas; 16 comparações desktop geradas e inspecionadas sobre dados sintéticos recém-semeados |
+| Chromium CI #342 no commit `4523450` | **PASS**: 37 testes funcionais em 134,34 s, 5 testes de agenda em 14,86 s, 93/93 capturas gerais e 96/96 capturas operacionais |
 | Auditoria de viewport equivalente a zoom 200% | **16/16 PASS** em 884×445 |
-| `reflex compile --dry` com o ambiente PostgreSQL QA isolado | **PASS**, compilado em 7,348 s; há avisos preexistentes de depreciação Reflex e assinaturas de `on_submit` |
+| `reflex compile --dry` com o ambiente PostgreSQL QA isolado | **PASS**, compilado em 6,328 s; há avisos preexistentes de depreciação Reflex e assinaturas de `on_submit` |
+| `python -m compileall -q vitta_one qa_browser scripts tests` | **PASS** |
 | OpenSpec strict | **34 passed, 0 failed**, 1 nota informativa sobre target spec arquivada de `patient-portal` |
 | `git diff --check` | **PASS** |
 | Migrations do banco descartável | `alembic upgrade head` passou até `f031a5aa5002`; nenhuma migration nova nesta change |
 
-Uma execução anterior de Pytest contra um banco compartilhado com os fixtures visuais encontrou colisões de CPF e estado mutado por fluxo de navegador. A suíte completa foi então repetida num banco PostgreSQL limpo e isolado, com os resultados aprovados acima. Nenhum banco/container preexistente ou de produção foi alterado; as bases e contas QA são descartáveis/sintéticas.
+Uma primeira execução de Pytest foi feita acidentalmente contra o banco descartável já preenchido pelas fixtures de navegador e encontrou duas colisões: CPFs fixos dos testes de concorrência e um prontuário inexistente nesse estado. A suíte foi repetida em `vitta_one_test`, recém-criado e sem dados, e passou integralmente. A suíte Chromium completa rodou em outro banco descartável; a matriz final foi então gerada numa terceira base recém-migrada/semeada (`vitta_one_operational_ui_qa_2`), sem reutilizar os dados mutados pelos fluxos de navegador. Nenhum banco/container preexistente ou de produção foi alterado; as bases e contas QA são descartáveis/sintéticas.
 
 ## CI e revisão da PR
 
-Na primeira tentativa Chromium do commit `a6583de`, um teste de 37 teve timeout na navegação para ficha do paciente. A reprodução isolada e a suíte completa em banco local limpo passaram, e a repetição do job passou 37/37 testes funcionais; nessa repetição, a captura geral encontrou uma expectativa antiga de título (“Todas as especialidades”) e validou 90/93. O runner foi corrigido em `a78b540` e a captura local limpa passou em 93/93. No SHA `a78b5405309c565f689d830115dc78a96f6fab43`, os três workflows passaram: `Validate Vitta-One` #537, `Vitta One | CI Produção` #15 e `QA Prescrições com Chromium` #338. O último validou 37 testes de segurança/teclado/responsividade, 5 testes de agenda, 93/93 capturas gerais e 96/96 capturas operacionais.
+Na primeira tentativa Chromium do commit `a6583de`, um teste de 37 teve timeout na navegação para ficha do paciente. A repetição do job passou 37/37 testes funcionais, mas a captura geral encontrou uma expectativa antiga de título (“Todas as especialidades”) e validou 90/93; o runner foi corrigido em `a78b540`. No SHA `a78b5405309c565f689d830115dc78a96f6fab43`, os três workflows passaram (#537, #15 e #338) com 37 testes funcionais, 5 testes de agenda, 93/93 capturas gerais e 96/96 capturas operacionais.
 
-O artefato sintético do Chromium #338 está em [capturas e evidências do workflow](https://github.com/vitta-one/openspec/actions/runs/44789868103/artifacts/14654789975). Como os PNGs originais são mantidos fora do Git, a etapa de CI valida somente as capturas; as comparações com referências foram feitas e inspecionadas localmente, em `qa-artifacts/operational-reference/`.
+Depois, os runs Chromium #339, #340 e #341 voltaram a falhar em `test_reception_global_patient_search_uses_identity_only`. A instrumentação do run #341 mostrou que a ação da linha “Paciente QA Operação 01” navegou para `/recepcao/pacientes/12` e carregou “Paciente QA Operação 11”. O commit `4523450` removeu a URL derivada duplicada do payload de listagem, constrói o link com o ID persistido da própria linha e fortalece o teste para aguardar os resultados, validar o ID/`href`/URL e confirmar o mesmo nome na ficha. O teste passou em cinco repetições locais e numa fixture recém-semeada; o Chromium CI #342 passou os 37 testes, os 5 testes de agenda e todas as capturas gerais e operacionais. `Validate Vitta-One` #541 e `Vitta One | CI Produção` #19 também passaram no commit `4523450`.
+
+O artifact sintético do Chromium #342 está em [capturas e evidências do workflow](https://github.com/vitta-one/openspec/actions/runs/44801449817/artifacts/14660519772). Como os PNGs originais são mantidos fora do Git, a execução de CI valida somente as capturas; as comparações locais sem máscaras foram feitas com `VITTA_ONE_REFERENCE_DIR=qa-artifacts/reference`, geradas e inspecionadas em `qa-artifacts/operational-reference/`.
 
 A PR #358 aponta para `develop`, permanece aberta e não foi mergeada. Não houve migration de produção, deploy ou alteração de banco de produção.

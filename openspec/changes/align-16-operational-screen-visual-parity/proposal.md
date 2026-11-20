@@ -6,6 +6,7 @@ As 16 telas operacionais já implementadas divergem em composição, densidade e
 
 - Ajustar o shell compartilhado e as 16 páginas para reproduzir a geometria e a hierarquia das referências dentro das limitações reais de viewport e renderização.
 - Corrigir problemas de responsividade e acessibilidade encontrados nas páginas alteradas sem remover ações funcionais.
+- Confirmar que a busca do diretório da Recepção navega para a ficha do mesmo paciente exibido em cada linha.
 - Preparar captura visual isolada com dados sintéticos de QA, comparações por rota e evidências separadas para desktop e viewports adicionais.
 - Documentar diferenças de dados e limitações de renderização sem tratar exemplos das imagens como dados reais.
 
@@ -20,6 +21,7 @@ Nenhuma.
 ### Capabilities modificadas
 
 - `reception-operational-dashboard`: incluir na visão do dia a contagem persistida de consultas canceladas.
+- `patient-reception-queue`: garantir que o link do diretório abra a ficha correspondente à identidade da linha.
 
 ## Impacto
 

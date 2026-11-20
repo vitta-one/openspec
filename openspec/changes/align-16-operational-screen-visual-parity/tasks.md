@@ -10,6 +10,7 @@
 - [x] 2.3 Ajustar composição, densidade e alinhamento das telas administrativas e financeira e comparar suas capturas novas com as referências 06–12.
 - [x] 2.4 Ajustar composição, densidade e alinhamento das telas médicas e comparar suas capturas novas com as referências 13–16.
 - [x] 2.5 Revisar teclado, foco, nomes acessíveis, estados de loading/vazio/erro, zoom e seis viewports nas telas afetadas; registrar verificações e limitações.
+- [x] 2.6 Garantir que cada link da lista de pacientes derive a ficha do ID da mesma linha e validar no Chromium que destino e identidade exibida correspondem ao paciente selecionado.
 
 ## 3. Evidência visual e regressão
 

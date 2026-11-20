@@ -24,6 +24,7 @@ Ver proposta em `proposal.md`. O produto usa páginas Reflex server-side e um sh
 4. **Comparar quadros sem redimensionamento não uniforme.** Capturas desktop e referência serão colocadas em quadros de comparação; a referência 01 será alinhada com preservação de aspecto e margens neutras. Gerar lado a lado, overlay e diff, além de registrar a medida de viewport, sem mascarar conteúdo estrutural.
 5. **Separar evidência por finalidade.** Manifestos distintos identificarão capturas, verificações funcionais e avaliações visuais; capturas e artefatos de diff permanecem ignorados pelo Git. O relatório versionado traz métricas, caminhos das evidências locais e limitações, não imagens com dados de usuário.
 6. **Tratar referências móveis como expectativa de reflow.** As referências fornecidas são desktop. Nos outros cinco viewports serão avaliados reflow, acesso às ações, overflow local de tabelas, foco, drawer e legibilidade; não será alegada equivalência pixel a pixel com uma referência mobile inexistente.
+7. **Derivar a navegação da identidade da própria linha.** O link da lista de pacientes monta a rota com o identificador persistido renderizado na mesma linha; não mantém uma URL duplicada no payload de busca. O teste Chromium verifica contagem/resultados, `href`, URL final e nome da ficha para o mesmo paciente.
 
 ## Riscos / trade-offs
 
