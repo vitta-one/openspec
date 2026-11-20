@@ -19,7 +19,7 @@
 - [x] 3.2 Gerar lado a lado, overlay e diff para cada uma das 16 referências desktop sem deformar imagens; inspecionar visualmente todas as rotas e separar diferenças de dados de layout.
 - [x] 3.3 Atualizar o relatório `docs/qa/operational-screen-parity-2026-11-17.md` com matriz individual de 16 rotas, medidas, resultados, dados, acessibilidade, responsividade e discrepâncias residuais.
 - [x] 3.4 Executar regressão: `pytest -q`, `reflex compile --dry`, capturas/comparações, `git diff --check` e OpenSpec strict; registrar comandos e status reais.
-- [ ] 3.5 Revisar diff integrado e estado do CI, criar commits convencionais, publicar a branch e abrir uma única PR para `develop`; verificar URL, alvo e ausência de merge/deploy.
+- [x] 3.5 Revisar diff integrado e estado do CI, criar commits convencionais, publicar a branch e abrir uma única PR para `develop`; verificar URL, alvo e ausência de merge/deploy.
 
 ## Registro da rodada final — 2026-11-20
 
@@ -28,4 +28,5 @@
 - Pytest em PostgreSQL 16.16 `vitta_one_test`: 571 aprovados, 3 skips explicados no relatório. Chromium funcional/acessibilidade: 42 aprovados em QA9; reflow 2×: 16/16.
 - Corrigida a busca vazia da Recepção quando o serializer omite o campo; Pytest, compilação Reflex e Chromium foram repetidos no código final.
 - Validação OpenSpec strict: 34 aprovados, zero falhas. A aprovação visual integral permanece em 0/16: diferenças de arte e de conteúdo/fixtures estão documentadas e não foram mascaradas ou substituídas por dados clínicos fictícios.
-- PR #358 permanece destinada a `develop`; o SHA/CI pós-push será registrado quando a execução desta branch terminar.
+- PR [#358](https://github.com/vitta-one/openspec/pull/358) permanece aberta para `develop`; branch publicada no SHA `9c0bc1f37feb6a27cd3fb272e5718bbea64425c0`. CI pós-push: Validate Vitta-One #543, Vitta One | CI Produção #21 e Chromium #344; os três passaram. O artifact de capturas sintéticas está vinculado no relatório de QA.
+- Nenhum merge, deploy, migration de produção ou alteração de banco de produção foi feito.

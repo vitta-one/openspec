@@ -105,4 +105,6 @@ Depois, os runs Chromium #339, #340 e #341 voltaram a falhar em `test_reception_
 
 O artifact sintético do Chromium #342 está em [capturas e evidências do workflow](https://github.com/vitta-one/openspec/actions/runs/44801449817/artifacts/14660519772). Como os PNGs originais são mantidos fora do Git, a execução de CI valida somente as capturas; as comparações locais sem máscaras foram feitas com `VITTA_ONE_REFERENCE_DIR=qa-artifacts/reference`, geradas e inspecionadas em `qa-artifacts/operational-reference/`.
 
-A PR #358 aponta para `develop`, permanece aberta e não foi mergeada. Não houve migration de produção, deploy ou alteração de banco de produção.
+No SHA `9c0bc1f37feb6a27cd3fb272e5718bbea64425c0`, os três workflows pós-push passaram: Validate Vitta-One **#543**, Vitta One | CI Produção **#21** e QA Prescrições com Chromium **#344**. O Chromium validou 37 testes funcionais, 5 testes de agenda, 93/93 capturas gerais e 96/96 capturas operacionais; a etapa CI informa explicitamente que as referências originais não estavam no runner e que suas 96 capturas não representam comparação visual. O artifact [vitta-one-chromium-all-screens — run #344](https://github.com/vitta-one/openspec/actions/runs/44835423005/artifacts/14676784883) contém as capturas sintéticas e manifestos; comparativos com as referências permanecem no workspace local ignorado.
+
+A PR [#358](https://github.com/vitta-one/openspec/pull/358) aponta para `develop` e permanece aberta. Nenhum merge foi feito. Não houve migration de produção, deploy ou alteração de banco de produção.
