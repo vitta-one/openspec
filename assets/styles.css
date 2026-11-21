@@ -4974,7 +4974,10 @@ button:disabled,
 }
 @media (max-width: 360px) {
   .vitta-shell--reception .vitta-page:has(.vitta-patient-create-workspace) .vitta-input::placeholder {
-    font-size: .8125rem;
+    font-size: .78125rem;
+  }
+  .vitta-shell--reception .vitta-page:has(.vitta-patient-create-workspace) #patient-create-name {
+    padding-left: 2.65rem;
   }
 }
 @media (min-width: 801px) {
