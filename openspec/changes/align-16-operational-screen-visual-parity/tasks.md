@@ -60,3 +60,11 @@
 - [x] Atualizar `docs/qa/operational-screen-parity-2026-11-17.md` com o resultado QA22, a tabela por tela e a comparação temporária de fonte, sem modificar fonte global porque a diferença medida foi marginal e inconsistente.
 - [x] Repetir Pytest completo em PostgreSQL descartável novo `vitta_one_test_22`: **574 passed, 3 skipped**; Chromium contra o build recém-iniciado com QA22: **42 passed** em 173,81 s. `reflex compile --dry`, `compileall`, OpenSpec strict e `git diff --check` passaram nesta revisão.
 - Nenhum dado de paciente, consulta, fila, vínculo médico, prontuário, exame ou cobrança foi alterado para reduzir a diferença. As diferenças visuais permanecem em aberto; esta tarefa não marca fidelidade integral como concluída.
+
+## Revalidação da largura mínima e captura determinística — 2026-11-21
+
+- [x] Corrigir o placeholder do nome que a CI Chromium Ubuntu cortou em 320 px e confirmar a largura do texto contra a área útil do input.
+- [x] Esperar `document.fonts.ready` antes dos screenshots e confirmar duas capturas byte a byte idênticas no mesmo Chromium/contexto.
+- [x] Recriar captura limpa QA23 e regenerar/inspecionar comparativos: **96/96**; RGB L1≥36 médio **9,51%**, MAE/canal médio **9,26**.
+- [x] Repetir Pytest PostgreSQL descartável: **574 passed, 3 skipped**; Chromium funcional/acessibilidade/responsividade: **42 passed**; OpenSpec strict **34/34**, `compileall`, `reflex compile --dry` e `git diff --check` aprovados.
+- [ ] Resolver as diferenças visuais restantes de cada rota e obter inspeção humana de paridade integral. A classificação atual é **0/16 aprovações**, `REVIEW_REQUIRED`; não substituir divergências clínicas/financeiras por registros fictícios.

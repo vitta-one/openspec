@@ -225,3 +225,46 @@ O guard de captura permite o banco dedicado `vitta_one_operational_ui_qa_22` na 
 - Pytest completo em PostgreSQL 16 descartável novo `vitta_one_test_22`, migrado a `f031a5aa5002 (head)`: **574 passed, 3 skipped** em 35,07 s. Os skips são os cenários de concorrência/row-locking não habilitados por este banco fora do nome `vitta_one`; um aviso `StarletteDeprecationWarning` legado permanece.
 - Chromium de autorização, formulários, agenda, foco/teclado e responsividade no servidor recém-compilado contra QA22: **42 passed** em 173,81 s.
 - Depois dessas execuções, permanecem válidos os gates repetidos: guard QA **3/3**, OpenSpec strict **34 passed, 0 failed**, `compileall`, `reflex compile --dry` e `git diff --check` aprovados. O servidor de comparação usa somente QA22 local; nenhuma conexão de produção foi configurada.
+
+## Revalidação após regressão Chromium em 320 px — 21/11/2026
+
+O CI Chromium do SHA `8d82cf4612ada84fce5c6f64eb00aae9ca76e765` encontrou um corte real no placeholder do nome em `/recepcao/pacientes/novo` a 320×740 no Chromium Ubuntu. A regra responsiva agora reduz somente esse placeholder para **12,5 px** até 360 px e reduz o padding esquerdo do campo para **42,4 px**, mantendo espaço entre o ícone e o texto. A asserção mede o texto e a largura útil do input, e a captura estreita voltou a passar.
+
+O runner visual agora aguarda `document.fonts.ready` antes do screenshot. Duas capturas consecutivas do mesmo formulário, no mesmo contexto Chromium/viewport, produziram arquivos PNG byte a byte idênticos. Isso estabiliza a comparação no mesmo ambiente, sem eliminar diferenças de fonte ou rasterização entre ambientes.
+
+A matriz foi refeita no bundle corrente contra PostgreSQL 16 descartável `vitta_one_operational_ui_qa_23`, migrado até `f031a5aa5002 (head)`, nas seis resoluções (**96/96 PASS**). Os 16 comparativos desktop sem máscaras, overlays, diffs e quatro folhas foram regenerados e reabertos.
+
+| Tela | Pixels RGB L1≥36 | MAE/canal | Resíduo observado |
+|---|---:|---:|---|
+| 01 `/recepcao` | 16,05% | 13,48 | Métricas, distribuição e conteúdo sintéticos diferem |
+| 02 `/recepcao/agenda` | 13,41% | 10,42 | Distribuição de consultas da fixture difere da semana de referência |
+| 03 `/recepcao/pacientes` | 10,17% | 12,06 | Identidades e quantidade de pacientes sintéticos diferem |
+| 04 `/recepcao/pacientes/novo` | 7,94% | 9,36 | Composição do formulário e painel corresponde; texto, ícones, fonte/rasterização ainda diferem |
+| 05 `/recepcao/fila` | 10,73% | 11,19 | Fixture tem uma entrada; referência mostra fila vazia |
+| 06 `/admin` | 13,65% | 10,15 | Contagens e dados de QA diferem |
+| 07 `/admin/funcionarios` | 9,64% | 8,70 | Quantidade e identidades sintéticas diferem |
+| 08 `/admin/funcionarios/novo` | 7,93% | 8,24 | Formulário inicial vazio e diferenças residuais de arte/texto |
+| 09 `/admin/especialidades` | 11,34% | 11,06 | Fixture tem 13 especialidades; PNG mostra 6 |
+| 10 `/admin/horarios` | 7,15% | 6,67 | Profissional não selecionado; painel vazio |
+| 11 `/admin/configuracoes` | 10,34% | 10,42 | Clínica QA sem configuração persistida |
+| 12 `/financeiro` | 9,64% | 9,37 | Fixture sem cobranças elegíveis; totais e tabela divergem |
+| 13 `/medico` | 8,07% | 8,04 | Projeção de atendimento sintética difere |
+| 14 `/medico/agenda` | 6,82% | 7,56 | Médico QA sem consultas vinculadas |
+| 15 `/medico/pacientes` | 4,14% | 5,53 | Médico QA sem pacientes vinculados |
+| 16 `/medico/prontuarios` | 5,15% | 5,94 | Médico QA sem prontuário ativo |
+
+Média da rodada: **9,51% de pixels alterados** no limiar RGB L1≥36 e **MAE/canal 9,26**. Na tela 04, a métrica agora é 7,94%/9,36, ante 7,56%/8,59 na rodada QA22. A diferença é registrada como variação entre execuções; não foi atribuída a uma regressão ou melhoria do produto. `fidelity-assessment.json` continua `REVIEW_REQUIRED`: **16 comparativos gerados e reinspecionados, 0/16 aprovações integrais**.
+
+Diferenças de dados/estado nas rotas 02, 05, 06, 07, 09, 11, 12, 13, 14, 15 e 16 continuam evidentes no overlay. Nenhum paciente, consulta, vínculo médico, prontuário ou cobrança foi inserido, removido ou alterado para reduzir o diff. A igualdade visual não está demonstrada.
+
+### Validação local depois da correção
+
+- Pytest completo em `vitta_one_test_23`, PostgreSQL 16 descartável, Alembic `f031a5aa5002 (head)`: **574 passed, 3 skipped**, um aviso legado `StarletteDeprecationWarning`.
+- Chromium funcional, autorização, teclado/foco, formulários e responsividade: **42 passed** em 173,53 s no build corrente; executado após a matriz para preservar as capturas antes das mutações de teste.
+- Capturas operacionais: **96/96 PASS**, sem imagem quebrada ou overflow horizontal global.
+- OpenSpec strict: **34 passed, 0 failed**, com uma nota informativa preexistente sobre target spec arquivada.
+- `python -m compileall -q vitta_one qa_browser scripts tests`: PASS.
+- `reflex compile --dry`: PASS em 6,26 s; avisos Reflex depreciação continuam.
+- `git diff --check`: PASS.
+
+Esses resultados locais ainda não representam uma CI verde após o ajuste; a execução de CI em `8d82cf4` antecede a correção mobile e falhou exatamente na largura do placeholder. A nova execução precisa confirmar a correção em Chromium Ubuntu. Nenhum merge, deploy ou acesso a banco de produção foi realizado.
