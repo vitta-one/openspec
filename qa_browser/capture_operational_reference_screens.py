@@ -502,6 +502,12 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
               document.activeElement?.blur();
               window.scrollTo(0, 0);
             }""")
+            page.evaluate("""async () => {
+              await document.fonts.ready;
+              if (document.fonts.status !== "loaded") {
+                throw new Error("Fontes ainda não terminaram de carregar");
+              }
+            }""")
             page.wait_for_timeout(350)
             if "Cannot connect to server: websocket error." in page.locator("body").inner_text():
                 raise AssertionError("Aviso de desconexão Reflex visível na captura")
