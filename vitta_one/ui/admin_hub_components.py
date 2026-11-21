@@ -55,7 +55,7 @@ def admin_hub_workspace() -> rx.Component:
             "Gestão da clínica",
             "Controle equipe, agenda, especialidades e configurações gerais.",
             show_art=True,
-            art_source="/clinic-operational-hero.svg",
+            art_source="/clinic-admin-dashboard-hero.png",
         ),
         rx.cond(
             AdminDashboardState.error_message != "",

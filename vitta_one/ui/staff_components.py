@@ -246,7 +246,7 @@ def admin_staff_panel() -> rx.Component:
                             spacing="1", align="start", min_width="0",
                         ),
                         rx.image(
-                            src="/clinic-operational-hero.svg", alt="", aria_hidden="true",
+                            src="/clinic-staff-create-banner.png", alt="", aria_hidden="true",
                             class_name="vitta-staff-create-banner-art",
                         ),
                         align="center", gap="4", width="100%",

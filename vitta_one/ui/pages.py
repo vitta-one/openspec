@@ -402,7 +402,7 @@ def admin_hours_page() -> rx.Component:
                 "Gerenciar horários",
                 "Configure e consulte a disponibilidade dos médicos, uma tarefa por vez.",
                 show_art=True,
-                art_source="/clinic-operational-hero.svg",
+                art_source="/clinic-admin-hours-hero.png",
             ),
             admin_availability_panel(),
             spacing="2", align="stretch", width="100%",
@@ -431,7 +431,7 @@ def admin_clinic_settings_page() -> rx.Component:
                     section_panel(
                         rx.vstack(
                             rx.image(
-                                src="/clinic-operational-hero.svg", alt="", aria_hidden="true",
+                                src="/clinic-admin-settings-guidance.png", alt="", aria_hidden="true",
                                 class_name="vitta-clinic-settings-illustration",
                             ),
                             rx.hstack(
@@ -617,6 +617,7 @@ def reception_queue_page() -> rx.Component:
                 class_name="vitta-primary-action",
             ),
             show_art=True,
+            art_source="/clinic-reception-queue-hero.png",
         ),
         active_queue_panel(),
         rx.cond(
@@ -729,6 +730,7 @@ def doctor_page() -> rx.Component:
             "Visão geral do consultório",
             "Acompanhe a agenda, o pronto-socorro, os pacientes e os registros clínicos.",
             show_art=True,
+            art_source="/clinic-doctor-overview-hero.png",
         ),
         rx.grid(
             _doctor_overview_card(
@@ -775,7 +777,7 @@ def doctor_records_page() -> rx.Component:
                 "Prontuários", "Registro clínico do paciente atual",
                 "Acesso restrito ao atendimento associado à sua sessão médica.",
                 show_art=True,
-                art_source="/doctor-records-hero.svg",
+                art_source="/clinic-doctor-records-hero.png",
             ),
             rx.box(
                 rx.cond(
@@ -790,6 +792,10 @@ def doctor_records_page() -> rx.Component:
                             min_height="22.5rem",
                         ),
                         class_name="vitta-doctor-records-empty-panel",
+                        padding=rx.breakpoints(
+                            initial="1rem",
+                            sm="24px 22px 22px",
+                        ),
                     ),
                 ),
                 width="100%",
@@ -800,6 +806,7 @@ def doctor_records_page() -> rx.Component:
         ),
         active="prontuarios",
         verified_path="/medico/prontuarios",
+        page_spacing="2",
     )
 
 
@@ -811,6 +818,7 @@ def doctor_agenda_page() -> rx.Component:
             "Minha agenda",
             "Consultas relacionadas ao profissional associado à sua conta, com datas no fuso da clínica.",
             show_art=True,
+            art_source="/clinic-doctor-agenda-hero.png",
         ),
         feedback_region(DoctorWorkspaceState.error_message, "", "doctor-agenda-feedback"),
         rx.link(
@@ -819,8 +827,14 @@ def doctor_agenda_page() -> rx.Component:
             href="/medico",
             class_name="vitta-doctor-agenda-cta",
         ),
-        doctor_week_calendar(),
-        doctor_calendar(),
+        rx.vstack(
+            doctor_week_calendar(),
+            doctor_calendar(),
+            spacing="0",
+            align="stretch",
+            width="100%",
+            class_name="vitta-doctor-agenda-calendars",
+        ),
         doctor_consultation_list(),
         active="agenda-medica",
         verified_path="/medico/agenda",
@@ -835,7 +849,7 @@ def doctor_patients_page() -> rx.Component:
             "Pacientes vinculados",
             "Pessoas derivadas exclusivamente de consultas do seu cadastro profissional.",
             show_art=True,
-            art_source="/clinic-doctor-hero.svg",
+            art_source="/clinic-doctor-patients-hero.png",
         ),
         feedback_region(DoctorWorkspaceState.error_message, "", "doctor-patients-feedback"),
         doctor_patient_list(),

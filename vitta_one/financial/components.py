@@ -121,7 +121,7 @@ def finance_content():
     return rx.vstack(
         page_header(
             "Vitta One", "Financeiro", "Cobranças e recebimentos · Asaas Sandbox",
-            show_art=True, art_source="/clinic-operational-hero.svg",
+            show_art=True, art_source="/clinic-finance-hero.png",
         ),
         rx.grid(
             _finance_metric("Recebido", S.received, "wallet", "green"),

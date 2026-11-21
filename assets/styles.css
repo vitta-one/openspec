@@ -3466,10 +3466,45 @@ button:disabled,
 @media (min-width: 1051px) {
   .vitta-shell--doctor .vitta-topbar { min-height: 3.875rem; }
   .vitta-shell--doctor .vitta-page { padding: .8125rem .75rem 3rem; }
+  .vitta-shell--doctor .vitta-page:has(.vitta-doctor-records-workspace) {
+    width: 100%;
+    max-width: none;
+    margin-inline: 0;
+    padding-inline: 30px 20px;
+  }
+  .vitta-shell--doctor .vitta-page:has(.vitta-doctor-records-workspace) .vitta-breadcrumb {
+    padding-top: 20.8px;
+    padding-left: 9px;
+  }
+  .vitta-shell--doctor .vitta-page:has(.vitta-doctor-records-workspace) > .rx-Stack {
+    row-gap: 11px;
+  }
+  .vitta-shell--doctor .vitta-page:has(.vitta-doctor-records-workspace) .vitta-page-header-copy {
+    padding-left: 10px;
+  }
+  .vitta-shell--doctor .vitta-page:has(.vitta-doctor-records-workspace) .vitta-page-header-copy > .rt-Text:last-child {
+    margin-top: 1rem;
+  }
+  .vitta-shell--doctor .vitta-page:has(.vitta-doctor-records-workspace) .vitta-doctor-records-content {
+    row-gap: 11px;
+  }
+  .vitta-shell--doctor .vitta-page:has(.vitta-doctor-patient-list) { padding-inline: .5rem; }
   .vitta-shell--doctor .vitta-page:has(.vitta-doctor-overview-grid) .vitta-page-header,
-  .vitta-shell--doctor .vitta-page:has(.vitta-doctor-agenda-cta) .vitta-page-header,
-  .vitta-shell--doctor .vitta-page:has(.vitta-doctor-patient-list) .vitta-page-header {
+  .vitta-shell--doctor .vitta-page:has(.vitta-doctor-agenda-cta) .vitta-page-header {
     padding-inline: 1rem;
+  }
+  .vitta-shell--doctor .vitta-page:has(.vitta-doctor-patient-list) .vitta-page-header {
+    padding-inline: 1.375rem;
+    margin-bottom: .25rem;
+  }
+  .vitta-shell--doctor .vitta-page:has(.vitta-doctor-patient-list) .vitta-page-header .rt-Heading {
+    margin-top: .4rem;
+  }
+  .vitta-shell--doctor .vitta-page:has(.vitta-doctor-patient-list) .vitta-page-header-copy > .rt-Text:last-child {
+    margin-top: .3125rem;
+  }
+  .vitta-shell--doctor .vitta-page:has(.vitta-doctor-patient-list) .vitta-page-header-copy {
+    align-self: flex-start;
   }
   .vitta-shell--doctor .vitta-page:has(.vitta-doctor-overview-grid) > .rx-Stack {
     gap: 1.25rem;
@@ -3941,12 +3976,20 @@ button:disabled,
 }
 
 .vitta-doctor-week-panel .vitta-agenda-day {
-  height: 8.75rem;
-  min-height: 8.75rem;
+  height: 8.875rem;
+  min-height: 8.875rem;
   overflow-y: auto;
   overscroll-behavior: contain;
+  padding: .9rem 1.1875rem;
 }
 .vitta-doctor-week-panel .vitta-agenda-event { padding: .45rem .5rem; }
+.vitta-doctor-week-heading { padding-left: 6px; }
+.vitta-doctor-week-heading > .rx-Stack { margin-left: 4px; }
+.vitta-doctor-week-day-content > .rt-Text { line-height: 24px; }
+.vitta-doctor-week-day-content > .rt-Heading { line-height: 31px; }
+.vitta-doctor-week-empty { color: var(--vitta-text-muted); }
+.vitta-doctor-week-content { gap: 18px; }
+.vitta-page .vitta-doctor-agenda-calendars { row-gap: 19px; }
 .vitta-doctor-overview-card {
   display: flex;
   align-items: center;
@@ -4481,6 +4524,13 @@ button:disabled,
   height: 12.75rem;
   bottom: -.5rem;
 }
+.vitta-shell--doctor .vitta-page:has(.vitta-doctor-records-workspace) .vitta-page-header-art {
+  right: 0;
+  width: 47.0625rem;
+  height: 14.25rem;
+  bottom: -.9rem;
+  opacity: 1;
+}
 .vitta-shell--doctor .vitta-page:has(.vitta-doctor-records-workspace) .vitta-page-header .rt-Heading {
   margin-top: .75rem;
 }
@@ -4494,9 +4544,17 @@ button:disabled,
   background: var(--vitta-primary-soft);
 }
 .vitta-doctor-week-heading-icon {
-  width: 3.5rem;
-  height: 3.5rem;
+  width: 3.375rem;
+  height: 3.375rem;
   border-radius: .8rem;
+}
+.vitta-doctor-week-heading .rt-Heading {
+  font-size: 1.375rem;
+  line-height: 1.75rem;
+}
+.vitta-doctor-week-heading .rt-Text {
+  font-size: 1rem;
+  line-height: 1.5rem;
 }
 .vitta-doctor-month-heading-icon {
   display: grid;
@@ -4508,9 +4566,6 @@ button:disabled,
   color: var(--vitta-primary);
   background: var(--vitta-primary-soft);
 }
-.vitta-doctor-week-panel { padding-block: .9rem; }
-.vitta-doctor-calendar-panel,
-.vitta-doctor-patient-list { padding-block: 1rem; }
 .vitta-doctor-patient-empty .vitta-empty-state .rt-Text { max-width: none; }
 .vitta-doctor-patient-heading-icon {
   width: 4.375rem;
@@ -4519,14 +4574,68 @@ button:disabled,
 }
 .vitta-doctor-patient-heading .rt-Heading {
   font-size: 1.55rem;
+  line-height: 1.2;
+}
+.vitta-doctor-month-heading { margin-left: 6px; }
+.vitta-doctor-month-heading > .rt-Heading {
+  margin-left: 2px;
+  font-size: 1.5rem;
   line-height: 1.3;
+}
+.vitta-doctor-month-divider { margin-top: 8px; }
+.vitta-doctor-month-nav { margin-top: 11px; padding-left: 8px; }
+.vitta-doctor-calendar-panel .vitta-doctor-month-nav > button {
+  width: 3.375rem;
+  min-width: 3.375rem;
+  height: 2.75rem;
+  min-height: 2.75rem;
+}
+.vitta-doctor-month-nav > .rt-Heading {
+  font-size: 1.5rem;
+  line-height: 1.3;
+}
+.vitta-doctor-month-weekdays { margin-top: 16px; padding-left: 8px; }
+.vitta-doctor-calendar-panel .vitta-doctor-month-weekdays > .rt-Text {
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+.vitta-doctor-calendar-panel .vitta-doctor-month-days {
+  margin-top: 6px;
+  padding-left: 8px;
+  row-gap: 8px;
+}
+.vitta-doctor-calendar-panel .vitta-doctor-month-cell {
+  min-height: 3.5rem;
+  padding: .5rem;
+}
+.vitta-doctor-calendar-panel .vitta-doctor-month-cell > .rt-Text {
+  font-size: 1.125rem;
+  line-height: 1.5rem;
 }
 .vitta-doctor-patient-list { min-height: 23.75rem; }
 .vitta-shell--doctor .vitta-page:has(.vitta-doctor-patient-list) .vitta-page-header--illustrated {
   min-height: 11rem;
 }
 .vitta-shell--doctor .vitta-page:has(.vitta-doctor-patient-list) .vitta-page-header-art {
-  height: 11.5rem;
+  right: 2.1875rem;
+  bottom: -.5625rem;
+  width: 44.4375rem;
+  height: 12rem;
+  opacity: 1;
+}
+.vitta-shell--doctor .vitta-page:has(.vitta-doctor-overview-grid) .vitta-page-header-art {
+  right: 2rem;
+  bottom: -1rem;
+  width: 47.1875rem;
+  height: 10.625rem;
+  opacity: 1;
+}
+.vitta-shell--doctor .vitta-page:has(.vitta-doctor-agenda-cta) .vitta-page-header-art {
+  right: 1.25rem;
+  bottom: -.625rem;
+  width: 40.4375rem;
+  height: 9.875rem;
+  opacity: 1;
 }
 .vitta-doctor-patient-empty { position: relative; min-width: 0; }
 .vitta-doctor-patient-empty .vitta-empty-state,
@@ -4547,12 +4656,24 @@ button:disabled,
   bottom: 0;
   left: 0;
   height: 5rem;
-  background-image: url('/doctor-empty-wave.svg');
+  background-image: none;
   background-repeat: no-repeat;
   background-position: center bottom;
   background-size: 100% 100%;
   content: "";
   pointer-events: none;
+}
+.vitta-doctor-patient-empty .vitta-empty-state::after {
+  height: 4.5rem;
+  background-image: url('/doctor-patients-empty-wave.png');
+}
+.vitta-doctor-records-empty-panel .vitta-empty-state::after {
+  height: 3.375rem;
+  background-image: url('/doctor-records-empty-wave.png');
+}
+.vitta-doctor-active-empty::after {
+  height: 5rem;
+  background-image: url('/doctor-overview-empty-wave.png');
 }
 .vitta-doctor-patient-empty .vitta-empty-state > div,
 .vitta-doctor-records-empty-panel .vitta-empty-state > div,
@@ -4569,9 +4690,10 @@ button:disabled,
 }
 .vitta-doctor-patient-empty .vitta-empty-state {
   min-height: 16rem;
-  padding: 1rem 1rem 3.5rem;
+  padding: 1rem 1rem 3.25rem;
 }
-.vitta-doctor-patient-empty .vitta-empty-icon,
+.vitta-doctor-patient-empty .vitta-empty-state > div { gap: 4px; }
+.vitta-doctor-patient-empty .vitta-empty-state .rt-Text { margin-top: .5rem; }
 .vitta-doctor-records-empty-panel .vitta-empty-icon {
   width: 4.5rem;
   height: 4.5rem;
@@ -4581,6 +4703,10 @@ button:disabled,
 .vitta-doctor-records-empty-panel .vitta-empty-icon svg {
   width: 2rem;
   height: 2rem;
+}
+.vitta-doctor-patient-empty .vitta-empty-icon {
+  width: 4.25rem;
+  height: 4.25rem;
 }
 .vitta-doctor-patient-empty .vitta-empty-state .rt-Heading {
   font-size: 1.5rem;
@@ -4592,7 +4718,7 @@ button:disabled,
   line-height: 1.5;
 }
 .vitta-doctor-records-empty-panel .vitta-empty-state {
-  min-height: 22.5rem;
+  min-height: 22.1875rem;
   padding: 1.5rem 1rem 2.75rem;
 }
 .vitta-doctor-records-empty-panel .vitta-empty-state > .rx-Stack {
@@ -4613,17 +4739,36 @@ button:disabled,
 .vitta-doctor-active-empty {
   min-height: 12.875rem;
   justify-content: center;
+  padding: 0 2rem .375rem 0;
   border-radius: var(--vitta-radius-control);
+  background-image: linear-gradient(180deg, #f8fcfc 0%, #f2fbfa 100%);
 }
 .vitta-doctor-active-empty-icon {
-  width: 3.5rem;
-  height: 3.5rem;
+  width: 4rem;
+  height: 3rem;
   border-radius: .85rem;
+}
+.vitta-doctor-active-call-next {
+  width: 14.5rem;
+  height: 2.875rem;
+  max-width: 100%;
+  margin-top: .375rem;
+  gap: .55rem;
+}
+.vitta-shell--doctor .vitta-doctor-active-call-next {
+  border-color: var(--vitta-primary);
+  background-color: var(--vitta-primary);
+  color: #fff;
+}
+.vitta-shell--doctor .vitta-doctor-active-call-next:hover:not(:disabled) {
+  border-color: var(--vitta-primary-hover);
+  background-color: var(--vitta-primary-hover);
 }
 .vitta-doctor-active-empty > div { position: relative; z-index: 1; }
 @media (max-width: 800px) {
   .vitta-doctor-patient-list { min-height: 0; }
   .vitta-doctor-records-empty-panel .vitta-empty-state { min-height: 19rem; }
+  .vitta-doctor-active-empty { padding-right: 0; }
 }
 @media (max-width: 1050px) {
   .vitta-shell--admin .vitta-page:has(.vitta-staff-create-banner),
@@ -4656,6 +4801,16 @@ button:disabled,
     height: 100%;
     opacity: .48;
   }
+  .vitta-shell--doctor .vitta-page:has(.vitta-doctor-overview-grid) .vitta-page-header-art,
+  .vitta-shell--doctor .vitta-page:has(.vitta-doctor-agenda-cta) .vitta-page-header-art,
+  .vitta-shell--doctor .vitta-page:has(.vitta-doctor-patient-list) .vitta-page-header-art,
+  .vitta-shell--doctor .vitta-page:has(.vitta-doctor-records-workspace) .vitta-page-header-art {
+    right: .5rem;
+    bottom: -.5rem;
+    width: 44%;
+    height: auto;
+    opacity: .48;
+  }
 }
 @media (max-width: 575px) {
   .vitta-shell .vitta-page-header--illustrated {
@@ -4674,6 +4829,16 @@ button:disabled,
     right: -.6rem;
     bottom: -.5rem;
     width: 60%;
+    opacity: .2;
+  }
+  .vitta-shell--doctor .vitta-page:has(.vitta-doctor-overview-grid) .vitta-page-header-art,
+  .vitta-shell--doctor .vitta-page:has(.vitta-doctor-agenda-cta) .vitta-page-header-art,
+  .vitta-shell--doctor .vitta-page:has(.vitta-doctor-patient-list) .vitta-page-header-art,
+  .vitta-shell--doctor .vitta-page:has(.vitta-doctor-records-workspace) .vitta-page-header-art {
+    right: -.6rem;
+    bottom: -.5rem;
+    width: 60%;
+    height: auto;
     opacity: .2;
   }
   .vitta-shell .vitta-page-header-actions {

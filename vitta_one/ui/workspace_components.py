@@ -13,6 +13,7 @@ def _calendar_grid(
     cells, month_label, previous, next_, *, heading: str | None = None,
     class_name: str | None = None,
 ) -> rx.Component:
+    doctor_calendar = class_name == "vitta-doctor-calendar-panel"
     children: list[rx.Component] = []
     if heading:
         children.extend(
@@ -29,30 +30,52 @@ def _calendar_grid(
                     width="100%",
                     class_name="vitta-doctor-month-heading",
                 ),
-                rx.separator(),
+                rx.separator(class_name="vitta-doctor-month-divider"),
             )
         )
     children.extend(
         (
             rx.flex(
-                rx.button("‹", type="button", variant="outline", aria_label="Mês anterior", on_click=previous),
+                rx.button(
+                    rx.icon("chevron_left", size=22, aria_hidden="true")
+                    if doctor_calendar else "‹",
+                    type="button", variant="outline", aria_label="Mês anterior",
+                    on_click=previous,
+                ),
                 rx.heading(month_label, size="4", text_align="center"),
-                rx.button("›", type="button", variant="outline", aria_label="Próximo mês", on_click=next_),
+                rx.button(
+                    rx.icon("chevron_right", size=22, aria_hidden="true")
+                    if doctor_calendar else "›",
+                    type="button", variant="outline", aria_label="Próximo mês",
+                    on_click=next_,
+                ),
                 justify="between",
                 align="center",
                 width="100%",
+                **(
+                    {"class_name": "vitta-doctor-month-nav"}
+                    if doctor_calendar else {}
+                ),
             ),
             rx.grid(
                 *[rx.text(day, size="1", text_align="center", color="var(--vitta-text-muted)") for day in _WEEKDAYS],
                 columns="repeat(7, minmax(0, 1fr))",
                 gap="0.25rem",
                 width="100%",
+                **(
+                    {"class_name": "vitta-doctor-month-weekdays"}
+                    if doctor_calendar else {}
+                ),
             ),
             rx.grid(
                 rx.foreach(
                     cells,
                     lambda cell: rx.box(
-                        rx.text(cell["day"], size="2", font_weight="700"),
+                        rx.text(
+                            cell["day"],
+                            size="3" if doctor_calendar else "2",
+                            font_weight="700",
+                        ),
                         rx.cond(
                             cell["count"] > 0,
                             rx.badge(cell["count"], color_scheme="teal", variant="soft", size="1"),
@@ -64,32 +87,48 @@ def _calendar_grid(
                         border_radius="0.65rem",
                         background=rx.cond(cell["count"] > 0, "var(--vitta-primary-soft)", "var(--vitta-surface)"),
                         overflow="hidden",
+                        **(
+                            {"class_name": "vitta-doctor-month-cell"}
+                            if doctor_calendar else {}
+                        ),
                     ),
                 ),
                 columns="repeat(7, minmax(0, 1fr))",
                 gap="0.25rem",
                 width="100%",
+                **(
+                    {"class_name": "vitta-doctor-month-days"}
+                    if doctor_calendar else {}
+                ),
             ),
         )
     )
     return section_panel(
         rx.vstack(
             *children,
-            spacing="3",
+            spacing="0" if doctor_calendar else "3",
             width="100%",
             align="stretch",
+            **(
+                {"class_name": "vitta-doctor-month-content"}
+                if doctor_calendar else {}
+            ),
         ),
         class_name=class_name,
+        padding=(
+            rx.breakpoints(initial="1rem", sm="7px 20px 16px")
+            if doctor_calendar else None
+        ),
     )
 
 
 def _doctor_week_day(day) -> rx.Component:
     return rx.box(
         rx.vstack(
-            rx.text(day["day_label"], size="2", font_weight="700",
+            rx.text(day["day_label"], size="3", font_weight="700",
                     color="var(--vitta-text-muted)"),
-            rx.heading(day["date_label"], size="5"),
-            rx.separator(),
+            rx.heading(day["date_label"], size="6", margin_top="4px"),
+            rx.separator(margin_top="10px"),
             rx.cond(
                 day["entries"].length() > 0,
                 rx.vstack(
@@ -104,11 +143,18 @@ def _doctor_week_day(day) -> rx.Component:
                         )
                     ),
                     spacing="2", width="100%", align="stretch",
+                    margin_top="8px",
                 ),
-                rx.text("Sem consultas", size="1",
-                        color="var(--vitta-text-muted)", padding_top="0.75rem"),
+                rx.hstack(
+                    rx.icon("calendar_days", size=19, aria_hidden="true"),
+                    rx.text("Sem consultas", size="3",
+                            color="var(--vitta-text-muted)"),
+                    align="center", gap="0.5rem", min_width="0",
+                    margin_top="10px", class_name="vitta-doctor-week-empty",
+                ),
             ),
-            spacing="3", width="100%", align="stretch",
+            spacing="0", width="100%", align="stretch",
+            class_name="vitta-doctor-week-day-content",
         ),
         role="region",
         aria_label="Consultas de " + day["day_label"] + " " + day["date_label"],
@@ -133,7 +179,7 @@ def doctor_week_calendar() -> rx.Component:
                             size="2", color="var(--vitta-text-muted)"),
                     spacing="1", align="start", min_width="0",
                 ),
-                gap="4", align="center", width="100%",
+                gap="5", align="center", width="100%",
                 class_name="vitta-doctor-week-heading",
             ),
             rx.box(
@@ -147,6 +193,10 @@ def doctor_week_calendar() -> rx.Component:
             class_name="vitta-doctor-week-content",
         ),
         class_name="vitta-doctor-week-panel",
+        padding=rx.breakpoints(
+            initial="1rem",
+            sm="14px 20px 12px",
+        ),
     )
 
 
@@ -241,7 +291,8 @@ def doctor_patient_list() -> rx.Component:
                     ),
                     spacing="1", align="start", min_width="0",
                 ),
-                gap="4", align="center", width="100%",
+                gap="1.0625rem", align="start", width="100%",
+                padding_left="0.5rem",
                 class_name="vitta-doctor-patient-heading",
             ),
             rx.cond(
@@ -283,6 +334,7 @@ def doctor_patient_list() -> rx.Component:
             align="stretch",
         ),
         class_name="vitta-doctor-patient-list",
+        padding=rx.breakpoints(initial="1rem", sm="14px 1.375rem 1rem"),
     )
 
 

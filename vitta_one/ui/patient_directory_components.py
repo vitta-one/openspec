@@ -136,6 +136,7 @@ def patient_directory_workspace() -> rx.Component:
                 class_name="vitta-primary-action vitta-patient-directory-new",
             ),
             show_art=True,
+            art_source="/clinic-reception-patients-hero.png",
         ),
         section_panel(
             rx.vstack(
@@ -436,7 +437,7 @@ def patient_create_workspace() -> rx.Component:
             section_panel(
                 rx.vstack(
                     rx.image(
-                        src="/patient-registration-guide.svg", alt="",
+                        src="/patient-registration-guide-exact.png", alt="",
                         aria_hidden="true", class_name="vitta-patient-create-illustration",
                     ),
                     rx.heading("O que acontece depois?", size="4"),
