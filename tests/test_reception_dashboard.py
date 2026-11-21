@@ -85,6 +85,7 @@ def test_empty_overview_reports_honest_zero_and_empty_calendar(db):
     snap = get_reception_overview(db, now=datetime(2026, 10, 14, 15, tzinfo=timezone.utc))
     assert snap.clinic_date == "2026-10-14"
     assert snap.scheduled_today == 0
+    assert snap.cancelled_today == 0
     assert snap.waiting == snap.attending == snap.finished_today == 0
     assert snap.confirmed_today == snap.arrivals_pending == 0
     assert not snap.calendar_consultations
@@ -103,6 +104,7 @@ def test_real_counts_are_disjoint_and_calendar_keeps_operational_statuses(db):
     queue(db, patient, status="FINALIZADO", finished=datetime(2026, 10, 13, 14, tzinfo=timezone.utc))
     snap = get_reception_overview(db, now=now)
     assert snap.scheduled_today == 3
+    assert snap.cancelled_today == 1
     assert snap.arrivals_pending == 1
     assert snap.confirmed_today == 1
     assert snap.waiting == 2 and snap.attending == 1 and snap.finished_today == 1
@@ -128,6 +130,7 @@ def test_calendar_dates_are_clinic_local_not_utc(db):
     snap = get_reception_overview(db, now=now)
     assert snap.clinic_date == "2026-10-14"
     assert snap.scheduled_today == 1
+    assert snap.cancelled_today == 0
     assert {item.id for item in snap.calendar_consultations} == {
         local_late_evening.id,
         local_next_day.id,

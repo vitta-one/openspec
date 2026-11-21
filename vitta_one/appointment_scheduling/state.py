@@ -30,6 +30,7 @@ from vitta_one.appointment_scheduling.reception_calendar import (
     build_week_days,
     count_calendar_outside_business_hours,
     filter_consultations_for_day,
+    format_week_period_label,
     monday_of_week,
     week_bounds,
 )
@@ -439,7 +440,7 @@ class AdminAvailabilityState(rx.State):
             professionals = _professional_rows(professional_items)
             allowed = {item["value"] for item in professionals}
             if self.selected_professional not in allowed:
-                self.selected_professional = professionals[0]["value"] if professionals else "__none__"
+                self.selected_professional = "__none__"
             self.filter_professional = (
                 self.selected_professional if self.selected_professional != "__none__" else "__all__"
             )
@@ -852,10 +853,9 @@ class ReceptionAgendaState(rx.State):
 
     @rx.var
     def agenda_period_label(self) -> str:
-        start, end = week_bounds(
+        return format_week_period_label(
             self.filter_start_date or monday_of_week(clinic_today_iso())
         )
-        return f"{date.fromisoformat(start):%d/%m/%Y} a {date.fromisoformat(end):%d/%m/%Y}"
 
     @rx.var
     def selected_agenda_day_label(self) -> str:

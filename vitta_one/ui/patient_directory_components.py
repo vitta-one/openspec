@@ -17,16 +17,33 @@ def _patient_row(row) -> rx.Component:
     """One semantic table row, with an explicit patient-detail action."""
     return rx.el.tr(
         rx.el.td(
-            rx.text(
-                row["name"], font_weight="700", color="var(--vitta-text)",
-                overflow_wrap="anywhere",
-            ),
-            rx.text(
-                row["phone"], size="1", color="var(--vitta-text-muted)",
-                class_name="vitta-patient-directory-mobile-phone",
-                overflow_wrap="anywhere",
+            rx.flex(
+                rx.box(
+                    rx.icon("user_round", size=21, aria_hidden="true"),
+                    class_name="vitta-patient-directory-avatar",
+                    aria_hidden="true",
+                ),
+                rx.vstack(
+                    rx.text(
+                        row["name"], font_weight="700", color="var(--vitta-text)",
+                        overflow_wrap="anywhere",
+                    ),
+                    rx.text(
+                        row["phone"], size="1", color="var(--vitta-text-muted)",
+                        class_name="vitta-patient-directory-mobile-phone",
+                        overflow_wrap="anywhere",
+                    ),
+                    spacing="1", align="start", min_width="0",
+                ),
+                gap="3", align="center", min_width="0",
             ),
             data_label="Paciente",
+        ),
+        rx.el.td(
+            rx.text("—", color="var(--vitta-text-muted)"),
+            data_label="CPF",
+            class_name="vitta-patient-directory-cpf-column",
+            aria_label="CPF não disponível nesta listagem",
         ),
         rx.el.td(
             rx.text(row["phone"], size="2", overflow_wrap="anywhere"),
@@ -36,7 +53,7 @@ def _patient_row(row) -> rx.Component:
         rx.el.td(
             rx.link(
                 "Ver detalhes",
-                href=row["href"].to(str),
+                href="/recepcao/pacientes/" + row["id"].to(str),
                 aria_label="Ver detalhes de " + row["name"],
                 class_name="vitta-context-link vitta-patient-directory-detail",
             ),
@@ -52,6 +69,7 @@ def _patient_directory_table() -> rx.Component:
         rx.el.thead(
             rx.el.tr(
                 rx.el.th("Paciente", scope="col"),
+                    rx.el.th("CPF", scope="col", class_name="vitta-patient-directory-cpf-column"),
                 rx.el.th(
                     "Telefone", scope="col",
                     class_name="vitta-patient-directory-phone-column",
@@ -118,19 +136,27 @@ def patient_directory_workspace() -> rx.Component:
                 class_name="vitta-primary-action vitta-patient-directory-new",
             ),
             show_art=True,
+            art_source="/clinic-reception-patients-hero.png",
         ),
         section_panel(
             rx.vstack(
                 rx.el.form(
                     rx.flex(
+                        rx.el.label(
+                            "Buscar por nome, CPF ou telefone",
+                            html_for="patient-directory-search",
+                            class_name="vitta-sr-only",
+                        ),
                         rx.box(
-                            field_label("Pesquisar pacientes", "patient-directory-search"),
+                            rx.icon(
+                                "search", size=19, aria_hidden="true",
+                                class_name="vitta-patient-directory-search-icon",
+                            ),
                             rx.el.input(
                                 id="patient-directory-search", type="search",
-                                name="query", placeholder="Nome, CPF ou telefone",
+                                name="query", placeholder="Buscar por nome, CPF ou telefone...",
                                 auto_complete="off", max_length=100,
                                 class_name="vitta-input",
-                                margin_top="0.4rem",
                                 value=S.patient_directory_query,
                                 on_change=S.update_patient_directory_query,
                                 aria_describedby="patient-directory-search-help",
@@ -138,10 +164,10 @@ def patient_directory_workspace() -> rx.Component:
                             rx.text(
                                 "A pesquisa considera nome, CPF e telefone dos cadastros autorizados.",
                                 id="patient-directory-search-help",
-                                size="1", margin_top="0.4rem",
-                                color="var(--vitta-text-muted)",
+                                class_name="vitta-sr-only",
                             ),
                             width="100%", flex="1", min_width="0",
+                            class_name="vitta-patient-directory-search-control",
                         ),
                         rx.hstack(
                             rx.button(
@@ -158,8 +184,9 @@ def patient_directory_workspace() -> rx.Component:
                             ),
                             spacing="2", align="center", flex_wrap="wrap",
                         ),
-                        align="end", gap="3", width="100%",
+                        align="center", gap="3", width="100%",
                         direction=rx.breakpoints(initial="column", sm="row"),
+                        class_name="vitta-patient-directory-search-form",
                     ),
                     on_submit=S.search_patient_directory,
                     width="100%",
@@ -242,6 +269,7 @@ def patient_directory_workspace() -> rx.Component:
             ),
         ),
         spacing="4", align="stretch", width="100%",
+        class_name="vitta-patient-directory-workspace",
     )
 
 
@@ -259,25 +287,44 @@ def patient_create_workspace() -> rx.Component:
             section_panel(
                 rx.el.form(
                     rx.vstack(
-                        rx.heading("Dados pessoais", size="4", color="var(--vitta-text)"),
-                        rx.text("Campos marcados com * são obrigatórios.",
-                                size="2", color="var(--vitta-text-muted)"),
+                        rx.hstack(
+                            rx.box(
+                                rx.icon("user_round", size=42),
+                                class_name="vitta-patient-create-heading-icon",
+                                aria_hidden="true",
+                            ),
+                            rx.vstack(
+                                rx.heading("Dados pessoais", size="5", color="var(--vitta-text)"),
+                                rx.text("Campos marcados com * são obrigatórios.",
+                                        size="2", color="var(--vitta-text-muted)",
+                                        class_name="vitta-patient-create-subtitle"),
+                                spacing="1", align="start", min_width="0",
+                                class_name="vitta-patient-create-heading-copy",
+                            ),
+                            align="center", gap="5", width="100%",
+                            class_name="vitta-patient-create-heading",
+                        ),
                         feedback_region(
                             S.error_message, S.success_message,
                             element_id="patient-create-feedback",
                         ),
                         rx.box(
                             field_label("Nome completo *", "patient-create-name"),
-                            rx.el.input(
-                                id="patient-create-name", name="name", type="text",
-                                auto_complete="name", required=True, max_length=160,
-                                placeholder="Nome completo do paciente",
-                                class_name="vitta-input", margin_top="0.45rem",
-                                value=S.new_patient_name,
-                                on_change=S.update_new_patient_name,
-                                disabled=S.is_submitting,
-                                aria_invalid=S.new_patient_name_error != "",
-                                aria_describedby="patient-create-name-error",
+                            rx.box(
+                                rx.icon("user_round", size=20, aria_hidden="true"),
+                                rx.el.input(
+                                    id="patient-create-name", name="name", type="text",
+                                    auto_complete="name", required=True, max_length=160,
+                                    placeholder="Nome completo do paciente",
+                                    class_name="vitta-input", margin_top="0.45rem",
+                                    value=S.new_patient_name,
+                                    on_change=S.update_new_patient_name,
+                                    disabled=S.is_submitting,
+                                    aria_invalid=S.new_patient_name_error != "",
+                                    aria_describedby="patient-create-name-error",
+                                ),
+                                class_name="vitta-patient-create-input-icon",
+                                width="100%",
                             ),
                             rx.text(
                                 S.new_patient_name_error,
@@ -289,17 +336,22 @@ def patient_create_workspace() -> rx.Component:
                         ),
                         rx.box(
                             field_label("CPF *", "patient-create-cpf"),
-                            rx.el.input(
-                                id="patient-create-cpf", name="cpf", type="text",
-                                input_mode="numeric", auto_complete="off",
-                                required=True, max_length=14,
-                                placeholder="000.000.000-00",
-                                class_name="vitta-input", margin_top="0.45rem",
-                                value=S.new_patient_cpf,
-                                on_change=S.update_new_patient_cpf,
-                                disabled=S.is_submitting,
-                                aria_invalid=S.new_patient_cpf_error != "",
-                                aria_describedby="patient-create-cpf-help patient-create-cpf-error",
+                            rx.box(
+                                rx.icon("id_card", size=20, aria_hidden="true"),
+                                rx.el.input(
+                                    id="patient-create-cpf", name="cpf", type="text",
+                                    input_mode="numeric", auto_complete="off",
+                                    required=True, max_length=14,
+                                    placeholder="000.000.000-00",
+                                    class_name="vitta-input", margin_top="0.45rem",
+                                    value=S.new_patient_cpf,
+                                    on_change=S.update_new_patient_cpf,
+                                    disabled=S.is_submitting,
+                                    aria_invalid=S.new_patient_cpf_error != "",
+                                    aria_describedby="patient-create-cpf-help patient-create-cpf-error",
+                                ),
+                                class_name="vitta-patient-create-input-icon",
+                                width="100%",
                             ),
                             rx.text(
                                 "Digite os 11 números do CPF. A formatação será aplicada automaticamente.",
@@ -326,16 +378,21 @@ def patient_create_workspace() -> rx.Component:
                         ),
                         rx.box(
                             field_label("Telefone (opcional)", "patient-create-phone"),
-                            rx.el.input(
-                                id="patient-create-phone", name="phone", type="tel",
-                                input_mode="numeric", auto_complete="tel",
-                                max_length=15, placeholder="(11) 99999-9999",
-                                class_name="vitta-input", margin_top="0.45rem",
-                                value=S.new_patient_phone,
-                                on_change=S.update_new_patient_phone,
-                                disabled=S.is_submitting,
-                                aria_invalid=S.new_patient_phone_error != "",
-                                aria_describedby="patient-create-phone-error",
+                            rx.box(
+                                rx.icon("phone", size=20, aria_hidden="true"),
+                                rx.el.input(
+                                    id="patient-create-phone", name="phone", type="tel",
+                                    input_mode="numeric", auto_complete="tel",
+                                    max_length=15, placeholder="(11) 99999-9999",
+                                    class_name="vitta-input", margin_top="0.45rem",
+                                    value=S.new_patient_phone,
+                                    on_change=S.update_new_patient_phone,
+                                    disabled=S.is_submitting,
+                                    aria_invalid=S.new_patient_phone_error != "",
+                                    aria_describedby="patient-create-phone-error",
+                                ),
+                                class_name="vitta-patient-create-input-icon",
+                                width="100%",
                             ),
                             rx.text(
                                 S.new_patient_phone_error,
@@ -360,6 +417,7 @@ def patient_create_workspace() -> rx.Component:
                                 class_name="vitta-context-link",
                             ),
                             rx.button(
+                                rx.icon("user_plus", size=24, aria_hidden="true"),
                                 "Cadastrar paciente", type="submit",
                                 color_scheme="teal", high_contrast=True,
                                 disabled=S.is_submitting | (S.new_patient_created_id > 0),
@@ -375,56 +433,88 @@ def patient_create_workspace() -> rx.Component:
                     on_submit=S.create_patient,
                     no_validate=True, width="100%",
                 ),
+                padding=rx.breakpoints(initial="1rem", lg="1.5rem 1.625rem"),
             ),
             width="100%",
+            class_name="vitta-patient-create-form-panel",
             ),
             section_panel(
+                rx.image(
+                    src="/patient-registration-guide-exact.png", alt="",
+                    aria_hidden="true", class_name="vitta-patient-create-illustration",
+                ),
                 rx.vstack(
-                    rx.heading("O que acontece depois?", size="4"),
-                    rx.text(
-                        "O cadastro cria uma ficha operacional para a Recepção.",
-                        size="2", color="var(--vitta-text-muted)", line_height="1.55",
+                    rx.hstack(
+                        rx.box(
+                            rx.icon("info", size=22),
+                            class_name="vitta-patient-create-info-icon",
+                            aria_hidden="true",
+                        ),
+                        rx.vstack(
+                            rx.heading(
+                                "O que acontece depois?", size="4",
+                                class_name="vitta-patient-create-guidance-heading",
+                            ),
+                            rx.text(
+                                "Após o cadastro, você será direcionado à ficha do paciente, onde poderá complementar as informações, consultar histórico e realizar agendamentos.",
+                                size="2", color="var(--vitta-text-muted)", line_height="1.5",
+                                class_name="vitta-patient-create-guidance-description",
+                            ),
+                            align="start", spacing="1", min_width="0",
+                            class_name="vitta-patient-create-guidance-copy",
+                        ),
+                        align="start", gap="5", width="100%",
+                        class_name="vitta-patient-create-guidance-intro",
                     ),
-                    rx.image(
-                        src="/patient-registration-guide.svg",
-                        alt="",
-                        aria_hidden="true",
-                        class_name="vitta-patient-create-illustration",
+                    rx.separator(class_name="vitta-patient-create-guidance-divider"),
+                    rx.vstack(
+                        rx.hstack(
+                            rx.icon("sparkles", size=24, color="var(--vitta-primary)"),
+                            rx.heading(
+                                "Dicas", size="4",
+                                class_name="vitta-patient-create-tips-heading",
+                            ),
+                            align="center", gap="8",
+                        ),
+                        _patient_create_tip(
+                            "check",
+                            "Confira se o CPF está correto e com 11 dígitos.",
+                        ),
+                        _patient_create_tip(
+                            "check",
+                            "O telefone é opcional, mas ajuda no contato com o paciente.",
+                        ),
+                        align="stretch", spacing="1", width="100%",
+                        class_name="vitta-patient-create-tips",
                     ),
-                    _patient_create_tip(
-                        "badge_check", "CPF validado",
-                        "O servidor valida o número e alerta se já houver uma ficha correspondente.",
-                    ),
-                    _patient_create_tip(
-                        "phone", "Contato opcional",
-                        "Você pode incluir um telefone agora ou completar esse dado depois.",
-                    ),
-                    _patient_create_tip(
-                        "calendar_plus", "Próximo passo",
-                        "Depois de salvar, abra a ficha e use o fluxo real de agendamento.",
-                    ),
-                    align="stretch", spacing="3", width="100%",
+                    align="stretch", spacing="0", width="100%",
+                    class_name="vitta-patient-create-guidance-body",
                 ),
                 class_name="vitta-patient-create-guidance",
+                padding="0",
+                background="linear-gradient(145deg, #ffffff 0%, #f5fbf9 100%)",
+                border="1px solid #d5e8e5",
             ),
             columns=rx.breakpoints(
-                initial="1", lg="minmax(0, 1.45fr) minmax(18rem, 0.85fr)"
+                initial="1", lg="minmax(0, 1.28fr) minmax(18rem, 0.85fr)"
             ),
-            gap="4", align="start", width="100%",
+            gap="1.5rem", align="start", width="100%",
+            class_name="vitta-patient-create-layout",
         ),
         spacing="4", align="stretch", width="100%",
+        class_name="vitta-patient-create-workspace",
     )
 
 
-def _patient_create_tip(icon: str, title: str, description: str) -> rx.Component:
+def _patient_create_tip(icon: str, description: str) -> rx.Component:
     return rx.flex(
         rx.box(rx.icon(icon, size=18), class_name="vitta-patient-create-tip-icon"),
-        rx.vstack(
-            rx.text(title, font_weight="750", size="2"),
-            rx.text(description, color="var(--vitta-text-muted)", size="1", line_height="1.5"),
-            align="start", spacing="1", min_width="0",
+        rx.text(
+            description, color="var(--vitta-text-muted)", size="2",
+            line_height="1.5", min_width="0",
+            class_name="vitta-patient-create-tip-description",
         ),
-        align="start", gap="3", width="100%",
+        align="center", gap="3", width="100%",
         class_name="vitta-patient-create-tip",
     )
 
@@ -499,7 +589,7 @@ def _patient_detail_sections() -> rx.Component:
                                 S.selected_patient_phone, "Não informado"),
                     ),
                     columns=rx.breakpoints(initial="1", md="3"),
-                    gap="4", width="100%",
+                    gap="1rem", width="100%",
                 ),
                 patient_edit_dialog(),
                 spacing="4", align="stretch", width="100%",
@@ -562,7 +652,7 @@ def _patient_detail_sections() -> rx.Component:
                 )
             ),
             columns=rx.breakpoints(initial="1", lg="minmax(0, 1.4fr) minmax(0, 1fr)"),
-            gap="4", width="100%",
+            gap="1rem", width="100%",
         ),
         section_panel(
             rx.vstack(

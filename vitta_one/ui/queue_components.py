@@ -71,7 +71,7 @@ def patient_selection_summary() -> rx.Component:
     return rx.cond(
         ReceptionQueueState.selected_patient_id > 0,
         rx.flex(
-            rx.box(
+            rx.flex(
                 rx.text("Paciente selecionado", size="1", color="var(--vitta-text-muted)"),
                 rx.text(
                     ReceptionQueueState.selected_patient_name,
@@ -790,37 +790,47 @@ def _queue_filters() -> rx.Component:
 
 def _queue_summary() -> rx.Component:
     return rx.flex(
-        rx.hstack(
-            rx.text("Aguardando", color="var(--vitta-text-muted)"),
-            rx.text(ReceptionQueueState.queue_count, font_weight="750"),
-            gap="2",
-        ),
-        rx.hstack(
-            rx.text("Vermelho", color="var(--vitta-text-muted)"),
-            rx.text(ReceptionQueueState.red_waiting_count, font_weight="750"),
-            gap="2",
-        ),
-        rx.hstack(
-            rx.text("Amarelo", color="var(--vitta-text-muted)"),
-            rx.text(ReceptionQueueState.yellow_waiting_count, font_weight="750"),
-            gap="2",
-        ),
-        rx.hstack(
-            rx.text("Verde", color="var(--vitta-text-muted)"),
-            rx.text(ReceptionQueueState.green_waiting_count, font_weight="750"),
-            gap="2",
-        ),
-        rx.hstack(
-            rx.text("Maior espera", color="var(--vitta-text-muted)"),
-            rx.text(ReceptionQueueState.queue_longest_wait, font_weight="750", class_name="vitta-tabular"),
-            gap="2",
-        ),
+        _queue_summary_metric("Aguardando", ReceptionQueueState.queue_count, "users_round"),
+        _queue_summary_metric("Vermelho", ReceptionQueueState.red_waiting_count,
+                              "triangle_alert", "red"),
+        _queue_summary_metric("Amarelo", ReceptionQueueState.yellow_waiting_count,
+                              "clock_3", "amber"),
+        _queue_summary_metric("Verde", ReceptionQueueState.green_waiting_count,
+                              "circle_check", "green"),
+        _queue_summary_metric("Maior espera", ReceptionQueueState.queue_longest_wait,
+                              "hourglass", "blue"),
+        _queue_summary_metric("Tempo médio de espera", ReceptionQueueState.queue_average_wait,
+                              "clock", "average"),
         flex_wrap="wrap",
         gap="3",
         class_name="vitta-queue-operational-summary",
         width="100%",
         role="status",
         aria_live="polite",
+    )
+
+
+def _queue_summary_metric(label, value, icon: str, tone: str = "teal") -> rx.Component:
+    return rx.flex(
+        rx.box(rx.icon(icon, size=18), class_name=f"vitta-queue-summary-icon vitta-queue-summary-icon--{tone}"),
+        rx.vstack(
+            (
+                rx.vstack(
+                    rx.text(value, size="3", font_weight="800", class_name="vitta-tabular"),
+                    rx.text(label, size="2", color="var(--vitta-text-muted)", line_height="1.2"),
+                    spacing="0", align="start",
+                )
+                if tone == "average"
+                else rx.hstack(
+                    rx.text(value, size="3", font_weight="800", class_name="vitta-tabular"),
+                    rx.text(label, size="2", font_weight="650", color="var(--vitta-text-muted)",
+                            line_height="1.2", overflow_wrap="anywhere"),
+                    spacing="2", align="center", flex_wrap="wrap",
+                )
+            ),
+            spacing="0", align="start", min_width="0",
+        ),
+        align="center", gap="2", class_name="vitta-queue-summary-metric",
     )
 
 
@@ -960,11 +970,14 @@ def active_queue_panel() -> rx.Component:
                         rx.fragment(),
                         rx.vstack(
                             _queue_summary(),
+                            rx.box(
                             empty_state(
                                 "users",
                                 "Nenhum paciente aguardando",
                                 "A fila de espera está vazia no momento.",
-                                min_height="7rem",
+                                min_height="13.5rem",
+                            ),
+                            class_name="vitta-queue-empty",
                             ),
                             spacing="3", width="100%", align="stretch",
                         ),
@@ -974,22 +987,32 @@ def active_queue_panel() -> rx.Component:
             spacing="4",
             width="100%",
             align="stretch",
-        )
+        ),
+        class_name="vitta-queue-active-panel",
     )
 
 def doctor_waiting_summary() -> rx.Component:
     return section_panel(
         rx.flex(
-            rx.box(
-                rx.heading("Fila de atendimento", size="5"),
-                rx.text(
-                    "A chamada respeita prioridade e ordem de chegada. Consultas agendadas são encaminhadas ao médico marcado; atendimentos de pronto-socorro seguem a fila compartilhada.",
-                    color="var(--vitta-text-muted)",
-                    size="2",
-                    line_height="1.55",
-                    margin_top="0.35rem",
-                    max_width="58ch",
+            rx.flex(
+                rx.box(
+                    rx.icon("siren", size=25),
+                    class_name="vitta-doctor-queue-icon",
+                    aria_hidden="true",
                 ),
+                rx.vstack(
+                    rx.heading("Fila de atendimento", size="5"),
+                    rx.text(
+                        "A chamada respeita prioridade e ordem de chegada. Consultas agendadas são encaminhadas ao médico marcado; atendimentos de pronto-socorro seguem a fila compartilhada.",
+                        color="var(--vitta-text-muted)",
+                        size="2",
+                        line_height="1.55",
+                        max_width="58ch",
+                    ),
+                    spacing="1", align="start", min_width="0",
+                ),
+                class_name="vitta-doctor-queue-copy",
+                align="center", gap="4", min_width="0",
             ),
             rx.vstack(
                 rx.box(
@@ -1009,10 +1032,11 @@ def doctor_waiting_summary() -> rx.Component:
                     text_align=rx.breakpoints(initial="left", sm="right"),
                 ),
                 rx.button(
+                    rx.icon("refresh_cw", size=16),
                     "Atualizar fila",
                     type="button",
                     size="2",
-                    variant="ghost",
+                    variant="outline",
                     color_scheme="teal",
                     on_click=DoctorQueueState.load,
                     disabled=DoctorQueueState.is_loading
@@ -1027,7 +1051,9 @@ def doctor_waiting_summary() -> rx.Component:
             align=rx.breakpoints(initial="stretch", sm="center"),
             gap="1rem",
             width="100%",
-        )
+        ),
+        padding="1rem 1.25rem",
+        class_name="vitta-doctor-waiting-summary",
     )
 
 
@@ -2332,6 +2358,11 @@ def doctor_active_panel() -> rx.Component:
         section_panel(
             rx.center(
                 rx.vstack(
+                    rx.box(
+                        rx.icon("users", size=27),
+                        class_name="vitta-doctor-active-empty-icon",
+                        aria_hidden="true",
+                    ),
                     rx.heading("Nenhum atendimento ativo", size="4"),
                     rx.text(
                         "Quando estiver disponível, chame o próximo paciente da fila.",
@@ -2340,21 +2371,25 @@ def doctor_active_panel() -> rx.Component:
                         text_align="center",
                     ),
                     rx.button(
+                        rx.icon("play", size=18, aria_hidden="true"),
                         "Chamar próximo",
                         type="button",
                         color_scheme="teal",
                         high_contrast=True,
-                        min_height="3rem",
+                        min_height="2.875rem",
                         on_click=DoctorQueueState.claim_next,
                         disabled=DoctorQueueState.is_submitting,
                         loading=DoctorQueueState.is_submitting,
+                        class_name="vitta-doctor-active-call-next",
                     ),
-                    spacing="4",
+                    spacing="2",
                     align="center",
                 ),
-                min_height="13rem",
+                min_height="12.875rem",
                 width="100%",
-            )
+                class_name="vitta-doctor-active-empty",
+            ),
+            class_name="vitta-doctor-active-empty-panel",
         ),
     )
 

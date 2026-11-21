@@ -109,6 +109,7 @@ def main() -> None:
         )
         day_first_patient_name = ""
         day_first_patient_phone = ""
+        day_first_patient_id = 0
         for number in range(1, 25):
             daily_patient = create_patient(
                 db,
@@ -119,6 +120,7 @@ def main() -> None:
             if number == 1:
                 day_first_patient_name = daily_patient.name
                 day_first_patient_phone = daily_patient.phone or ""
+                day_first_patient_id = daily_patient.id or 0
             starts_at = daily_start + timedelta(minutes=30 * (number - 1))
             if starts_at >= day_end:
                 raise RuntimeError("Synthetic daily QA appointments exceed the clinic day.")
@@ -261,6 +263,7 @@ def main() -> None:
             "reception_email": receptionist.email,
             "day_first_patient_name": day_first_patient_name,
             "day_first_patient_phone": day_first_patient_phone,
+            "day_first_patient_id": day_first_patient_id,
             "day_first_professional_name": daily_professionals[0].name,
             "day_total": 24,
         }

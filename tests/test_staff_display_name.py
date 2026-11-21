@@ -10,7 +10,7 @@ from vitta_one.auth.roles import Role
 from vitta_one.auth.security import hash_password, verify_password
 from vitta_one.auth.service import create_session
 from vitta_one.auth.staff_service import (
-    create_receptionist, filter_employee_directory, get_employee_detail,
+    count_employee_roles, create_receptionist, filter_employee_directory, get_employee_detail,
     list_employee_directory,
 )
 from vitta_one.auth.authorization import RoleForbiddenError
@@ -56,7 +56,10 @@ def test_admin_can_create_named_receptionist_and_directory_shows_name(db):
     assert user.role == Role.RECEPCIONISTA.value
     assert verify_password(user.password_hash, "Segura123456789!")
     entries = list_employee_directory(db, token=token)
-    assert any(row["name"] == "Maria de Souza" for row in entries)
+    assert any(
+        row["name"] == "Maria de Souza" and row["access_status"] == "Ativo"
+        for row in entries
+    )
 
 
 @pytest.mark.parametrize("name", ["", "A", " " * 4, "X" * 161])
@@ -89,7 +92,9 @@ def test_legacy_identity_is_not_misrepresented_as_a_name(db):
     entries = list_employee_directory(db, token=token)
     assert any(row["name"] == "Nome não informado" and row["email"] == "legado@exemplo.com" for row in entries)
     detail = get_employee_detail(db, token=token, employee_id=user.id)
-    assert detail is not None and detail["name"] == "Nome não informado"
+    assert detail is not None
+    assert detail["name"] == "Nome não informado"
+    assert detail["access_status"] == "Ativo"
 
 
 def test_receptionist_cannot_create_another_receptionist(db):
@@ -140,3 +145,31 @@ def test_patient_users_are_excluded_from_the_staff_directory(db):
     _session(db, Role.PACIENTE)
     rows = list_employee_directory(db, token=admin_token)
     assert rows == []
+
+
+def test_admin_role_counts_include_all_staff_but_exclude_patients(db):
+    admin_token = _session(db, Role.ADMINISTRADOR)
+    users = {}
+    for index, role in enumerate((Role.RECEPCIONISTA, Role.MEDICO, Role.FINANCEIRO, Role.PACIENTE)):
+        user = User(
+            email=f"staff-{index}@clinica.example",
+            password_hash=hash_password("SenhaDeTeste123!"),
+            role=role.value,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        users[role] = user
+
+    assert count_employee_roles(db, token=admin_token) == {
+        "ADMINISTRADOR": 1,
+        "RECEPCIONISTA": 1,
+        "MEDICO": 1,
+        "FINANCEIRO": 1,
+    }
+
+    receptionist_token = create_session(
+        db, user_id=users[Role.RECEPCIONISTA].id, ttl=timedelta(hours=1),
+    )
+    with pytest.raises(RoleForbiddenError):
+        count_employee_roles(db, token=receptionist_token)

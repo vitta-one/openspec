@@ -1,9 +1,9 @@
 """Persisted operational metrics; no auth or UI and no clinical contents."""
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 import re
 
-from sqlalchemy import func, or_
+from sqlalchemy import and_, func, or_
 from sqlmodel import Session, select
 
 from vitta_one.appointment_scheduling.domain import ConsultationStatus
@@ -11,6 +11,7 @@ from vitta_one.appointment_scheduling.service import (
     ProfessionalOption,
     list_active_professionals,
 )
+from vitta_one.appointment_scheduling.settings import clinic_timezone
 from vitta_one.appointment_scheduling.temporal import (
     clinic_date_after_iso,
     clinic_date_range_to_utc,
@@ -49,6 +50,7 @@ class ReceptionOverview:
     as_of: datetime
     clinic_date: str
     scheduled_today: int
+    cancelled_today: int
     waiting: int
     attending: int
     finished_today: int
@@ -86,6 +88,8 @@ def get_reception_overview(
             func.count(Consultation.id)
             .filter(Consultation.status != ConsultationStatus.CANCELADA.value),
             func.count(Consultation.id)
+            .filter(Consultation.status == ConsultationStatus.CANCELADA.value),
+            func.count(Consultation.id)
             .filter(Consultation.status == ConsultationStatus.CONFIRMADA.value),
             func.count(Consultation.id).filter(
                 Consultation.status == ConsultationStatus.AGENDADA.value,
@@ -93,7 +97,7 @@ def get_reception_overview(
             ),
         ).where(*day_consultations)
     ).one()
-    scheduled_today, confirmed_today, arrivals_pending = (
+    scheduled_today, cancelled_today, confirmed_today, arrivals_pending = (
         int(value or 0) for value in consultation_counts
     )
 
@@ -182,6 +186,7 @@ def get_reception_overview(
         as_of=current,
         clinic_date=clinic_date,
         scheduled_today=scheduled_today,
+        cancelled_today=cancelled_today,
         waiting=waiting,
         attending=attending,
         finished_today=finished_today,
@@ -222,14 +227,51 @@ class ReceptionDaySnapshot:
     total_pages: int
 
 
-def _day_search_clause(value: str):
-    """Build a bounded literal search across appointment patient identity fields."""
+def _day_time_clause(value: str, clinic_date: str):
+    """Match an explicit clinic-local HH:MM value independent of DB timezone."""
+    match = re.fullmatch(r"(?P<hour>\d{1,2}):(?P<minute>\d{2})", value)
+    if match is None:
+        return None
+    hour = int(match.group("hour"))
+    minute = int(match.group("minute") or 0)
+    if hour > 23 or minute > 59:
+        return None
+
+    local_naive = datetime.combine(
+        date.fromisoformat(clinic_date), time(hour=hour, minute=minute)
+    )
+    zone = clinic_timezone()
+    interval = timedelta(minutes=1)
+    ranges = []
+    seen: set[datetime] = set()
+    for fold in (0, 1):
+        local = local_naive.replace(tzinfo=zone, fold=fold)
+        start_utc = local.astimezone(timezone.utc)
+        if (
+            start_utc not in seen
+            and start_utc.astimezone(zone).replace(tzinfo=None) == local_naive
+        ):
+            seen.add(start_utc)
+            ranges.append(
+                and_(
+                    Consultation.scheduled_at >= start_utc,
+                    Consultation.scheduled_at < start_utc + interval,
+                )
+            )
+    return or_(*ranges) if ranges else None
+
+
+def _day_search_clause(value: str, clinic_date: str):
+    """Search patient, professional, phone/CPF and clinic-local appointment time."""
     query = " ".join(str(value or "").split())[:100]
     if not query:
         return None
 
     escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-    clauses = [Patient.name.ilike(f"%{escaped}%", escape="\\")]
+    clauses = [
+        Patient.name.ilike(f"%{escaped}%", escape="\\"),
+        Professional.name.ilike(f"%{escaped}%", escape="\\"),
+    ]
     digits = re.sub(r"\D", "", query)
     if digits:
         clauses.extend(
@@ -238,6 +280,9 @@ def _day_search_clause(value: str):
                 func.coalesce(Patient.phone, "").like(f"%{digits}%"),
             )
         )
+    time_clause = _day_time_clause(query, clinic_date)
+    if time_clause is not None:
+        clauses.append(time_clause)
     return or_(*clauses)
 
 
@@ -247,6 +292,7 @@ def get_reception_day(
     now: datetime | None = None,
     professional_id: int | None = None,
     search: str = "",
+    status: str = "",
     page: int = 1,
     page_size: int = 7,
 ) -> ReceptionDaySnapshot:
@@ -265,6 +311,13 @@ def get_reception_day(
             raise ValueError("Selecione um profissional válido.")
         if db.get(Professional, professional_id) is None:
             raise ValueError("Selecione um profissional válido.")
+    requested_status = str(status or "").strip()
+    if requested_status == "__all__":
+        requested_status = ""
+    if requested_status and requested_status not in {
+        item.value for item in ConsultationStatus
+    }:
+        raise ValueError("Selecione uma situação válida.")
 
     current = ensure_utc(now or datetime.now(timezone.utc))
     clinic_date = clinic_today_iso(current)
@@ -277,7 +330,9 @@ def get_reception_day(
     ]
     if professional_id is not None:
         conditions.append(Consultation.professional_id == professional_id)
-    search_clause = _day_search_clause(search)
+    if requested_status:
+        conditions.append(Consultation.status == requested_status)
+    search_clause = _day_search_clause(search, clinic_date)
     if search_clause is not None:
         conditions.append(search_clause)
 
@@ -286,6 +341,7 @@ def get_reception_day(
             select(func.count(Consultation.id))
             .select_from(Consultation)
             .join(Patient, Patient.id == Consultation.patient_id)
+            .join(Professional, Professional.id == Consultation.professional_id)
             .where(*conditions)
         ).one()
         or 0

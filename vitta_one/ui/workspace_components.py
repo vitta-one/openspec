@@ -9,28 +9,73 @@ from vitta_one.ui.components import empty_state, section_panel, field_label, fee
 _WEEKDAYS = ("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")
 
 
-def _calendar_grid(cells, month_label, previous, next_) -> rx.Component:
-    return section_panel(
-        rx.vstack(
+def _calendar_grid(
+    cells, month_label, previous, next_, *, heading: str | None = None,
+    class_name: str | None = None,
+) -> rx.Component:
+    doctor_calendar = class_name == "vitta-doctor-calendar-panel"
+    children: list[rx.Component] = []
+    if heading:
+        children.extend(
+            (
+                rx.hstack(
+                    rx.box(
+                        rx.icon("calendar_days", size=28),
+                        class_name="vitta-doctor-month-heading-icon",
+                        aria_hidden="true",
+                    ),
+                    rx.heading(heading, size="5"),
+                    align="center",
+                    gap="4",
+                    width="100%",
+                    class_name="vitta-doctor-month-heading",
+                ),
+                rx.separator(class_name="vitta-doctor-month-divider"),
+            )
+        )
+    children.extend(
+        (
             rx.flex(
-                rx.button("‹", type="button", variant="outline", aria_label="Mês anterior", on_click=previous),
+                rx.button(
+                    rx.icon("chevron_left", size=22, aria_hidden="true")
+                    if doctor_calendar else "‹",
+                    type="button", variant="outline", aria_label="Mês anterior",
+                    on_click=previous,
+                ),
                 rx.heading(month_label, size="4", text_align="center"),
-                rx.button("›", type="button", variant="outline", aria_label="Próximo mês", on_click=next_),
+                rx.button(
+                    rx.icon("chevron_right", size=22, aria_hidden="true")
+                    if doctor_calendar else "›",
+                    type="button", variant="outline", aria_label="Próximo mês",
+                    on_click=next_,
+                ),
                 justify="between",
                 align="center",
                 width="100%",
+                **(
+                    {"class_name": "vitta-doctor-month-nav"}
+                    if doctor_calendar else {}
+                ),
             ),
             rx.grid(
                 *[rx.text(day, size="1", text_align="center", color="var(--vitta-text-muted)") for day in _WEEKDAYS],
                 columns="repeat(7, minmax(0, 1fr))",
-                gap="1",
+                gap="0.25rem",
                 width="100%",
+                **(
+                    {"class_name": "vitta-doctor-month-weekdays"}
+                    if doctor_calendar else {}
+                ),
             ),
             rx.grid(
                 rx.foreach(
                     cells,
                     lambda cell: rx.box(
-                        rx.text(cell["day"], size="2", font_weight="700"),
+                        rx.text(
+                            cell["day"],
+                            size="3" if doctor_calendar else "2",
+                            font_weight="700",
+                        ),
                         rx.cond(
                             cell["count"] > 0,
                             rx.badge(cell["count"], color_scheme="teal", variant="soft", size="1"),
@@ -42,26 +87,48 @@ def _calendar_grid(cells, month_label, previous, next_) -> rx.Component:
                         border_radius="0.65rem",
                         background=rx.cond(cell["count"] > 0, "var(--vitta-primary-soft)", "var(--vitta-surface)"),
                         overflow="hidden",
+                        **(
+                            {"class_name": "vitta-doctor-month-cell"}
+                            if doctor_calendar else {}
+                        ),
                     ),
                 ),
                 columns="repeat(7, minmax(0, 1fr))",
-                gap="1",
+                gap="0.25rem",
                 width="100%",
+                **(
+                    {"class_name": "vitta-doctor-month-days"}
+                    if doctor_calendar else {}
+                ),
             ),
-            spacing="3",
+        )
+    )
+    return section_panel(
+        rx.vstack(
+            *children,
+            spacing="0" if doctor_calendar else "3",
             width="100%",
             align="stretch",
-        )
+            **(
+                {"class_name": "vitta-doctor-month-content"}
+                if doctor_calendar else {}
+            ),
+        ),
+        class_name=class_name,
+        padding=(
+            rx.breakpoints(initial="1rem", sm="7px 20px 16px")
+            if doctor_calendar else None
+        ),
     )
 
 
 def _doctor_week_day(day) -> rx.Component:
     return rx.box(
         rx.vstack(
-            rx.text(day["day_label"], size="2", font_weight="700",
+            rx.text(day["day_label"], size="3", font_weight="700",
                     color="var(--vitta-text-muted)"),
-            rx.heading(day["date_label"], size="5"),
-            rx.separator(),
+            rx.heading(day["date_label"], size="6", margin_top="4px"),
+            rx.separator(margin_top="10px"),
             rx.cond(
                 day["entries"].length() > 0,
                 rx.vstack(
@@ -76,12 +143,22 @@ def _doctor_week_day(day) -> rx.Component:
                         )
                     ),
                     spacing="2", width="100%", align="stretch",
+                    margin_top="8px",
                 ),
-                rx.text("Sem consultas", size="1",
-                        color="var(--vitta-text-muted)", padding_top="0.75rem"),
+                rx.hstack(
+                    rx.icon("calendar_days", size=19, aria_hidden="true"),
+                    rx.text("Sem consultas", size="3",
+                            color="var(--vitta-text-muted)"),
+                    align="center", gap="0.5rem", min_width="0",
+                    margin_top="10px", class_name="vitta-doctor-week-empty",
+                ),
             ),
-            spacing="3", width="100%", align="stretch",
+            spacing="0", width="100%", align="stretch",
+            class_name="vitta-doctor-week-day-content",
         ),
+        role="region",
+        aria_label="Consultas de " + day["day_label"] + " " + day["date_label"],
+        tab_index=0,
         class_name="vitta-agenda-day",
     )
 
@@ -90,17 +167,35 @@ def doctor_week_calendar() -> rx.Component:
     """Reuse the seven-lane calendar visual language from Reception."""
     return section_panel(
         rx.vstack(
-            rx.heading("Minha semana", size="5"),
-            rx.text("Próximos sete dias de consultas sob sua responsabilidade.",
-                    size="2", color="var(--vitta-text-muted)"),
+            rx.hstack(
+                rx.box(
+                    rx.icon("calendar_days", size=26),
+                    class_name="vitta-doctor-week-heading-icon",
+                    aria_hidden="true",
+                ),
+                rx.vstack(
+                    rx.heading("Minha semana", size="5"),
+                    rx.text("Próximos sete dias de consultas sob sua responsabilidade.",
+                            size="2", color="var(--vitta-text-muted)"),
+                    spacing="1", align="start", min_width="0",
+                ),
+                gap="5", align="center", width="100%",
+                class_name="vitta-doctor-week-heading",
+            ),
             rx.box(
                 rx.grid(
                     rx.foreach(DoctorWorkspaceState.calendar_week, _doctor_week_day),
-                    columns="7", gap="2", class_name="vitta-agenda-week-grid",
+                    columns="7", gap="0.5rem", class_name="vitta-agenda-week-grid",
                 ),
                 width="100%", overflow_x="auto", class_name="vitta-agenda-week-scroll",
             ),
             spacing="4", align="stretch", width="100%",
+            class_name="vitta-doctor-week-content",
+        ),
+        class_name="vitta-doctor-week-panel",
+        padding=rx.breakpoints(
+            initial="1rem",
+            sm="14px 20px 12px",
         ),
     )
 
@@ -111,6 +206,8 @@ def doctor_calendar() -> rx.Component:
         DoctorWorkspaceState.month_label,
         DoctorWorkspaceState.previous_month,
         DoctorWorkspaceState.next_month,
+        heading="Calendário do mês",
+        class_name="vitta-doctor-calendar-panel",
     )
 
 
@@ -179,11 +276,24 @@ def doctor_consultation_list() -> rx.Component:
 def doctor_patient_list() -> rx.Component:
     return section_panel(
         rx.vstack(
-            rx.heading("Pacientes vinculados às suas consultas", size="4"),
-            rx.text(
-                "Esta lista inclui somente pessoas com consulta associada ao seu cadastro profissional.",
-                size="2",
-                color="var(--vitta-text-muted)",
+            rx.hstack(
+                rx.box(
+                    rx.icon("users", size=31),
+                    class_name="vitta-doctor-patient-heading-icon",
+                    aria_hidden="true",
+                ),
+                rx.vstack(
+                    rx.heading("Pacientes vinculados às suas consultas", size="5"),
+                    rx.text(
+                        "Esta lista inclui somente pessoas com consulta associada ao seu cadastro profissional.",
+                        size="2",
+                        color="var(--vitta-text-muted)",
+                    ),
+                    spacing="1", align="start", min_width="0",
+                ),
+                gap="1.0625rem", align="start", width="100%",
+                padding_left="0.5rem",
+                class_name="vitta-doctor-patient-heading",
             ),
             rx.cond(
                 DoctorWorkspaceState.is_loading,
@@ -209,13 +319,22 @@ def doctor_patient_list() -> rx.Component:
                         spacing="2",
                         width="100%",
                     ),
-                    empty_state("users", "Ainda não há pacientes vinculados", "Pacientes aparecem após serem associados a uma consulta sua."),
+                    rx.box(
+                        empty_state(
+                            "users", "Ainda não há pacientes vinculados",
+                            "Pacientes aparecem após serem associados a uma consulta sua.",
+                            min_height="16rem",
+                        ),
+                        width="100%", class_name="vitta-doctor-patient-empty",
+                    ),
                 ),
             ),
-            spacing="3",
+            spacing="4",
             width="100%",
             align="stretch",
-        )
+        ),
+        class_name="vitta-doctor-patient-list",
+        padding=rx.breakpoints(initial="1rem", sm="14px 1.375rem 1rem"),
     )
 
 
@@ -304,18 +423,30 @@ def admin_clinic_configuration() -> rx.Component:
         section_panel(
             rx.vstack(
                 rx.flex(
-                    rx.heading("Informações da clínica", size="4"),
+                    rx.hstack(
+                        rx.box(
+                            rx.icon("settings", size=26),
+                            class_name="vitta-admin-action-icon vitta-clinic-settings-icon",
+                            aria_hidden="true",
+                        ),
+                        rx.vstack(
+                            rx.heading("Informações da clínica", size="5"),
+                            rx.text(
+                                "Nome e endereço exibidos nas informações de atendimento do portal do paciente.",
+                                size="2", color="var(--vitta-text-muted)",
+                            ),
+                            spacing="1", align="start", min_width="0",
+                        ),
+                        align="center", gap="6", min_width="0",
+                    ),
                     rx.badge(
                         rx.cond(AdminClinicConfigurationState.configured, "Configurado", "Não configurado"),
                         color_scheme=rx.cond(AdminClinicConfigurationState.configured, "green", "gray"),
                         variant="soft",
                     ),
-                    justify="between", align="center", gap="2",
-                    flex_wrap="wrap", width="100%",
-                ),
-                rx.text(
-                    "Nome e endereço exibidos nas informações de atendimento do portal do paciente.",
-                    size="2", color="var(--vitta-text-muted)",
+                    justify="between", align="center", gap="3",
+                    width="100%",
+                    class_name="vitta-clinic-settings-heading",
                 ),
                 feedback_region(
                     AdminClinicConfigurationState.error_message,
@@ -348,12 +479,13 @@ def admin_clinic_configuration() -> rx.Component:
                                         on_change=AdminClinicConfigurationState.set_clinic_name,
                                         class_name="vitta-input",
                                         max_length=160, aria_required=True,
+                                        placeholder="Ex.: Clínica Vitta One",
                                         aria_invalid=AdminClinicConfigurationState.name_error != "",
                                         aria_describedby=rx.cond(
                                             AdminClinicConfigurationState.name_error != "",
                                             "clinic-configuration-name-error", "",
                                         ),
-                                        margin_top="0.4rem", width="100%",
+                                        margin_top="0.55rem", width="100%",
                                     ),
                                     rx.cond(
                                         AdminClinicConfigurationState.name_error != "",
@@ -375,13 +507,14 @@ def admin_clinic_configuration() -> rx.Component:
                                         on_change=AdminClinicConfigurationState.set_clinic_address,
                                         class_name="vitta-textarea",
                                         max_length=500, aria_required=True,
+                                        placeholder="Ex.: Rua das Flores, 123 — Centro, Cidade — UF",
                                         aria_invalid=AdminClinicConfigurationState.address_error != "",
                                         aria_describedby=rx.cond(
                                             AdminClinicConfigurationState.address_error != "",
                                             "clinic-configuration-address-error", "",
                                         ),
                                         rows="3", resize="vertical",
-                                        margin_top="0.4rem", width="100%",
+                                        margin_top="0.55rem", width="100%",
                                     ),
                                     rx.cond(
                                         AdminClinicConfigurationState.address_error != "",
@@ -395,25 +528,35 @@ def admin_clinic_configuration() -> rx.Component:
                                     ),
                                     width="100%",
                                 ),
-                                rx.button(
-                                    rx.cond(
-                                        AdminClinicConfigurationState.is_saving,
-                                        "Salvando alterações…", "Salvar alterações",
+                                rx.flex(
+                                    rx.link("Cancelar", href="/admin",
+                                            class_name="vitta-context-link"),
+                                    rx.button(
+                                        rx.cond(
+                                            AdminClinicConfigurationState.is_saving,
+                                            "Salvando alterações…", "Salvar alterações",
+                                        ),
+                                        type="submit", class_name="vitta-primary-action",
+                                        disabled=AdminClinicConfigurationState.is_saving,
+                                        loading=AdminClinicConfigurationState.is_saving,
                                     ),
-                                    type="submit", class_name="vitta-primary-action",
-                                    disabled=AdminClinicConfigurationState.is_saving,
-                                    loading=AdminClinicConfigurationState.is_saving,
+                                    justify="end", align="center", gap="0.75rem",
+                                    flex_wrap="wrap", width="100%",
+                                    class_name="vitta-clinic-settings-actions",
                                 ),
-                                spacing="4", align="stretch", width="100%",
+                                spacing="5", align="stretch", width="100%",
                             ),
                             on_submit=AdminClinicConfigurationState.save,
                             reset_on_submit=False,
+                            margin_top="1.25rem",
                             width="100%",
                         ),
                     ),
                 ),
-                spacing="4", align="stretch", width="100%",
+                spacing="3", align="stretch", width="100%",
             ),
+            padding=rx.breakpoints(initial="1rem", sm="1.75rem 2rem"),
         ),
         width="100%",
+        class_name="vitta-clinic-settings-form",
     )

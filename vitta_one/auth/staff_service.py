@@ -1,4 +1,5 @@
 """Server-authorized creation of receptionist identities."""
+from sqlalchemy import func
 from sqlmodel import Session, select
 from sqlalchemy.exc import IntegrityError
 from vitta_one.auth.authorization import require_role
@@ -45,9 +46,32 @@ def list_employee_directory(db: Session, *, token: str) -> list[dict]:
     return [
         {"id": user.id, "email": user.email, "name": user.display_name or "Nome não informado", "role": user.role,
          "role_label": ("Médico" if user.role == Role.MEDICO.value else "Recepcionista"),
+         # The current auth model has no disabled-user state: staff identities
+         # returned here are usable accounts. Keep this projection tied to that
+         # contract until the model adds an explicit access-status field.
+         "access_status": "Ativo",
          "href": f"/admin/funcionarios/{user.id}"}
         for user in users
     ]
+
+
+def count_employee_roles(db: Session, *, token: str) -> dict[str, int]:
+    """Return aggregate staff counts without exposing identities to the caller."""
+    require_role(db, token, Role.ADMINISTRADOR)
+    staff_roles = (
+        Role.ADMINISTRADOR.value,
+        Role.RECEPCIONISTA.value,
+        Role.MEDICO.value,
+        Role.FINANCEIRO.value,
+    )
+    counts = {role: 0 for role in staff_roles}
+    rows = db.exec(
+        select(User.role, func.count(User.id))
+        .where(User.role.in_(staff_roles))
+        .group_by(User.role)
+    ).all()
+    counts.update({role: int(count) for role, count in rows})
+    return counts
 
 
 def get_employee_detail(db: Session, *, token: str, employee_id: int) -> dict | None:
@@ -86,6 +110,7 @@ def get_employee_detail(db: Session, *, token: str, employee_id: int) -> dict | 
         "has_name": bool(name),
         "role": user.role,
         "role_label": "Médico" if user.role == Role.MEDICO.value else "Recepcionista",
+        "access_status": "Ativo",
         "href": f"/admin/funcionarios/{user.id}",
         "professional_identifier": (
             professional.registration_identifier if professional is not None else ""

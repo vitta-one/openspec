@@ -398,6 +398,53 @@ def test_postgres_concurrent_emission_has_one_external_effect(setup):
     assert provider.calls.count(('POST','/v3/payments'))==1
 
 
+def test_charge_creation_rechecks_active_charge_after_customer_resolution(setup, monkeypatch):
+    db, tokens, patient, consultation, engine = setup
+    provider = Provider()
+    original_customer = financial._customer
+    identity = financial.authorize(db, tokens[Role.FINANCEIRO])
+    attempted_charge_inserts = []
+
+    def simulate_competing_emission(db, resolved_patient, client):
+        customer = original_customer(db, resolved_patient, client)
+        db.add(FinancialCharge(
+            consultation_id=consultation.id,
+            customer_id=customer.id,
+            created_by=identity.id,
+            value=Decimal("80.00"),
+            due_date=date.today() + timedelta(days=1),
+            method="PIX",
+            status="SENDING",
+            operation="CREATE",
+        ))
+        db.commit()
+        return customer
+
+    def count_charge_inserts(conn, cursor, statement, parameters, context, executemany):
+        if statement.lstrip().upper().startswith("INSERT INTO FINANCIAL_CHARGES"):
+            attempted_charge_inserts.append(statement)
+
+    monkeypatch.setattr(financial, "_customer", simulate_competing_emission)
+    event.listen(engine, "before_cursor_execute", count_charge_inserts)
+    try:
+        with pytest.raises(FinancialError, match="cobrança ativa"):
+            financial.create_charge(
+                db,
+                token=tokens[Role.FINANCEIRO],
+                consultation_id=consultation.id,
+                value="100.00",
+                due_date=date.today() + timedelta(days=1),
+                method="PIX",
+                client=provider.client(),
+            )
+    finally:
+        event.remove(engine, "before_cursor_execute", count_charge_inserts)
+
+    assert len(attempted_charge_inserts) == 1
+    assert provider.calls.count(("POST", "/v3/payments")) == 0
+    assert len(db.exec(select(FinancialCharge)).all()) == 1
+
+
 def test_invalid_and_provisional_session_denied(setup):
     db,tokens,patient,consultation,_=setup
     with pytest.raises(PermissionError):

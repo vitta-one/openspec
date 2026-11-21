@@ -109,6 +109,7 @@ class ReceptionDashboardState(rx.State):
 
     appointments: list[ReceptionAppointmentRow] = []
     overview_scheduled: int = 0
+    overview_cancelled: int = 0
     overview_waiting: int = 0
     overview_attending: int = 0
     overview_pending: int = 0
@@ -120,10 +121,11 @@ class ReceptionDashboardState(rx.State):
     calendar_week: list[AgendaDay] = []
     upcoming_appointments: list[UpcomingAppointmentRow] = []
     professional_options: list[ProfessionalOptionRow] = []
-    professional_filter: str = "__all__"
     search_query: str = ""
+    status_filter: str = "__all__"
+    reload_generation: int = 0
     current_page: int = 1
-    page_size: int = 7
+    page_size: int = 8
     total_pages: int = 1
     total_count: int = 0
     clinic_date_label: str = ""
@@ -146,7 +148,7 @@ class ReceptionDashboardState(rx.State):
 
     @rx.var
     def has_active_filters(self) -> bool:
-        return bool(self.search_query.strip()) or self.professional_filter != "__all__"
+        return bool(self.search_query.strip()) or self.status_filter != "__all__"
 
     @rx.var
     def showing_start(self) -> int:
@@ -164,25 +166,24 @@ class ReceptionDashboardState(rx.State):
     def page_label(self) -> str:
         return f"{self.current_page} de {self.total_pages}"
 
+    @rx.var
+    def page_numbers(self) -> list[int]:
+        """Return a bounded window of real server-side page numbers."""
+        total = max(1, self.total_pages)
+        start = max(1, min(self.current_page - 2, total - 4))
+        end = min(total, start + 4)
+        return list(range(start, end + 1))
+
     async def _token(self) -> str:
         auth = await self.get_state(AuthState)
         return auth.session_token
-
-    def _professional_filter_id(self) -> int | None:
-        if self.professional_filter == "__all__":
-            return None
-        if not any(
-            option["value"] == self.professional_filter
-            for option in self.professional_options
-        ):
-            return None
-        return int(self.professional_filter)
 
     def _clear_data(self) -> None:
         self.appointments = []
         self.calendar_week = []
         self.upcoming_appointments = []
         self.overview_scheduled = 0
+        self.overview_cancelled = 0
         self.overview_waiting = 0
         self.overview_attending = 0
         self.overview_pending = 0
@@ -232,11 +233,6 @@ class ReceptionDashboardState(rx.State):
             {"value": str(item.id), "label": item.name}
             for item in snapshot.professionals
         ]
-        if self.professional_filter != "__all__" and not any(
-            option["value"] == self.professional_filter
-            for option in self.professional_options
-        ):
-            self.professional_filter = "__all__"
         self.current_page = snapshot.page
         self.page_size = snapshot.page_size
         self.total_count = snapshot.total
@@ -248,6 +244,7 @@ class ReceptionDashboardState(rx.State):
     def _apply_overview(self, overview):
         """Build persisted real-time cards and a seven-day calendar."""
         self.overview_scheduled = overview.scheduled_today
+        self.overview_cancelled = overview.cancelled_today
         self.overview_waiting = overview.waiting
         self.overview_attending = overview.attending
         self.overview_pending = overview.arrivals_pending
@@ -291,7 +288,9 @@ class ReceptionDashboardState(rx.State):
                 "professional_name": appointment.professional_name,
                 "status_label": appointment.status.label,
             })
-            if len(upcoming) == 5:
+            # The dashboard keeps this card as a three-row preview; the full
+            # appointment list remains available from the agenda route.
+            if len(upcoming) == 3:
                 break
         self.upcoming_appointments = upcoming
 
@@ -302,6 +301,14 @@ class ReceptionDashboardState(rx.State):
         self.email_pending = metrics.pending
 
     async def _reload(self):
+        # A slow earlier search/page request must not replace a newer result.
+        # Reflex events can overlap while the browser is processing consecutive
+        # input, pagination, and periodic refresh events.
+        self.reload_generation += 1
+        generation = self.reload_generation
+        search_query = self.search_query
+        status_filter = self.status_filter
+        current_page = self.current_page
         self.is_loading = True
         self.error_message = ""
         yield
@@ -311,30 +318,36 @@ class ReceptionDashboardState(rx.State):
                 snapshot = reception_day_operations(
                     db,
                     token=token,
-                    professional_id=self._professional_filter_id(),
-                    search=self.search_query,
-                    page=self.current_page,
-                    page_size=7,
+                    search=search_query,
+                    status=status_filter,
+                    page=current_page,
+                    page_size=8,
                 )
                 overview = reception_overview(db, token=token)
                 email_metrics = reception_email_metrics(db, token=token)
+            if generation != self.reload_generation:
+                return
             self._apply_snapshot(snapshot)
             self._apply_overview(overview)
             self._apply_email_metrics(email_metrics)
         except (AuthenticationRequiredError, PasswordChangeRequiredError):
-            self._clear_data()
-            yield rx.redirect("/login")
+            if generation == self.reload_generation:
+                self._clear_data()
+                yield rx.redirect("/login")
         except RoleForbiddenError:
-            self._clear_data()
-            yield rx.redirect("/acesso-negado")
+            if generation == self.reload_generation:
+                self._clear_data()
+                yield rx.redirect("/acesso-negado")
         except Exception:
-            self._clear_data()
-            self.error_message = (
-                "Não foi possível atualizar as consultas de hoje. Tente novamente."
-            )
+            if generation == self.reload_generation:
+                self._clear_data()
+                self.error_message = (
+                    "Não foi possível atualizar as consultas de hoje. Tente novamente."
+                )
         finally:
-            self.is_loading = False
-            yield
+            if generation == self.reload_generation:
+                self.is_loading = False
+                yield
 
     @rx.event
     async def load(self):
@@ -342,25 +355,22 @@ class ReceptionDashboardState(rx.State):
             yield event
 
     @rx.event
-    def update_search_query(self, value: str) -> None:
-        self.search_query = str(value or "")[:100]
-
-    @rx.event
     async def apply_search(self, form_data: dict[str, Any]):
-        self.search_query = str(form_data.get("query", self.search_query) or "")[:100]
+        # Empty fields can be omitted by the browser's form serializer; an
+        # explicit submit must still clear the previous server-side query.
+        self.search_query = str(form_data.get("query") or "")[:100]
         self.current_page = 1
         async for event in self._reload():
             yield event
 
     @rx.event
-    async def update_professional(self, value: str):
+    async def update_status(self, value: str):
         requested = str(value or "__all__")
-        if requested == "__all__" or any(
-            option["value"] == requested for option in self.professional_options
-        ):
-            self.professional_filter = requested
-        else:
-            self.professional_filter = "__all__"
+        valid_statuses = {status.value for status in ConsultationStatus}
+        self.status_filter = (
+            requested if requested == "__all__" or requested in valid_statuses
+            else "__all__"
+        )
         self.current_page = 1
         async for event in self._reload():
             yield event
@@ -376,6 +386,20 @@ class ReceptionDashboardState(rx.State):
     async def next_page(self):
         if self.current_page < self.total_pages:
             self.current_page += 1
+            async for event in self._reload():
+                yield event
+
+    @rx.event
+    async def go_to_page(self, requested_page: int):
+        """Change pages only within the last authorized server-side snapshot."""
+        if (
+            isinstance(requested_page, bool)
+            or not isinstance(requested_page, int)
+            or not 1 <= requested_page <= self.total_pages
+        ):
+            return
+        if requested_page != self.current_page and not self.is_loading:
+            self.current_page = requested_page
             async for event in self._reload():
                 yield event
 
@@ -399,8 +423,12 @@ class ReceptionDashboardState(rx.State):
     @rx.event
     async def clear_filters(self):
         self.search_query = ""
-        self.professional_filter = "__all__"
+        self.status_filter = "__all__"
         self.current_page = 1
+        yield rx.call_script(
+            "(() => { const input = document.getElementById('reception-day-search'); "
+            "if (input) input.value = ''; })()"
+        )
         async for event in self._reload():
             yield event
 
@@ -416,10 +444,10 @@ class ReceptionDashboardState(rx.State):
                 snapshot = reception_day_operations(
                     db,
                     token=token,
-                    professional_id=self._professional_filter_id(),
                     search=self.search_query,
+                    status=self.status_filter,
                     page=self.current_page,
-                    page_size=7,
+                    page_size=8,
                 )
             self._apply_snapshot(snapshot)
             row = next(

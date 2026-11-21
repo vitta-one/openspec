@@ -181,7 +181,6 @@ def reception_list_patient_directory(
         {
             "id": patient.id, "name": patient.name,
             "phone": patient.phone or "",
-            "href": f"/recepcao/pacientes/{patient.id}",
         }
         for patient in patients
     ], total

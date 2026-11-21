@@ -104,7 +104,6 @@ class PatientDirectoryRow(TypedDict):
     id: int
     name: str
     phone: str
-    href: str
 
 
 class PatientOperationalConsultationRow(TypedDict):
@@ -256,6 +255,14 @@ def queue_wait_minutes(entered_at: datetime, now: datetime | None = None) -> int
 def format_queue_wait(minutes: int) -> str:
     hours, remaining = divmod(max(0, minutes), 60)
     return f"{hours}h {remaining:02d}min" if hours else f"{remaining} min"
+
+
+def average_queue_wait_minutes(rows: list[QueueRow]) -> int:
+    """Return the rounded mean of persisted queue waits, or zero for an empty queue."""
+    waits = [max(0, int(row["wait_minutes"])) for row in rows]
+    if not waits:
+        return 0
+    return (sum(waits) + len(waits) // 2) // len(waits)
 
 
 def filter_active_queue(
@@ -451,6 +458,10 @@ class ReceptionQueueState(rx.State):
             (row["wait_minutes"] for row in self.queue_rows), default=0
         ))
 
+    @rx.var
+    def queue_average_wait(self) -> str:
+        return format_queue_wait(average_queue_wait_minutes(self.queue_rows))
+
     @rx.event
     def set_queue_search(self, value: str) -> None:
         self.queue_search_query = str(value or "")[:100]
@@ -628,7 +639,6 @@ class ReceptionQueueState(rx.State):
                 {
                     "id": item["id"], "name": item["name"],
                     "phone": _format_patient_contact(item["phone"]),
-                    "href": item["href"],
                 }
                 for item in items
             ]
@@ -691,7 +701,7 @@ class ReceptionQueueState(rx.State):
         self.patient_detail_error = ""
         yield
         try:
-            raw_id = str(self.router.page.params.get("patient_id", ""))
+            raw_id = self._patient_detail_route_id()
             if not raw_id.isdigit() or len(raw_id) > 18 or int(raw_id) <= 0:
                 self._clear_sensitive_view()
                 self.patient_detail_error = "Paciente não encontrado."
@@ -1029,9 +1039,23 @@ class ReceptionQueueState(rx.State):
         self.selected_patient_portal_status = ""
         self._clear_feedback()
 
+    def _patient_detail_route_id(self) -> str:
+        """Read the patient id from the current URL for detail and edit routes."""
+        parts = self.router.url.path.strip("/").split("/")
+        if (
+            len(parts) not in (3, 4)
+            or parts[:2] != ["recepcao", "pacientes"]
+            or (len(parts) == 4 and parts[3] != "editar")
+        ):
+            return ""
+        raw_id = parts[2]
+        if not raw_id.isdigit() or len(raw_id) > 18 or int(raw_id) <= 0:
+            return ""
+        return raw_id
+
     def _matches_patient_detail_route(self) -> bool:
-        raw_id = str(self.router.page.params.get("patient_id", ""))
-        return raw_id.isdigit() and int(raw_id) == self.selected_patient_id > 0
+        raw_id = self._patient_detail_route_id()
+        return bool(raw_id) and int(raw_id) == self.selected_patient_id > 0
 
     @rx.event
     async def open_patient_edit_dialog(self):

@@ -1,5 +1,6 @@
 {
-  "result": "PASS",
+  "generated_at_utc": "2026-11-20T17:28:42.592694+00:00",
+  "result": "PASS_CAPTURE_AND_ROUTE_SMOKE; VISUALLY_INSPECTED_WITH_RESIDUALS",
   "routes": 16,
   "viewports": {
     "desktop-1768x890": 16,
@@ -11,582 +12,1133 @@
   },
   "captures_passed": 96,
   "captures_failed": 0,
+  "captures_with_unloaded_images": 0,
+  "route_smoke_status": "PASS",
+  "comparisons_generated": 16,
+  "comparisons_visually_inspected": 16,
+  "pixel_identical_approved": 0,
+  "reference_alignment": {
+    "width": 1768,
+    "height": 890,
+    "fit": "contain",
+    "background": "#f7f8fc"
+  },
   "captures": [
     {
       "reference": "01-dashboard-recepcao.png",
+      "screen": "01-dashboard-recepcao",
+      "role": "recepcionista",
       "route": "/recepcao",
       "viewport": "desktop-1768x890",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_metrics_and_appointments",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "02-agenda-recepcao.png",
+      "screen": "02-agenda-recepcao",
+      "role": "recepcionista",
       "route": "/recepcao/agenda",
       "viewport": "desktop-1768x890",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_appointments",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "03-lista-pacientes.png",
+      "screen": "03-lista-pacientes",
+      "role": "recepcionista",
       "route": "/recepcao/pacientes",
       "viewport": "desktop-1768x890",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_patient_directory",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "04-novo-paciente.png",
+      "screen": "04-novo-paciente",
+      "role": "recepcionista",
       "route": "/recepcao/pacientes/novo",
       "viewport": "desktop-1768x890",
-      "status": "PASS"
+      "data_state": "initial_patient_form",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "05-fila-espera.png",
+      "screen": "05-fila-espera",
+      "role": "recepcionista",
       "route": "/recepcao/fila",
       "viewport": "desktop-1768x890",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_waiting_queue",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "06-dashboard-administracao.png",
+      "screen": "06-dashboard-administracao",
+      "role": "administrador",
       "route": "/admin",
       "viewport": "desktop-1768x890",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_admin_summary",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "07-funcionarios.png",
+      "screen": "07-funcionarios",
+      "role": "administrador",
       "route": "/admin/funcionarios",
       "viewport": "desktop-1768x890",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_staff_directory",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "08-novo-funcionario.png",
+      "screen": "08-novo-funcionario",
+      "role": "administrador",
       "route": "/admin/funcionarios/novo",
       "viewport": "desktop-1768x890",
-      "status": "PASS"
+      "data_state": "initial_staff_form",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "09-especialidades.png",
+      "screen": "09-especialidades",
+      "role": "administrador",
       "route": "/admin/especialidades",
       "viewport": "desktop-1768x890",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_specialty_directory",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "10-gerenciar-horarios.png",
+      "screen": "10-gerenciar-horarios",
+      "role": "administrador",
       "route": "/admin/horarios",
       "viewport": "desktop-1768x890",
-      "status": "PASS"
+      "data_state": "no_professional_selected",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "11-configuracoes-clinica.png",
+      "screen": "11-configuracoes-clinica",
+      "role": "administrador",
       "route": "/admin/configuracoes",
       "viewport": "desktop-1768x890",
-      "status": "PASS"
+      "data_state": "clinic_configuration_unconfigured",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "12-financeiro-asaas.png",
+      "screen": "12-financeiro-asaas",
+      "role": "financeiro",
       "route": "/financeiro",
       "viewport": "desktop-1768x890",
-      "status": "PASS"
+      "data_state": "no_eligible_charges",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "13-medico-visao-geral.png",
+      "screen": "13-medico-visao-geral",
+      "role": "medico",
       "route": "/medico",
       "viewport": "desktop-1768x890",
-      "status": "PASS"
+      "data_state": "shared_synthetic_queue_without_active_doctor_record",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "14-medico-agenda.png",
+      "screen": "14-medico-agenda",
+      "role": "medico",
       "route": "/medico/agenda",
       "viewport": "desktop-1768x890",
-      "status": "PASS"
+      "data_state": "doctor_without_scheduled_consultations",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "15-medico-pacientes.png",
+      "screen": "15-medico-pacientes",
+      "role": "medico",
       "route": "/medico/pacientes",
       "viewport": "desktop-1768x890",
-      "status": "PASS"
+      "data_state": "doctor_without_linked_patients",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "16-medico-prontuarios.png",
+      "screen": "16-medico-prontuarios",
+      "role": "medico",
       "route": "/medico/prontuarios",
       "viewport": "desktop-1768x890",
-      "status": "PASS"
+      "data_state": "no_active_record_for_doctor",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "01-dashboard-recepcao.png",
+      "screen": "01-dashboard-recepcao",
+      "role": "recepcionista",
       "route": "/recepcao",
       "viewport": "desktop-1440x900",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_metrics_and_appointments",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "02-agenda-recepcao.png",
+      "screen": "02-agenda-recepcao",
+      "role": "recepcionista",
       "route": "/recepcao/agenda",
       "viewport": "desktop-1440x900",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_appointments",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "03-lista-pacientes.png",
+      "screen": "03-lista-pacientes",
+      "role": "recepcionista",
       "route": "/recepcao/pacientes",
       "viewport": "desktop-1440x900",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_patient_directory",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "04-novo-paciente.png",
+      "screen": "04-novo-paciente",
+      "role": "recepcionista",
       "route": "/recepcao/pacientes/novo",
       "viewport": "desktop-1440x900",
-      "status": "PASS"
+      "data_state": "initial_patient_form",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "05-fila-espera.png",
+      "screen": "05-fila-espera",
+      "role": "recepcionista",
       "route": "/recepcao/fila",
       "viewport": "desktop-1440x900",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_waiting_queue",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "06-dashboard-administracao.png",
+      "screen": "06-dashboard-administracao",
+      "role": "administrador",
       "route": "/admin",
       "viewport": "desktop-1440x900",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_admin_summary",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "07-funcionarios.png",
+      "screen": "07-funcionarios",
+      "role": "administrador",
       "route": "/admin/funcionarios",
       "viewport": "desktop-1440x900",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_staff_directory",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "08-novo-funcionario.png",
+      "screen": "08-novo-funcionario",
+      "role": "administrador",
       "route": "/admin/funcionarios/novo",
       "viewport": "desktop-1440x900",
-      "status": "PASS"
+      "data_state": "initial_staff_form",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "09-especialidades.png",
+      "screen": "09-especialidades",
+      "role": "administrador",
       "route": "/admin/especialidades",
       "viewport": "desktop-1440x900",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_specialty_directory",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "10-gerenciar-horarios.png",
+      "screen": "10-gerenciar-horarios",
+      "role": "administrador",
       "route": "/admin/horarios",
       "viewport": "desktop-1440x900",
-      "status": "PASS"
+      "data_state": "no_professional_selected",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "11-configuracoes-clinica.png",
+      "screen": "11-configuracoes-clinica",
+      "role": "administrador",
       "route": "/admin/configuracoes",
       "viewport": "desktop-1440x900",
-      "status": "PASS"
+      "data_state": "clinic_configuration_unconfigured",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "12-financeiro-asaas.png",
+      "screen": "12-financeiro-asaas",
+      "role": "financeiro",
       "route": "/financeiro",
       "viewport": "desktop-1440x900",
-      "status": "PASS"
+      "data_state": "no_eligible_charges",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "13-medico-visao-geral.png",
+      "screen": "13-medico-visao-geral",
+      "role": "medico",
       "route": "/medico",
       "viewport": "desktop-1440x900",
-      "status": "PASS"
+      "data_state": "shared_synthetic_queue_without_active_doctor_record",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "14-medico-agenda.png",
+      "screen": "14-medico-agenda",
+      "role": "medico",
       "route": "/medico/agenda",
       "viewport": "desktop-1440x900",
-      "status": "PASS"
+      "data_state": "doctor_without_scheduled_consultations",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "15-medico-pacientes.png",
+      "screen": "15-medico-pacientes",
+      "role": "medico",
       "route": "/medico/pacientes",
       "viewport": "desktop-1440x900",
-      "status": "PASS"
+      "data_state": "doctor_without_linked_patients",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "16-medico-prontuarios.png",
+      "screen": "16-medico-prontuarios",
+      "role": "medico",
       "route": "/medico/prontuarios",
       "viewport": "desktop-1440x900",
-      "status": "PASS"
+      "data_state": "no_active_record_for_doctor",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "01-dashboard-recepcao.png",
+      "screen": "01-dashboard-recepcao",
+      "role": "recepcionista",
       "route": "/recepcao",
       "viewport": "tablet-1024x768",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_metrics_and_appointments",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "02-agenda-recepcao.png",
+      "screen": "02-agenda-recepcao",
+      "role": "recepcionista",
       "route": "/recepcao/agenda",
       "viewport": "tablet-1024x768",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_appointments",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "03-lista-pacientes.png",
+      "screen": "03-lista-pacientes",
+      "role": "recepcionista",
       "route": "/recepcao/pacientes",
       "viewport": "tablet-1024x768",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_patient_directory",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "04-novo-paciente.png",
+      "screen": "04-novo-paciente",
+      "role": "recepcionista",
       "route": "/recepcao/pacientes/novo",
       "viewport": "tablet-1024x768",
-      "status": "PASS"
+      "data_state": "initial_patient_form",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "05-fila-espera.png",
+      "screen": "05-fila-espera",
+      "role": "recepcionista",
       "route": "/recepcao/fila",
       "viewport": "tablet-1024x768",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_waiting_queue",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "06-dashboard-administracao.png",
+      "screen": "06-dashboard-administracao",
+      "role": "administrador",
       "route": "/admin",
       "viewport": "tablet-1024x768",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_admin_summary",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "07-funcionarios.png",
+      "screen": "07-funcionarios",
+      "role": "administrador",
       "route": "/admin/funcionarios",
       "viewport": "tablet-1024x768",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_staff_directory",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "08-novo-funcionario.png",
+      "screen": "08-novo-funcionario",
+      "role": "administrador",
       "route": "/admin/funcionarios/novo",
       "viewport": "tablet-1024x768",
-      "status": "PASS"
+      "data_state": "initial_staff_form",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "09-especialidades.png",
+      "screen": "09-especialidades",
+      "role": "administrador",
       "route": "/admin/especialidades",
       "viewport": "tablet-1024x768",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_specialty_directory",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "10-gerenciar-horarios.png",
+      "screen": "10-gerenciar-horarios",
+      "role": "administrador",
       "route": "/admin/horarios",
       "viewport": "tablet-1024x768",
-      "status": "PASS"
+      "data_state": "no_professional_selected",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "11-configuracoes-clinica.png",
+      "screen": "11-configuracoes-clinica",
+      "role": "administrador",
       "route": "/admin/configuracoes",
       "viewport": "tablet-1024x768",
-      "status": "PASS"
+      "data_state": "clinic_configuration_unconfigured",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "12-financeiro-asaas.png",
+      "screen": "12-financeiro-asaas",
+      "role": "financeiro",
       "route": "/financeiro",
       "viewport": "tablet-1024x768",
-      "status": "PASS"
+      "data_state": "no_eligible_charges",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "13-medico-visao-geral.png",
+      "screen": "13-medico-visao-geral",
+      "role": "medico",
       "route": "/medico",
       "viewport": "tablet-1024x768",
-      "status": "PASS"
+      "data_state": "shared_synthetic_queue_without_active_doctor_record",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "14-medico-agenda.png",
+      "screen": "14-medico-agenda",
+      "role": "medico",
       "route": "/medico/agenda",
       "viewport": "tablet-1024x768",
-      "status": "PASS"
+      "data_state": "doctor_without_scheduled_consultations",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "15-medico-pacientes.png",
+      "screen": "15-medico-pacientes",
+      "role": "medico",
       "route": "/medico/pacientes",
       "viewport": "tablet-1024x768",
-      "status": "PASS"
+      "data_state": "doctor_without_linked_patients",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "16-medico-prontuarios.png",
+      "screen": "16-medico-prontuarios",
+      "role": "medico",
       "route": "/medico/prontuarios",
       "viewport": "tablet-1024x768",
-      "status": "PASS"
+      "data_state": "no_active_record_for_doctor",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "01-dashboard-recepcao.png",
+      "screen": "01-dashboard-recepcao",
+      "role": "recepcionista",
       "route": "/recepcao",
       "viewport": "tablet-768x1024",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_metrics_and_appointments",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "02-agenda-recepcao.png",
+      "screen": "02-agenda-recepcao",
+      "role": "recepcionista",
       "route": "/recepcao/agenda",
       "viewport": "tablet-768x1024",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_appointments",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "03-lista-pacientes.png",
+      "screen": "03-lista-pacientes",
+      "role": "recepcionista",
       "route": "/recepcao/pacientes",
       "viewport": "tablet-768x1024",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_patient_directory",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "04-novo-paciente.png",
+      "screen": "04-novo-paciente",
+      "role": "recepcionista",
       "route": "/recepcao/pacientes/novo",
       "viewport": "tablet-768x1024",
-      "status": "PASS"
+      "data_state": "initial_patient_form",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "05-fila-espera.png",
+      "screen": "05-fila-espera",
+      "role": "recepcionista",
       "route": "/recepcao/fila",
       "viewport": "tablet-768x1024",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_waiting_queue",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "06-dashboard-administracao.png",
+      "screen": "06-dashboard-administracao",
+      "role": "administrador",
       "route": "/admin",
       "viewport": "tablet-768x1024",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_admin_summary",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "07-funcionarios.png",
+      "screen": "07-funcionarios",
+      "role": "administrador",
       "route": "/admin/funcionarios",
       "viewport": "tablet-768x1024",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_staff_directory",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "08-novo-funcionario.png",
+      "screen": "08-novo-funcionario",
+      "role": "administrador",
       "route": "/admin/funcionarios/novo",
       "viewport": "tablet-768x1024",
-      "status": "PASS"
+      "data_state": "initial_staff_form",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "09-especialidades.png",
+      "screen": "09-especialidades",
+      "role": "administrador",
       "route": "/admin/especialidades",
       "viewport": "tablet-768x1024",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_specialty_directory",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "10-gerenciar-horarios.png",
+      "screen": "10-gerenciar-horarios",
+      "role": "administrador",
       "route": "/admin/horarios",
       "viewport": "tablet-768x1024",
-      "status": "PASS"
+      "data_state": "no_professional_selected",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "11-configuracoes-clinica.png",
+      "screen": "11-configuracoes-clinica",
+      "role": "administrador",
       "route": "/admin/configuracoes",
       "viewport": "tablet-768x1024",
-      "status": "PASS"
+      "data_state": "clinic_configuration_unconfigured",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "12-financeiro-asaas.png",
+      "screen": "12-financeiro-asaas",
+      "role": "financeiro",
       "route": "/financeiro",
       "viewport": "tablet-768x1024",
-      "status": "PASS"
+      "data_state": "no_eligible_charges",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "13-medico-visao-geral.png",
+      "screen": "13-medico-visao-geral",
+      "role": "medico",
       "route": "/medico",
       "viewport": "tablet-768x1024",
-      "status": "PASS"
+      "data_state": "shared_synthetic_queue_without_active_doctor_record",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "14-medico-agenda.png",
+      "screen": "14-medico-agenda",
+      "role": "medico",
       "route": "/medico/agenda",
       "viewport": "tablet-768x1024",
-      "status": "PASS"
+      "data_state": "doctor_without_scheduled_consultations",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "15-medico-pacientes.png",
+      "screen": "15-medico-pacientes",
+      "role": "medico",
       "route": "/medico/pacientes",
       "viewport": "tablet-768x1024",
-      "status": "PASS"
+      "data_state": "doctor_without_linked_patients",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "16-medico-prontuarios.png",
+      "screen": "16-medico-prontuarios",
+      "role": "medico",
       "route": "/medico/prontuarios",
       "viewport": "tablet-768x1024",
-      "status": "PASS"
+      "data_state": "no_active_record_for_doctor",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "01-dashboard-recepcao.png",
+      "screen": "01-dashboard-recepcao",
+      "role": "recepcionista",
       "route": "/recepcao",
       "viewport": "mobile-390x844",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_metrics_and_appointments",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "02-agenda-recepcao.png",
+      "screen": "02-agenda-recepcao",
+      "role": "recepcionista",
       "route": "/recepcao/agenda",
       "viewport": "mobile-390x844",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_appointments",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "03-lista-pacientes.png",
+      "screen": "03-lista-pacientes",
+      "role": "recepcionista",
       "route": "/recepcao/pacientes",
       "viewport": "mobile-390x844",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_patient_directory",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "04-novo-paciente.png",
+      "screen": "04-novo-paciente",
+      "role": "recepcionista",
       "route": "/recepcao/pacientes/novo",
       "viewport": "mobile-390x844",
-      "status": "PASS"
+      "data_state": "initial_patient_form",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "05-fila-espera.png",
+      "screen": "05-fila-espera",
+      "role": "recepcionista",
       "route": "/recepcao/fila",
       "viewport": "mobile-390x844",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_waiting_queue",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "06-dashboard-administracao.png",
+      "screen": "06-dashboard-administracao",
+      "role": "administrador",
       "route": "/admin",
       "viewport": "mobile-390x844",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_admin_summary",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "07-funcionarios.png",
+      "screen": "07-funcionarios",
+      "role": "administrador",
       "route": "/admin/funcionarios",
       "viewport": "mobile-390x844",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_staff_directory",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "08-novo-funcionario.png",
+      "screen": "08-novo-funcionario",
+      "role": "administrador",
       "route": "/admin/funcionarios/novo",
       "viewport": "mobile-390x844",
-      "status": "PASS"
+      "data_state": "initial_staff_form",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "09-especialidades.png",
+      "screen": "09-especialidades",
+      "role": "administrador",
       "route": "/admin/especialidades",
       "viewport": "mobile-390x844",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_specialty_directory",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "10-gerenciar-horarios.png",
+      "screen": "10-gerenciar-horarios",
+      "role": "administrador",
       "route": "/admin/horarios",
       "viewport": "mobile-390x844",
-      "status": "PASS"
+      "data_state": "no_professional_selected",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "11-configuracoes-clinica.png",
+      "screen": "11-configuracoes-clinica",
+      "role": "administrador",
       "route": "/admin/configuracoes",
       "viewport": "mobile-390x844",
-      "status": "PASS"
+      "data_state": "clinic_configuration_unconfigured",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "12-financeiro-asaas.png",
+      "screen": "12-financeiro-asaas",
+      "role": "financeiro",
       "route": "/financeiro",
       "viewport": "mobile-390x844",
-      "status": "PASS"
+      "data_state": "no_eligible_charges",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "13-medico-visao-geral.png",
+      "screen": "13-medico-visao-geral",
+      "role": "medico",
       "route": "/medico",
       "viewport": "mobile-390x844",
-      "status": "PASS"
+      "data_state": "shared_synthetic_queue_without_active_doctor_record",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "14-medico-agenda.png",
+      "screen": "14-medico-agenda",
+      "role": "medico",
       "route": "/medico/agenda",
       "viewport": "mobile-390x844",
-      "status": "PASS"
+      "data_state": "doctor_without_scheduled_consultations",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "15-medico-pacientes.png",
+      "screen": "15-medico-pacientes",
+      "role": "medico",
       "route": "/medico/pacientes",
       "viewport": "mobile-390x844",
-      "status": "PASS"
+      "data_state": "doctor_without_linked_patients",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "16-medico-prontuarios.png",
+      "screen": "16-medico-prontuarios",
+      "role": "medico",
       "route": "/medico/prontuarios",
       "viewport": "mobile-390x844",
-      "status": "PASS"
+      "data_state": "no_active_record_for_doctor",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "01-dashboard-recepcao.png",
+      "screen": "01-dashboard-recepcao",
+      "role": "recepcionista",
       "route": "/recepcao",
       "viewport": "mobile-320x740",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_metrics_and_appointments",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "02-agenda-recepcao.png",
+      "screen": "02-agenda-recepcao",
+      "role": "recepcionista",
       "route": "/recepcao/agenda",
       "viewport": "mobile-320x740",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_appointments",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "03-lista-pacientes.png",
+      "screen": "03-lista-pacientes",
+      "role": "recepcionista",
       "route": "/recepcao/pacientes",
       "viewport": "mobile-320x740",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_patient_directory",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "04-novo-paciente.png",
+      "screen": "04-novo-paciente",
+      "role": "recepcionista",
       "route": "/recepcao/pacientes/novo",
       "viewport": "mobile-320x740",
-      "status": "PASS"
+      "data_state": "initial_patient_form",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "05-fila-espera.png",
+      "screen": "05-fila-espera",
+      "role": "recepcionista",
       "route": "/recepcao/fila",
       "viewport": "mobile-320x740",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_waiting_queue",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "06-dashboard-administracao.png",
+      "screen": "06-dashboard-administracao",
+      "role": "administrador",
       "route": "/admin",
       "viewport": "mobile-320x740",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_admin_summary",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "07-funcionarios.png",
+      "screen": "07-funcionarios",
+      "role": "administrador",
       "route": "/admin/funcionarios",
       "viewport": "mobile-320x740",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_staff_directory",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "08-novo-funcionario.png",
+      "screen": "08-novo-funcionario",
+      "role": "administrador",
       "route": "/admin/funcionarios/novo",
       "viewport": "mobile-320x740",
-      "status": "PASS"
+      "data_state": "initial_staff_form",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "09-especialidades.png",
+      "screen": "09-especialidades",
+      "role": "administrador",
       "route": "/admin/especialidades",
       "viewport": "mobile-320x740",
-      "status": "PASS"
+      "data_state": "synthetic_persisted_specialty_directory",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "10-gerenciar-horarios.png",
+      "screen": "10-gerenciar-horarios",
+      "role": "administrador",
       "route": "/admin/horarios",
       "viewport": "mobile-320x740",
-      "status": "PASS"
+      "data_state": "no_professional_selected",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "11-configuracoes-clinica.png",
+      "screen": "11-configuracoes-clinica",
+      "role": "administrador",
       "route": "/admin/configuracoes",
       "viewport": "mobile-320x740",
-      "status": "PASS"
+      "data_state": "clinic_configuration_unconfigured",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "12-financeiro-asaas.png",
+      "screen": "12-financeiro-asaas",
+      "role": "financeiro",
       "route": "/financeiro",
       "viewport": "mobile-320x740",
-      "status": "PASS"
+      "data_state": "no_eligible_charges",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "13-medico-visao-geral.png",
+      "screen": "13-medico-visao-geral",
+      "role": "medico",
       "route": "/medico",
       "viewport": "mobile-320x740",
-      "status": "PASS"
+      "data_state": "shared_synthetic_queue_without_active_doctor_record",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "14-medico-agenda.png",
+      "screen": "14-medico-agenda",
+      "role": "medico",
       "route": "/medico/agenda",
       "viewport": "mobile-320x740",
-      "status": "PASS"
+      "data_state": "doctor_without_scheduled_consultations",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "15-medico-pacientes.png",
+      "screen": "15-medico-pacientes",
+      "role": "medico",
       "route": "/medico/pacientes",
       "viewport": "mobile-320x740",
-      "status": "PASS"
+      "data_state": "doctor_without_linked_patients",
+      "status": "PASS",
+      "images_loaded": true
     },
     {
       "reference": "16-medico-prontuarios.png",
+      "screen": "16-medico-prontuarios",
+      "role": "medico",
       "route": "/medico/prontuarios",
       "viewport": "mobile-320x740",
-      "status": "PASS"
+      "data_state": "no_active_record_for_doctor",
+      "status": "PASS",
+      "images_loaded": true
     }
-  ]
+  ],
+  "comparisons": [
+    {
+      "screen": "01-dashboard-recepcao",
+      "route": "/recepcao",
+      "data_state": "synthetic_persisted_metrics_and_appointments",
+      "status": "VISUALLY_INSPECTED_WITH_RESIDUALS",
+      "changed_pixel_percent_at_36": 15.87,
+      "mean_absolute_channel_difference": 12.77,
+      "masks_applied": false
+    },
+    {
+      "screen": "02-agenda-recepcao",
+      "route": "/recepcao/agenda",
+      "data_state": "synthetic_persisted_appointments",
+      "status": "VISUALLY_INSPECTED_WITH_RESIDUALS",
+      "changed_pixel_percent_at_36": 13.35,
+      "mean_absolute_channel_difference": 10.48,
+      "masks_applied": false
+    },
+    {
+      "screen": "03-lista-pacientes",
+      "route": "/recepcao/pacientes",
+      "data_state": "synthetic_persisted_patient_directory",
+      "status": "VISUALLY_INSPECTED_WITH_RESIDUALS",
+      "changed_pixel_percent_at_36": 11.14,
+      "mean_absolute_channel_difference": 12.52,
+      "masks_applied": false
+    },
+    {
+      "screen": "04-novo-paciente",
+      "route": "/recepcao/pacientes/novo",
+      "data_state": "initial_patient_form",
+      "status": "VISUALLY_INSPECTED_WITH_RESIDUALS",
+      "changed_pixel_percent_at_36": 12.82,
+      "mean_absolute_channel_difference": 13.31,
+      "masks_applied": false
+    },
+    {
+      "screen": "05-fila-espera",
+      "route": "/recepcao/fila",
+      "data_state": "synthetic_persisted_waiting_queue",
+      "status": "VISUALLY_INSPECTED_WITH_RESIDUALS",
+      "changed_pixel_percent_at_36": 12.73,
+      "mean_absolute_channel_difference": 12.46,
+      "masks_applied": false
+    },
+    {
+      "screen": "06-dashboard-administracao",
+      "route": "/admin",
+      "data_state": "synthetic_persisted_admin_summary",
+      "status": "VISUALLY_INSPECTED_WITH_RESIDUALS",
+      "changed_pixel_percent_at_36": 13.79,
+      "mean_absolute_channel_difference": 10.35,
+      "masks_applied": false
+    },
+    {
+      "screen": "07-funcionarios",
+      "route": "/admin/funcionarios",
+      "data_state": "synthetic_persisted_staff_directory",
+      "status": "VISUALLY_INSPECTED_WITH_RESIDUALS",
+      "changed_pixel_percent_at_36": 10.97,
+      "mean_absolute_channel_difference": 10.06,
+      "masks_applied": false
+    },
+    {
+      "screen": "08-novo-funcionario",
+      "route": "/admin/funcionarios/novo",
+      "data_state": "initial_staff_form",
+      "status": "VISUALLY_INSPECTED_WITH_RESIDUALS",
+      "changed_pixel_percent_at_36": 8.66,
+      "mean_absolute_channel_difference": 8.66,
+      "masks_applied": false
+    },
+    {
+      "screen": "09-especialidades",
+      "route": "/admin/especialidades",
+      "data_state": "synthetic_persisted_specialty_directory",
+      "status": "VISUALLY_INSPECTED_WITH_RESIDUALS",
+      "changed_pixel_percent_at_36": 11.34,
+      "mean_absolute_channel_difference": 10.99,
+      "masks_applied": false
+    },
+    {
+      "screen": "10-gerenciar-horarios",
+      "route": "/admin/horarios",
+      "data_state": "no_professional_selected",
+      "status": "VISUALLY_INSPECTED_WITH_RESIDUALS",
+      "changed_pixel_percent_at_36": 7.84,
+      "mean_absolute_channel_difference": 7.37,
+      "masks_applied": false
+    },
+    {
+      "screen": "11-configuracoes-clinica",
+      "route": "/admin/configuracoes",
+      "data_state": "clinic_configuration_unconfigured",
+      "status": "VISUALLY_INSPECTED_WITH_RESIDUALS",
+      "changed_pixel_percent_at_36": 10.79,
+      "mean_absolute_channel_difference": 11.01,
+      "masks_applied": false
+    },
+    {
+      "screen": "12-financeiro-asaas",
+      "route": "/financeiro",
+      "data_state": "no_eligible_charges",
+      "status": "VISUALLY_INSPECTED_WITH_RESIDUALS",
+      "changed_pixel_percent_at_36": 12.57,
+      "mean_absolute_channel_difference": 12.56,
+      "masks_applied": false
+    },
+    {
+      "screen": "13-medico-visao-geral",
+      "route": "/medico",
+      "data_state": "shared_synthetic_queue_without_active_doctor_record",
+      "status": "VISUALLY_INSPECTED_WITH_RESIDUALS",
+      "changed_pixel_percent_at_36": 16.04,
+      "mean_absolute_channel_difference": 13.63,
+      "masks_applied": false
+    },
+    {
+      "screen": "14-medico-agenda",
+      "route": "/medico/agenda",
+      "data_state": "doctor_without_scheduled_consultations",
+      "status": "VISUALLY_INSPECTED_WITH_RESIDUALS",
+      "changed_pixel_percent_at_36": 12.86,
+      "mean_absolute_channel_difference": 11.61,
+      "masks_applied": false
+    },
+    {
+      "screen": "15-medico-pacientes",
+      "route": "/medico/pacientes",
+      "data_state": "doctor_without_linked_patients",
+      "status": "VISUALLY_INSPECTED_WITH_RESIDUALS",
+      "changed_pixel_percent_at_36": 13.27,
+      "mean_absolute_channel_difference": 12.25,
+      "masks_applied": false
+    },
+    {
+      "screen": "16-medico-prontuarios",
+      "route": "/medico/prontuarios",
+      "data_state": "no_active_record_for_doctor",
+      "status": "VISUALLY_INSPECTED_WITH_RESIDUALS",
+      "changed_pixel_percent_at_36": 14.14,
+      "mean_absolute_channel_difference": 11.21,
+      "masks_applied": false
+    }
+  ],
+  "reflow_200_percent_equivalent": {
+    "viewport": {
+      "width": 884,
+      "height": 445
+    },
+    "captured_at_utc": "2026-11-20T17:30:09.945688+00:00",
+    "passed": 16,
+    "failed": 0,
+    "kind": "200_percent_equivalent_reflow"
+  }
 }
