@@ -799,6 +799,9 @@ def main() -> None:
     mode = "com comparação local" if REFERENCE_AVAILABLE else "somente capturas; referências locais ausentes"
     print(f"Capturas operacionais: {passed}/{len(records)} PASS ({mode}); artefatos em {ROOT_OUTPUT}")
     if failures:
+        print("Falhas detalhadas por rota e viewport:")
+        for failure in failures:
+            print(json.dumps(failure, ensure_ascii=False, sort_keys=True))
         raise AssertionError(f"Falhas de QA visual/interativo: {len(failures)}")
 
 
