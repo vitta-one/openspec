@@ -61,6 +61,19 @@ def test_visual_qa_guards_reject_remote_hosts_and_non_disposable_databases():
         enabled="yes",
         database_id="vitta-one-operational-ui-qa-db",
     )
+    validate_disposable_database_url(
+        disposable_url.replace(":15432", ":15433").replace(
+            "/vitta_one", "/vitta_one_operational_ui_qa_21"
+        ),
+        enabled="yes",
+        database_id="vitta-one-operational-ui-qa-db",
+    )
+    with pytest.raises(RuntimeError):
+        validate_disposable_database_url(
+            disposable_url.replace(":15432", ":15433"),
+            enabled="yes",
+            database_id="vitta-one-operational-ui-qa-db",
+        )
     with pytest.raises(RuntimeError):
         validate_disposable_database_url(
             disposable_url.replace(":15432", ":5432"),
