@@ -123,6 +123,7 @@ class ReceptionDashboardState(rx.State):
     professional_options: list[ProfessionalOptionRow] = []
     search_query: str = ""
     status_filter: str = "__all__"
+    reload_generation: int = 0
     current_page: int = 1
     page_size: int = 8
     total_pages: int = 1
@@ -300,6 +301,14 @@ class ReceptionDashboardState(rx.State):
         self.email_pending = metrics.pending
 
     async def _reload(self):
+        # A slow earlier search/page request must not replace a newer result.
+        # Reflex events can overlap while the browser is processing consecutive
+        # input, pagination, and periodic refresh events.
+        self.reload_generation += 1
+        generation = self.reload_generation
+        search_query = self.search_query
+        status_filter = self.status_filter
+        current_page = self.current_page
         self.is_loading = True
         self.error_message = ""
         yield
@@ -309,39 +318,41 @@ class ReceptionDashboardState(rx.State):
                 snapshot = reception_day_operations(
                     db,
                     token=token,
-                    search=self.search_query,
-                    status=self.status_filter,
-                    page=self.current_page,
+                    search=search_query,
+                    status=status_filter,
+                    page=current_page,
                     page_size=8,
                 )
                 overview = reception_overview(db, token=token)
                 email_metrics = reception_email_metrics(db, token=token)
+            if generation != self.reload_generation:
+                return
             self._apply_snapshot(snapshot)
             self._apply_overview(overview)
             self._apply_email_metrics(email_metrics)
         except (AuthenticationRequiredError, PasswordChangeRequiredError):
-            self._clear_data()
-            yield rx.redirect("/login")
+            if generation == self.reload_generation:
+                self._clear_data()
+                yield rx.redirect("/login")
         except RoleForbiddenError:
-            self._clear_data()
-            yield rx.redirect("/acesso-negado")
+            if generation == self.reload_generation:
+                self._clear_data()
+                yield rx.redirect("/acesso-negado")
         except Exception:
-            self._clear_data()
-            self.error_message = (
-                "Não foi possível atualizar as consultas de hoje. Tente novamente."
-            )
+            if generation == self.reload_generation:
+                self._clear_data()
+                self.error_message = (
+                    "Não foi possível atualizar as consultas de hoje. Tente novamente."
+                )
         finally:
-            self.is_loading = False
-            yield
+            if generation == self.reload_generation:
+                self.is_loading = False
+                yield
 
     @rx.event
     async def load(self):
         async for event in self._reload():
             yield event
-
-    @rx.event
-    def update_search_query(self, value: str) -> None:
-        self.search_query = str(value or "")[:100]
 
     @rx.event
     async def apply_search(self, form_data: dict[str, Any]):
@@ -414,6 +425,10 @@ class ReceptionDashboardState(rx.State):
         self.search_query = ""
         self.status_filter = "__all__"
         self.current_page = 1
+        yield rx.call_script(
+            "(() => { const input = document.getElementById('reception-day-search'); "
+            "if (input) input.value = ''; })()"
+        )
         async for event in self._reload():
             yield event
 

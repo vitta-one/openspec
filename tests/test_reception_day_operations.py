@@ -61,6 +61,26 @@ def test_empty_day_search_submission_clears_stale_query(form_data):
     assert state.current_page == 1
 
 
+def test_day_search_applies_submitted_value_over_previous_filter():
+    state = SimpleNamespace(search_query="11900000001", current_page=3)
+
+    async def reload():
+        yield None
+
+    state._reload = reload
+
+    async def submit():
+        async for _ in ReceptionDashboardState.apply_search.fn(
+            state, {"query": "Dra. Clara Silveira"}
+        ):
+            pass
+
+    asyncio.run(submit())
+
+    assert state.search_query == "Dra. Clara Silveira"
+    assert state.current_page == 1
+
+
 def make_professional(db, index: int = 1, *, name: str = "Dra. Clara Silveira"):
     professional = Professional(
         name=name,

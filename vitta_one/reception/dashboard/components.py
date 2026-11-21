@@ -453,7 +453,7 @@ def _reception_day_toolbar() -> rx.Component:
                     ),
                     rx.el.input(
                         id="reception-day-search", name="query", type="search",
-                        value=S.search_query, on_change=S.update_search_query,
+                        default_value=S.search_query,
                         placeholder="Paciente, profissional ou horário",
                         auto_complete="off",
                         max_length=100, class_name="vitta-reception-day-search-input",

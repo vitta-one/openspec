@@ -515,7 +515,9 @@ def test_reception_daily_operations_table_and_filters(page: Page) -> None:
     search.fill(FIXTURE["day_first_professional_name"])
     search.press("Enter")
     expect(page.locator(".vitta-reception-day-row")).to_have_count(8, timeout=30000)
-    expect(page.get_by_role("status").filter(has_text="de 8 consultas")).to_be_visible()
+    expect(
+        page.get_by_role("status").filter(has_text="de 8 consultas")
+    ).to_be_visible(timeout=30000)
     expect(
         page.locator(".vitta-reception-day-table-scroll").get_by_text(
             FIXTURE["day_first_patient_name"], exact=True
@@ -524,13 +526,17 @@ def test_reception_daily_operations_table_and_filters(page: Page) -> None:
 
     search.fill("")
     search.press("Enter")
+    expect(search).to_have_value("", timeout=30000)
+    expect(page.locator(".vitta-reception-day-row")).to_have_count(8, timeout=30000)
     expect(
         page.get_by_role("status").filter(has_text="de 24 consultas")
     ).to_be_visible(timeout=30000)
     page.locator("#reception-day-status").click()
     page.get_by_role("option", name="Agendada", exact=True).click()
     expect(page.locator(".vitta-reception-day-row")).to_have_count(3, timeout=30000)
-    expect(page.get_by_role("status").filter(has_text="de 3 consultas")).to_be_visible()
+    expect(
+        page.get_by_role("status").filter(has_text="de 3 consultas")
+    ).to_be_visible(timeout=30000)
     expect(page.locator(".vitta-reception-day-pagination button")).to_have_count(0)
 
     page.locator("#reception-day-status").click()
