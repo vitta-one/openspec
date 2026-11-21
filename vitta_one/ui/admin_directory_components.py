@@ -71,16 +71,26 @@ def specialty_row(row) -> rx.Component:
 
 def specialty_table_row(row) -> rx.Component:
     """Compact semantic row for the full specialty directory."""
+    icon_name = rx.match(
+        row["name"],
+        ("Cardiologia", "activity"),
+        ("Clínica Geral", "stethoscope"),
+        ("Ortopedia", "bone"),
+        ("Pediatria", "baby"),
+        ("Ginecologia", "venus"),
+        ("Dermatologia", "flask_conical"),
+        "stethoscope",
+    )
     return rx.table.row(
         rx.table.row_header_cell(
             rx.hstack(
                 rx.box(
-                    rx.icon("stethoscope", size=19, aria_hidden="true"),
+                    rx.icon(icon_name, size=21, aria_hidden="true"),
                     class_name="vitta-specialty-table-icon",
                     aria_hidden="true",
                 ),
                 rx.text(row["name"], font_weight="650", color="var(--vitta-text)"),
-                align="center", gap="3", min_width="0",
+                align="center", gap="20px", min_width="0",
             ),
         ),
         rx.table.cell(rx.text("—", color="var(--vitta-text-muted)")),
@@ -154,7 +164,7 @@ def specialties_table() -> rx.Component:
         overflow_x="auto",
         tab_index=0,
         role="region",
-        aria_label="Tabela de especialidades; role para os lados em telas pequenas",
+        aria_label="Tabela de especialidades; use as setas para navegar",
         class_name="vitta-specialty-table-scroll",
     )
 
@@ -1363,6 +1373,7 @@ def _directory_pagination(*, is_professional: bool) -> rx.Component:
                 "Mostrando ", range_start, "–", range_end, " de ",
                 result_count, " ", noun,
                 size="2", color="var(--vitta-text-muted)",
+                role="status", aria_live="polite",
             ),
             rx.hstack(
                 rx.hstack(
@@ -1466,86 +1477,88 @@ def specialties_management_workspace() -> rx.Component:
         ),
         section_panel(
             rx.vstack(
-                _directory_filters(is_professional=False),
-                _specialty_advanced_filters(),
-                rx.flex(
-                    rx.text(
-                        "Resultados: ",
-                        AdminDirectoryState.specialty_result_count,
-                        size="2",
-                        color="var(--vitta-text-muted)",
-                        role="status",
-                        aria_live="polite",
-                        class_name="vitta-sr-only",
+                rx.cond(
+                    AdminDirectoryState.specialty_advanced_filters_open,
+                    rx.vstack(
+                        _directory_filters(is_professional=False),
+                        _specialty_advanced_filters(),
+                        spacing="3",
+                        align="stretch",
+                        width="100%",
                     ),
+                    _directory_filters(is_professional=False),
+                ),
+                rx.vstack(
                     rx.cond(
                         AdminDirectoryState.has_active_specialty_filters,
-                        rx.button(
-                            "Limpar filtros",
-                            type="button",
-                            variant="ghost",
-                            color_scheme="teal",
-                            size="2",
-                            on_click=AdminDirectoryState.clear_specialty_filters,
-                            disabled=AdminDirectoryState.is_submitting,
+                        rx.flex(
+                            rx.button(
+                                "Limpar filtros",
+                                type="button",
+                                variant="ghost",
+                                color_scheme="teal",
+                                size="2",
+                                on_click=AdminDirectoryState.clear_specialty_filters,
+                                disabled=AdminDirectoryState.is_submitting,
+                            ),
+                            justify="end",
+                            width="100%",
                         ),
                         rx.fragment(),
                     ),
-                    justify="between",
-                    align="center",
-                    gap="0.75rem",
-                    width="100%",
-                    flex_wrap="wrap",
-                ),
-                rx.cond(
-                    AdminDirectoryState.is_loading,
-                    rx.center(
-                        rx.spinner(size="3"),
-                        min_height="8rem",
-                        width="100%",
-                        role="status",
-                        aria_label="Carregando especialidades",
-                    ),
                     rx.cond(
-                        AdminDirectoryState.has_filtered_specialties,
-                        specialties_table(),
+                        AdminDirectoryState.is_loading,
                         rx.center(
-                            rx.vstack(
-                                rx.text(
-                                    rx.cond(
-                                        AdminDirectoryState.has_specialties,
-                                        "Nenhuma especialidade encontrada para os filtros selecionados.",
-                                        "Nenhuma especialidade cadastrada.",
-                                    ),
-                                    color="var(--vitta-text-muted)",
-                                    text_align="center",
-                                    size="2",
-                                ),
-                                rx.cond(
-                                    AdminDirectoryState.has_active_specialty_filters,
-                                    rx.button(
-                                        "Limpar filtros",
-                                        type="button",
-                                        variant="outline",
-                                        on_click=AdminDirectoryState.clear_specialty_filters,
-                                    ),
-                                    rx.button(
-                                        "Nova especialidade",
-                                        type="button",
-                                        color_scheme="teal",
-                                        on_click=AdminDirectoryState.start_new_specialty,
-                                    ),
-                                ),
-                                spacing="3",
-                                align="center",
-                            ),
-                            min_height="10rem",
+                            rx.spinner(size="3"),
+                            min_height="8rem",
                             width="100%",
+                            role="status",
+                            aria_label="Carregando especialidades",
+                        ),
+                        rx.cond(
+                            AdminDirectoryState.has_filtered_specialties,
+                            specialties_table(),
+                            rx.center(
+                                rx.vstack(
+                                    rx.text(
+                                        rx.cond(
+                                            AdminDirectoryState.has_specialties,
+                                            "Nenhuma especialidade encontrada para os filtros selecionados.",
+                                            "Nenhuma especialidade cadastrada.",
+                                        ),
+                                        color="var(--vitta-text-muted)",
+                                        text_align="center",
+                                        size="2",
+                                    ),
+                                    rx.cond(
+                                        AdminDirectoryState.has_active_specialty_filters,
+                                        rx.button(
+                                            "Limpar filtros",
+                                            type="button",
+                                            variant="outline",
+                                            on_click=AdminDirectoryState.clear_specialty_filters,
+                                        ),
+                                        rx.button(
+                                            "Nova especialidade",
+                                            type="button",
+                                            color_scheme="teal",
+                                            on_click=AdminDirectoryState.start_new_specialty,
+                                        ),
+                                    ),
+                                    spacing="3",
+                                    align="center",
+                                ),
+                                min_height="10rem",
+                                width="100%",
+                            ),
                         ),
                     ),
+                    _directory_pagination(is_professional=False),
+                    spacing="2",
+                    align="stretch",
+                    width="100%",
                 ),
-                _directory_pagination(is_professional=False),
-                spacing="3",
+                gap="20px",
                 align="stretch",
                 width="100%",
             ),

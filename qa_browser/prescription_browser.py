@@ -366,8 +366,17 @@ def test_admin_specialty_pagination_has_real_second_page(page: Page) -> None:
     page_size.click()
     page.get_by_role("option", name="25", exact=True).click()
     expect(page_size).to_contain_text("25", timeout=15000)
+    result_summary = page.locator(".vitta-directory-pagination-footer")
+    expect(result_summary).to_contain_text(" de ", timeout=15000)
+    total_match = re.search(
+        r"Mostrando\s+\d+–\d+\s+de\s+(\d+)\s+especialidades",
+        result_summary.inner_text(),
+    )
+    assert total_match is not None, result_summary.inner_text()
+    total_specialties = int(total_match.group(1))
+    assert total_specialties > 10
     all_specialties = page.locator("table tbody tr")
-    expect(all_specialties).to_have_count(13, timeout=15000)
+    expect(all_specialties).to_have_count(total_specialties, timeout=15000)
     expect(current_page).to_have_text("1")
 
     page_size.click()
@@ -379,7 +388,7 @@ def test_admin_specialty_pagination_has_real_second_page(page: Page) -> None:
     second_page = page.locator("table tbody tr")
     expect(second_page.first).to_be_visible(timeout=15000)
     second_page_count = second_page.count()
-    assert 1 <= second_page_count <= 10
+    assert second_page_count == total_specialties - 10
     assert second_page.first.inner_text() != first_row_text
     expect(next_page).to_be_disabled()
     previous.click()

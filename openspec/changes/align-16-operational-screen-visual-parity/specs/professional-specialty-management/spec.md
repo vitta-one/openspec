@@ -25,3 +25,10 @@ O diretório de especialidades e o diretório completo de profissionais MUST exi
 #### Scenario: Rejeitar tamanho inválido
 - **WHEN** chega um tamanho fora de 10, 25 ou 50
 - **THEN** o estado de paginação permanece inalterado
+
+### Requirement: Diretório de especialidades preserva a composição desktop compacta
+Na referência desktop de 1768×890, o painel do diretório MUST manter seis linhas completas da tabela e a paginação visível na primeira dobra quando houver mais resultados. A rolagem vertical MUST ficar limitada à tabela, conservar o cabeçalho visível e permitir navegação por teclado; o restante da página não pode ser cortado.
+
+#### Scenario: Há mais de seis especialidades na primeira página
+- **WHEN** o Administrador abre o diretório no viewport de referência e existem mais de seis resultados
+- **THEN** as seis primeiras linhas aparecem completas, a faixa de resultados e a paginação permanecem visíveis e a rolagem da lista é acessível por teclado

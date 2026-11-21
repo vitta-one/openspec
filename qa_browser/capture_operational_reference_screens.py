@@ -264,6 +264,17 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
             viewport_height = page.evaluate("window.innerHeight")
             if footer_box is None or footer_box["y"] + footer_box["height"] > viewport_height:
                 raise AssertionError("Paginação de especialidades ficou fora do viewport de referência")
+            table_scroll = page.locator(".vitta-specialty-table-scroll").bounding_box()
+            if table_scroll is None:
+                raise AssertionError("Área rolável da tabela de especialidades não foi renderizada")
+            if specialty_rows.count() >= 6:
+                sixth_row = specialty_rows.nth(5).bounding_box()
+                if sixth_row is None or sixth_row["y"] + sixth_row["height"] > table_scroll["y"] + table_scroll["height"] + 1:
+                    raise AssertionError("A sexta especialidade foi cortada na tabela de referência")
+            if specialty_rows.count() > 6:
+                seventh_row = specialty_rows.nth(6).bounding_box()
+                if seventh_row is not None and seventh_row["y"] < table_scroll["y"] + table_scroll["height"] - 1:
+                    raise AssertionError("Uma sétima especialidade aparece parcialmente no recorte")
         if route == "/medico/agenda" and viewport_name == "desktop-1768x890":
             expect(page.locator(".vitta-doctor-week-empty")).to_have_count(7)
         if not page.locator("body").inner_text().strip():
@@ -342,6 +353,11 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
             '#patient-create-phone', '.vitta-patient-create-actions > a',
             '.vitta-patient-create-actions > button', '.vitta-queue-active-panel',
             '.vitta-staff-form', '.vitta-specialty-table',
+            '.vitta-specialty-directory-panel', '.vitta-specialty-directory-filters',
+            '.vitta-specialty-table-scroll', '.vitta-specialty-table thead tr',
+            '.vitta-specialty-table tbody tr:nth-child(1)',
+            '.vitta-specialty-table tbody tr:nth-child(6)',
+            '.vitta-directory-pagination-footer',
             '.vitta-availability-panel', '.vitta-clinic-settings-layout',
             '.vitta-clinic-settings-guidance', '.vitta-finance-filters',
             '.vitta-finance-issue', '.vitta-finance-charges',
@@ -412,6 +428,25 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
             })) : []
           };
         }""")
+        if route == "/admin/especialidades" and viewport_name == "desktop-1768x890":
+            expected_landmarks = {
+                ".vitta-specialty-directory-panel": {"x": 156, "y": 331, "width": 1536, "height": 502},
+                ".vitta-specialty-table-scroll": {"x": 181, "y": 428, "width": 1486, "height": 320},
+                ".vitta-specialty-table thead tr": {"y": 428, "height": 39},
+                ".vitta-specialty-table tbody tr:nth-child(1)": {"y": 467, "height": 47},
+                ".vitta-specialty-table tbody tr:nth-child(6)": {"y": 700, "height": 47},
+                ".vitta-directory-pagination-footer": {"y": 756, "height": 56},
+            }
+            for selector, target in expected_landmarks.items():
+                actual = geometry["landmarks"].get(selector)
+                if actual is None:
+                    raise AssertionError(f"Marco de especialidades ausente: {selector}")
+                for dimension, expected in target.items():
+                    if abs(actual[dimension] - expected) > 2:
+                        raise AssertionError(
+                            f"{selector} {dimension}={actual[dimension]}px; "
+                            f"referência {expected}px"
+                        )
         if route == "/recepcao/pacientes" and viewport_name == "desktop-1768x890":
             art = geometry["landmarks"].get(".vitta-page-header-art")
             description = geometry["landmarks"].get(
