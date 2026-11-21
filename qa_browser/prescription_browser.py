@@ -3,6 +3,7 @@
 No mocking of Reflex State or backend. Every browser context starts with a fresh
 session. These tests run against a *disposable* real Reflex + PostgreSQL instance.
 """
+from datetime import datetime
 import json
 import os
 import re
@@ -11,6 +12,10 @@ from pathlib import Path
 import pytest
 from playwright.sync_api import Page, expect, sync_playwright
 from qa_browser.playwright_support import launch_chromium, validate_loopback_base_url
+from vitta_one.appointment_scheduling.reception_calendar import (
+    format_week_period_label,
+    monday_of_week,
+)
 
 
 BASE = validate_loopback_base_url(os.getenv("QA_BASE_URL", "http://127.0.0.1:3000"))
@@ -943,6 +948,10 @@ def test_patient_books_own_appointment_and_both_staff_agendas_update(page: Page)
     expect(date_options.nth(1)).to_be_visible(timeout=30000)
     date_options.nth(1).click()
     expect(page.get_by_role("heading", name="4. Escolha o horário")).to_be_visible()
+    selected_date_text = page.locator("#patient-booking-date").inner_text()
+    selected_date_match = re.search(r"\d{2}/\d{2}/\d{4}", selected_date_text)
+    assert selected_date_match is not None, selected_date_text
+    booked_date = datetime.strptime(selected_date_match.group(), "%d/%m/%Y").date()
     choose = page.get_by_role("button", name=re.compile("Selecionar horário de")).first
     expect(choose).to_be_visible(timeout=30000)
     page.emulate_media(reduced_motion="reduce")
@@ -1002,6 +1011,18 @@ def test_patient_books_own_appointment_and_both_staff_agendas_update(page: Page)
             role_page.goto(BASE + route, wait_until="domcontentloaded")
             if route.startswith("/recepcao"):
                 expect(role_page.get_by_role("heading", name="Consultas do período")).to_be_visible(timeout=30000)
+                # A fixture starts its bookable slot two days ahead. Near a
+                # week boundary that slot belongs to the next agenda period.
+                # Open that week explicitly before asserting the shared record.
+                role_page.get_by_role("button", name="Escolher outra semana").click()
+                role_page.locator("#reception-agenda-start").fill(booked_date.isoformat())
+                role_page.get_by_role("button", name="Aplicar", exact=True).click()
+                expected_period = format_week_period_label(
+                    monday_of_week(booked_date.isoformat())
+                )
+                expect(
+                    role_page.get_by_role("button", name="Escolher outra semana")
+                ).to_have_text(expected_period, timeout=30000)
                 expect_patient_in_paginated_agenda(role_page, FIXTURE["booking_patient_name"])
             else:
                 expect(

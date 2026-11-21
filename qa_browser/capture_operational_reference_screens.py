@@ -134,8 +134,16 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
     output.parent.mkdir(parents=True, exist_ok=True)
     errors: list[str] = []
     page_errors: list[str] = []
+    websocket_errors: list[str] = []
     geometry: dict = {}
     on_page_error = lambda error: page_errors.append(str(error))
+    page.on(
+        "websocket",
+        lambda socket: socket.on(
+            "socketerror",
+            lambda error: websocket_errors.append(f"{socket.url}: {error}"),
+        ),
+    )
     page.on("pageerror", on_page_error)
     try:
         page.goto(BASE + route, wait_until="domcontentloaded", timeout=30000)
@@ -204,6 +212,8 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
                 raise AssertionError("Filtros de especialidades não foram renderizados")
             if abs(search_box["y"] - status_box["y"]) > 2:
                 raise AssertionError("Busca e situação não estão alinhadas na grade")
+        if route == "/medico/agenda" and viewport_name == "desktop-1768x890":
+            expect(page.locator(".vitta-doctor-week-empty")).to_have_count(7)
         if not page.locator("body").inner_text().strip():
             raise AssertionError("A rota não renderizou conteúdo")
         if page.locator("nextjs-portal, vite-error-overlay").count():
@@ -212,6 +222,10 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
             raise AssertionError("Overflow horizontal da página")
         if page_errors:
             raise AssertionError("Erro JavaScript: " + page_errors[0][:220])
+        if websocket_errors:
+            raise AssertionError("Falha de WebSocket: " + websocket_errors[0][:220])
+        if "Cannot connect to server: websocket error." in page.locator("body").inner_text():
+            raise AssertionError("Aviso de desconexão Reflex visível na captura")
         geometry = page.evaluate("""() => {
           const rect = (node) => {
             if (!node) return null;
@@ -313,6 +327,70 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
             })) : []
           };
         }""")
+        if viewport_name == "desktop-1768x890" and route in {
+            "/medico/agenda", "/medico/pacientes", "/medico/prontuarios"
+        }:
+            geometry["doctor_reference_landmarks"] = page.evaluate("""() => {
+              const box = (selector) => {
+                const node = document.querySelector(selector);
+                if (!node) return null;
+                const rect = node.getBoundingClientRect();
+                return Object.fromEntries(['x', 'y', 'width', 'height'].map((key) =>
+                  [key, Math.round(rect[key] * 100) / 100]
+                ));
+              };
+              return Object.fromEntries([
+                '.vitta-doctor-week-panel', '.vitta-agenda-week-grid',
+                '.vitta-doctor-calendar-panel', '.vitta-doctor-month-heading-icon',
+                '.vitta-doctor-month-divider', '.vitta-doctor-month-nav',
+                '.vitta-doctor-month-weekdays', '.vitta-doctor-month-days',
+                '.vitta-page-header', '.vitta-page-header .rt-Heading',
+                '.vitta-doctor-patient-list', '.vitta-doctor-patient-heading-icon',
+                '.vitta-doctor-patient-heading .rt-Heading',
+                '.vitta-doctor-patient-empty .vitta-empty-state',
+                '.vitta-breadcrumb', '.vitta-page-header-art',
+                '.vitta-doctor-records-workspace',
+                '.vitta-doctor-records-empty-panel .vitta-empty-state'
+              ].map((selector) => [selector, box(selector)]));
+            }""")
+            expected_landmarks = {
+                "/medico/agenda": {
+                    ".vitta-doctor-week-panel": {"y": 319, "height": 254},
+                    ".vitta-agenda-week-grid": {"y": 408},
+                    ".vitta-doctor-calendar-panel": {"y": 592},
+                    ".vitta-doctor-month-heading-icon": {"x": 343, "y": 600},
+                    ".vitta-doctor-month-divider": {"y": 664},
+                    ".vitta-doctor-month-nav": {"y": 676},
+                    ".vitta-doctor-month-weekdays": {"y": 736},
+                    ".vitta-doctor-month-days": {"y": 766},
+                },
+                "/medico/pacientes": {
+                    ".vitta-page-header": {"x": 312, "y": 75, "width": 1424, "height": 176},
+                    ".vitta-page-header .rt-Heading": {"x": 334, "y": 123},
+                    ".vitta-doctor-patient-list": {"x": 312, "y": 279, "width": 1424, "height": 380},
+                    ".vitta-doctor-patient-heading-icon": {"x": 343, "y": 294, "width": 70, "height": 68},
+                    ".vitta-doctor-patient-heading .rt-Heading": {"x": 430, "y": 294},
+                    ".vitta-doctor-patient-empty .vitta-empty-state": {"x": 335, "y": 378, "width": 1378, "height": 256},
+                },
+                "/medico/prontuarios": {
+                    ".vitta-breadcrumb": {"x": 310, "y": 75},
+                    ".vitta-page-header .rt-Heading": {"x": 320, "y": 192},
+                    ".vitta-page-header-art": {"x": 995, "y": 88, "width": 753, "height": 228},
+                    ".vitta-doctor-records-workspace": {"x": 310, "y": 316, "width": 1438},
+                    ".vitta-doctor-records-empty-panel .vitta-empty-state": {"x": 333, "y": 341, "width": 1392, "height": 355},
+                },
+            }
+            measured = geometry["doctor_reference_landmarks"]
+            for selector, expected in expected_landmarks[route].items():
+                actual = measured.get(selector)
+                if actual is None:
+                    raise AssertionError(f"Landmarka médica ausente: {selector}")
+                for dimension, target in expected.items():
+                    if abs(actual[dimension] - target) > 2:
+                        raise AssertionError(
+                            f"{route} {selector} {dimension}={actual[dimension]}px; "
+                            f"referência {target}px"
+                        )
         if route == "/admin/especialidades":
             geometry["specialty_filters"] = page.evaluate("""() => {
               const measure = (selector) => {
@@ -403,7 +481,11 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
               document.activeElement?.blur();
               window.scrollTo(0, 0);
             }""")
-            page.wait_for_timeout(75)
+            page.wait_for_timeout(350)
+            if "Cannot connect to server: websocket error." in page.locator("body").inner_text():
+                raise AssertionError("Aviso de desconexão Reflex visível na captura")
+            if websocket_errors:
+                raise AssertionError("Falha de WebSocket: " + websocket_errors[0][:220])
             page.screenshot(path=str(output), full_page=False, animations="disabled", timeout=15000)
         except Exception as error:
             errors.append("Screenshot não gerado: " + str(error)[:220])
