@@ -289,17 +289,19 @@ def patient_create_workspace() -> rx.Component:
                     rx.vstack(
                         rx.hstack(
                             rx.box(
-                                rx.icon("user_round", size=26),
+                                rx.icon("user_round", size=42),
                                 class_name="vitta-patient-create-heading-icon",
                                 aria_hidden="true",
                             ),
                             rx.vstack(
                                 rx.heading("Dados pessoais", size="5", color="var(--vitta-text)"),
                                 rx.text("Campos marcados com * são obrigatórios.",
-                                        size="2", color="var(--vitta-text-muted)"),
+                                        size="2", color="var(--vitta-text-muted)",
+                                        class_name="vitta-patient-create-subtitle"),
                                 spacing="1", align="start", min_width="0",
+                                class_name="vitta-patient-create-heading-copy",
                             ),
-                            align="center", gap="3", width="100%",
+                            align="center", gap="5", width="100%",
                             class_name="vitta-patient-create-heading",
                         ),
                         feedback_region(
@@ -415,6 +417,7 @@ def patient_create_workspace() -> rx.Component:
                                 class_name="vitta-context-link",
                             ),
                             rx.button(
+                                rx.icon("user_plus", size=24, aria_hidden="true"),
                                 "Cadastrar paciente", type="submit",
                                 color_scheme="teal", high_contrast=True,
                                 disabled=S.is_submitting | (S.new_patient_created_id > 0),
@@ -430,43 +433,73 @@ def patient_create_workspace() -> rx.Component:
                     on_submit=S.create_patient,
                     no_validate=True, width="100%",
                 ),
+                padding=rx.breakpoints(initial="1rem", lg="1.5rem 1.625rem"),
             ),
             width="100%",
             class_name="vitta-patient-create-form-panel",
             ),
             section_panel(
+                rx.image(
+                    src="/patient-registration-guide-exact.png", alt="",
+                    aria_hidden="true", class_name="vitta-patient-create-illustration",
+                ),
                 rx.vstack(
-                    rx.image(
-                        src="/patient-registration-guide-exact.png", alt="",
-                        aria_hidden="true", class_name="vitta-patient-create-illustration",
-                    ),
-                    rx.heading("O que acontece depois?", size="4"),
-                    rx.text(
-                        "Após o cadastro, você será direcionado à ficha do paciente, onde poderá complementar as informações, consultar histórico e realizar agendamentos.",
-                        size="2", color="var(--vitta-text-muted)", line_height="1.55",
-                    ),
-                    rx.separator(),
                     rx.hstack(
-                        rx.icon("sparkles", size=20, color="var(--vitta-primary)"),
-                        rx.heading("Dicas", size="4"),
-                        align="center", gap="2",
+                        rx.box(
+                            rx.icon("info", size=22),
+                            class_name="vitta-patient-create-info-icon",
+                            aria_hidden="true",
+                        ),
+                        rx.vstack(
+                            rx.heading(
+                                "O que acontece depois?", size="4",
+                                class_name="vitta-patient-create-guidance-heading",
+                            ),
+                            rx.text(
+                                "Após o cadastro, você será direcionado à ficha do paciente, onde poderá complementar as informações, consultar histórico e realizar agendamentos.",
+                                size="2", color="var(--vitta-text-muted)", line_height="1.5",
+                                class_name="vitta-patient-create-guidance-description",
+                            ),
+                            align="start", spacing="1", min_width="0",
+                            class_name="vitta-patient-create-guidance-copy",
+                        ),
+                        align="start", gap="5", width="100%",
+                        class_name="vitta-patient-create-guidance-intro",
                     ),
-                    _patient_create_tip(
-                        "circle_check",
-                        "Confira se o CPF está correto e com 11 dígitos.",
+                    rx.separator(class_name="vitta-patient-create-guidance-divider"),
+                    rx.vstack(
+                        rx.hstack(
+                            rx.icon("sparkles", size=24, color="var(--vitta-primary)"),
+                            rx.heading(
+                                "Dicas", size="4",
+                                class_name="vitta-patient-create-tips-heading",
+                            ),
+                            align="center", gap="8",
+                        ),
+                        _patient_create_tip(
+                            "check",
+                            "Confira se o CPF está correto e com 11 dígitos.",
+                        ),
+                        _patient_create_tip(
+                            "check",
+                            "O telefone é opcional, mas ajuda no contato com o paciente.",
+                        ),
+                        align="stretch", spacing="1", width="100%",
+                        class_name="vitta-patient-create-tips",
                     ),
-                    _patient_create_tip(
-                        "circle_check",
-                        "O telefone é opcional, mas ajuda no contato com o paciente.",
-                    ),
-                    align="stretch", spacing="3", width="100%",
+                    align="stretch", spacing="0", width="100%",
+                    class_name="vitta-patient-create-guidance-body",
                 ),
                 class_name="vitta-patient-create-guidance",
+                padding="0",
+                background="linear-gradient(145deg, #ffffff 0%, #f5fbf9 100%)",
+                border="1px solid #d5e8e5",
             ),
             columns=rx.breakpoints(
                 initial="1", lg="minmax(0, 1.28fr) minmax(18rem, 0.85fr)"
             ),
             gap="1.5rem", align="start", width="100%",
+            class_name="vitta-patient-create-layout",
         ),
         spacing="4", align="stretch", width="100%",
         class_name="vitta-patient-create-workspace",
@@ -479,6 +512,7 @@ def _patient_create_tip(icon: str, description: str) -> rx.Component:
         rx.text(
             description, color="var(--vitta-text-muted)", size="2",
             line_height="1.5", min_width="0",
+            class_name="vitta-patient-create-tip-description",
         ),
         align="center", gap="3", width="100%",
         class_name="vitta-patient-create-tip",

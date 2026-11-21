@@ -220,6 +220,27 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
             raise AssertionError("Overlay de erro de desenvolvimento visível")
         if page.evaluate("document.documentElement.scrollWidth > window.innerWidth + 2"):
             raise AssertionError("Overflow horizontal da página")
+        if route == "/recepcao/pacientes/novo" and viewport_name == "mobile-320x740":
+            placeholder = page.locator("#patient-create-name").evaluate("""input => {
+              const inputStyle = getComputedStyle(input);
+              const placeholderStyle = getComputedStyle(input, "::placeholder");
+              const canvas = document.createElement("canvas");
+              const context = canvas.getContext("2d");
+              context.font = placeholderStyle.font;
+              const letterSpacing = placeholderStyle.letterSpacing === "normal"
+                ? 0
+                : Number.parseFloat(placeholderStyle.letterSpacing) || 0;
+              const textWidth = context.measureText(input.placeholder).width
+                + Math.max(0, input.placeholder.length - 1) * letterSpacing;
+              const availableWidth = input.clientWidth
+                - Number.parseFloat(inputStyle.paddingLeft)
+                - Number.parseFloat(inputStyle.paddingRight);
+              return {textWidth, availableWidth};
+            }""")
+            if placeholder["textWidth"] > placeholder["availableWidth"]:
+                raise AssertionError(
+                    "O placeholder do nome do paciente fica cortado em 320 px"
+                )
         if page_errors:
             raise AssertionError("Erro JavaScript: " + page_errors[0][:220])
         if websocket_errors:

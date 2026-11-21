@@ -733,7 +733,13 @@ def page_header(
     )
 
 
-def section_panel(*children, padding=None, **props) -> rx.Component:
+def section_panel(
+    *children,
+    padding=None,
+    background="var(--vitta-surface)",
+    border="1px solid var(--vitta-border)",
+    **props,
+) -> rx.Component:
     """Render a durable operational section using the canonical product surface."""
     return rx.box(
         *children,
@@ -743,8 +749,8 @@ def section_panel(*children, padding=None, **props) -> rx.Component:
             if padding is not None
             else rx.breakpoints(initial="1rem", sm="1.25rem")
         ),
-        background="var(--vitta-surface)",
-        border="1px solid var(--vitta-border)",
+        background=background,
+        border=border,
         border_radius="var(--vitta-radius-panel)",
         box_shadow="var(--vitta-shadow-xs)",
         **props,
