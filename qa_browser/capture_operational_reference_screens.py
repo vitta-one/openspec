@@ -85,9 +85,10 @@ DATA_STATES = {
 EMAILS = {
     "administrador": FIXTURE["admin_email"],
     "recepcionista": FIXTURE["reception_email"],
-    # Doctor B is an existing linked QA identity with no consultations or
-    # clinical records, matching the approved empty operational states without
-    # hiding or deleting data from Doctor A.
+    # Doctor B is a linked QA identity with an empty consultation projection in
+    # the freshly seeded capture database. Browser booking tests may consume its
+    # synthetic slot, so reference captures use a fresh fixture and never erase
+    # those test results.
     "medico": FIXTURE["doctor_b_email"],
     "financeiro": FIXTURE["finance_email"],
 }
@@ -396,6 +397,13 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
         errors.append(str(error)[:500])
     finally:
         try:
+            # Route-specific interaction checks can scroll controls into view.
+            # Capture the canonical top-of-page composition after those checks.
+            page.evaluate("""() => {
+              document.activeElement?.blur();
+              window.scrollTo(0, 0);
+            }""")
+            page.wait_for_timeout(75)
             page.screenshot(path=str(output), full_page=False, animations="disabled", timeout=15000)
         except Exception as error:
             errors.append("Screenshot não gerado: " + str(error)[:220])
