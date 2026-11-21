@@ -154,13 +154,24 @@ def doctor_finish(db: Session, *, token: str, entry_id: int) -> QueueEntry:
 
 def reception_list_patient_directory(
     db: Session, *, token: str, search: str = "", page: int = 1, size: int = 10,
+    phone_filter: str = "ALL",
 ) -> tuple[list[dict[str, str | int]], int]:
     """Paginate patient identities after server-side receptionist authorization."""
     require_role(db, token, Role.RECEPCIONISTA)
     page = max(1, int(page))
     size = max(1, min(int(size), 30))
+    if phone_filter not in {"ALL", "WITH_PHONE", "WITHOUT_PHONE"}:
+        raise ValueError("Filtro de telefone inválido")
     term = " ".join(str(search or "").split())[:100]
     statement = select(Patient)
+    if phone_filter == "WITH_PHONE":
+        statement = statement.where(
+            Patient.phone.is_not(None), func.trim(Patient.phone) != ""
+        )
+    elif phone_filter == "WITHOUT_PHONE":
+        statement = statement.where(
+            (Patient.phone.is_(None)) | (func.trim(Patient.phone) == "")
+        )
     if term:
         # Keep the directory search equivalent to the existing receptionist
         # quick search. Escape SQL LIKE wildcards; do not expose CPF in results.

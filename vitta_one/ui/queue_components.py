@@ -790,7 +790,9 @@ def _queue_filters() -> rx.Component:
 
 def _queue_summary() -> rx.Component:
     return rx.flex(
-        _queue_summary_metric("Aguardando", ReceptionQueueState.queue_count, "users_round"),
+        _queue_summary_metric(
+            "Aguardando", ReceptionQueueState.queue_count, "users_round", "red"
+        ),
         _queue_summary_metric("Vermelho", ReceptionQueueState.red_waiting_count,
                               "triangle_alert", "red"),
         _queue_summary_metric("Amarelo", ReceptionQueueState.yellow_waiting_count,
@@ -830,7 +832,9 @@ def _queue_summary_metric(label, value, icon: str, tone: str = "teal") -> rx.Com
             ),
             spacing="0", align="start", min_width="0",
         ),
-        align="center", gap="2", class_name="vitta-queue-summary-metric",
+        align="center",
+        gap="2",
+        class_name=f"vitta-queue-summary-metric vitta-queue-summary-metric--{tone}",
     )
 
 
@@ -897,24 +901,39 @@ def active_queue_panel() -> rx.Component:
     return section_panel(
         rx.vstack(
             rx.flex(
-                rx.box(
-                    rx.heading("Fila ativa", size="5"),
-                    rx.text(
-                        "Ordenação por prioridade clínica: Vermelho, Amarelo e Verde; em cada grupo, primeiro quem chegou antes.",
-                        color="var(--vitta-text-muted)", size="2",
-                        line_height="1.5", margin_top="0.25rem",
+                rx.hstack(
+                    rx.box(
+                        rx.icon("users_round", size=34, aria_hidden="true"),
+                        class_name="vitta-queue-active-heading-icon",
                     ),
-                    rx.cond(
-                        ReceptionQueueState.queue_last_updated_at != "",
-                        rx.text(
-                            "Última atualização: ",
-                            ReceptionQueueState.queue_last_updated_at,
-                            color="var(--vitta-text-subtle)", size="1",
-                            margin_top="0.35rem", role="status", aria_live="polite",
+                    rx.box(
+                        rx.heading(
+                            "Fila ativa", size="5",
+                            class_name="vitta-queue-active-title",
                         ),
-                        rx.fragment(),
+                        rx.text(
+                            "Ordenação por prioridade clínica: Vermelho, Amarelo e Verde; em cada grupo, primeiro quem chegou antes.",
+                            color="var(--vitta-text-muted)", size="2",
+                            line_height="1.5", margin_top="0.25rem",
+                            class_name="vitta-queue-active-description",
+                        ),
+                        rx.cond(
+                            ReceptionQueueState.queue_last_updated_at != "",
+                            rx.text(
+                                "Última atualização: ",
+                                ReceptionQueueState.queue_last_updated_at,
+                                color="var(--vitta-text-subtle)", size="1",
+                                margin_top="0.35rem", role="status", aria_live="polite",
+                                class_name="vitta-queue-active-updated",
+                            ),
+                            rx.fragment(),
+                        ),
+                        min_width="0",
                     ),
+                    align="center",
+                    gap="4",
                     min_width="0",
+                    class_name="vitta-queue-active-heading",
                 ),
                 rx.button(
                     rx.icon("refresh-cw", size=16),
@@ -926,12 +945,14 @@ def active_queue_panel() -> rx.Component:
                     disabled=ReceptionQueueState.is_loading_queue
                     | ReceptionQueueState.is_submitting,
                     loading=ReceptionQueueState.is_loading_queue,
+                    class_name="vitta-queue-active-refresh",
                 ),
                 direction=rx.breakpoints(initial="column", sm="row"),
                 justify="between",
                 align=rx.breakpoints(initial="stretch", sm="center"),
                 gap="3",
                 width="100%",
+                class_name="vitta-queue-active-header",
             ),
             rx.cond(
                 ReceptionQueueState.queue_load_error != "",
@@ -979,7 +1000,7 @@ def active_queue_panel() -> rx.Component:
                             ),
                             class_name="vitta-queue-empty",
                             ),
-                            spacing="3", width="100%", align="stretch",
+                            spacing="6", width="100%", align="stretch",
                         ),
                     ),
                 ),
@@ -987,6 +1008,9 @@ def active_queue_panel() -> rx.Component:
             spacing="4",
             width="100%",
             align="stretch",
+        ),
+        padding=rx.breakpoints(
+            initial="1rem", sm="1.25rem", xl="1.625rem 1.875rem"
         ),
         class_name="vitta-queue-active-panel",
     )

@@ -412,6 +412,7 @@ def _reception_day_header() -> rx.Component:
                 class_name="vitta-reception-day-date",
             ),
             align="start", spacing="1", min_width="0",
+            class_name="vitta-reception-day-heading",
         ),
         rx.vstack(
             rx.cond(
@@ -549,9 +550,19 @@ def _queue_preview_row(row) -> rx.Component:
         rx.badge(row["priority_label"], color_scheme="green", high_contrast=True),
     )
     return rx.flex(
+        rx.box(
+            rx.icon("user_round", size=16, aria_hidden="true"),
+            class_name="vitta-reception-preview-icon",
+        ),
         rx.vstack(
-            rx.text(row["patient_name"], size="2", font_weight="700", overflow_wrap="anywhere"),
-            rx.text("Espera: ", row["wait_label"], size="1", color="var(--vitta-text-muted)"),
+            rx.text(
+                row["patient_name"], size="2", font_weight="700",
+                overflow_wrap="anywhere", class_name="vitta-reception-preview-name",
+            ),
+            rx.text(
+                "Aguardando há ", row["wait_label"], size="1",
+                color="var(--vitta-text-muted)", class_name="vitta-reception-preview-wait",
+            ),
             align="start", spacing="1", min_width="0",
         ),
         priority_badge,
@@ -564,14 +575,32 @@ def _reception_queue_preview() -> rx.Component:
     return section_panel(
         rx.vstack(
             rx.flex(
-                rx.vstack(
-                    rx.heading("Fila de espera", size="4"),
-                    rx.text(ReceptionQueueState.queue_count, " aguardando",
-                            size="1", color="var(--vitta-text-muted)"),
-                    align="start", spacing="0",
+                rx.hstack(
+                    rx.box(
+                        rx.icon("users", size=20, aria_hidden="true"),
+                        class_name="vitta-reception-section-icon",
+                    ),
+                    rx.vstack(
+                        rx.heading("Fila de espera", size="4"),
+                        rx.text(
+                            "Pacientes aguardando atendimento.",
+                            size="1", color="var(--vitta-text-muted)",
+                        ),
+                        align="start", spacing="0", min_width="0",
+                    ),
+                    align="center", gap="3", min_width="0",
                 ),
-                rx.link("Abrir fila", href="/recepcao/fila", class_name="vitta-context-link"),
+                rx.badge(
+                    ReceptionQueueState.queue_count,
+                    rx.cond(
+                        ReceptionQueueState.queue_count == 1,
+                        " paciente",
+                        " pacientes",
+                    ),
+                    color_scheme="teal", class_name="vitta-reception-queue-count",
+                ),
                 justify="between", align="center", gap="2", width="100%",
+                class_name="vitta-reception-queue-header",
             ),
             rx.cond(
                 ReceptionQueueState.is_loading_queue,
@@ -596,8 +625,21 @@ def _reception_queue_preview() -> rx.Component:
                     ),
                 ),
             ),
+            rx.flex(
+                rx.link(
+                    rx.hstack(
+                        rx.text("Ver fila completa"),
+                        rx.icon("arrow_right", size=15, aria_hidden="true"),
+                        align="center", gap="1",
+                    ),
+                    href="/recepcao/fila",
+                    class_name="vitta-reception-preview-more",
+                ),
+                justify="end", width="100%",
+            ),
             align="stretch", spacing="3", width="100%",
         ),
+        class_name="vitta-reception-queue-preview",
     )
 
 
@@ -605,9 +647,27 @@ def _upcoming_appointments_panel() -> rx.Component:
     return section_panel(
         rx.vstack(
             rx.flex(
-                rx.heading("Próximos atendimentos", size="4"),
-                rx.link("Ver agenda", href="/recepcao/agenda", class_name="vitta-context-link"),
+                rx.hstack(
+                    rx.box(
+                        rx.icon("calendar_days", size=20, aria_hidden="true"),
+                        class_name="vitta-reception-section-icon",
+                    ),
+                    rx.link(
+                        rx.vstack(
+                            rx.heading("Próximos atendimentos", size="4"),
+                            rx.text(
+                                "Próximas consultas da agenda de hoje.",
+                                size="1", color="var(--vitta-text-muted)",
+                            ),
+                            align="start", spacing="0", min_width="0",
+                        ),
+                        href="/recepcao/agenda",
+                        class_name="vitta-reception-upcoming-heading-link",
+                    ),
+                    align="center", gap="3", min_width="0",
+                ),
                 align="center", justify="between", gap="2", width="100%",
+                class_name="vitta-reception-upcoming-header",
             ),
             rx.cond(
                 S.upcoming_appointments.length() > 0,
@@ -615,16 +675,27 @@ def _upcoming_appointments_panel() -> rx.Component:
                     rx.foreach(
                         S.upcoming_appointments,
                         lambda row: rx.flex(
-                            rx.box(
+                            rx.hstack(
+                                rx.icon("calendar_days", size=13, aria_hidden="true"),
                                 rx.text(row["time"], font_weight="800", class_name="vitta-tabular"),
-                                rx.text(row["date_label"], size="1", color="var(--vitta-text-muted)"),
-                                min_width="3.5rem",
+                                align="center", gap="1",
+                                class_name="vitta-reception-upcoming-time",
                             ),
                             rx.vstack(
-                                rx.text(row["patient_name"], size="2", font_weight="700",
-                                        overflow_wrap="anywhere"),
-                                rx.text(row["professional_name"], size="1",
-                                        color="var(--vitta-text-muted)", overflow_wrap="anywhere"),
+                                rx.text(
+                                    row["patient_name"], size="2", font_weight="700",
+                                    overflow_wrap="anywhere",
+                                    class_name="vitta-reception-upcoming-patient",
+                                ),
+                                rx.hstack(
+                                    rx.icon("user_round", size=12, aria_hidden="true"),
+                                    rx.text(
+                                        row["professional_name"], size="1",
+                                        color="var(--vitta-text-muted)", overflow_wrap="anywhere",
+                                    ),
+                                    align="center", gap="1",
+                                    class_name="vitta-reception-upcoming-professional",
+                                ),
                                 align="start", spacing="0", min_width="0",
                             ),
                             align="center", gap="2", width="100%",
@@ -644,46 +715,106 @@ def _upcoming_appointments_panel() -> rx.Component:
 
 
 def _operational_alerts_panel() -> rx.Component:
+    alert_count = rx.cond(S.overview_pending > 0, 1, 0) + rx.cond(
+        S.email_failed > 0, 1, 0
+    )
     return section_panel(
         rx.vstack(
-            rx.heading("Alertas operacionais", size="4"),
+            rx.flex(
+                rx.hstack(
+                    rx.box(
+                        rx.icon("bell_ring", size=19, aria_hidden="true"),
+                        class_name="vitta-reception-section-icon vitta-reception-alerts-icon",
+                    ),
+                    rx.heading("Notificações e avisos operacionais", size="4"),
+                    align="center",
+                    gap="3",
+                    min_width="0",
+                ),
+                rx.badge(
+                    alert_count,
+                    color_scheme="teal",
+                    class_name="vitta-reception-alert-count",
+                ),
+                justify="between",
+                align="center",
+                gap="3",
+                width="100%",
+                class_name="vitta-reception-alerts-header",
+            ),
             rx.cond(
                 (S.overview_pending == 0) & (S.email_failed == 0),
                 rx.text("Nenhum item requer revisão agora.", size="2",
-                        color="var(--vitta-text-muted)"),
+                        color="var(--vitta-text-muted)",
+                        class_name="vitta-reception-alerts-empty"),
                 rx.vstack(
                     rx.cond(
                         S.overview_pending > 0,
                         rx.link(
-                            rx.hstack(
-                                rx.icon("clock_alert", size=17),
-                                rx.text(S.overview_pending,
-                                        " consultas anteriores ainda sem check-in"),
-                                gap="2", align="start",
+                            rx.flex(
+                                rx.icon("clock_alert", size=17, aria_hidden="true"),
+                                rx.cond(
+                                    S.overview_pending == 1,
+                                    rx.text(
+                                        "1 consulta anterior ainda sem check-in",
+                                        overflow_wrap="anywhere",
+                                    ),
+                                    rx.text(
+                                        S.overview_pending,
+                                        " consultas anteriores ainda sem check-in",
+                                        overflow_wrap="anywhere",
+                                    ),
+                                ),
+                                gap="3",
+                                align="center",
+                                width="100%",
                             ),
                             href="/recepcao/agenda",
-                            class_name="vitta-operational-alert-link",
+                            class_name="vitta-operational-alert-row",
                         ),
                         rx.fragment(),
                     ),
                     rx.cond(
                         S.email_failed > 0,
                         rx.link(
-                            rx.hstack(
-                                rx.icon("mail_x", size=17),
-                                rx.text(S.email_failed, " falhas de envio para revisar"),
-                                gap="2", align="start",
+                            rx.flex(
+                                rx.icon("mail_x", size=17, aria_hidden="true"),
+                                rx.cond(
+                                    S.email_failed == 1,
+                                    rx.text(
+                                        "1 falha de envio para revisar",
+                                        overflow_wrap="anywhere",
+                                    ),
+                                    rx.text(
+                                        S.email_failed,
+                                        " falhas de envio para revisar",
+                                        overflow_wrap="anywhere",
+                                    ),
+                                ),
+                                gap="3",
+                                align="center",
+                                width="100%",
                             ),
                             href="/recepcao#notificacoes",
-                            class_name="vitta-operational-alert-link",
+                            class_name="vitta-operational-alert-row",
                         ),
                         rx.fragment(),
                     ),
-                    spacing="2", align="stretch", width="100%",
+                    spacing="2",
+                    align="stretch",
+                    width="100%",
+                    class_name="vitta-reception-alerts-list",
                 ),
             ),
-            align="stretch", spacing="3", width="100%",
+            align="stretch",
+            spacing="3",
+            width="100%",
+            class_name="vitta-reception-alerts-content",
         ),
+        padding=rx.breakpoints(
+            initial=".65rem .85rem", xl=".5rem 1rem"
+        ),
+        class_name="vitta-reception-alerts-panel",
     )
 
 
@@ -705,17 +836,20 @@ def _reception_quick_actions() -> rx.Component:
             ),
             rx.link(
                 rx.hstack(rx.icon("user_round_plus", size=16), rx.text("Novo paciente"), gap="2", align="center"),
-                href="/recepcao/pacientes/novo", class_name="vitta-reception-quick-link",
+                href="/recepcao/pacientes/novo",
+                class_name="vitta-reception-quick-link vitta-reception-quick-link--patient",
             ),
             rx.link(
                 rx.hstack(rx.icon("list_ordered", size=16), rx.text("Ver fila de espera"), gap="2", align="center"),
-                href="/recepcao/fila", class_name="vitta-reception-quick-link",
+                href="/recepcao/fila",
+                class_name="vitta-reception-quick-link vitta-reception-quick-link--queue",
             ),
             rx.button(
                 rx.cond(S.is_loading, rx.spinner(size="1"), rx.icon("refresh_cw", size=16)),
                 rx.cond(S.is_loading, "Atualizando...", "Atualizar dados"),
                 type="button", on_click=S.refresh, variant="outline",
-                disabled=S.is_loading, class_name="vitta-reception-quick-link",
+                disabled=S.is_loading,
+                class_name="vitta-reception-quick-link vitta-reception-quick-link--refresh",
                 aria_label="Atualizar dados da Recepção",
             ),
             gap="2", align="center", flex_wrap="wrap", justify="end",
@@ -734,6 +868,13 @@ def reception_email_metrics_panel() -> rx.Component:
     return section_panel(
         rx.vstack(
             rx.flex(
+                rx.box(
+                    rx.icon("mail", size=19, aria_hidden="true"),
+                    class_name=(
+                        "vitta-reception-section-icon "
+                        "vitta-reception-email-heading-icon"
+                    ),
+                ),
                 rx.vstack(
                     rx.heading("Confirmações por e-mail", size="4"),
                     rx.text(
@@ -749,14 +890,21 @@ def reception_email_metrics_panel() -> rx.Component:
                     class_name="vitta-reception-email-copy",
                 ),
                 rx.link(
-                    "Consultar envios", href="/recepcao#notificacoes",
-                    class_name="vitta-context-link vitta-reception-email-link",
+                    rx.hstack(
+                        rx.text("Consultar envios"),
+                        rx.icon("arrow_right", size=15, aria_hidden="true"),
+                        align="center",
+                        gap="2",
+                    ),
+                    href="/recepcao#notificacoes",
+                    class_name="vitta-reception-email-action",
                 ),
                 justify="between",
                 align="center",
                 gap="3",
                 flex_wrap="wrap",
                 width="100%",
+                class_name="vitta-reception-email-header",
             ),
             rx.grid(
                 _email_metric("Aceitos pelo Resend", S.email_accepted, "mail_check"),
@@ -771,7 +919,11 @@ def reception_email_metrics_panel() -> rx.Component:
             spacing="3",
             width="100%",
             class_name="vitta-reception-email-metrics",
-        )
+        ),
+        padding=rx.breakpoints(
+            initial=".65rem .85rem", xl=".5rem 1rem"
+        ),
+        class_name="vitta-reception-email-panel",
     )
 
 
@@ -922,18 +1074,18 @@ def reception_dashboard() -> rx.Component:
                         align="stretch", spacing="3", width="100%",
                     ),
                     columns=rx.breakpoints(
-                        initial="1", xl="minmax(0, 2fr) minmax(19rem, 0.9fr)"
+                        initial="1", xl="minmax(0, 2.15fr) minmax(19rem, 1fr)"
                     ),
-                    gap="0.75rem", align="start", width="100%",
+                    gap="1rem", align="start", width="100%",
                     class_name="vitta-reception-dashboard-grid",
                     ),
                     rx.grid(
                         _operational_alerts_panel(),
                         reception_email_metrics_panel(),
                         columns=rx.breakpoints(
-                            initial="1", xl="minmax(0, 1fr) minmax(0, 1.15fr)"
+                            initial="1", xl="minmax(0, 0.9fr) minmax(0, 1fr)"
                         ),
-                        gap="0.75rem", align="stretch", width="100%",
+                        gap="1.25rem", align="stretch", width="100%",
                         class_name="vitta-reception-dashboard-footer",
                     ),
                 ),

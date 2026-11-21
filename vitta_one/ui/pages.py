@@ -646,6 +646,7 @@ def reception_queue_page() -> rx.Component:
         ),
         active="fila",
         verified_path="/recepcao/fila",
+        page_spacing="4",
     )
 
 

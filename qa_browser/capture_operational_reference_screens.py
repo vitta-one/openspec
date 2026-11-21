@@ -194,6 +194,31 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
             expect(page.get_by_role("button", name="1", exact=True)).to_have_attribute(
                 "aria-current", "page", timeout=15000
             )
+        if route == "/recepcao/pacientes" and viewport_name == "desktop-1768x890":
+            page.get_by_role("button", name="Mais filtros", exact=True).click()
+            phone_filter = page.get_by_role(
+                "combobox", name="Filtrar pacientes por telefone"
+            )
+            expect(phone_filter).to_be_visible()
+            rows = page.locator(".vitta-patient-directory-table tbody tr")
+            phone_filter.click()
+            page.get_by_role("option", name="Com telefone", exact=True).click()
+            expect(rows.first).to_be_visible(timeout=15000)
+            phone_filter.click()
+            page.get_by_role("option", name="Sem telefone", exact=True).click()
+            expect(rows.first).to_be_visible(timeout=15000)
+            phone_filter.click()
+            page.get_by_role("option", name="Todos", exact=True).click()
+            page_size = page.get_by_role("combobox", name="Itens por página")
+            page_size.click()
+            page.get_by_role("option", name="20", exact=True).click()
+            expect(page_size).to_contain_text("20", timeout=15000)
+            page_size.click()
+            page.get_by_role("option", name="10", exact=True).click()
+            expect(page_size).to_contain_text("10", timeout=15000)
+            page.get_by_role("button", name="Mais filtros", exact=True).click()
+            expect(phone_filter).to_have_count(0)
+            page.evaluate("document.activeElement && document.activeElement.blur()")
         if route == "/admin/funcionarios" and viewport_name == "desktop-1768x890":
             page_size = page.get_by_role("combobox", name="Itens por página")
             expect(page_size).to_be_visible()
@@ -212,14 +237,36 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
                 raise AssertionError("Filtros de especialidades não foram renderizados")
             if abs(search_box["y"] - status_box["y"]) > 2:
                 raise AssertionError("Busca e situação não estão alinhadas na grade")
+            specialty_rows = page.locator(".vitta-specialty-table tbody tr")
+            all_specialties_count = specialty_rows.count()
+            more_filters = page.get_by_role("button", name="Mais filtros", exact=True)
+            more_filters.click()
+            professional_filter = page.get_by_role(
+                "combobox", name="Filtrar especialidades por vínculo profissional"
+            )
+            expect(professional_filter).to_be_visible()
+            professional_filter.click()
+            page.get_by_role("option", name="Com profissionais", exact=True).click()
+            expect(professional_filter).to_contain_text("Com profissionais", timeout=15000)
+            filtered_specialties_count = specialty_rows.count()
+            if filtered_specialties_count > all_specialties_count:
+                raise AssertionError("O filtro por vínculo ampliou a lista de especialidades")
+            professional_filter.click()
+            page.get_by_role("option", name="Todas", exact=True).click()
+            expect(professional_filter).to_contain_text("Todas", timeout=15000)
+            expect(specialty_rows).to_have_count(all_specialties_count, timeout=15000)
+            more_filters.click()
+            expect(professional_filter).to_have_count(0)
+            page.evaluate("document.activeElement && document.activeElement.blur()")
         if route == "/medico/agenda" and viewport_name == "desktop-1768x890":
             expect(page.locator(".vitta-doctor-week-empty")).to_have_count(7)
         if not page.locator("body").inner_text().strip():
             raise AssertionError("A rota não renderizou conteúdo")
         if page.locator("nextjs-portal, vite-error-overlay").count():
             raise AssertionError("Overlay de erro de desenvolvimento visível")
-        if page.evaluate("document.documentElement.scrollWidth > window.innerWidth + 2"):
-            raise AssertionError("Overflow horizontal da página")
+        if page.evaluate("document.documentElement.scrollWidth > window.innerWidth"):
+            overflow = page.evaluate("document.documentElement.scrollWidth - window.innerWidth")
+            raise AssertionError(f"Overflow horizontal da página: {overflow}px")
         if route == "/recepcao/pacientes/novo" and viewport_name == "mobile-320x740":
             placeholder = page.locator("#patient-create-name").evaluate("""input => {
               const inputStyle = getComputedStyle(input);
@@ -278,9 +325,16 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
           };
           const landmarks = [
             '.vitta-page-header', '.vitta-page-header .rt-Heading',
+            '.vitta-page-header-copy > .rt-Text:last-child',
+            '.vitta-page-header-actions > a',
             '.vitta-admin-hub-metrics', '.vitta-reception-operations',
             '.vitta-reception-day-panel', '.vitta-patient-directory-workspace',
-            '.vitta-patient-create-workspace', '.vitta-queue-active-panel',
+            '.vitta-patient-create-workspace',
+            '.vitta-patient-create-form-panel > .rt-Box',
+            '.vitta-patient-create-guidance', '#patient-create-name',
+            '#patient-create-cpf', '#patient-create-cpf-help',
+            '#patient-create-phone', '.vitta-patient-create-actions > a',
+            '.vitta-patient-create-actions > button', '.vitta-queue-active-panel',
             '.vitta-staff-form', '.vitta-specialty-table',
             '.vitta-availability-panel', '.vitta-clinic-settings-layout',
             '.vitta-clinic-settings-guidance', '.vitta-finance-filters',
@@ -306,7 +360,11 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
           const patientEmpty = document.querySelector('.vitta-doctor-patient-empty .vitta-empty-state');
           const patientEmptyStyle = patientEmpty ? getComputedStyle(patientEmpty) : null;
           return {
-            viewport: { width: innerWidth, height: innerHeight },
+            viewport: {
+              width: innerWidth,
+              height: innerHeight,
+              documentScrollWidth: document.documentElement.scrollWidth
+            },
             sidebar: first('.vitta-sidebar'),
             topbar: first('.vitta-topbar'),
             page: rect(main),
@@ -348,6 +406,77 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
             })) : []
           };
         }""")
+        if route == "/recepcao/pacientes" and viewport_name == "desktop-1768x890":
+            art = geometry["landmarks"].get(".vitta-page-header-art")
+            description = geometry["landmarks"].get(
+                ".vitta-page-header-copy > .rt-Text:last-child"
+            )
+            action = geometry["landmarks"].get(
+                ".vitta-page-header-actions > a"
+            )
+            if art is None:
+                raise AssertionError("A arte de cabeçalho de pacientes não foi renderizada")
+            for dimension, target in {
+                "x": 722, "y": 82, "width": 700, "height": 225
+            }.items():
+                if abs(art[dimension] - target) > 1:
+                    raise AssertionError(
+                        f"Arte de pacientes {dimension}={art[dimension]}px; "
+                        f"referência {target}px"
+                    )
+            if description is None or abs(description["y"] - 255) > 1:
+                actual_y = None if description is None else description["y"]
+                raise AssertionError(
+                    "Descrição da lista de pacientes em "
+                    f"y={actual_y}px; referência aproximada 255px"
+                )
+            if action is None:
+                raise AssertionError("Ação Novo paciente não foi renderizada")
+            for dimension, target in {
+                "x": 1490, "y": 229, "width": 220, "height": 56
+            }.items():
+                if abs(action[dimension] - target) > 1:
+                    raise AssertionError(
+                        f"Ação Novo paciente {dimension}={action[dimension]}px; "
+                        f"referência {target}px"
+                    )
+        if route == "/recepcao/pacientes/novo" and viewport_name == "desktop-1768x890":
+            expected_landmarks = {
+                ".vitta-patient-create-form-panel > .rt-Box": {
+                    "x": 159, "y": 267, "width": 905, "height": 584,
+                },
+                ".vitta-patient-create-guidance": {
+                    "x": 1088, "y": 267, "width": 601, "height": 584,
+                },
+                "#patient-create-name": {
+                    "x": 186, "y": 418, "width": 851, "height": 50,
+                },
+                "#patient-create-cpf": {
+                    "x": 186, "y": 529, "width": 851, "height": 50,
+                },
+                "#patient-create-cpf-help": {
+                    "x": 186, "y": 589, "width": 851, "height": 21,
+                },
+                "#patient-create-phone": {
+                    "x": 186, "y": 668, "width": 851, "height": 50,
+                },
+                ".vitta-patient-create-actions > a": {
+                    "x": 641, "y": 777, "width": 130, "height": 48,
+                },
+                ".vitta-patient-create-actions > button": {
+                    "x": 787, "y": 777, "width": 250, "height": 48,
+                },
+            }
+            for selector, expected in expected_landmarks.items():
+                actual = geometry["landmarks"].get(selector)
+                if actual is None:
+                    raise AssertionError(f"Landmarka do cadastro não encontrada: {selector}")
+                for dimension, target in expected.items():
+                    if abs(actual[dimension] - target) > 1:
+                        raise AssertionError(
+                            f"{selector} {dimension}={actual[dimension]}px; "
+                            f"referência {target}px"
+                        )
         if viewport_name == "desktop-1768x890" and route in {
             "/medico/agenda", "/medico/pacientes", "/medico/prontuarios"
         }:
@@ -814,7 +943,7 @@ def main() -> None:
     (ROOT_OUTPUT / "functional-manifest.json").write_text(
         json.dumps({
             "kind": "browser-route-smoke",
-            "scope": "16 rotas autorizadas; URL, título, overflow horizontal, erros JS; agenda com alternância de visualização; paginação server-side da Recepção; alinhamento dos filtros de especialidades",
+            "scope": "16 rotas autorizadas; URL, título, overflow horizontal, erros JS; alternância de agenda; busca, paginação e filtros de telefone da Recepção; filtros de especialidades e vínculos profissionais; paginação administrativa",
             "status": "PASS" if not failures else "FAIL",
             "checks": records,
             "failures": failures,

@@ -2243,12 +2243,14 @@ button:disabled,
 }
 .vitta-staff-table .vitta-staff-table-row:hover { background: var(--vitta-surface-subtle); }
 .vitta-staff-toolbar { padding-bottom: 0.4rem; }
-.vitta-staff-footer {
+.vitta-staff-footer,
+.vitta-directory-pagination-footer {
   min-height: 3.5rem;
   padding: .65rem .25rem 0;
   border-top: 1px solid var(--vitta-border);
 }
-.vitta-staff-page-control {
+.vitta-staff-page-control,
+.vitta-directory-page-control {
   display: grid;
   width: 2.5rem;
   min-width: 2.5rem;
@@ -2256,14 +2258,16 @@ button:disabled,
   padding: 0;
   place-items: center;
 }
-.vitta-staff-page-control.is-current {
+.vitta-staff-page-control.is-current,
+.vitta-directory-page-control.is-current {
   border: 1px solid var(--vitta-primary);
   border-radius: var(--vitta-radius-control);
   color: var(--vitta-primary);
   background: var(--vitta-primary-soft);
   font-weight: 700;
 }
-.vitta-staff-page-size { min-height: 2.5rem; }
+.vitta-staff-page-size,
+.vitta-directory-page-size { min-height: 2.5rem; }
 .vitta-staff-search-control,
 .vitta-directory-search-control {
   position: relative;
@@ -2327,13 +2331,15 @@ button:disabled,
   .vitta-staff-create-action { width: 100%; }
 }
 @media (max-width: 360px) {
-  .vitta-staff-footer-controls {
+  .vitta-staff-footer-controls,
+  .vitta-directory-footer-controls {
     flex: 1 1 100%;
     flex-wrap: wrap;
     justify-content: flex-end;
     min-width: 0;
   }
-  .vitta-staff-pagination-controls { flex: 0 0 auto; }
+  .vitta-staff-pagination-controls,
+  .vitta-directory-pagination-controls { flex: 0 0 auto; }
 }
 @media (prefers-reduced-motion: reduce) {
   .vitta-staff-details-link { transition: none; }
@@ -2871,6 +2877,7 @@ button:disabled,
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   align-items: center;
+  column-gap: .75rem;
   padding: 0.75rem 0;
   border-top: 1px solid var(--vitta-border);
   border-bottom: 1px solid var(--vitta-border);
@@ -2885,6 +2892,13 @@ button:disabled,
   border: 1px solid var(--vitta-border);
   border-radius: var(--vitta-radius-control);
   background: var(--vitta-surface);
+}
+.vitta-queue-summary-metric--average {
+  border-color: transparent;
+  border-radius: 0;
+  border-inline-start: 1px solid var(--vitta-border-strong);
+  background: transparent;
+  padding-inline-start: 1.25rem;
 }
 .vitta-queue-summary-icon {
   display: grid;
@@ -2907,11 +2921,92 @@ button:disabled,
   border-radius: var(--vitta-radius-panel);
   background: var(--vitta-surface-subtle);
 }
+@media (min-width: 1200px) {
+  .vitta-shell--reception .vitta-page:has(.vitta-patient-directory-workspace) .vitta-page-header-art,
+  .vitta-shell--reception .vitta-page:has(.vitta-queue-active-panel) .vitta-page-header-art {
+    width: min(42vw, 44rem);
+    height: 13.5rem;
+  }
+  .vitta-shell--reception .vitta-page:has(.vitta-patient-directory-workspace) .vitta-page-header-actions > a {
+    width: 13.875rem;
+    min-height: 3.5rem;
+    font-size: 1.0625rem;
+  }
+  .vitta-patient-directory-search-control .vitta-input,
+  .vitta-patient-directory-search-actions > button {
+    height: 3.5rem;
+    min-height: 3.5rem;
+  }
+  .vitta-patient-directory-search-actions > button { padding-inline: 1rem; }
+  .vitta-patient-directory-panel .vitta-patient-directory-table th {
+    padding-block: 1rem;
+  }
+  .vitta-patient-directory-panel .vitta-patient-directory-table td {
+    padding-block: 1.125rem;
+  }
+  .vitta-patient-directory-panel .vitta-patient-directory-table {
+    margin-block-start: 1.5rem;
+  }
+  .vitta-queue-operational-summary {
+    grid-template-columns:
+      minmax(0, 1.25fr) minmax(0, 1.08fr) minmax(0, 1.03fr)
+      minmax(0, .93fr) minmax(0, 1.2fr) minmax(0, 1.56fr);
+    column-gap: 1.75rem;
+    padding-block: 1.5rem .875rem;
+  }
+  .vitta-queue-active-header {
+    padding-bottom: 1.125rem;
+  }
+  .vitta-queue-active-heading-icon {
+    display: grid;
+    width: 4.25rem;
+    height: 4rem;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: .875rem;
+    color: var(--vitta-primary);
+    background: var(--vitta-primary-soft);
+  }
+  .vitta-queue-active-title {
+    font-size: 1.5rem;
+    line-height: 1.75rem;
+  }
+  .vitta-queue-active-description {
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+  .vitta-queue-active-updated {
+    font-size: .875rem;
+    line-height: 1.25rem;
+  }
+  .vitta-queue-active-refresh {
+    min-height: 3.25rem;
+    padding-inline: 1.5rem;
+    font-size: 1.0625rem;
+  }
+  .vitta-queue-summary-metric--average {
+    box-shadow: none;
+  }
+  .vitta-queue-active-panel .vitta-queue-empty {
+    margin-top: .5rem;
+  }
+  .vitta-shell--reception .vitta-page:has(.vitta-queue-active-panel) .vitta-page-header-art {
+    width: min(42vw, 44rem);
+  }
+}
 @media (max-width: 1100px) {
-  .vitta-queue-operational-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .vitta-queue-operational-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-gap: .75rem;
+    row-gap: .75rem;
+  }
 }
 @media (max-width: 620px) {
-  .vitta-queue-operational-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .vitta-queue-operational-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: .5rem;
+    row-gap: .5rem;
+  }
   .vitta-queue-summary-metric { padding-inline: .45rem; }
 }
 
@@ -2950,7 +3045,7 @@ button:disabled,
 
 /* Reception patient creation: compact field flow and reachable actions. */
 .vitta-patient-create-actions {
-  margin-top: .125rem;
+  margin-top: .4375rem;
   padding-top: 1.5625rem;
   border-top: 1px solid var(--vitta-border);
   gap: 1rem !important;
@@ -2994,6 +3089,10 @@ button:disabled,
 }
 .vitta-patient-create-form-panel .vitta-input {
   font-size: 1.125rem;
+}
+.vitta-patient-create-form-panel .vitta-form-panel > .vitta-patient-create-field--name {
+  margin-top: .5rem;
+  margin-bottom: .125rem;
 }
 .vitta-patient-create-form-panel #patient-create-cpf-help {
   font-size: 1rem;
@@ -3077,6 +3176,48 @@ button:disabled,
   transform: translateY(-50%);
 }
 .vitta-patient-directory-search-form > div:first-of-type { flex: 1 1 24rem; }
+.vitta-patient-directory-search-actions { flex: 0 0 auto; }
+.vitta-patient-directory-search-actions > button { white-space: nowrap; }
+.vitta-patient-directory-advanced-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 18rem);
+  gap: .75rem;
+  width: 100%;
+  padding: .875rem 1rem;
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-control);
+  background: var(--vitta-surface-subtle);
+}
+.vitta-patient-directory-phone-filter-field { min-width: 0; }
+.vitta-patient-directory-pagination { min-width: 0; }
+.vitta-patient-directory-pagination-controls { min-width: 0; }
+.vitta-patient-directory-page-size-trigger {
+  width: 4.5rem;
+  min-height: 2.75rem;
+  justify-content: space-between;
+}
+.vitta-patient-directory-page-arrow,
+.vitta-patient-directory-page-current {
+  display: inline-grid;
+  width: 2.75rem;
+  min-width: 2.75rem;
+  height: 2.75rem;
+  min-height: 2.75rem;
+  place-items: center;
+  padding: 0;
+  border-radius: .625rem;
+}
+.vitta-patient-directory-page-current {
+  border: 1px solid var(--vitta-primary);
+  color: var(--vitta-primary);
+  background: var(--vitta-primary-soft);
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+.vitta-patient-directory-page-arrow:disabled { opacity: .55; }
+.vitta-patient-directory-search-submit { min-width: 9.5rem; }
+.vitta-patient-directory-search-clear { min-width: 7.5rem; }
+.vitta-patient-directory-more-filters { min-width: 11.875rem; }
 
 @media (max-width: 640px) {
   .vitta-shell a.vitta-patient-directory-new { width: 100%; }
@@ -3092,6 +3233,17 @@ button:disabled,
   .vitta-patient-directory-table th:first-child { width: 64%; }
   .vitta-patient-directory-table th:last-child { width: 36%; }
   .vitta-patient-directory-avatar { flex-basis: 2.5rem; width: 2.5rem; height: 2.5rem; }
+  .vitta-patient-directory-search-actions,
+  .vitta-patient-directory-search-actions > button { width: 100%; min-width: 0; }
+  .vitta-patient-directory-search-actions > button { padding-inline: .5rem; }
+  .vitta-patient-directory-search-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .vitta-patient-directory-search-submit,
+  .vitta-patient-directory-search-clear { min-width: 0; }
+  .vitta-patient-directory-search-actions > .vitta-patient-directory-more-filters { grid-column: 1 / -1; }
+  .vitta-patient-directory-pagination-controls { justify-content: space-between; }
 }
 
 .vitta-specialty-table-icon {
@@ -3885,6 +4037,31 @@ button:disabled,
   margin-bottom: 0;
   line-height: 1rem;
 }
+.vitta-specialty-more-filters {
+  height: 2.5rem;
+  min-height: 2.5rem;
+  justify-content: center;
+  white-space: nowrap;
+}
+.vitta-specialty-advanced-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 18rem);
+  gap: .75rem;
+  width: 100%;
+  padding: .875rem 1rem;
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-control);
+  background: var(--vitta-surface-subtle);
+}
+.vitta-specialty-professional-filter-field { min-width: 0; }
+@media (min-width: 1051px) {
+  .vitta-shell--admin .vitta-page:has(.vitta-specialty-table) {
+    padding-top: 1rem;
+  }
+  .vitta-shell--admin .vitta-page:has(.vitta-specialty-table) .vitta-specialty-directory-panel {
+    margin-top: .375rem;
+  }
+}
 .vitta-summary-metric {
   min-width: 0;
   min-height: 5.1rem;
@@ -3990,14 +4167,10 @@ button:disabled,
 }
 .vitta-reception-dashboard-grid {
   align-items: start;
-  gap: .75rem;
 }
-.vitta-reception-dashboard-footer { gap: .75rem; }
 .vitta-reception-dashboard-footer > *,
 .vitta-reception-dashboard-grid > :first-child { min-width: 0; }
-.vitta-reception-dashboard-footer > * { padding: .65rem .85rem !important; }
 .vitta-reception-email-copy { flex: 1 1 auto; }
-.vitta-reception-email-link { flex: 0 0 auto; white-space: nowrap; }
 .vitta-reception-email-metrics { gap: .7rem !important; }
 .vitta-reception-email-metrics .vitta-email-metric { min-height: 3.8rem; padding: .4rem .55rem; }
 .vitta-reception-email-metrics .vitta-email-metric-icon { width: 2.15rem; height: 2.15rem; }
@@ -4437,7 +4610,7 @@ button:disabled,
 }
 .vitta-shell--reception .vitta-page:has(.vitta-patient-directory-workspace) .vitta-page-header {
   margin-top: .875rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.125rem;
 }
 .vitta-shell--reception .vitta-page:has(.vitta-patient-create-workspace) > .vitta-patient-create-workspace > .vitta-page-header {
   margin-top: 1.25rem;
@@ -4469,6 +4642,16 @@ button:disabled,
   padding-top: .35rem;
 }
 @media (min-width: 1051px) {
+  .vitta-shell--reception .vitta-page:has(.vitta-patient-directory-workspace),
+  .vitta-shell--reception .vitta-page:has(.vitta-patient-create-workspace),
+  .vitta-shell--reception .vitta-page:has(.vitta-queue-active-panel) {
+    width: min(100%, 100.375rem);
+    margin-inline-start: max(0px, calc((100% - 98.625rem) / 2));
+    margin-inline-end: auto;
+  }
+  .vitta-shell--reception .vitta-page:has(.vitta-patient-create-workspace) {
+    width: min(100%, 98.625rem);
+  }
   .vitta-shell--reception.is-sidebar-closed:has(.vitta-patient-directory-workspace),
   .vitta-shell--reception.is-sidebar-closed:has(.vitta-patient-create-workspace),
   .vitta-shell--reception.is-sidebar-closed:has(.vitta-queue-active-panel) {
@@ -4477,10 +4660,197 @@ button:disabled,
   .vitta-shell--reception.is-sidebar-closed:has(.vitta-reception-operations) {
     grid-template-columns: 3rem minmax(0, 1fr);
   }
+  .vitta-shell--reception .vitta-page:has(.vitta-reception-operations) {
+    width: min(100%, 93rem);
+    margin-inline-start: max(0px, calc((100% - 93rem) / 2 + 1rem));
+    margin-inline-end: auto;
+    padding-inline: 1.75rem 1.25rem;
+  }
   .vitta-shell--reception:has(.vitta-reception-operations) .vitta-topbar {
     min-height: 2.75rem;
     padding: .1rem 1.25rem;
     gap: .25rem;
+  }
+}
+
+@media (min-width: 1200px) {
+  .vitta-shell--reception .vitta-page:has(.vitta-patient-directory-workspace)
+    .vitta-page-header {
+    align-items: flex-end;
+    padding: 1.5rem 0 .3125rem;
+  }
+  .vitta-shell--reception .vitta-page:has(.vitta-patient-directory-workspace)
+    .vitta-page-header-copy > .rt-Text:last-child {
+    margin-top: 1.375rem;
+  }
+  .vitta-shell--reception .vitta-page:has(.vitta-patient-directory-workspace)
+    .vitta-page-header-copy {
+    padding-bottom: .25rem;
+  }
+  .vitta-shell--reception .vitta-page:has(.vitta-patient-directory-workspace)
+    .vitta-page-header-actions > a {
+    width: 13.75rem;
+    margin-inline-end: .4375rem;
+  }
+  .vitta-shell--reception .vitta-page:has(.vitta-queue-active-panel) .vitta-page-header {
+    margin-bottom: .7rem;
+  }
+  .vitta-shell--reception .vitta-page:has(.vitta-queue-active-panel)
+    .vitta-page-header--illustrated:has(.vitta-page-header-actions) .vitta-page-header-art {
+    height: 13.5rem;
+    bottom: -1.25rem;
+  }
+  .vitta-reception-dashboard-grid {
+    grid-template-columns: minmax(0, 2.15fr) minmax(19rem, 1fr);
+  }
+  .vitta-reception-dashboard-footer {
+    grid-template-columns: minmax(0, .9fr) minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 1600px) {
+  .vitta-shell--reception .vitta-page:has(.vitta-patient-directory-workspace)
+    .vitta-page-header-art {
+    right: 18.4375rem;
+    bottom: -1.0625rem;
+    width: 43.75rem;
+    height: 14.0625rem;
+    opacity: 1;
+  }
+}
+
+@media (min-width: 1440px) {
+  .vitta-reception-day-heading {
+    padding-block-start: .375rem;
+    padding-block-end: 0;
+    padding-inline-start: .375rem;
+  }
+  .vitta-reception-day-heading .vitta-section-kicker {
+    font-size: .625rem;
+    line-height: .875rem;
+  }
+  .vitta-reception-day-heading .vitta-reception-day-title {
+    font-size: 1.375rem;
+    line-height: 1.625rem;
+  }
+  .vitta-reception-day-heading > .rt-Text:not(.vitta-section-kicker):not(.vitta-reception-day-date) {
+    font-size: .8125rem;
+    line-height: 1rem;
+  }
+  .vitta-reception-day-heading .vitta-reception-day-date {
+    margin-block-start: .25rem;
+    font-size: .8125rem;
+    line-height: 1.25rem;
+  }
+  .vitta-shell--reception .vitta-reception-quick-panel {
+    padding: .45rem .8125rem .65rem 1.0625rem;
+  }
+  .vitta-reception-quick-toolbar { column-gap: 1.3125rem; }
+  .vitta-reception-quick-heading { column-gap: .5rem; }
+  .vitta-reception-quick-heading .rt-Text {
+    font-size: .75rem;
+    line-height: 1rem;
+  }
+  .vitta-reception-quick-actions {
+    column-gap: .875rem;
+    row-gap: .5rem;
+    padding-inline-start: 1.25rem;
+    border-inline-start: 1px solid var(--vitta-border);
+  }
+  .vitta-reception-quick-actions > .vitta-reception-quick-link {
+    height: 2.25rem;
+    min-height: 2.25rem;
+    flex: 0 0 auto;
+    padding-inline: .5rem;
+    gap: .375rem;
+    font-size: .75rem;
+    line-height: 1.2;
+  }
+  .vitta-reception-quick-actions > button.vitta-reception-quick-link {
+    height: 2.25rem;
+    min-height: 2.25rem;
+  }
+  .vitta-reception-quick-link--primary { width: 8.0625rem; }
+  .vitta-reception-quick-link--patient { width: 8.25rem; }
+  .vitta-reception-quick-link--queue,
+  .vitta-reception-quick-link--refresh { width: 9rem; }
+  .vitta-reception-appointments-panel .rt-Heading,
+  .vitta-reception-dashboard-grid > :nth-child(2) .rt-Heading,
+  .vitta-reception-dashboard-footer .rt-Heading {
+    font-size: .9rem;
+    line-height: 1.25rem;
+  }
+  .vitta-reception-queue-preview { min-height: 13.125rem; }
+  .vitta-reception-upcoming-panel {
+    min-height: 12.75rem;
+    padding-inline: 1rem;
+  }
+  .vitta-reception-preview-row {
+    gap: .5rem;
+    padding-block: .25rem;
+  }
+  .vitta-reception-preview-icon {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: .6rem;
+    color: var(--vitta-primary);
+    background: var(--vitta-primary-soft);
+  }
+  .vitta-reception-preview-name,
+  .vitta-reception-upcoming-patient {
+    font-size: .8125rem;
+    line-height: 1.1rem;
+  }
+  .vitta-reception-preview-wait,
+  .vitta-reception-upcoming-professional {
+    font-size: .7rem;
+    line-height: .95rem;
+  }
+  .vitta-reception-queue-count {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    font-size: .75rem;
+    line-height: 1rem;
+  }
+  .vitta-reception-preview-more {
+    color: var(--vitta-primary);
+    font-size: .75rem;
+    font-weight: 700;
+    line-height: 1rem;
+    text-decoration: none;
+  }
+  .vitta-reception-preview-more:focus-visible,
+  .vitta-reception-upcoming-heading-link:focus-visible {
+    outline: 3px solid var(--vitta-focus);
+    outline-offset: 2px;
+    border-radius: var(--vitta-radius-control);
+  }
+  .vitta-reception-upcoming-heading-link {
+    min-width: 0;
+    color: inherit;
+    text-decoration: none;
+  }
+  .vitta-reception-upcoming-heading-link:hover .rt-Heading {
+    color: var(--vitta-primary);
+  }
+  .vitta-reception-upcoming-header { min-width: 0; }
+  .vitta-reception-upcoming-time {
+    min-width: 3.5rem;
+    flex: 0 0 auto;
+    padding: .25rem .5rem;
+    border-radius: 999px;
+    color: var(--vitta-primary);
+    background: var(--vitta-primary-soft);
+    font-size: .75rem;
+    line-height: 1rem;
+    white-space: nowrap;
+  }
+  .vitta-reception-dashboard-grid { margin-block-start: .125rem; }
+  .vitta-reception-dashboard-footer {
+    margin-block-start: .3125rem;
   }
 }
 
@@ -4518,6 +4888,55 @@ button:disabled,
   color: var(--vitta-primary);
   background: var(--vitta-primary-soft);
 }
+.vitta-reception-alerts-header,
+.vitta-reception-email-header { min-width: 0; }
+.vitta-reception-alerts-header > :first-child,
+.vitta-reception-email-header > :nth-child(2) { flex: 1 1 auto; }
+.vitta-reception-alerts-icon,
+.vitta-reception-email-heading-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: .65rem;
+}
+.vitta-reception-alert-count {
+  min-width: 1.5rem;
+  justify-content: center;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+.vitta-reception-alerts-list { min-width: 0; }
+.vitta-operational-alert-row {
+  display: flex;
+  min-width: 0;
+  min-height: 2.375rem;
+  align-items: center;
+  padding: .45rem .65rem;
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-control);
+  color: var(--vitta-text);
+  background: var(--vitta-surface-subtle);
+  font-size: .8rem;
+  line-height: 1.25rem;
+  text-decoration: none;
+}
+.vitta-operational-alert-row > svg { flex: 0 0 auto; color: var(--vitta-primary); }
+.vitta-operational-alert-row:hover { background: var(--vitta-primary-soft); }
+.vitta-operational-alert-row:focus-visible,
+.vitta-reception-email-action:focus-visible {
+  outline: 3px solid var(--vitta-focus);
+  outline-offset: 2px;
+}
+.vitta-reception-alerts-empty { min-height: 2.375rem; }
+.vitta-reception-email-action {
+  flex: 0 0 auto;
+  color: var(--vitta-primary);
+  font-size: .8rem;
+  font-weight: 700;
+  line-height: 1.25rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.vitta-reception-email-action:hover { text-decoration: underline; text-underline-offset: 3px; }
 .vitta-reception-day-view-action {
   width: 2rem;
   min-width: 2rem;

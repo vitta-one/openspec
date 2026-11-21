@@ -1255,6 +1255,22 @@ def _directory_filters(*, is_professional: bool) -> rx.Component:
         ),
         *(
             [
+                rx.button(
+                    rx.icon("list_filter", size=16),
+                    "Mais filtros",
+                    type="button",
+                    variant="outline",
+                    color_scheme="teal",
+                    on_click=AdminDirectoryState.toggle_specialty_advanced_filters,
+                    aria_expanded=AdminDirectoryState.specialty_advanced_filters_open,
+                    aria_controls="specialty-advanced-filters",
+                    class_name="vitta-specialty-more-filters",
+                )
+            ]
+            if not is_professional else []
+        ),
+        *(
+            [
                 rx.box(
                     field_label("Especialidade", "professional-specialty-filter"),
                     rx.box(_directory_professional_specialty_filter(), margin_top="0.4rem"),
@@ -1266,7 +1282,7 @@ def _directory_filters(*, is_professional: bool) -> rx.Component:
             initial="1",
             sm="repeat(2, minmax(0, 1fr))",
             lg="repeat(3, minmax(0, 1fr))" if is_professional
-            else "minmax(0, 1.3fr) minmax(16rem, 1fr)",
+            else "minmax(0, 1.36fr) minmax(16rem, 1fr) 9.5rem",
         ),
         gap="1rem",
         width="100%",
@@ -1274,6 +1290,41 @@ def _directory_filters(*, is_professional: bool) -> rx.Component:
             "vitta-specialty-directory-filters"
             if not is_professional else ""
         ),
+    )
+
+
+def _specialty_advanced_filters() -> rx.Component:
+    return rx.cond(
+        AdminDirectoryState.specialty_advanced_filters_open,
+        rx.box(
+            rx.box(
+                field_label(
+                    "Vínculo profissional",
+                    "specialty-professional-filter",
+                ),
+                rx.select.root(
+                    rx.select.trigger(
+                        id="specialty-professional-filter",
+                        aria_label="Filtrar especialidades por vínculo profissional",
+                        width="100%",
+                        class_name="vitta-select-trigger",
+                    ),
+                    rx.select.content(
+                        rx.select.item("Todas", value="all"),
+                        rx.select.item("Com profissionais", value="linked"),
+                        rx.select.item("Sem profissionais", value="unlinked"),
+                        position="popper",
+                    ),
+                    value=AdminDirectoryState.specialty_professional_filter,
+                    on_change=AdminDirectoryState.update_specialty_professional_filter,
+                    width="100%",
+                ),
+                class_name="vitta-specialty-professional-filter-field",
+            ),
+            id="specialty-advanced-filters",
+            class_name="vitta-specialty-advanced-filters",
+        ),
+        rx.fragment(),
     )
 
 
@@ -1290,16 +1341,82 @@ def _directory_pagination(*, is_professional: bool) -> rx.Component:
         AdminDirectoryState.move_professional_page
         if is_professional else AdminDirectoryState.move_specialty_page
     )
+    result_count = (
+        AdminDirectoryState.professional_results_count
+        if is_professional else AdminDirectoryState.specialty_result_count
+    )
+    range_start = (
+        AdminDirectoryState.professional_page_range_start
+        if is_professional else AdminDirectoryState.specialty_page_range_start
+    )
+    range_end = (
+        AdminDirectoryState.professional_page_range_end
+        if is_professional else AdminDirectoryState.specialty_page_range_end
+    )
+    noun = "profissionais" if is_professional else "especialidades"
     return rx.cond(
-        count > 1,
+        result_count > 0,
         rx.flex(
-            rx.button("Anterior", variant="outline", type="button",
-                      disabled=page <= 1, on_click=move(-1)),
-            rx.text("Página ", page, " de ", count, color="var(--vitta-text-muted)", size="2"),
-            rx.button("Próxima", variant="outline", type="button",
-                      disabled=page >= count, on_click=move(1)),
-            align="center", justify="center", gap="1rem", flex_wrap="wrap",
-            width="100%", margin_top="0.5rem",
+            rx.text(
+                "Mostrando ", range_start, "–", range_end, " de ",
+                result_count, " ", noun,
+                size="2", color="var(--vitta-text-muted)",
+            ),
+            rx.hstack(
+                rx.hstack(
+                    rx.text(
+                        "Itens por página", size="2",
+                        color="var(--vitta-text-muted)", white_space="nowrap",
+                    ),
+                    rx.select.root(
+                        rx.select.trigger(
+                            width="4.5rem",
+                            class_name="vitta-select-trigger vitta-directory-page-size",
+                            aria_label="Itens por página",
+                        ),
+                        rx.select.content(
+                            rx.select.item("10", value="10"),
+                            rx.select.item("25", value="25"),
+                            rx.select.item("50", value="50"),
+                            position="popper",
+                        ),
+                        value=AdminDirectoryState.directory_page_size_value,
+                        on_change=AdminDirectoryState.update_directory_page_size,
+                        size="2",
+                    ),
+                    gap="2", align="center",
+                ),
+                rx.hstack(
+                    rx.button(
+                        rx.icon("chevron_left", size=17),
+                        type="button", variant="outline", color_scheme="gray",
+                        class_name="vitta-directory-page-control",
+                        on_click=move(-1),
+                        disabled=page <= 1,
+                        aria_label="Página anterior",
+                    ),
+                    rx.el.span(
+                        page,
+                        class_name="vitta-directory-page-control is-current",
+                        aria_current="page",
+                        aria_label="Página atual",
+                    ),
+                    rx.button(
+                        rx.icon("chevron_right", size=17),
+                        type="button", variant="outline", color_scheme="gray",
+                        class_name="vitta-directory-page-control",
+                        on_click=move(1),
+                        disabled=page >= count,
+                        aria_label="Próxima página",
+                    ),
+                    gap="2", align="center",
+                    class_name="vitta-directory-pagination-controls",
+                ),
+                gap="3", align="center", flex_wrap="wrap",
+                class_name="vitta-directory-footer-controls",
+            ),
+            justify="between", gap="3", align="center", flex_wrap="wrap",
+            width="100%", class_name="vitta-directory-pagination-footer",
         ),
         rx.fragment(),
     )
@@ -1348,6 +1465,7 @@ def specialties_management_workspace() -> rx.Component:
         section_panel(
             rx.vstack(
                 _directory_filters(is_professional=False),
+                _specialty_advanced_filters(),
                 rx.flex(
                     rx.text(
                         "Resultados: ",
