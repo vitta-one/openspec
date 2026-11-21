@@ -112,3 +112,55 @@ No SHA `9c0bc1f37feb6a27cd3fb272e5718bbea64425c0`, os três workflows pós-push 
 No SHA final de código `2ee85798be7b5022f756e47438c1bb75303181c7`, os três workflows também passaram: OpenSpec/migrations/pytest/Reflex/smoke [#44843172226](https://github.com/vitta-one/openspec/actions/runs/44843172226), Validate Vitta-One [#44843172261](https://github.com/vitta-one/openspec/actions/runs/44843172261) e QA Prescrições com Chromium [#44843172272](https://github.com/vitta-one/openspec/actions/runs/44843172272). A CI executou 37 testes funcionais, 5 de agenda, 93/93 capturas gerais e 96/96 capturas operacionais. O artifact [vitta-one-chromium-all-screens — run #44843172272](https://github.com/vitta-one/openspec/actions/runs/44843172272/artifacts/14682266453) contém capturas e manifestos sintéticos. Os logs registram que as referências PNG não estão disponíveis no runner; portanto, as capturas da CI não são comparação visual. As comparações reais sem máscaras foram geradas e inspecionadas localmente em `qa-artifacts/operational-reference/`.
 
 A PR [#358](https://github.com/vitta-one/openspec/pull/358) aponta para `develop` e permanece aberta. Nenhum merge foi feito. Não houve migration de produção, deploy ou alteração de banco de produção.
+
+## Validação final após correções — 21/11/2026
+
+Esta rodada foi feita com código da branch de trabalho, Reflex em build local `--env prod` e PostgreSQL 16 descartável novo (`vitta_one_operational_ui_qa_20`), já migrado até `f031a5aa5002 (head)`. A referência original 01 foi alinhada proporcionalmente em um quadro 1768×890, sem deformação ou máscaras; as demais referências mantiveram 1768×890. As 96 capturas foram recriadas depois das alterações finais do CSS/serviço. Os quatro comparativos e overlays foram reabertos e inspecionados.
+
+| Rota | Capturas | Diferença de pixels ≥ RGB L1 36 | MAE RGB/canal | Resultado visual |
+|---|---:|---:|---:|---|
+| 01 `/recepcao` | 6/6 | 16,07% | 13,49 | Revisada; conteúdo e indicadores sintéticos divergem |
+| 02 `/recepcao/agenda` | 6/6 | 13,41% | 10,42 | Revisada; as 24 consultas sintéticas do dia concentram-se no sábado, enquanto a referência distribui eventos na semana |
+| 03 `/recepcao/pacientes` | 6/6 | 10,17% | 12,06 | Revisada; lista e nomes sintéticos diferem |
+| 04 `/recepcao/pacientes/novo` | 6/6 | 13,09% | 13,32 | Revisada; formulário inicia vazio; ilustração de orientação agora usa o recorte correspondente à referência |
+| 05 `/recepcao/fila` | 6/6 | 10,73% | 11,19 | Revisada; há uma entrada de QA persistida, enquanto a referência mostra fila vazia |
+| 06 `/admin` | 6/6 | 13,65% | 10,15 | Revisada; números/dados e 13 especialidades sintéticas diferem das 6 da referência |
+| 07 `/admin/funcionarios` | 6/6 | 9,64% | 8,70 | Revisada; quantidade e dados de funcionários sintéticos diferem |
+| 08 `/admin/funcionarios/novo` | 6/6 | 7,93% | 8,24 | Revisada; formulário vazio, banner reproduzido com o ativo correspondente |
+| 09 `/admin/especialidades` | 6/6 | 11,34% | 11,06 | Revisada; há 13 especialidades sintéticas contra 6 na referência |
+| 10 `/admin/horarios` | 6/6 | 7,15% | 6,67 | Revisada; nenhum profissional é pré-selecionado e nenhum horário é inventado |
+| 11 `/admin/configuracoes` | 6/6 | 10,34% | 10,42 | Revisada; clínica de QA ainda sem configuração persistida; campos vazios |
+| 12 `/financeiro` | 6/6 | 9,64% | 9,37 | Revisada; não há cobranças elegíveis na fixture, então totais/tabela ficam vazios/zero |
+| 13 `/medico` | 6/6 | 8,07% | 8,04 | Revisada; a fila compartilhada tem uma entrada sintética e não há atendimento ativo deste médico |
+| 14 `/medico/agenda` | 6/6 | 6,82% | 7,56 | Revisada; projeção autorizada deste médico não contém consultas; landmarks medidos no DOM |
+| 15 `/medico/pacientes` | 6/6 | 4,14% | 5,53 | Revisada; não há pacientes vinculados a este médico na fixture; landmarks medidos no DOM |
+| 16 `/medico/prontuarios` | 6/6 | 5,15% | 5,94 | Revisada; não existe prontuário/atendimento ativo para esta identidade; landmarks medidos no DOM |
+
+Resultado da matriz: **96/96 PASS**, 0 falhas de captura e overflow global, 96 imagens carregadas. Comparações desktop: **16/16 geradas, 16/16 inspecionadas, 0/16 aprovadas como paridade visual integral**. A avaliação continua `REVIEW_REQUIRED`. A diferença RGB L1≥36 varia de **4,14% a 16,07%** (média **9,83%**); MAE médio por canal **9,51**. Essas métricas incluem dados, texto, estados, arte e rasterização, e não são uma nota automática de layout.
+
+As ilustrações específicas das referências foram extraídas em recortes locais dedicados para banners e estados vazios das telas de Recepção, Administração, Financeiro e Médico; não são referências completas usadas como imagem de fundo. Os 15 ativos acrescentados são PNGs de componentes/arte e permanecem no Git. PNGs originais, capturas, comparativos, overlays e diffs permanecem ignorados pelo Git em `qa-artifacts/operational-reference/`. Folhas: `comparativo-01-04.png`, `comparativo-05-08.png`, `comparativo-09-12.png`, `comparativo-13-16.png`; cada rota tem também captura, `side-by-side.png`, `overlay-50.png` e `diff-amplified-3x.png`.
+
+Diferenças de dados não foram convertidas em registros falsos para coincidir com os PNGs: não foram adicionadas cobranças, vínculos médicos, consultas ou registros clínicos para a comparação. Os resultados de cada fixture acima são distintos da avaliação de geometria. A versão 01 da fixture de agenda concentra 24 consultas no dia corrente para exercitar a tabela diária; isso explica a concentração no sábado em `/recepcao/agenda` e não é um ajuste de layout.
+
+## Regressões funcionais encontradas e corrigidas nesta rodada
+
+- Uma emissão financeira concorrente podia passar pela validação inicial, resolver o cliente externo com commits intermediários e tentar inserir a cobrança sem consultar novamente a consulta bloqueada. O serviço agora revalida a existência de cobrança ativa depois de readquirir o lock da consulta, preservando o índice único como última proteção. Um teste determinístico reproduziu a tentativa dupla no SQLite e PostgreSQL antes da correção e confirmou que apenas a cobrança concorrente permanece, sem chamada externa de pagamento, depois dela.
+- O browser QA de agendamento agora abre a semana que contém o horário escolhido. Isso cobre a borda de semana: em 21/11/2026, a fixture de agendamento inicia dois dias depois e cai na semana seguinte. A verificação não depende de a data corrente ser segunda-feira.
+- Auditoria do CSS removeu uma regra responsiva médica duplicada e uma redefinição redundante do ícone de estado vazio. Os valores computados permanecem os da regra efetiva já comparada.
+
+## Validação técnica final desta rodada
+
+| Validação | Resultado |
+|---|---|
+| Pytest completo em `vitta_one_test` PostgreSQL descartável | **574 passed, 3 skipped**, 1 `StarletteDeprecationWarning` legado |
+| Chromium funcional, autorização, acessibilidade de teclado/foco e responsividade | **42 passed** em 172,96 s; inclui o fluxo de agendamento após correção de semana |
+| OpenSpec strict | **34 passed, 0 failed**, com nota informativa preexistente sobre target spec arquivada de `patient-portal` |
+| `python -m compileall -q vitta_one qa_browser scripts tests` | **PASS** |
+| `reflex compile --dry` | **PASS** em 7,330 s; continuam avisos de APIs/assinaturas Reflex depreciadas |
+| `git diff --check` | **PASS** após a atualização do relatório e OpenSpec |
+| Migrações no banco QA20 | `reflex db migrate` concluído; `alembic current --check-heads` em `f031a5aa5002 (head)` |
+| Build de produção local e smoke HTTP | **PASS**, `/login` respondeu HTTP 200 após seguir o redirecionamento canônico |
+
+Os três skips e o aviso HTTP continuam explicados na rodada anterior. `alembic check` segue sem poder comparar metadata neste repositório porque `alembic/env.py` não fornece `target_metadata`; não foi criada migration nem alterado schema de produção. O build local avisou que Reflex detecta diferenças de schema que pediriam `reflex db makemigrations`, mas o estado migrado confirmado continua no head Alembic e nenhuma migration nova foi necessária para esta correção.
+
+A fidelidade visual integral permanece **não aprovada (0/16)**. A próxima aprovação depende de avaliar e resolver diferenças reais restantes com os contratos de domínio intactos; em especial, os estados/dados de referência divergem das projeções autorizadas e sintéticas e não foram imitados com dados falsos.

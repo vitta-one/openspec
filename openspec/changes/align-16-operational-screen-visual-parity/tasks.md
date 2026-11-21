@@ -32,3 +32,13 @@
 - Commits publicados: `b9fa2d4` (busca diária), `982eba1` (captura visual) e `2ee8579` (relatório de QA). CI pós-push passou 3/3 no SHA `2ee85798be7b5022f756e47438c1bb75303181c7`, incluindo 37 testes gerais, 5 de agenda, 93/93 capturas gerais e 96/96 capturas operacionais; artifact está no relatório.
 - PR [#358](https://github.com/vitta-one/openspec/pull/358) permanece aberta para `develop`. O campo de busca e o Chromium passaram na regressão final; nenhum merge foi feito.
 - Nenhum merge, deploy, migration de produção ou alteração de banco de produção foi feito.
+
+## Registro de continuação — 21/11/2026
+
+- Build Reflex `--env prod` executado com o código corrente da branch e PostgreSQL 16 QA isolado/migrado até `f031a5aa5002 (head)`; smoke HTTP 200 confirmado após redirecionamento.
+- Regeneradas 96/96 capturas nas seis resoluções com fixture sintética limpa e as 16 referências originais locais. Foram gerados 16 comparativos sem máscaras (lado a lado, overlay de 50% e diff amplificado) e quatro folhas de revisão; todos foram inspecionados novamente. `fidelity-assessment.json` permanece `REVIEW_REQUIRED`, com **0/16 aprovadas integralmente** e faixa de diferença RGB L1≥36 de 4,14%–16,07%.
+- Os resíduos de dados/estado foram detalhados por rota no relatório de QA. Não se criaram cobranças ou registros clínicos falsos para aproximar a imagem; a concentração de consultas de QA no sábado é efeito da fixture usada para a tabela diária.
+- Corrigida a corrida de criação de cobrança: após resolver o cliente e readquirir o lock da consulta, o serviço revalida a cobrança ativa antes de inserir; índice único permanece como proteção final. O teste determinístico é verde em SQLite e PostgreSQL e prova que não há segundo INSERT nem chamada externa.
+- Ajustado o teste Chromium do autogendamento para navegar para a semana do horário escolhido, cobrindo a virada de semana sem depender do dia atual.
+- Validações: Pytest **574 passed, 3 skipped**; Chromium **42 passed**; OpenSpec strict **34 passed, 0 failed**; `compileall`, `reflex compile --dry`, migrations/head e `git diff --check` aprovados. Avisos de depreciação Reflex/Starlette e a nota OpenSpec estão descritos no relatório.
+- Aprovação visual permanece **0/16**; diferenças de conteúdos, estados e rasterização continuam mensuradas e documentadas, sem declaração de pixel-idêntica.
