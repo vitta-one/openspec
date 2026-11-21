@@ -1,10 +1,10 @@
-# Relatório final de paridade visual das telas operacionais — 20/11/2026
+# Relatório de paridade visual das telas operacionais — 20–21/11/2026
 
 ## Escopo e método
 
 Continuação do checkpoint `bfe77d9001a875574f39b8aafb89859d4ad5beff` na branch `fix/visual-parity-16-screens-20261117`. A implementação permaneceu em Reflex, preservando States, handlers server-side, modelos, serviços e autorização existente.
 
-As 16 referências PNG anexadas foram copiadas para `qa-artifacts/reference/`, ignorado pelo Git. Cada arquivo foi conferido por SHA-256 contra o anexo com o mesmo número/nome. A referência 01 mede 1774×887; ela foi ajustada proporcionalmente com `contain` ao quadro 1768×890, com faixa de 3 px no eixo Y. As outras 15 já medem 1768×890. Não foram aplicadas máscaras. A matriz final foi refeita em 20/11 no PostgreSQL descartável QA10, com o bundle da branch incluindo as últimas correções de busca.
+As 16 referências PNG anexadas foram conferidas por SHA-256 contra o anexo com o mesmo número/nome e abertas/decodificadas novamente no fim da rodada. A referência 01 mede 1774×887; ela foi ajustada proporcionalmente com `contain` ao quadro 1768×890, com faixa de 3 px no eixo Y. As outras 15 já medem 1768×890. Não foram aplicadas máscaras. A matriz visual final foi refeita em 20/11 no PostgreSQL descartável QA14, com o bundle atualizado e uma fixture recém-semeada. A regressão interativa foi repetida em seguida no mesmo banco; as capturas canônicas foram feitas antes de testes que alteram registros sintéticos.
 
 O runner `qa_browser.capture_operational_reference_screens` registrou dimensões e caixas via `getBoundingClientRect()`, estilos computados, imagens carregadas, URL, títulos e overflow. Foram gerados PNGs, lado a lado, overlays a 50%, diffs amplificados e quatro folhas de comparação em `qa-artifacts/operational-reference/` (ignorado pelo Git). As quatro folhas com as 16 telas foram inspecionadas visualmente após a captura final. Métricas de pixels são diagnósticas e contam também conteúdo, texto, dados e variações de rasterização; não representam uma nota de fidelidade.
 
@@ -21,7 +21,7 @@ O runner `qa_browser.capture_operational_reference_screens` registrou dimensões
 | Aprovação como pixel-idêntica | **0/16**; não se declara identidade visual sem comprovação |
 | Reflow equivalente a 200% | **16/16 PASS** em viewport CSS 884×445, sem overflow ou imagens quebradas |
 
-Os comparativos individuais e manifestos detalhados permanecem em `qa-artifacts/operational-reference/`: folhas `comparativo-01-04.png`, `comparativo-05-08.png`, `comparativo-09-12.png` e `comparativo-13-16.png`; cada rota também tem `side-by-side.png`, `overlay-50.png` e `diff-amplified-3x.png`. A captura QA10 contém o layout final, incluindo as variantes de grid/sidebar e o Financeiro. A escala de 200% foi verificada como viewport CSS reduzido à metade, não por alteração do zoom do sistema operacional.
+Os comparativos individuais e manifestos detalhados permanecem em `qa-artifacts/operational-reference/`: folhas `comparativo-01-04.png`, `comparativo-05-08.png`, `comparativo-09-12.png` e `comparativo-13-16.png`; cada rota também tem `side-by-side.png`, `overlay-50.png` e `diff-amplified-3x.png`. As quatro folhas da captura QA14 foram abertas e inspecionadas; elas mostram a composição do bundle atual, variantes de grid/sidebar e Financeiro. Após os testes de interação de cada rota, o runner desfoca o controle e volta ao topo antes de capturar para não registrar rolagem provocada por validações. A escala de 200% foi verificada como viewport CSS reduzido à metade, não por alteração do zoom do sistema operacional.
 
 ## Avaliação por tela
 
@@ -44,7 +44,7 @@ Os comparativos individuais e manifestos detalhados permanecem em `qa-artifacts/
 | 15 `/medico/pacientes` | 6/6; rota PASS | Lista vinculada e estado vazio respeitam a projeção autorizada do médico. O médico QA não tem pacientes vinculados, enquanto o PNG contém registros; não foram fabricados vínculos clínicos. Diferença de pixels acima do limiar RGB L1=36: 12.21%; MAE RGB por canal: 10.02. |
 | 16 `/medico/prontuarios` | 6/6; rota PASS | Painel do prontuário atual e estado vazio estão presentes. A identidade de QA não tem atendimento/prontuário ativo; não foram criados diagnósticos, exames ou prontuários sintéticos para imitar a imagem. Diferença de pixels acima do limiar RGB L1=36: 11.98%; MAE RGB por canal: 8.71. |
 
-Cada percentual inclui rasterização, texto, dados, ícones e arte; não é um classificador de defeitos. As diferenças de dados não foram mascaradas. Os números acima vêm do manifesto da última captura, feita com banco QA recém-criado em 20/11/2026.
+Cada percentual inclui rasterização, texto, dados, ícones e arte; não é um classificador de defeitos. As diferenças de dados não foram mascaradas. Os números acima vêm do manifesto da última captura, feita com banco QA14 recém-criado em 20/11/2026.
 
 ### Diferenças que permanecem
 
@@ -63,7 +63,7 @@ Cada percentual inclui rasterização, texto, dados, ícones e arte; não é um 
 - Compactada a lista de próximos atendimentos; o rodapé do dashboard termina em Y=880,8 px no viewport 1768×890 e permanece dentro da captura.
 - Removida uma regra de margem negativa sem componente correspondente.
 - Corrigida a expectativa de título do runner geral: a tela de especialidades publica o heading acessível “Especialidades”. A captura local completa validou 93/93 telas/formatos em PostgreSQL descartável limpo.
-- Alinhado o filtro do dashboard da Recepção com a referência: o seletor filtra situação, e a busca server-side cobre nome de paciente, profissional, telefone/CPF e horário local explícito `HH:MM`. Uma busca vazia submetida limpa o filtro anterior mesmo quando o browser omite o campo vazio; testes unitários cobrem ambos os formatos do formulário.
+- Alinhado o filtro do dashboard da Recepção com a referência: o seletor filtra situação, e a busca server-side cobre nome de paciente, profissional, telefone/CPF e horário local explícito `HH:MM`. Para evitar que um `on_change` atrasado restaure uma consulta antiga, o campo usa valor inicial do navegador e só submete seu valor nativo no Enter; limpar redefine o campo no cliente e o filtro no servidor. Um número de geração descarta respostas de recarga superadas. Testes unitários e Chromium cobrem o fluxo depois de paginação, busca por profissional e limpeza.
 - Eliminada a URL duplicada nos dados da listagem de pacientes; cada link de ficha deriva do ID persistido da linha. O Chromium aguarda os resultados de busca e confirma que `href`, URL e nome da ficha pertencem ao mesmo paciente.
 - Recomposta a área Financeira com métricas em uma linha, filtros de 36 px no desktop, respiro explícito em grids/flex, campos de 44 px em mobile, tabela semântica de seis colunas e vazio horizontal. O valor da cobrança e a evolução continuam ligados aos States existentes.
 - Corrigidos os gaps numéricos inválidos das grades Reflex em telas de pacientes, calendário, agenda, especialidades, equipe, administração e Recepção; os espaços renderizam explicitamente em múltiplos de 4 px. A grade do cadastro do paciente mede 24 px entre formulário e orientações.
@@ -71,6 +71,7 @@ Cada percentual inclui rasterização, texto, dados, ícones e arte; não é um 
 - Corrigidos gaps Financeiros que eram descartados pelo browser como `normal`: os componentes Flex/Grid usam unidades CSS válidas. Em 1768×890, o conteúdo mede x=169/largura=1554 px; indicadores, filtros, emissão, cobranças e evolução iniciam em y=167,4/262,6/411/563/783 px.
 - Encurtado o cabeçalho da tabela de cobranças para 33,5 px, ajustando a altura total da seção em conjunto com o espaço interno. A evolução termina dentro da primeira dobra conforme a referência.
 - Refinados o padding e a altura dos estados vazios médicos e o ritmo da visão geral médica sem alterar as projeções clínicas autorizadas.
+- Corrigida a captura de `/admin/funcionarios`: o teste de paginação rolava o conteúdo e cortava o título no PNG; o runner agora retorna ao topo e remove foco transitório antes de cada screenshot.
 
 ## Responsividade, acessibilidade e funcionamento
 
@@ -82,20 +83,20 @@ Permanecem os limites do estado funcional real documentados acima. A captura nã
 
 | Verificação | Resultado final |
 |---|---|
-| `python -m pytest -q -rs` em PostgreSQL 16.16 descartável `vitta_one_test` | **571 passed, 3 skipped** em 37,75 s; 1 aviso `StarletteDeprecationWarning` do `httpx` no `TestClient`. Os skips são dois casos de concorrência/row-locking fora do ambiente CI próprio e um caso que recusa fixtures de concorrência fora de `vitta_one`. |
-| `python -m pytest qa_browser/prescription_browser.py qa_browser/admin_agenda_browser.py -q` em PostgreSQL QA limpo `vitta_one_operational_ui_qa_9` | **42 passed** em 177,84 s; inclui autorização, fluxos clínicos/administrativos, foco, teclado, redução de movimento e responsividade |
+| `python -m pytest -q -rs` em PostgreSQL 16.16 de teste `vitta_one_test` | **572 passed, 3 skipped** em 40,30 s; 1 aviso `StarletteDeprecationWarning` do `httpx` no `TestClient`. Os skips são dois casos de concorrência/row-locking fora do ambiente CI próprio e um caso que recusa fixtures de concorrência fora de `vitta_one`. |
+| `python -m pytest qa_browser/prescription_browser.py qa_browser/admin_agenda_browser.py -q` em PostgreSQL QA isolado `vitta_one_operational_ui_qa_14` | **42 passed** em 180,89 s; inclui autorização, fluxos clínicos/administrativos, foco, teclado, redução de movimento, responsividade e a regressão da busca vazia após buscar profissional |
 | Regressão do link da ficha em Chromium | **5/5 repetições PASS** na primeira fixture; **1/1 PASS** na fixture limpa usada para a captura final; o teste confere ID esperado, URL e nome da ficha |
 | `python -m qa_browser.capture_all_screens` em fixture sintética da rodada CI anterior | **93/93 PASS** no run CI histórico #342; este runner não foi repetido localmente após as últimas correções de Financeiro |
-| `python -m qa_browser.capture_operational_reference_screens` com `VITTA_ONE_REFERENCE_DIR=qa-artifacts/reference` em PostgreSQL QA limpo `vitta_one_operational_ui_qa_10` | **96/96 PASS** no bundle Reflex do HEAD; 16 capturas desktop, lados a lados, overlays de 50%, diffs sem máscaras e folhas de comparação inspecionados |
+| `python -m qa_browser.capture_operational_reference_screens` com 16 referências locais em PostgreSQL QA recém-criado `vitta_one_operational_ui_qa_14` | **96/96 PASS**; 16 rotas em seis viewports, mais comparativos desktop lado a lado, overlays de 50%, diffs sem máscaras e quatro folhas gerados e inspecionados após reset de rolagem |
 | Chromium CI #342 no commit `4523450` | **PASS**: 37 testes funcionais em 134,34 s, 5 testes de agenda em 14,86 s, 93/93 capturas gerais e 96/96 capturas operacionais |
 | Auditoria final de viewport equivalente a zoom 200% | **16/16 PASS** em 884×445 na rodada final QA6; sem overflow global e sem imagens quebradas |
-| `reflex compile --dry` com o ambiente PostgreSQL QA isolado | **PASS**, compilado em 5,495 s; persistem avisos existentes de depreciação Reflex e anotações de `on_submit` |
+| `reflex compile --dry` com o ambiente PostgreSQL QA isolado | **PASS**, compilado em 6,164 s; persistem avisos existentes de depreciação Reflex e anotações de `on_submit` |
 | `python -m compileall -q vitta_one qa_browser scripts tests` | **PASS** |
 | OpenSpec strict | **34 passed, 0 failed**, 1 nota informativa sobre target spec arquivada de `patient-portal` |
 | `git diff --check` | **PASS** |
-| Migrations do banco descartável | `reflex db migrate` e `alembic current --check-heads` confirmaram `f031a5aa5002` em `vitta_one_test` e nas bases descartáveis QA9/QA10; nenhuma migration nova nesta change |
+| Migrations do banco descartável | `reflex db migrate` confirmou o schema da branch na base QA14; `alembic current --check-heads` confirmou `f031a5aa5002 (head)`; nenhuma migration nova nesta change |
 
-Na última repetição limpa do Chromium, o teste da Recepção revelou uma corrida ao submeter a busca vazia: alguns serializers omitem um campo vazio e o State mantinha a consulta anterior. A submissão agora limpa explicitamente a busca, com testes unitários para campo vazio e ausente; o browser sincroniza pela contagem antes de aplicar o filtro de situação. A suíte completa passou 42/42 em QA9, e a matriz final foi regenerada 96/96 em QA10. As bases QA7–QA10 foram criadas separadamente, migradas e semeadas somente com dados sintéticos; nenhuma base/container preexistente ou de produção foi apagada ou alterada.
+Depois do Chromium verde no commit de código `9c0bc1f`, o run de `b16c372` reproduziu falha na busca vazia da Recepção após paginação e busca por profissional. A separação tentativa entre rascunho e filtro ainda mantinha o campo controlado por evento Reflex; em execução longa o valor visual podia voltar ao termo anterior. A correção final retirou a atualização por caractere: o formulário lê o valor nativo submetido no Enter, inclusive vazio, enquanto a limpeza também redefine o campo no DOM. Um contador descarta reloads antigos. O teste unitário valida valores vazios/ausentes e submissão nova; o Chromium confirma campo vazio, oito linhas da página e total restaurado para 24. No código atual: Pytest 572 aprovados e 3 skips explicados; Chromium 42/42; captura limpa 96/96 em QA14. Nenhum banco/container preexistente ou de produção foi apagado; as bases QA11–QA14 foram criadas separadamente, migradas e semeadas somente com dados sintéticos.
 
 ## CI e revisão da PR
 
