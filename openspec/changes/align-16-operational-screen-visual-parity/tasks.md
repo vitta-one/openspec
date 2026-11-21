@@ -33,6 +33,14 @@
 - PR [#358](https://github.com/vitta-one/openspec/pull/358) permanece aberta para `develop`. O campo de busca e o Chromium passaram na regressão final; nenhum merge foi feito.
 - Nenhum merge, deploy, migration de produção ou alteração de banco de produção foi feito.
 
+## Registro de revisão adicional — 21/11/2026
+
+- Reaberta a referência 04 após apontamento da usuária; o overlay local sem máscaras evidenciou ícones menores/deslocados e a faixa de ações 3 px abaixo do PNG.
+- Ajustados os ícones e alinhamentos medidos da tela de cadastro e o placeholder para caber em 320 px; o runner verifica a largura no viewport estreito.
+- Regeneradas as 96 capturas e os 16 comparativos depois do build Reflex atual. As diferenças da tela 04 caíram de 13,09% para 7,56% no limiar RGB L1≥36 (MAE/canal de 13,32 para 8,59).
+- Todos os quatro comparativos agregados foram reinspecionados; a paridade integral permanece não comprovada (**0/16 aprovações**). Diferenças de dados, estados, ícones e rasterização continuam abertas no relatório de QA; nenhuma captura foi mascarada.
+- Nenhum dado clínico ou financeiro foi alterado para aproximar os PNGs.
+
 ## Registro de continuação — 21/11/2026
 
 - Build Reflex `--env prod` executado com o código corrente da branch e PostgreSQL 16 QA isolado/migrado até `f031a5aa5002 (head)`; smoke HTTP 200 confirmado após redirecionamento.
@@ -42,3 +50,13 @@
 - Ajustado o teste Chromium do autogendamento para navegar para a semana do horário escolhido, cobrindo a virada de semana sem depender do dia atual.
 - Validações: Pytest **574 passed, 3 skipped**; Chromium **42 passed**; OpenSpec strict **34 passed, 0 failed**; `compileall`, `reflex compile --dry`, migrations/head e `git diff --check` aprovados. Avisos de depreciação Reflex/Starlette e a nota OpenSpec estão descritos no relatório.
 - Aprovação visual permanece **0/16**; diferenças de conteúdos, estados e rasterização continuam mensuradas e documentadas, sem declaração de pixel-idêntica.
+
+## Recaptura local com guard de QA endurecido — 2026-11-21
+
+- [x] Recriar o PostgreSQL 16 descartável `vitta_one_operational_ui_qa_22`, executar Alembic até `f031a5aa5002 (head)`, semear apenas identidades/dados sintéticos e iniciar o bundle atual da branch nesse banco.
+- [x] Regenerar a matriz das 16 rotas em seis viewports: **96/96 PASS**, zero falhas, zero imagens quebradas, zero overflow horizontal. Gerar comparativos desktop sem máscaras e reinspecionar os quatro painéis agregados.
+- [x] Recalcular métricas sem esconder divergências: RGB L1≥36 de **4,14% a 16,06%**, média **9,49%**; MAE médio **9,21**. Resultado honesto: **0/16 aprovações integrais**, estado `REVIEW_REQUIRED`.
+- [x] Endurecer o guard para rejeitar o nome genérico `vitta_one` na porta local 15433 e cobrir o caso com teste: **3/3** testes direcionados aprovados.
+- [x] Atualizar `docs/qa/operational-screen-parity-2026-11-17.md` com o resultado QA22, a tabela por tela e a comparação temporária de fonte, sem modificar fonte global porque a diferença medida foi marginal e inconsistente.
+- [x] Repetir Pytest completo em PostgreSQL descartável novo `vitta_one_test_22`: **574 passed, 3 skipped**; Chromium contra o build recém-iniciado com QA22: **42 passed** em 173,81 s. `reflex compile --dry`, `compileall`, OpenSpec strict e `git diff --check` passaram nesta revisão.
+- Nenhum dado de paciente, consulta, fila, vínculo médico, prontuário, exame ou cobrança foi alterado para reduzir a diferença. As diferenças visuais permanecem em aberto; esta tarefa não marca fidelidade integral como concluída.

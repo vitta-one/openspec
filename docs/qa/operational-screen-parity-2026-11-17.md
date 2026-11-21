@@ -122,7 +122,7 @@ Esta rodada foi feita com código da branch de trabalho, Reflex em build local `
 | 01 `/recepcao` | 6/6 | 16,07% | 13,49 | Revisada; conteúdo e indicadores sintéticos divergem |
 | 02 `/recepcao/agenda` | 6/6 | 13,41% | 10,42 | Revisada; as 24 consultas sintéticas do dia concentram-se no sábado, enquanto a referência distribui eventos na semana |
 | 03 `/recepcao/pacientes` | 6/6 | 10,17% | 12,06 | Revisada; lista e nomes sintéticos diferem |
-| 04 `/recepcao/pacientes/novo` | 6/6 | 13,09% | 13,32 | Revisada; formulário inicia vazio; ilustração de orientação agora usa o recorte correspondente à referência |
+| 04 `/recepcao/pacientes/novo` | 6/6 | 7,56% | 8,59 | Revisada; formulário inicia vazio; ilustração, ícones e landmarks refinados nesta iteração; continua sem aprovação pixel-idêntica |
 | 05 `/recepcao/fila` | 6/6 | 10,73% | 11,19 | Revisada; há uma entrada de QA persistida, enquanto a referência mostra fila vazia |
 | 06 `/admin` | 6/6 | 13,65% | 10,15 | Revisada; números/dados e 13 especialidades sintéticas diferem das 6 da referência |
 | 07 `/admin/funcionarios` | 6/6 | 9,64% | 8,70 | Revisada; quantidade e dados de funcionários sintéticos diferem |
@@ -170,3 +170,58 @@ A fidelidade visual integral permanece **não aprovada (0/16)**. A próxima apro
 O CI Chromium #44866103623 chegou a **95/96 capturas**. A falha foi `/medico/pacientes` em 1768×890: o landmark do estado vazio estava ausente porque `test_patient_books_own_appointment_and_both_staff_agendas_update` tinha agendado uma consulta sintética para o Médico B antes da matriz. O seed inicial preserva intencionalmente esse médico sem pacientes vinculados para validar o estado vazio; a captura executada depois dos testes funcionais herdava a mutação.
 
 O workflow agora roda e exige a matriz de 16 telas imediatamente após subir o servidor, antes dos testes interativos que alteram a fixture. A captura continua sendo gerada pelo build corrente, sem relaxar landmarks ou criar dados artificiais para a tela; os demais testes continuam executando mesmo se a etapa de captura falhar, e a falha é verificada ao fim do job. No SHA `149f25cf8f4f2d0c4a52d1e475107301baccc372`, o CI Chromium #44867148239 confirmou a correção: **96/96** capturas operacionais, **37** testes de navegador, **5** testes de agenda e **93/93** capturas gerais passaram. O artifact [vitta-one-chromium-all-screens — run #44867148239](https://github.com/vitta-one/openspec/actions/runs/44867148239/artifacts/14692179081) contém somente as capturas sintéticas e manifestos; referências originais não estão disponíveis no runner, então isso não representa comparação visual. A avaliação local continua em **0/16 telas aprovadas**.
+
+## Refinamento adicional da tela Novo paciente — 21/11/2026
+
+A revisão rejeitou a tela 04. A comparação sem máscaras mostrou defeitos geométricos ainda corrigíveis, então a tela foi medida novamente, alterada e recapturada com Chromium do bundle atual.
+
+| Marco em 1768×890 | Medida atual | Evidência/ajuste |
+|---|---:|---|
+| Área de conteúdo | x=159, largura=1530 px | Mesmo eixo e limite horizontal da referência |
+| Cartão do formulário | x=159, y=267 px, largura=905 px | Conteúdo interno começa em x=186 e mede 851 px |
+| Painel de orientação | x=1088, y=267 px, largura≈601 px | Recorte da ilustração ocupa 599×249 px sem distorção |
+| Campos | nome y=421, CPF y=534, telefone y=673 px | Cada controle mede 851×50 px |
+| Ícones dos campos | x=210 px (caixa SVG) | A regra final anterior deixava os glifos aproximadamente 10 px à esquerda |
+| Divisória e ações | divisória y=752 px; ações y=777 px | Cancelar 130×48 px e cadastrar 250×48 px; antes estavam 3 px abaixo |
+| Placeholder a 320 px | texto medido 173,0 px; área disponível 175,2 px | O texto completo cabe; o runner falha se o placeholder ultrapassar o campo |
+
+O ícone de orientação deixou de receber um círculo CSS redundante ao redor do próprio símbolo circular; as dicas usam um check simples, o ícone de dados pessoais foi ampliado e a ação principal recebeu o peso tipográfico da referência. A comparação ampliada confirmou que as três quebras do texto orientativo, a divisória e o eixo das dicas permanecem alinhados.
+
+A matriz atual, executada após essas alterações, concluiu **96/96 capturas PASS** nos seis tamanhos, sem imagens quebradas, falhas de rota ou overflow horizontal global. Foram gerados e inspecionados os 16 comparativos desktop, overlays e diffs sem máscaras. Na tela 04, o diff RGB L1≥36 caiu de **13,09% (MAE/canal 13,32)** na rodada anterior para **7,56% (MAE/canal 8,59)**. Isso comprova melhoria, não igualdade: a tela permanece `REVIEW_REQUIRED` e a avaliação geral segue **0/16 aprovada integralmente**.
+
+O overlay atual em `qa-artifacts/operational-reference/comparisons/04-novo-paciente/` ainda mostra diferenças de rasterização, formas dos ícones/navegação, superfícies e texto. As outras 15 comparações foram reabertas; permanecem os desvios de conteúdo e estado por rota descritos nas tabelas. Nenhum registro de paciente, consulta, fila, prontuário, exame ou cobrança foi adicionado, removido ou alterado para reduzir o diff.
+
+## Recaptura e inspeção corrente — 21/11/2026, QA22
+
+Depois do endurecimento do guard de banco, o bundle da branch foi iniciado novamente em build `--env prod`, agora contra o PostgreSQL 16 descartável `vitta_one_operational_ui_qa_22`, migrado até `f031a5aa5002 (head)` e semeado com fixtures QA sintéticas. O capturador confirmou o build local servido em `127.0.0.1:3000` e concluiu **96/96** capturas, sem falha de navegação, imagem quebrada ou overflow horizontal. Os 16 overlays de 50%, diffs sem máscara e comparativos lado a lado foram regenerados; as quatro folhas agregadas foram reabertas para inspeção.
+
+| Tela | Pixels com RGB L1 ≥ 36 | MAE RGB/canal | Inspeção |
+|---|---:|---:|---|
+| 01 `/recepcao` | 16,06% | 13,49 | Revisada; dados/estados sintéticos divergem |
+| 02 `/recepcao/agenda` | 13,41% | 10,42 | Revisada; datas e distribuição de consultas diferem |
+| 03 `/recepcao/pacientes` | 10,17% | 12,06 | Revisada; nomes e quantidade de pacientes diferem |
+| 04 `/recepcao/pacientes/novo` | 7,56% | 8,59 | Revisada após refinamento; persistem diferenças visuais e de rasterização |
+| 05 `/recepcao/fila` | 10,73% | 11,19 | Revisada; fixture tem uma entrada e a referência está vazia |
+| 06 `/admin` | 13,65% | 10,15 | Revisada; métricas e especialidades diferem |
+| 07 `/admin/funcionarios` | 9,64% | 8,70 | Revisada; dados e quantidade de funcionários diferem |
+| 08 `/admin/funcionarios/novo` | 7,93% | 8,24 | Revisada; formulário vazio e diferenças residuais de arte/texto |
+| 09 `/admin/especialidades` | 11,34% | 11,06 | Revisada; fixture tem 13 especialidades, a referência mostra 6 |
+| 10 `/admin/horarios` | 7,15% | 6,67 | Revisada; sem profissional selecionado, sem horários inventados |
+| 11 `/admin/configuracoes` | 10,34% | 10,42 | Revisada; configuração clínica de QA vazia |
+| 12 `/financeiro` | 9,64% | 9,37 | Revisada; não há cobranças elegíveis na fixture |
+| 13 `/medico` | 8,07% | 8,04 | Revisada; fila compartilhada sintética contém uma entrada |
+| 14 `/medico/agenda` | 6,82% | 7,56 | Revisada; médico QA não tem consultas vinculadas |
+| 15 `/medico/pacientes` | 4,14% | 5,53 | Revisada; médico QA não tem pacientes vinculados |
+| 16 `/medico/prontuarios` | 5,15% | 5,94 | Revisada; médico QA não tem prontuário ativo |
+
+Na matriz corrente, pixels alterados acima do limiar variam de **4,14% a 16,06%** (média **9,49%**); MAE médio por canal: **9,21**. Esses valores incluem texto, conteúdo, estados, ícones e rasterização. `fidelity-assessment.json` continua `REVIEW_REQUIRED`: **0/16 telas aprovadas**. Não declaro identidade pixel a pixel.
+
+Uma comparação técnica temporária de fonte, só na tela 04, sem mudança de produto, mostrou que Inter reduz o MAE total de 8,59 para 8,44, mas aumenta pixels alterados e piora a região textual do painel orientativo. A pilha tipográfica do produto foi mantida porque a alteração global não demonstrou ganho consistente.
+
+O guard de captura permite o banco dedicado `vitta_one_operational_ui_qa_22` na porta local reservada e recusa o nome genérico `vitta_one` nessa porta. O teste direcionado do guard passou **3/3**. Banco, capturas e comparativos permanecem em QA local ignorado pelo Git; nenhum registro clínico ou financeiro foi manipulado para coincidir com a referência.
+
+### Regressão funcional repetida após a recaptura
+
+- Pytest completo em PostgreSQL 16 descartável novo `vitta_one_test_22`, migrado a `f031a5aa5002 (head)`: **574 passed, 3 skipped** em 35,07 s. Os skips são os cenários de concorrência/row-locking não habilitados por este banco fora do nome `vitta_one`; um aviso `StarletteDeprecationWarning` legado permanece.
+- Chromium de autorização, formulários, agenda, foco/teclado e responsividade no servidor recém-compilado contra QA22: **42 passed** em 173,81 s.
+- Depois dessas execuções, permanecem válidos os gates repetidos: guard QA **3/3**, OpenSpec strict **34 passed, 0 failed**, `compileall`, `reflex compile --dry` e `git diff --check` aprovados. O servidor de comparação usa somente QA22 local; nenhuma conexão de produção foi configurada.
