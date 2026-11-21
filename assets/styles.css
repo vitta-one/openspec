@@ -3256,6 +3256,22 @@ button:disabled,
   border-radius: .65rem;
   background: var(--vitta-primary-soft);
 }
+.vitta-specialty-table-scroll {
+  max-height: 22rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.vitta-specialty-table-scroll:focus-visible {
+  outline: 3px solid var(--vitta-focus);
+  outline-offset: 2px;
+}
+.vitta-specialty-table thead {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  background: var(--vitta-surface);
+}
 .vitta-specialty-table-action {
   width: 2.35rem !important;
   min-width: 2.35rem !important;

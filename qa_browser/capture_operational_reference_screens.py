@@ -258,6 +258,12 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
             more_filters.click()
             expect(professional_filter).to_have_count(0)
             page.evaluate("document.activeElement && document.activeElement.blur()")
+            pagination_footer = page.locator(".vitta-directory-pagination-footer")
+            expect(pagination_footer).to_be_visible()
+            footer_box = pagination_footer.bounding_box()
+            viewport_height = page.evaluate("window.innerHeight")
+            if footer_box is None or footer_box["y"] + footer_box["height"] > viewport_height:
+                raise AssertionError("Paginação de especialidades ficou fora do viewport de referência")
         if route == "/medico/agenda" and viewport_name == "desktop-1768x890":
             expect(page.locator(".vitta-doctor-week-empty")).to_have_count(7)
         if not page.locator("body").inner_text().strip():

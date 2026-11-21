@@ -152,8 +152,10 @@ def specialties_table() -> rx.Component:
         width="100%",
         max_width="100%",
         overflow_x="auto",
+        tab_index=0,
         role="region",
         aria_label="Tabela de especialidades; role para os lados em telas pequenas",
+        class_name="vitta-specialty-table-scroll",
     )
 
 

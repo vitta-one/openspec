@@ -348,32 +348,42 @@ def test_admin_registers_medical_professional_without_resend_and_prevents_duplic
 
 
 def test_admin_specialty_pagination_has_real_second_page(page: Page) -> None:
-    """Exercise pagination with >10 specialties on disposable PostgreSQL."""
+    """Exercise page sizing and navigation with persisted specialties."""
     login_as_admin(page)
     page.goto(BASE + "/admin/especialidades", wait_until="domcontentloaded")
     expect(page.get_by_role("heading", name="Especialidades", exact=True)).to_be_visible(timeout=30000)
-    page_label = page.get_by_text(re.compile(r"^Página 1 de \d+$"))
-    expect(page_label).to_be_visible(timeout=20000)
-    page_count = int(page_label.inner_text().split(" de ", 1)[1])
-    assert page_count >= 2
+    current_page = page.locator(".vitta-directory-page-control.is-current")
+    expect(current_page).to_have_text("1", timeout=20000)
     first_page = page.locator("table tbody tr")
     expect(first_page).to_have_count(10, timeout=15000)
     first_row_text = first_page.first.inner_text()
-    expect(page.get_by_role("button", name="Anterior")).to_be_disabled()
-    page.get_by_role("button", name="Próxima").click()
-    second_page_label = page.get_by_text(re.compile(r"^Página 2 de \d+$"))
-    expect(second_page_label).to_be_visible(timeout=15000)
+    previous = page.get_by_role("button", name="Página anterior")
+    next_page = page.get_by_role("button", name="Próxima página")
+    expect(previous).to_be_disabled()
+    expect(next_page).to_be_enabled()
+
+    page_size = page.get_by_role("combobox", name="Itens por página")
+    page_size.click()
+    page.get_by_role("option", name="25", exact=True).click()
+    expect(page_size).to_contain_text("25", timeout=15000)
+    all_specialties = page.locator("table tbody tr")
+    expect(all_specialties).to_have_count(13, timeout=15000)
+    expect(current_page).to_have_text("1")
+
+    page_size.click()
+    page.get_by_role("option", name="10", exact=True).click()
+    expect(page_size).to_contain_text("10", timeout=15000)
+    expect(first_page).to_have_count(10, timeout=15000)
+    next_page.click()
+    expect(current_page).to_have_text("2", timeout=15000)
     second_page = page.locator("table tbody tr")
     expect(second_page.first).to_be_visible(timeout=15000)
     second_page_count = second_page.count()
     assert 1 <= second_page_count <= 10
     assert second_page.first.inner_text() != first_row_text
-    if page_count == 2:
-        expect(page.get_by_role("button", name="Próxima")).to_be_disabled()
-    else:
-        expect(page.get_by_role("button", name="Próxima")).to_be_enabled()
-    page.get_by_role("button", name="Anterior").click()
-    expect(page_label).to_be_visible(timeout=15000)
+    expect(next_page).to_be_disabled()
+    previous.click()
+    expect(current_page).to_have_text("1", timeout=15000)
 
 
 def test_admin_availability_controls_are_understandable_and_responsive(page: Page) -> None:
