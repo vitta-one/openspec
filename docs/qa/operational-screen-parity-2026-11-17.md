@@ -164,3 +164,9 @@ Diferenças de dados não foram convertidas em registros falsos para coincidir c
 Os três skips e o aviso HTTP continuam explicados na rodada anterior. `alembic check` segue sem poder comparar metadata neste repositório porque `alembic/env.py` não fornece `target_metadata`; não foi criada migration nem alterado schema de produção. O build local avisou que Reflex detecta diferenças de schema que pediriam `reflex db makemigrations`, mas o estado migrado confirmado continua no head Alembic e nenhuma migration nova foi necessária para esta correção.
 
 A fidelidade visual integral permanece **não aprovada (0/16)**. A próxima aprovação depende de avaliar e resolver diferenças reais restantes com os contratos de domínio intactos; em especial, os estados/dados de referência divergem das projeções autorizadas e sintéticas e não foram imitados com dados falsos.
+
+## Isolamento da captura Chromium — 21/11/2026
+
+O CI Chromium #44866103623 chegou a **95/96 capturas**. A falha foi `/medico/pacientes` em 1768×890: o landmark do estado vazio estava ausente porque `test_patient_books_own_appointment_and_both_staff_agendas_update` tinha agendado uma consulta sintética para o Médico B antes da matriz. O seed inicial preserva intencionalmente esse médico sem pacientes vinculados para validar o estado vazio; a captura executada depois dos testes funcionais herdava a mutação.
+
+O workflow agora roda e exige a matriz de 16 telas imediatamente após subir o servidor, antes dos testes interativos que alteram a fixture. A captura continua sendo gerada pelo build corrente, sem relaxar landmarks ou criar dados artificiais para a tela; os demais testes continuam executando mesmo se a etapa de captura falhar, e a falha é verificada ao fim do job. A confirmação dessa correção depende do run CI no SHA que contém o workflow atualizado.
