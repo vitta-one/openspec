@@ -68,3 +68,21 @@
 - [x] Recriar captura limpa QA23 e regenerar/inspecionar comparativos: **96/96**; RGB L1≥36 médio **9,51%**, MAE/canal médio **9,26**.
 - [x] Repetir Pytest PostgreSQL descartável: **574 passed, 3 skipped**; Chromium funcional/acessibilidade/responsividade: **42 passed**; OpenSpec strict **34/34**, `compileall`, `reflex compile --dry` e `git diff --check` aprovados.
 - [ ] Resolver as diferenças visuais restantes de cada rota e obter inspeção humana de paridade integral. A classificação atual é **0/16 aprovações**, `REVIEW_REQUIRED`; não substituir divergências clínicas/financeiras por registros fictícios.
+
+## Continuação QA25 e rodada após reinício do ambiente — 21/11/2026
+
+- [x] Reabrir e inspecionar os quatro comparativos agregados da matriz QA25; registrar métricas por rota, diferenças de conteúdo/estado e limites em `docs/qa/operational-screen-parity-2026-11-17.md`.
+- [x] Corrigir mais uma diferença funcional/visual em `/admin/especialidades`: adicionar rodapé com faixa real de resultados, seletor de tamanho 10/25/50 e navegação server-side; validar valores de página aceitos em teste puro.
+- [x] Após o reinício automático do ambiente, repetir `reflex compile --dry`, OpenSpec strict, `compileall`, `git diff --check` e testes direcionados no checkout atual.
+- [x] Recapturar localmente a matriz de 96 telas com a nova composição da tela 09; registrar captura funcional, medidas DOM e comparativo honesto em `docs/qa/operational-screen-parity-2026-11-17.md`.
+- [ ] Aguardar CI Chromium/Pytest do follow-up, inspecionar os artifacts de 96 capturas e corrigir qualquer regressão que aparecer.
+- [ ] Aprovar visualmente as 16 telas. Permanece **0/16**; o trabalho não pode marcar fidelidade integral com diffs residuais nem usar dados clínicos/financeiros artificiais para reduzir as métricas.
+
+## Continuação QA26 — correção estrutural de `/admin/especialidades` — 21/11/2026
+
+- [x] Reabrir a captura Chromium do SHA `0b0a619`; confirmar que a paginação avançava para baixo de linhas adicionais e que o painel excedia o PNG.
+- [x] Reproduzir a geometria da referência com medidas DOM: painel, filtros, tabela, cabeçalho, seis linhas completas e paginação na primeira dobra; manter a rolagem interna acessível por teclado e status anunciado.
+- [x] Atualizar o teste de paginação para derivar o total real do resumo visível, em vez de presumir 13; teste direcionado local **1/1 PASS**.
+- [x] Regerar a matriz local de seis viewports: **96/96 PASS**, sem overflow horizontal; validar OpenSpec strict, compileall, `reflex compile --dry` e `git diff --check`.
+- [ ] Repetir no CI Chromium completo do SHA final (atualização funcional, segurança, teclado, responsividade e uploads de evidência) e inspecionar suas capturas antes da aprovação do código.
+- [ ] Paridade integral continua pendente: **0/16**. A tela 09 melhorou a geometria, mas ainda contém dados/ícones/descrições diferentes da referência; não atribuir fidelidade total.

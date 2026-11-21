@@ -268,3 +268,61 @@ Diferenças de dados/estado nas rotas 02, 05, 06, 07, 09, 11, 12, 13, 14, 15 e 1
 - `git diff --check`: PASS.
 
 Esses resultados locais ainda não representam uma CI verde após o ajuste; a execução de CI em `8d82cf4` antecede a correção mobile e falhou exatamente na largura do placeholder. A nova execução precisa confirmar a correção em Chromium Ubuntu. Nenhum merge, deploy ou acesso a banco de produção foi realizado.
+
+## Nova inspeção das 16 telas — QA25, 21/11/2026
+
+A execução local mais recente usou o bundle Reflex corrente naquele momento, PostgreSQL 16 descartável `vitta_one_operational_ui_qa_25`, Alembic `f031a5aa5002 (head)` e as referências PNG em diretório temporário. As imagens foram abertas e comparadas sem máscaras; as quatro folhas de contato foram inspecionadas. A matriz registrou 96/96 capturas e zero overflow horizontal. Isso confirma carregamento e reflow; não significa fidelidade aprovada.
+
+| Tela | Pixels RGB L1≥36 | MAE/canal | Diferença visual ainda observada |
+|---|---:|---:|---|
+| 01 `/recepcao` | 14,12% | 11,07 | Métricas, nomes e conteúdo operacional diferem da referência. |
+| 02 `/recepcao/agenda` | 13,41% | 10,42 | A semana e a distribuição de consultas diferem; os eventos QA estão concentrados no sábado. |
+| 03 `/recepcao/pacientes` | 5,69% | 8,11 | A quantidade, os nomes e os telefones da fixture diferem. |
+| 04 `/recepcao/pacientes/novo` | 7,18% | 8,01 | Geometria do formulário foi aproximada; ilustração, glifos, conteúdo e rasterização continuam diferentes. |
+| 05 `/recepcao/fila` | 10,39% | 11,43 | A fixture contém uma entrada; a referência está vazia. |
+| 06 `/admin` | 13,65% | 10,15 | Contagens e resumos persistidos diferem. |
+| 07 `/admin/funcionarios` | 9,64% | 8,70 | Nomes, valores de conta e registros diferem. |
+| 08 `/admin/funcionarios/novo` | 7,93% | 8,24 | Formulário está em estado inicial; persistem diferenças de arte e conteúdo. |
+| 09 `/admin/especialidades` | 10,47% | 9,98 | A fixture contém 13 especialidades e a referência mostra 6; descrições não existem no modelo atual. |
+| 10 `/admin/horarios` | 7,15% | 6,67 | A tela QA não tem profissional selecionado nem disponibilidade associada. |
+| 11 `/admin/configuracoes` | 10,34% | 10,42 | A clínica QA ainda não tem configuração persistida. |
+| 12 `/financeiro` | 9,64% | 9,37 | Não há cobranças elegíveis; valores exibidos na referência não podem ser simulados. |
+| 13 `/medico` | 8,07% | 8,04 | A fila compartilhada da fixture contém uma entrada, enquanto a referência mostra estado sem paciente. |
+| 14 `/medico/agenda` | 6,82% | 7,56 | O médico QA não tem consultas vinculadas. |
+| 15 `/medico/pacientes` | 4,14% | 5,53 | O médico QA não tem pacientes vinculados. |
+| 16 `/medico/prontuarios` | 5,15% | 5,94 | O médico QA não tem prontuário ativo. |
+
+Média dessa rodada: **8,99%** de pixels acima do limiar RGB L1≥36. Métricas de pixel são apenas diagnósticas e não decidem a revisão visual. O manifesto continua `REVIEW_REQUIRED`, **0/16 aprovadas integralmente**.
+
+Na tela 04, a geometria final medida no DOM a 1768×890 foi: conteúdo x=159/largura=1530; formulário x=159/y=267/largura=905/altura=584; painel de orientação x=1088/y=267/largura≈601/altura=584; inputs 851×50; ações alinhadas em y=777. Essa correção reduziu o diff RGB L1≥36 de 10,10%/MAE 11,31 para 7,18%/MAE 8,01. A tela ainda não está aprovada.
+
+A inspeção da tela 09 identificou outra diferença de estrutura: o rodapé de resultados, seletor de itens por página e controles de página da referência não eram exibidos no diretório atual. O código agora acrescenta esses controles com tamanhos validados (10/25/50), faixa de resultados real e eventos server-side existentes. Essa alteração entrou depois da matriz QA25; portanto, as capturas QA25 não validam o rodapé novo e a rota 09 precisa ser recapturada no bundle posterior.
+
+Depois do reinício do ambiente de execução, o processo local de PostgreSQL e os processos de captura não sobreviveram. Não foi possível concluir naquela instância as suítes completas que estavam em andamento, e nenhum resultado parcial foi contabilizado. Na nova instância, foram executados: OpenSpec strict (**34 aprovados, 0 falhas**), `python -m compileall -q vitta_one qa_browser scripts tests` (PASS), `reflex compile --dry` (PASS em 8,967 s), `git diff --check` (PASS) e testes direcionados atualizados (**13/13**). A CI da PR precisa confirmar Pytest completo, Chromium, seis viewports, landmarks e a recaptura do código com a nova paginação.
+
+Não foram alteradas referências, fixtures clínicas ou cobranças para forçar correspondência de pixels. Nenhum paciente, consulta, fila, prontuário, exame ou cobrança foi inserido/removido para imitar os PNGs. A igualdade visual continua **não comprovada**; layouts dinâmicos com registros e estados diferentes não podem produzir a mesma imagem sem a fixture de referência, e os elementos de ilustração/tipografia ainda apresentam resíduos mensuráveis.
+
+## Continuação QA26 — tela 09 e CI do checkpoint — 21/11/2026
+
+A branch preservou o checkpoint e os commits anteriores. No primeiro follow-up, o CI do SHA `0b0a619dba1dbf515ee1bd5aaaa449f1fee65634` aprovou PostgreSQL 16/migrations, OpenSpec strict (**34/34**), Pytest (**578 passed, 3 skipped, 1 aviso legado**), Reflex compile e smoke HTTP. O Chromium gerou as 96 capturas; **36 testes passaram e 1 falhou** porque o teste de paginação esperava 13 especialidades fixas, mas a fixture daquele job persistiu 14. A falha era uma contagem de teste que não acompanhava os dados existentes. O teste agora lê o total mostrado pela própria interface e valida a segunda página a partir dele; a repetição local passou (**1/1**). O novo CI do follow-up ainda precisa confirmar a alteração.
+
+A inspeção do artifact Chromium em `/tmp/vitta-one-ci-0b0a619` confirmou o defeito visual da tela 09: a paginação aparecia depois de parte de uma sétima linha e o painel terminava em y=873, contra y≈832 no PNG. Sem alterar registros, a tela foi reorganizada para que a toolbar e a área de resultados usem gaps próprios, a tabela tenha rolagem vertical limitada, o cabeçalho permaneça sticky, as ações permaneçam acessíveis e seis linhas completas caibam antes da paginação. A navegação da região usa foco/teclas; o resumo de resultados anuncia mudanças com `role=status` e `aria-live`.
+
+Geometria DOM final medida localmente em 1768×890, com a fixture QA sintética corrente:
+
+| Elemento | X | Y | Largura | Altura |
+|---|---:|---:|---:|---:|
+| Painel do diretório | 156 | 330,75 | 1536 | 502 |
+| Filtros | 181 | 339,75 | 1486 | 68 |
+| Área de rolagem da tabela | 181 | 427,75 | 1486 | 320 |
+| Cabeçalho da tabela | 181 | 427,75 | 1486 | 39 |
+| Primeira linha | 181 | 466,75 | 1486 | 46,69 |
+| Sexta linha | 181 | 700,19 | 1486 | 46,69 |
+| Rodapé da paginação | 181 | 755,75 | 1486 | 56 |
+| Número da página atual | 1571 | 769,44 | 40 | 40 |
+
+A tabela agora usa as proporções da referência para alinhar coluna de especialidade, descrição, status e ações; os botões de ação medem 46×36 px e os ícones têm o bloco de 58×42 px. A captura 1768×890 foi comparada sem máscaras, lado a lado, overlay e diff em `/tmp/vitta-one-09-local-reviewed*`. A diferença caiu de **10,70% / MAE 10,135** na captura pré-ajuste para **9,26% / MAE 9,016**. Ainda não há aprovação pixel a pixel: a fixture contém 13 especialidades sintéticas com descrições vazias, enquanto a referência exibe seis nomes, ícones e descrições específicos. O comparativo não mascara essas regiões.
+
+A matriz local com o código atualizado voltou a gerar **96/96 capturas em seis viewports**, sem overflow horizontal; o guard da rota 09 agora confere geometria da tabela, sexta linha integral e rodapé visível. Como as referências não estavam no caminho que o runner local procura, esse manifesto local comprova navegação/captura e os comparativos de `/tmp` foram gerados manualmente contra o PNG original. OpenSpec strict (**valid**), `compileall`, `reflex compile --dry` e `git diff --check` passaram. A fidelidade integral permanece **0/16**; nenhuma das outras 15 telas foi aprovada nesta rodada.
+
+Nenhum registro clínico/financeiro foi criado ou alterado para imitar o mockup. A diferença de 14 versus 13 no CI foi corrigida no teste, não na fixture. O follow-up `60e3b4c2aa7b0a256752201be2411cf33c81b874` está no CI (**Chromium run 44958157881; Python/Reflex run 44958157941; Validate run 44958157919**). Ainda é necessário conferir os três resultados, comparar e inspecionar o artifact desse SHA e registrar qualquer regressão antes de aprovar o código.
