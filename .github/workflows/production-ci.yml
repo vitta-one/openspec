@@ -67,7 +67,7 @@ jobs:
       - name: Sintaxe dos scripts de deploy
         run: bash -n scripts/deploy/bootstrap-vps.sh scripts/deploy/poll-prod.sh
       - name: Validação OpenSpec strict
-        run: npx --yes @fission-ai/openspec validate --all --strict
+        run: npx --yes @fission-ai/openspec@1.13.0 validate --all --strict
       - name: Migrations em PostgreSQL 16 descartável
         run: |
           reflex db migrate
