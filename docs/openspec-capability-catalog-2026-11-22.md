@@ -4,9 +4,9 @@
 
 ## Objetivo e critérios
 
-Reconciliar o contrato normativo com o monólito Python/Reflex, migrations e testes, sem alterar runtime, banco local, deploy ou permissão de produção. A especificação descreve comportamento do código identificado ou contrato de change existente; capacidades futuras permanecem somente em `openspec/changes`.
+Reconciliar o contrato normativo com o monólito Python/Reflex, migrations e testes, sem alterar runtime, banco local, deploy ou permissão de produção. A especificação descreve contratos identificados no código e nas changes históricas, preservadas em `openspec/changes/archive/`; não há novas integrações previstas nesta entrega.
 
-**Categorias:** `C` = spec previamente consolidada e revisada; `A` = recuperada de archive; `D` = sincronizada de delta ativo, sem aceite operacional integral; `E` = contrato documental derivado de código; `P` = proposta futura, **fora das specs consolidadas**.
+**Categorias:** `C` = spec previamente consolidada e revisada; `A` = recuperada de archive; `D` = sincronizada de delta anteriormente ativo, agora arquivado sem homologação externa inferida; `E` = contrato documental derivado de código.
 
 ## Matriz de rastreabilidade
 
@@ -15,7 +15,7 @@ Reconciliar o contrato normativo com o monólito Python/Reflex, migrations e tes
 | `access-control` | C + D | `auth/{roles,service,authorization,staff_service}.py` | `test_auth_security.py`, `test_auth_service.py`, `test_admin_staff_creation.py` | cinco roles, convites e navegação revisados |
 | `appointment-scheduling` | C + D | `appointment_scheduling/{service,weekly,ical_export}.py`, `models/appointment.py` | `test_appointment_scheduling_postgres.py`, `test_professional_weekly_schedule.py`, `test_ical_export.py` | slots, 45 dias, iCalendar e calendário |
 | `clinical-care-record` | C + A | `clinical_care/{service,application}.py`, `models/clinical_care.py` | `test_clinical_care_service.py`, `test_walkin_clinical_journey.py` | concilia Consulta e QueueEntry avulsa |
-| `clinical-prescription` | C + A | `clinical_prescription/{service,state}.py`, `models/clinical_prescription.py` | `test_clinical_prescription_service.py`, `test_clinical_prescription_postgres.py` | prescrição de episódio agendado e avulso; ZapSign ausente |
+| `clinical-prescription` | C + A | `clinical_prescription/{service,state}.py`, `models/clinical_prescription.py` | `test_clinical_prescription_service.py`, `test_clinical_prescription_postgres.py` | prescrição de episódio agendado e avulso; impressão protegida, sem assinatura eletrônica neste escopo |
 | `consultation-care-lifecycle` | C | `consultation_care/{service,application}.py` | `test_consultation_care_lifecycle.py`, `test_consultation_care_postgres.py` | preservada |
 | `patient-reception-queue` | C + D | `patient_queue/{service,profile,state}.py` | `test_patient_queue_postgres.py`, `test_reception_patient_profile.py` | fila, perfil e cadastro operacional |
 | `professional-specialty-management` | C + D | `professional_directory/{service,state}.py`, `models/professional.py` | `test_professional_directory_service.py`, `test_specialty_management_filters.py` | cadastro, vínculo e filtros |
@@ -40,23 +40,23 @@ Reconciliar o contrato normativo com o monólito Python/Reflex, migrations e tes
 
 `C/A/D/E` são origem de documentação, **não** estado de produção. Nenhuma linha afirma que a suíte inteira foi executada nesta branch.
 
-## Changes e aceite
+## Encerramento documental e rastreabilidade
 
-- 19 changes já estavam em `archive/` na baseline; as quatro capabilities em archive sem spec final foram recuperadas.
-- 26 changes não arquivadas já existiam na `develop`; seus deltas foram incorporados às specs respectivas, **sem marcar tarefas desmarcadas como concluídas e sem arquivar changes**.
-- Duas novas changes somente de planejamento: `add-examination-attachments` e `add-prescription-signature` (categorias P). Elas ainda não pertencem a `openspec/specs/`.
-- `integrate-asaas-financial` e `extend-resend-email` continham tarefas de homologação não concluídas. Não presumir transações Sandbox reais, entrega Resend, DNS, endpoints públicos ou configuração de credenciais.
-- `align-operational-screen-visual-parity` declara tarefas concluídas, mas `docs/qa/operational-screen-parity-2026-11-17.md` registra 0/16 de equivalência visual integral no comparativo de referências. Não confundir capturas com aprovação estética.
-- A sincronização documental não altera o estado dos PRs previamente integrados. A aprovação do novo PR é uma revisão de documentação, não autorização de deploy nem merge.
+- Na baseline `develop`, existiam 19 changes arquivadas e 26 ativas.
+- Por solicitação explícita de encerramento de escopo, as 26 changes antigas foram transferidas para `openspec/changes/archive/` com seus arquivos e identificadores originais preservados, respeitando o prefixo de data. O repositório passa a ter **45 changes arquivadas e nenhuma change ativa**.
+- As tarefas ainda marcadas `- [ ]` permanecem exatamente no histórico arquivado: **arquivamento documental não é prova de execução nem homologação de pendências técnicas**. Nenhum checkbox foi marcado artificialmente.
+- Propostas adicionais que não fazem mais parte do prazo acadêmico foram retiradas do PR, dos testes e do roadmap, sem incluir novas funcionalidades na aplicação.
+- O CI da revisão anterior registrou OpenSpec strict **53/53**, PostgreSQL QA, **584 testes Python aprovados** (2 ignorados), e Reflex compile; a reorganização posterior deve ser validada novamente no GitHub Actions.
+- A validação de paridade visual `docs/qa/operational-screen-parity-2026-11-17.md` ainda registra revisão de equivalência visual pendente, independentemente do encerramento documental.
+- As operações Asaas e Resend possuem contratos e adaptadores, mas testes locais não substituem homologação externa de pagamentos, webhooks e entrega de e-mail.
 
-## Pendências objetivas para encerramento
+## Evidências e limites após o arquivamento
 
-1. Revisar manualmente requisitos alterados frente às rotas e serviços da `develop`, especialmente guard de paciente, regras de conflito e episódios avulsos.
-2. Rodar `npx @fission-ai/openspec validate --all --strict` no checkout local ou CI.
-3. Rodar `python -m pytest -q`, migrações em PostgreSQL 16 descartável, `reflex compile --dry` e Chromium nas interfaces alteradas, conforme disponibilidade.
-4. Reexecutar testes de Asaas/Resend em Sandbox real autorizado, com webhook público e credenciais seguras; não usar pacientes reais.
-5. Resolver tarefas abertas e obter revisão de cada change antes de `archive` correspondente, preservando histórico.
-6. Revisar a estratégia de modularização de `staff-management`, `patient-directory` e `professional-working-hours` para evitar contratos duplicados em evoluções posteriores.
+1. Confirmar `openspec validate --all --strict --no-interactive` para a versão exata do PR após os movimentos de archive.
+2. Confirmar migrations em QA descartável, Pytest, compilação Reflex e smoke HTTP no CI.
+3. Preservar o histórico dos itens pendentes nos `tasks.md` movidos; não afirmar uma funcionalidade não exercitada no ambiente externo.
+4. Manter revisão de autorização, contexto clínico e diferenciação entre fluxo agendado e avulso antes do uso com dados reais.
+5. Manter as specs consolidadas separadas dos documentos de entrega acadêmica, e não reabrir propostas fora do escopo sem decisão nova.
 
 ## Material para o Innovation Lab
 

@@ -81,15 +81,42 @@ def test_patient_role_and_walkin_are_consistent() -> None:
     assert "QueueEntry" in care
 
 
-def test_future_integrations_remain_in_changes() -> None:
-    assert not (SPECS / "examination-management" / "spec.md").exists()
-    assert not (SPECS / "prescription-signature" / "spec.md").exists()
-    for change, capability in (
-        ("add-examination-attachments", "examination-management"),
-        ("add-prescription-signature", "prescription-signature"),
-    ):
-        root = CHANGES / change
-        for artifact in ("proposal.md", "design.md", "tasks.md"):
-            assert (root / artifact).exists(), f"{change}/{artifact}"
-        assert (root / "specs" / capability / "spec.md").exists()
-        assert "- [ ]" in (root / "tasks.md").read_text(encoding="utf-8")
+def test_reconciled_changes_are_archived() -> None:
+    """As changes existentes no corte acadêmico seguem rastreáveis no histórico.
+
+    Não proíbe criação de novas changes pelo fluxo normal do OpenSpec.
+    """
+    names = {
+        "2026-10-31-admin-qa-patient-dossier",
+        "2026-10-31-fix-professional-registration-modal",
+        "2026-10-31-manage-clinic-configuration",
+        "2026-10-31-reception-booking-modal",
+        "2026-10-31-refine-admin-hub-navigation",
+        "2026-10-31-refine-employee-detail",
+        "2026-10-31-refine-employee-directory",
+        "2026-10-31-refine-reception-agenda-checkin",
+        "2026-10-31-refine-specialty-management",
+        "2026-10-31-separate-patient-registration-portal",
+        "2026-10-31-unify-staff-registration",
+        "admin-horarios-calendario-operacional",
+        "admin-qa-agenda-visual",
+        "align-16-operational-screen-visual-parity",
+        "align-operational-screen-visual-parity",
+        "extend-resend-email",
+        "integrate-asaas-financial",
+        "reception-operacao-do-dia-20261031",
+        "reception-patient-directory-20261031",
+        "reception-patient-operational-profile",
+        "reception-patient-registration-ux",
+        "reception-queue-operational-board-20261031",
+        "refactor-admin-profissionais-20261031",
+        "refinar-modais-especialidades-20261031",
+        "refine-admin-reception-qa-panel",
+        "refine-global-navigation-20261031",
+    }
+    for name in names:
+        archive_name = name if name[:4].isdigit() and name[4] == "-" else f"2026-11-22-{name}"
+        destination = CHANGES / "archive" / archive_name
+        assert destination.is_dir(), f"Archive ausente: {archive_name}"
+        assert (destination / "proposal.md").is_file(), archive_name
+        assert not (CHANGES / name).exists(), f"Change ainda ativa: {name}"

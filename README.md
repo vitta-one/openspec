@@ -8,15 +8,13 @@ A fundação de acesso, paciente/fila, profissionais/especialidades, agenda, lif
 
 ## Catálogo OpenSpec e rastreabilidade
 
-A matriz de requisitos → código → testes, os contratos consolidados e as propostas ainda não implementadas estão em [docs/openspec-capability-catalog-2026-11-22.md](docs/openspec-capability-catalog-2026-11-22.md). O catálogo distingue funcionalidades presentes no código, changes com tarefas pendentes e integrações futuras, sem confundir mocks com serviços homologados.
+A matriz de requisitos → código → testes e a situação dos contratos consolidados e arquivados estão em [docs/openspec-capability-catalog-2026-11-22.md](docs/openspec-capability-catalog-2026-11-22.md). O catálogo distingue evidências automatizadas, histórico documental e integrações externas que ainda dependem de homologação.
 
 ## Stack definida
 
 - Reflex como framework full-stack da aplicação web;
 - Python;
 - PostgreSQL;
-- Cloudinary para anexos de exames;
-- ZapSign em sandbox para assinatura de prescrições (integração planejada; ainda não aplicada nesta capability);
 - Asaas em sandbox para operações financeiras.
 
 ## Estrutura principal
@@ -153,7 +151,7 @@ Este roteiro é a referência oficial para rodar o projeto, tanto numa máquina 
 | pip, venv | Incluídos no Python | Dependências Python |
 | Homebrew/Docker | **Opcionais** | Não necessários para o Hackintosh |
 | Resend | **Opcional** | Enviar credenciais temporárias por e-mail |
-| Cloudinary/ZapSign/Asaas | Não necessários | Integrações planejadas para outra etapa |
+| Asaas (Sandbox) | Opcional para QA local | Adaptador financeiro; produção e credenciais externas dependem de configuração e homologação |
 
 Comandos de inspeção no macOS/Linux:
 
@@ -642,7 +640,7 @@ A senha temporária é gerada criptograficamente, salva somente em hash e expira
 
 O convite do portal do paciente usa as mesmas credenciais do Resend e exige também `VITTA_ONE_PUBLIC_URL`. A Recepção precisa confirmar consentimento em uma ação separada; o cadastro não cria uma conta. O código é enviado por e-mail, persistido somente como hash, expira em 24 horas e é consumido uma vez. Se o envio não for aceito, nenhum acesso é ativado; a equipe pode emitir outro convite após confirmar consentimento novamente. `VITTA_ONE_CLINIC_NAME` e `VITTA_ONE_CLINIC_ADDRESS` devem conter os dados reais da unidade; quando qualquer um estiver ausente, o portal informa que o endereço ainda precisa ser configurado.
 
-Cloudinary (exames), ZapSign (assinatura de prescrições) e Asaas (pagamentos) **não precisam de configuração para testar o MVP atual**. Sua integração continua planejada em `docs/roadmap/next-capabilities-2026-10-14.md`.
+O MVP roda localmente sem credenciais externas de pagamento. Para testar operações reais de Asaas em Sandbox ou a entrega por Resend, configure e homologue os respectivos provedores no ambiente de QA apropriado; mocks e testes automatizados não comprovam entrega ou liquidação externa.
 
 ### 12. Atualizar depois de novos merges — sem reinstalar tudo
 
@@ -762,7 +760,7 @@ Os valores acima são placeholders, **não credenciais funcionais**. O remetente
 
 Financeiro ainda permanece shell. Administrador executa a gestão do diretório e Recepção/Médico executam a capability de fila; prioridade é sempre informada pela operação (`VERMELHO`, `AMARELO`, `VERDE`) e nunca é calculada ou elevada automaticamente pelo Vitta-One. A autorização é revalidada no backend e não depende apenas de componentes escondidos no frontend.
 
-Uma Consulta agendada continua fora da fila até a Recepção usar **Confirmar chegada**. Quando o Médico marcado chama o paciente, nasce um único `ClinicalCareRecord`. Durante `EM_ANDAMENTO`, o Médico pode salvar o registro clínico e criar uma ou mais Prescrições com itens. Ao finalizar, Consulta/fila passam para `CONCLUIDA`/`FINALIZADO`; Atendimento e Prescrições tornam-se somente leitura e passam a integrar o histórico. A Prescrição possui visualização HTML/CSS para impressão, mas **a assinatura ZapSign ainda não está implementada**. Atendimentos avulsos de pronto-socorro não criam uma Consulta agendada: o registro clínico e as prescrições são vinculados diretamente à passagem da fila, com histórico preservado após finalização. O fluxo de autogendamento não altera a classificação da fila.
+Uma Consulta agendada continua fora da fila até a Recepção usar **Confirmar chegada**. Quando o Médico marcado chama o paciente, nasce um único `ClinicalCareRecord`. Durante `EM_ANDAMENTO`, o Médico pode salvar o registro clínico e criar uma ou mais Prescrições com itens. Ao finalizar, Consulta/fila passam para `CONCLUIDA`/`FINALIZADO`; Atendimento e Prescrições tornam-se somente leitura e passam a integrar o histórico. A Prescrição possui visualização HTML/CSS protegida para impressão; assinatura digital está fora do escopo desta entrega. Atendimentos avulsos de pronto-socorro não criam uma Consulta agendada: o registro clínico e as prescrições são vinculados diretamente à passagem da fila, com histórico preservado após finalização. O fluxo de autogendamento não altera a classificação da fila.
 
 ## Fluxo de desenvolvimento
 
