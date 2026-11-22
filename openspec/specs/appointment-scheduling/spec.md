@@ -359,3 +359,33 @@ A Recepção SHALL reutilizar o mesmo formulário, State e serviço transacional
 - **WHEN** a recepcionista inicia uma nova consulta pela Agenda ou dashboard
 - **THEN** o mesmo modal exige seleção de paciente e horário
 - **AND** a rota de agendamento preexistente permanece compatível
+
+### Requirement: Expediente semanal gera horários sem sobrescrever reservas
+O sistema MUST persistir expediente semanal por profissional ativo, validar dias e horários elegíveis e publicar slots dentro da janela móvel de 45 dias em horário local da clínica, sem sobrescrever reservas nem indisponibilidades manuais.
+
+#### Scenario: Regra semanal válida
+- **WHEN** o Administrador salva uma faixa contínua de dias e intervalo com duração de slot suportada (30 ou 60 minutos)
+- **THEN** o serviço gera os horários elegíveis na janela móvel, convertendo instantes conforme o fuso configurado
+
+#### Scenario: Regeração de slots
+- **WHEN** o processo de publicação é repetido para profissional com slots existentes
+- **THEN** as reservas e os horários manuais desativados permanecem intactos, sem criar duplicações
+
+#### Scenario: Regra inválida
+- **WHEN** dias, início, fim ou duração não respeitam as regras do expediente
+- **THEN** o serviço rejeita a alteração e preserva a regra persistida
+
+### Requirement: Exportação de Consulta para iCalendar respeita identidade e privacidade
+O sistema MUST permitir exportar arquivo .ics de Consulta autorizada e não cancelada com instante inicial verdadeiro, sem inventar duração, local ou dados clínicos.
+
+#### Scenario: Consulta autorizada
+- **WHEN** usuário autorizado solicita o evento de uma consulta ativa com horário válido
+- **THEN** o serviço produz iCalendar importável contendo apenas informações operacionais necessárias e data/hora com fuso correto
+
+#### Scenario: Consulta cancelada ou não autorizada
+- **WHEN** a consulta está cancelada, pertence a outro paciente/médico ou não existe sessão elegível
+- **THEN** o servidor rejeita a exportação sem revelar dados
+
+#### Scenario: Dados insuficientes
+- **WHEN** a consulta possui horário sem fuso válido
+- **THEN** a geração é rejeitada em vez de fabricar horário ou duração

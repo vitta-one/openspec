@@ -53,3 +53,29 @@ O portal MUST NOT retornar sintomas, ClinicalCareRecord, histórico clínico, di
 #### Scenario: Paciente abre consulta
 - **WHEN** o portal carrega detalhes
 - **THEN** apresenta apenas dados operacionais da consulta e clínica
+
+### Requirement: Ativação de portal exige convite válido e consentimento explícito
+O sistema MUST vincular conta PACIENTE ao cadastro correto somente mediante convite elegível, consentimento registrado e confirmação segura, impedindo reutilização de código, duplicação de identidade e identificação pública da existência de conta.
+
+#### Scenario: Convite válido e ativação
+- **WHEN** o paciente possui convite não expirado, ainda não usado e seus dados de ativação são validados no servidor
+- **THEN** o vínculo com a identidade PACIENTE é persistido sem criar segundo cadastro de paciente
+
+#### Scenario: Convite expirado ou utilizado
+- **WHEN** um código expirado, revogado ou já consumido é apresentado novamente
+- **THEN** a ativação é recusada de forma genérica, sem permitir acesso ao portal
+
+#### Scenario: Consentimento ausente
+- **WHEN** o fluxo de convite não possui consentimento exigido
+- **THEN** o servidor recusa iniciar a ativação
+
+#### Scenario: Falha de e-mail
+- **WHEN** o transporte de convite está indisponível ou retorna estado desconhecido
+- **THEN** o sistema registra um estado coerente e não afirma entrega confirmada nem duplica a conta
+
+### Requirement: Portal utiliza apenas informações da própria sessão ativa
+O portal MUST revalidar a identidade PACIENTE e o vínculo Patient a cada leitura e ação de reserva; uma sessão sem vínculo ou expirada MUST NOT projetar consultas de outro paciente.
+
+#### Scenario: Sessão inválida
+- **WHEN** o paciente perde a sessão durante navegação ou tentativa de reserva
+- **THEN** o servidor recusa a operação e limpa o estado sensível apresentado
