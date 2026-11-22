@@ -4,11 +4,11 @@ Sistema acadêmico de gerenciamento de clínica médica desenvolvido com **Pytho
 
 ## Estado atual
 
-A fundação de acesso, paciente/fila, profissionais/especialidades, agenda, lifecycle da Consulta, registro clínico e Prescrições estruturadas estão implementados. Os contratos normativos são mantidos sob `openspec/specs/`, e as evoluções concluídas estão preservadas em `openspec/changes/archive/`. A autorização continua sendo revalidada no servidor em todas as leituras e mutações protegidas. A validação de Prescrições inclui testes PostgreSQL, suíte Python e navegador Chromium automatizado; homologação presencial em dispositivos físicos continua recomendada antes de uso real.
+A fundação de acesso, paciente/fila, profissionais/especialidades, agenda, lifecycle da Consulta, registro clínico e Prescrições estruturadas estão implementados. Por decisão de encerramento acadêmico, os 25 contratos normativos foram preservados em `docs/archive/openspec-specs-2026-11-22/` e `openspec/specs/` ficou sem specs; as 45 changes encerradas permanecem em `openspec/changes/archive/`. É uma exceção ao fluxo OpenSpec padrão. A autorização continua sendo revalidada no servidor em todas as leituras e mutações protegidas. A validação de Prescrições inclui testes PostgreSQL, suíte Python e navegador Chromium automatizado; homologação presencial em dispositivos físicos continua recomendada antes de uso real.
 
 ## Catálogo OpenSpec e rastreabilidade
 
-A matriz de requisitos → código → testes e a situação dos contratos consolidados e arquivados estão em [docs/openspec-capability-catalog-2026-11-22.md](docs/openspec-capability-catalog-2026-11-22.md). O catálogo distingue evidências automatizadas, histórico documental e integrações externas que ainda dependem de homologação.
+A matriz de requisitos → código → testes e a situação dos contratos congelados no arquivo histórico estão em [docs/openspec-capability-catalog-2026-11-22.md](docs/openspec-capability-catalog-2026-11-22.md). O catálogo distingue evidências automatizadas, histórico documental e integrações externas que ainda dependem de homologação.
 
 ## Stack definida
 
@@ -27,10 +27,11 @@ A matriz de requisitos → código → testes e a situação dos contratos conso
 ├── alembic.ini
 ├── docs/
 │   ├── project-overview.md
-│   └── domain-model.md
+│   ├── domain-model.md
+│   └── archive/openspec-specs-2026-11-22/
 ├── openspec/
 │   ├── config.yaml
-│   ├── specs/
+│   ├── specs/  # apenas .gitkeep neste corte
 │   └── changes/
 │       └── archive/
 ├── vitta_one/
@@ -594,11 +595,14 @@ Rotas importantes: `/admin`, `/admin/especialidades`, `/admin/profissionais`, `/
 
 ### 10. Rodar testes e validar OpenSpec
 
-Primeiro valide as specs:
+Para validar com OpenSpec strict as 25 specs preservadas no snapshot sem recolocá-las em `openspec/specs/`, use o validador temporário:
 
 ~~~bash
-npx -y @fission-ai/openspec@1.13.0 validate --all --strict --no-interactive
+npm ci --prefix tools/openspec-validator --ignore-scripts --no-audit --no-fund
+python scripts/validate_archived_openspec.py
 ~~~
+
+> Esta organização é excepcional para a apresentação acadêmica. O comando direto `openspec validate --all` na raiz não encontrará as 25 specs, pois estão arquivadas; antes de novas changes, restaure e revise os contratos do snapshot.
 
 Para `pytest`, **nunca use o banco `vitta_one_qa` onde você testa o navegador**. Crie e migre `vitta_one_test` (passo 3/4/5). No macOS/Linux:
 

@@ -83,7 +83,7 @@ Não use contexto implícito para preencher decisões marcadas como abertas.
 - Mudanças funcionais ou técnicas relevantes devem utilizar OpenSpec.
 - Seguir o ciclo `Explore → Propose → Review → Apply → Archive`.
 - Não iniciar implementação de uma funcionalidade relevante antes de revisar proposal, specs, design e tasks aplicáveis.
-- `openspec/specs/` representa comportamento consolidado; não preencher specs finais antecipadamente fora do fluxo de changes.
+- No OpenSpec padrão, `openspec/specs/` representa o comportamento consolidado. Excepcionalmente, no encerramento acadêmico de 22/11/2026, os 25 contratos foram preservados em `docs/archive/openspec-specs-2026-11-22/`, deixando `openspec/specs/` sem specs. Antes de novas changes, restaure e revise o snapshot para retomar os contratos canônicos.
 - Manter changes delimitadas, incrementais e verificáveis.
 
 ## Segurança e dados
@@ -93,8 +93,8 @@ Não use contexto implícito para preencher decisões marcadas como abertas.
 - Não hardcodar ou versionar credenciais, tokens, chaves ou segredos.
 - Tratar dados pessoais, financeiros e clínicos como sensíveis.
 - Evitar registrar dados clínicos ou pessoais desnecessários em logs e mensagens de erro.
-- Integrações com Cloudinary, ZapSign e Asaas devem usar configuração por ambiente e, quando implementadas, tratar autenticação, timeouts, rate limits, retries seguros e falhas externas.
-- ZapSign e Asaas devem permanecer em sandbox enquanto o projeto acadêmico assim exigir.
+- Integrações no escopo, como Asaas e Resend, devem usar configuração por ambiente e tratar autenticação, timeouts, rate limits, retries seguros e falhas externas.
+- Asaas deve permanecer em sandbox enquanto o projeto acadêmico assim exigir.
 
 ## Qualidade
 

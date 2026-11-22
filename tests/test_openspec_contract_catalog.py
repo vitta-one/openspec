@@ -1,4 +1,4 @@
-"""Guarda documental de estrutura e cenários das specs canônicas OpenSpec.
+"""Guarda documental da estrutura e cenários do snapshot OpenSpec.
 
 Os testes não substituem o validador strict oficial, nem exercitam Reflex ou
 integrações externas. Eles impedem regressões triviais na cobertura do catálogo.
@@ -9,6 +9,7 @@ import re
 
 ROOT = Path(__file__).resolve().parents[1]
 SPECS = ROOT / "openspec" / "specs"
+ARCHIVED_SPECS = ROOT / "docs" / "archive" / "openspec-specs-2026-11-22"
 CHANGES = ROOT / "openspec" / "changes"
 
 EXPECTED = {
@@ -40,13 +41,18 @@ EXPECTED = {
 }
 
 
-def test_expected_capabilities_have_canonical_spec() -> None:
-    found = {path.parent.name for path in SPECS.glob("*/spec.md")}
-    assert EXPECTED <= found, sorted(EXPECTED - found)
+def test_expected_capabilities_are_archived() -> None:
+    found = {path.parent.name for path in ARCHIVED_SPECS.glob("*/spec.md")}
+    assert found == EXPECTED, sorted(EXPECTED ^ found)
 
 
-def test_canonical_specs_contain_verifiable_scenarios() -> None:
-    for path in sorted(SPECS.glob("*/spec.md")):
+def test_active_specs_are_empty() -> None:
+    assert SPECS.is_dir()
+    assert {path.name for path in SPECS.iterdir()} == {".gitkeep"}
+
+
+def test_archived_specs_contain_verifiable_scenarios() -> None:
+    for path in sorted(ARCHIVED_SPECS.glob("*/spec.md")):
         source = path.read_text(encoding="utf-8")
         name = path.parent.name
         assert source.startswith(f"# {name} Specification"), name
@@ -73,8 +79,8 @@ def test_canonical_specs_contain_verifiable_scenarios() -> None:
 
 def test_patient_role_and_walkin_are_consistent() -> None:
     config = (ROOT / "openspec" / "config.yaml").read_text(encoding="utf-8")
-    auth = (SPECS / "access-control" / "spec.md").read_text(encoding="utf-8")
-    care = (SPECS / "clinical-care-record" / "spec.md").read_text(encoding="utf-8")
+    auth = (ARCHIVED_SPECS / "access-control" / "spec.md").read_text(encoding="utf-8")
+    care = (ARCHIVED_SPECS / "clinical-care-record" / "spec.md").read_text(encoding="utf-8")
     assert "e Paciente" in config
     assert "role PACIENTE" in auth
     assert "Walk-in permanece sem registro" not in care

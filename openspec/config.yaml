@@ -23,10 +23,9 @@ context: |
     Financeiro e Paciente. Cada role possui painel ou portal dedicado.
 
   Integrations:
-    Cloudinary para anexos de exames.
-    ZapSign em sandbox para assinatura de prescrições.
     Asaas em sandbox para operações financeiras.
-    Não existe integração com laboratórios externos de exames.
+    Resend para notificações por e-mail onde configurado.
+    Outras integrações não fazem parte do escopo acadêmico atual.
 
   Development:
     Desenvolver incrementalmente com OpenSpec.

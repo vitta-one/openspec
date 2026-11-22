@@ -1,12 +1,12 @@
 # Catálogo de capabilities OpenSpec — Vitta One
 
-> Baseline auditada: `develop` em `08f87cd7c4228cc38d4a569d35483abec76f3b79`, em 22/11/2026. Este catálogo acompanha a branch de reconciliação de specs; confirmação de comportamento depende de testes e de revisão. A existência de uma spec em `openspec/specs` não prova integração externa homologada.
+> Baseline auditada: `develop` em `08f87cd7c4228cc38d4a569d35483abec76f3b79`, em 22/11/2026. Os 25 contratos foram preservados sem alteração em `docs/archive/openspec-specs-2026-11-22/`; `openspec/specs/` está vazia neste corte acadêmico. O snapshot não prova homologação de integração externa.
 
 ## Objetivo e critérios
 
 Reconciliar o contrato normativo com o monólito Python/Reflex, migrations e testes, sem alterar runtime, banco local, deploy ou permissão de produção. A especificação descreve contratos identificados no código e nas changes históricas, preservadas em `openspec/changes/archive/`; não há novas integrações previstas nesta entrega.
 
-**Categorias:** `C` = spec previamente consolidada e revisada; `A` = recuperada de archive; `D` = sincronizada de delta anteriormente ativo, agora arquivado sem homologação externa inferida; `E` = contrato documental derivado de código.
+**Categorias de origem do snapshot:** `C` = spec previamente consolidada e revisada; `A` = recuperada de archive; `D` = sincronizada de delta anteriormente ativo, agora arquivado sem homologação externa inferida; `E` = contrato documental derivado de código.
 
 ## Matriz de rastreabilidade
 
@@ -43,20 +43,20 @@ Reconciliar o contrato normativo com o monólito Python/Reflex, migrations e tes
 ## Encerramento documental e rastreabilidade
 
 - Na baseline `develop`, existiam 19 changes arquivadas e 26 ativas.
-- Por solicitação explícita de encerramento de escopo, as 26 changes antigas foram transferidas para `openspec/changes/archive/` com seus arquivos e identificadores originais preservados, respeitando o prefixo de data. O repositório passa a ter **45 changes arquivadas e nenhuma change ativa**.
+- Por solicitação explícita de encerramento de escopo, as 26 changes antigas foram transferidas para `openspec/changes/archive/` com seus arquivos e identificadores originais preservados, respeitando o prefixo de data. O repositório passa a ter **45 changes arquivadas e nenhuma change ativa**. Por decisão acadêmica posterior, as 25 specs foram movidas integralmente para `docs/archive/openspec-specs-2026-11-22/`, restando apenas `.gitkeep` em `openspec/specs/`.
 - As tarefas ainda marcadas `- [ ]` permanecem exatamente no histórico arquivado: **arquivamento documental não é prova de execução nem homologação de pendências técnicas**. Nenhum checkbox foi marcado artificialmente.
 - Propostas adicionais que não fazem mais parte do prazo acadêmico foram retiradas do PR, dos testes e do roadmap, sem incluir novas funcionalidades na aplicação.
-- O CI da revisão anterior registrou OpenSpec strict **53/53**, PostgreSQL QA, **584 testes Python aprovados** (2 ignorados), e Reflex compile; a reorganização posterior deve ser validada novamente no GitHub Actions.
+- O CI anterior registrou OpenSpec strict **25/25**, PostgreSQL QA, **584 testes Python aprovados** (2 ignorados) e Reflex compile. Esta revisão deve validar novamente o snapshot via cópia temporária no CI.
 - A validação de paridade visual `docs/qa/operational-screen-parity-2026-11-17.md` ainda registra revisão de equivalência visual pendente, independentemente do encerramento documental.
 - As operações Asaas e Resend possuem contratos e adaptadores, mas testes locais não substituem homologação externa de pagamentos, webhooks e entrega de e-mail.
 
 ## Evidências e limites após o arquivamento
 
-1. Confirmar `openspec validate --all --strict --no-interactive` para a versão exata do PR após os movimentos de archive.
+1. Confirmar `python scripts/validate_archived_openspec.py` para a versão exata da PR (OpenSpec strict sobre cópia temporária dos 25 contratos).
 2. Confirmar migrations em QA descartável, Pytest, compilação Reflex e smoke HTTP no CI.
 3. Preservar o histórico dos itens pendentes nos `tasks.md` movidos; não afirmar uma funcionalidade não exercitada no ambiente externo.
 4. Manter revisão de autorização, contexto clínico e diferenciação entre fluxo agendado e avulso antes do uso com dados reais.
-5. Manter as specs consolidadas separadas dos documentos de entrega acadêmica, e não reabrir propostas fora do escopo sem decisão nova.
+5. Preservar o snapshot dos 25 contratos separado das specs ativas; restaurar os contratos antes de mudanças futuras.
 
 ## Material para o Innovation Lab
 
@@ -64,7 +64,7 @@ Evidência demonstrável: uma capability pode estar implementada mas presente ap
 
 ## Links
 
-- [Código e specs](https://github.com/vitta-one/openspec/tree/develop/openspec/specs)
+- [Snapshot arquivado de specs](https://github.com/vitta-one/openspec/tree/develop/docs/archive/openspec-specs-2026-11-22)
 - [Mudanças OpenSpec](https://github.com/vitta-one/openspec/tree/develop/openspec/changes)
 - [Evidências Asaas/Resend](https://github.com/vitta-one/openspec/blob/develop/docs/implementacao-asaas-resend-evidencias-2026-11-11.md)
 - [QA visual](https://github.com/vitta-one/openspec/blob/develop/docs/qa/operational-screen-parity-2026-11-17.md)
