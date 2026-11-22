@@ -47,11 +47,11 @@ O sistema MUST permitir que um usuário autenticado encerre sua sessão e MUST i
 - **THEN** o sistema invalida a sessão atual, limpa o contexto autenticado e direciona para a página de login
 
 ### Requirement: Roles fixas do domínio
-O sistema MUST reconhecer exatamente as roles Administrador, Recepcionista, Médico e Financeiro para controle de acesso nesta capability.
+O sistema MUST reconhecer exatamente as cinco roles Administrador, Recepcionista, Médico, Financeiro e Paciente para controle de acesso nesta capability.
 
 #### Scenario: Usuário autenticado possui uma role válida
 - **WHEN** a sessão de um usuário autenticado é carregada
-- **THEN** o sistema associa o usuário a uma das quatro roles previstas e usa essa role nas decisões de autorização
+- **THEN** o sistema associa o usuário a uma das cinco roles previstas e usa essa role nas decisões de autorização
 
 ### Requirement: Autorização deve ser aplicada no servidor
 O sistema MUST validar identidade e role no lado servidor em todo event handler, loader, computed var ou operação que leia ou modifique dados protegidos. Ocultar componentes ou redirecionar páginas no frontend MUST NOT ser considerado controle de acesso suficiente.
@@ -61,7 +61,7 @@ O sistema MUST validar identidade e role no lado servidor em todo event handler,
 - **THEN** o servidor rejeita a operação e nenhum dado protegido é criado, alterado, removido ou retornado indevidamente
 
 ### Requirement: Shell de dashboard por role
-O sistema MUST possuir um destino inicial protegido para cada uma das quatro roles. Esses destinos MAY hospedar funcionalidades de negócio definidas por capabilities específicas, desde que cada operação continue submetida à autorização server-side correspondente.
+O sistema MUST possuir um destino inicial protegido para cada uma das cinco roles. Esses destinos MAY hospedar funcionalidades de negócio definidas por capabilities específicas, desde que cada operação continue submetida à autorização server-side correspondente.
 
 #### Scenario: Administrador conclui login
 - **WHEN** um usuário com role Administrador conclui a autenticação
@@ -79,12 +79,16 @@ O sistema MUST possuir um destino inicial protegido para cada uma das quatro rol
 - **WHEN** um usuário com role Financeiro conclui a autenticação
 - **THEN** o sistema direciona para o painel financeiro protegido
 
-### Requirement: Não existe cadastro público nesta change
-O sistema MUST NOT expor um fluxo público de criação de contas como parte desta capability inicial.
+#### Scenario: Paciente conclui login
+- **WHEN** um usuário com role PACIENTE e conta ativada conclui a autenticação
+- **THEN** o sistema direciona para o portal próprio protegido, sem expor painéis internos
+
+### Requirement: Não há autocadastro público irrestrito
+O sistema MUST NOT expor criação pública irrestrita de contas, mas MUST permitir ativação de PACIENTE somente por convite e validação seguros descritos em patient-portal.
 
 #### Scenario: Visitante acessa a área pública
 - **WHEN** uma pessoa não autenticada navega pela aplicação
-- **THEN** o sistema oferece autenticação, mas não oferece criação pública de conta
+- **THEN** o sistema oferece autenticação e ativação por convite elegível, sem cadastro aberto
 
 ### Requirement: Bootstrap controlado do primeiro Administrador
 O sistema MUST fornecer um mecanismo de bootstrap manual, controlado e idempotente para criar o primeiro usuário Administrador quando ainda não existir um administrador, sem usar senha padrão hardcoded ou versionada.

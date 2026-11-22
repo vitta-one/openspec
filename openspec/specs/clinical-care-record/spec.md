@@ -63,7 +63,7 @@ O sistema MUST permitir mutação do ClinicalCareRecord somente à conta Médica
 - **WHEN** Administrador, Recepcionista ou Financeiro chama diretamente a operação de save
 - **THEN** o servidor rejeita antes de retornar ou alterar dados clínicos
 
-### Requirement: Atendimento só é editável enquanto a Consulta está Em andamento
+### Requirement: Atendimento só é editável enquanto o episódio clínico está em andamento
 O sistema MUST aceitar save somente quando a Consultation vinculada estiver `EM_ANDAMENTO` ou, no episódio avulso, a QueueEntry correspondente estiver em atendimento pelo Médico responsável.
 
 #### Scenario: Consulta concluída

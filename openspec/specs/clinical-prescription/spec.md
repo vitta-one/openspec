@@ -6,7 +6,7 @@ Permitir que o Médico responsável crie Prescrições estruturadas durante um a
 
 ## Requirements
 
-### Requirement: Prescrição pertence ao Atendimento clínico e à Consulta
+### Requirement: Prescrição pertence ao Atendimento clínico elegível
 O sistema MUST vincular cada Prescription a um ClinicalCareRecord existente e ao Médico responsável. `consultation_id` MUST corresponder à Consulta agendada quando existir e MUST permanecer ausente no episódio avulso da fila.
 
 #### Scenario: Contexto válido
@@ -72,7 +72,7 @@ O sistema MUST restringir criação, edição e exclusão à conta Médica respo
 - **WHEN** Recepcionista, Financeiro ou Administrador normal chama a operação
 - **THEN** o servidor rejeita antes de ler ou alterar dados protegidos
 
-### Requirement: Prescrições só são mutáveis durante Consulta Em andamento
+### Requirement: Prescrições só são mutáveis durante episódio clínico em andamento
 O sistema MUST aceitar mutações somente quando a Consultation relacionada estiver `EM_ANDAMENTO` ou, em atendimento avulso, a QueueEntry correspondente estiver em atendimento pelo Médico responsável.
 
 #### Scenario: Consulta concluída
@@ -117,7 +117,7 @@ O sistema MUST impedir remoção isolada quando o item alvo é o único item da 
 - **THEN** a operação é rejeitada e a UI orienta a excluir a Prescrição inteira se necessário
 
 ### Requirement: Médico pode excluir Prescrição durante atendimento
-O sistema MUST permitir excluir uma Prescription inteira somente durante `EM_ANDAMENTO`, removendo seus itens filhos no mesmo fluxo.
+O sistema MUST permitir excluir uma Prescription inteira somente enquanto o episódio clínico de origem estiver em atendimento (Consultation `EM_ANDAMENTO` ou QueueEntry avulsa `EM_ATENDIMENTO`), removendo seus itens filhos no mesmo fluxo.
 
 #### Scenario: Excluir documento editável
 - **WHEN** o Médico responsável confirma exclusão durante `EM_ANDAMENTO`

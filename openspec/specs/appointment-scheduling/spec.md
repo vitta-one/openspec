@@ -134,7 +134,7 @@ O sistema MUST reconhecer os estados confirmados `AGENDADA`, `CONFIRMADA`, `EM_A
 - **THEN** o servidor rejeita a mutação e preserva o registro para a futura capability de ciclo clínico
 
 ### Requirement: Agenda e disponibilidade são protegidas no servidor
-O sistema MUST permitir gestão de slots somente à role Administrador e MUST permitir consulta operacional da agenda, agendamento, reagendamento e cancelamento somente à role Recepcionista.
+O sistema MUST permitir gestão de slots somente à role Administrador e MUST permitir à Recepcionista operar agenda, agendamento, reagendamento e cancelamento conforme seu fluxo. O Paciente MUST poder consultar disponibilidade elegível e reservar exclusivamente para sua própria identidade autenticada, conforme patient-self-booking, sem autorização para operações da Recepção.
 
 #### Scenario: Role incompatível tenta gerenciar disponibilidade
 - **WHEN** uma identidade sem role Administrador chama diretamente uma mutação de slot
