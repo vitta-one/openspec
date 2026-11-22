@@ -6,14 +6,6 @@ Controlar transporte Resend, outbox, tentativas, idempotência e rastreamento au
 
 ## Requirements
 
-# Spec Delta — Entrega de e-mails
-
-## Purpose
-
-Rastrear intenções e tentativas de envio ao Resend com estados verdadeiros, controle de concorrência, verificação de webhooks e recuperação operacional segura.
-
-## ADDED Requirements
-
 ### Requirement: Endereços sintéticos e remetente inválido não chegam ao Resend
 O sistema MUST bloquear destinatários de domínios reservados ou inválidos antes de chamar o Resend. `RESEND_FROM_EMAIL` MUST conter uma única caixa postal válida, com nome de exibição opcional e domínio não reservado. Remetente ausente ou inválido MUST produzir `NOT_CONFIGURED` sem chamada HTTP. A habilitação do domínio é verificada pelo provedor; rejeição explícita do Resend MUST ser registrada como falha, nunca como entrega.
 

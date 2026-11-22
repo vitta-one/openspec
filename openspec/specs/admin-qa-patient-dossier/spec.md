@@ -6,10 +6,6 @@ Regularizar o preview local de QA da ficha de paciente, com acesso administrativ
 
 ## Requirements
 
-# admin-qa-patient-dossier Specification
-
-## ADDED Requirements
-
 ### Requirement: Diretório de pacientes exclusivamente de consulta
 O sistema MUST disponibilizar a listagem em `/admin/pacientes` apenas quando a flag de preview QA local estiver ativa e a sessão pertencer ao Administrador. A listagem MUST oferecer busca, paginação e ação "Ver detalhes" sem controles de seleção em lote nem históricos expandidos; MUST retornar à UI somente nome, ID e CPF mascarado.
 

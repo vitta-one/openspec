@@ -6,14 +6,6 @@ Publicar eventos financeiros elegíveis a comunicação após persistência, pre
 
 ## Requirements
 
-# Spec Delta — Comunicação financeira
-
-## Purpose
-
-Publicar intenções de comunicação de cobranças e recebimentos confirmados sem acoplar o recebimento de webhooks ao provedor de e-mail.
-
-## ADDED Requirements
-
 ### Requirement: Evento financeiro comunicado após persistência
 O sistema MUST registrar evento de cobrança disponível somente após identificador e link válidos persistidos, e de pagamento confirmado somente na primeira transição conciliada para RECEIVED. Intenção de comunicação MUST compartilhar a transação do evento financeiro, com identidade estável. Falha do Resend MUST NOT desfazer pagamento confirmado.
 

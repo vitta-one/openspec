@@ -6,14 +6,6 @@ Integrar cobranças Pix/boleto ao Asaas exclusivamente em Sandbox, com persistê
 
 ## Requirements
 
-# Spec Delta — Pagamentos Asaas
-
-## Purpose
-
-Integrar pacientes e cobranças ao Asaas Sandbox com integridade local, autenticação de eventos, recuperação de falhas externas e conciliação verificável.
-
-## ADDED Requirements
-
 ### Requirement: Cliente financeiro único sob demanda
 O sistema MUST reutilizar o cliente Asaas vinculado ao paciente e MUST criar cliente somente ao precisar de cobrança. Nome e CPF válidos MUST ser validados antes da chamada; atualizações MUST preservar o vínculo. Resultado incerto MUST bloquear nova criação até conciliação. Dados enviados MUST ser limitados à finalidade financeira.
 

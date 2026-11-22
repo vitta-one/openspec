@@ -6,12 +6,6 @@ Apresentar ao Administrador indicadores operacionais derivados de registros pers
 
 ## Requirements
 
-## Purpose
-
-Oferecer à Administração um resumo confiável e não clínico da clínica, com indicadores derivados de registros existentes e caminhos diretos para tarefas administrativas autorizadas.
-
-## ADDED Requirements
-
 ### Requirement: Painel administrativo mostra indicadores persistidos e definidos
 O painel `/admin` MUST apresentar contagens de profissionais ativos, especialidades ativas, consultas não canceladas do dia no fuso da clínica e contas de equipe com perfil Médico ou Recepcionista. A projeção MUST ser autorizada para Administrador no servidor e MUST conter apenas agregados, sem dados de pacientes ou conteúdo clínico.
 

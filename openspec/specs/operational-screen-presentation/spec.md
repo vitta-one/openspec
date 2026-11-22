@@ -6,12 +6,6 @@ Estabelecer o comportamento compartilhado de apresentação, navegação, respon
 
 ## Requirements
 
-## Purpose
-
-Define a apresentação compartilhada das telas operacionais do Vitta-One, com variantes de navegação por perfil, estados reais do domínio e comportamento responsivo acessível.
-
-## ADDED Requirements
-
 ### Requirement: Shell operacional preserva a variante visual de cada perfil
 As 16 rotas operacionais MUST usar a identidade visual canônica e os controles do shell autenticado. No primeiro acesso, a navegação MUST iniciar compacta para Recepção, Administração e Financeiro, e expandida com marca Vitta-One para Médico. Uma escolha manual MUST ser preservada entre rotas do mesmo perfil e MUST poder ser alterada por controle acessível.
 

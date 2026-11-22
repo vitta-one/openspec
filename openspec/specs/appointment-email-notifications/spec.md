@@ -6,14 +6,6 @@ Definir eventos transacionais de agendamento elegíveis a notificação, com dis
 
 ## Requirements
 
-# Spec Delta — Comunicação de agenda
-
-## Purpose
-
-Notificar pacientes elegíveis sobre eventos reais da agenda, com gatilhos explícitos, frequência limitada, horário local consistente e lembretes sem duplicação.
-
-## ADDED Requirements
-
 ### Requirement: Confirmação de reserva após commit
 O sistema MUST solicitar uma confirmação após criação bem-sucedida de Consulta AGENDADA, para paciente com autorização de agenda ativa e e-mail de conta vinculada válido. MUST NOT confundir confirmação de reserva com check-in CONFIRMADA nem enviar novamente por check-in. Rollback MUST NOT gerar notificação.
 

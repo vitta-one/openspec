@@ -6,14 +6,6 @@ Permitir gestão financeira autorizada de cobranças vinculadas a consultas, con
 
 ## Requirements
 
-# Spec Delta — Gestão financeira
-
-## Purpose
-
-Permitir gestão básica de cobranças da clínica com autorização no servidor, histórico verificável e projeções derivadas exclusivamente dos pagamentos persistidos.
-
-## ADDED Requirements
-
 ### Requirement: Acesso financeiro autorizado
 O sistema MUST revalidar sessão e role em toda leitura ou mutação financeira e MUST bloquear identidades com troca de senha pendente. Administrador e Financeiro MUST poder consultar, emitir e cancelar; somente Administrador MUST poder solicitar estorno integral Pix suportado. Recepcionista, Médico e Paciente MUST NOT receber dados financeiros internos.
 

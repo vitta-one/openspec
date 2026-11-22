@@ -6,14 +6,6 @@ Padronizar templates e regras de privacidade, autorização de comunicação e p
 
 ## Requirements
 
-# Spec Delta — E-mails transacionais
-
-## Purpose
-
-Fornecer mensagens transacionais acessíveis e seguras, preservando o onboarding existente e autorizando explicitamente destinatários e novos gatilhos.
-
-## ADDED Requirements
-
 ### Requirement: Compatibilidade de acesso médico e paciente
 O sistema MUST preservar criação de credencial médica temporária e convite de paciente consentido, com expiração de 24 horas, troca inicial obrigatória e código de ativação de uso único. Reemissão MUST preservar autorização, invalidar o segredo anterior e respeitar intervalo mínimo de 2 minutos para paciente. Senhas e códigos MUST existir somente na memória necessária ao envio.
 
