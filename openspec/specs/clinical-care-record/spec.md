@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Persistir o conteúdo clínico básico produzido durante uma Consulta em andamento, permitir edição segura pelo Médico responsável e formar um histórico cronológico somente leitura por paciente sem antecipar prescrição, exames ou integrações externas.
+Persistir o conteúdo clínico básico produzido em Consulta agendada ou episódio avulso em andamento, permitir edição segura pelo Médico responsável e formar um histórico cronológico somente leitura por paciente sem antecipar prescrição, exames ou integrações externas.
 
 ## Requirements
 
@@ -22,12 +22,20 @@ O sistema MUST possuir no máximo um ClinicalCareRecord por Consultation e MUST 
 - **WHEN** uma operação tenta persistir um segundo ClinicalCareRecord para a mesma Consultation
 - **THEN** o banco e o serviço rejeitam a duplicação
 
-### Requirement: Walk-in permanece sem registro clínico nesta change
-O sistema MUST preservar o fluxo existente de QueueEntry sem Consultation e MUST NOT criar ClinicalCareRecord para walk-in nesta capability.
+### Requirement: Walk-in possui registro clínico próprio sem Consulta fictícia
+O sistema MUST criar no máximo um ClinicalCareRecord para a QueueEntry de atendimento sem agendamento e MUST manter a exclusividade entre `consultation_id` e `queue_entry_id`.
 
 #### Scenario: Médico chama walk-in
-- **WHEN** o Médico chama uma QueueEntry sem `consultation_id`
-- **THEN** a fila continua seu lifecycle atual e nenhum ClinicalCareRecord é criado
+- **WHEN** o Médico autenticado chama entrada de fila sem Consulta
+- **THEN** o episódio cria registro clínico vinculado à QueueEntry e ao Médico responsável, sem reservar slot ou criar Consultation
+
+#### Scenario: Episódio duplicado
+- **WHEN** duas operações disputam criação do ClinicalCareRecord para a mesma entrada
+- **THEN** a transação e a constraint de unicidade impedem registros duplicados
+
+#### Scenario: Médico de outro atendimento
+- **WHEN** um Médico diferente tenta carregar ou salvar o episódio avulso
+- **THEN** a autorização no servidor rejeita a tentativa sem expor texto clínico
 
 ### Requirement: Atendimento registra quatro áreas clínicas simples
 O ClinicalCareRecord MUST suportar queixa principal, anamnese, diagnóstico e conduta/observações como texto livre.
@@ -41,7 +49,7 @@ O ClinicalCareRecord MUST suportar queixa principal, anamnese, diagnóstico e co
 - **THEN** o sistema rejeita o save, mantém o registro anterior e informa qual campo precisa ser reduzido sem ecoar o conteúdo clínico
 
 ### Requirement: Somente o Médico responsável pode editar o Atendimento
-O sistema MUST permitir mutação do ClinicalCareRecord somente para a conta Médica vinculada ao profissional da Consultation.
+O sistema MUST permitir mutação do ClinicalCareRecord somente à conta Médica responsável pela Consultation ou pela QueueEntry de walk-in atual.
 
 #### Scenario: Médico correto salva durante atendimento
 - **WHEN** o Médico autenticado corresponde ao profissional da Consultation e a Consulta está `EM_ANDAMENTO`
@@ -56,7 +64,7 @@ O sistema MUST permitir mutação do ClinicalCareRecord somente para a conta Mé
 - **THEN** o servidor rejeita antes de retornar ou alterar dados clínicos
 
 ### Requirement: Atendimento só é editável enquanto a Consulta está Em andamento
-O sistema MUST aceitar save somente quando a Consultation vinculada estiver `EM_ANDAMENTO`.
+O sistema MUST aceitar save somente quando a Consultation vinculada estiver `EM_ANDAMENTO` ou, no episódio avulso, a QueueEntry correspondente estiver em atendimento pelo Médico responsável.
 
 #### Scenario: Consulta concluída
 - **WHEN** o Médico tenta salvar um ClinicalCareRecord cuja Consulta já está `CONCLUIDA`
@@ -100,7 +108,7 @@ A interface Médica MUST identificar alterações locais do formulário e MUST e
 - **THEN** a UI atualiza o snapshot persistido, remove o estado dirty e reabilita a finalização
 
 ### Requirement: Histórico clínico usa somente Atendimentos concluídos
-O sistema MUST projetar o histórico clínico a partir de ClinicalCareRecords cujas Consultations estejam `CONCLUIDA`.
+O sistema MUST projetar o histórico a partir de registros com Consultation `CONCLUIDA` ou QueueEntry avulsa finalizada, sem incluir episódios ainda ativos.
 
 #### Scenario: Paciente possui atendimentos anteriores concluídos
 - **WHEN** o Médico carrega o histórico durante um atendimento ativo do mesmo paciente
@@ -126,7 +134,7 @@ O sistema MUST paginar a projeção de histórico em páginas de 10 registros e 
 - **THEN** o servidor normaliza/rejeita de forma segura sem retornar dados de outro paciente
 
 ### Requirement: Médico acessa histórico somente no contexto do paciente ativo
-O sistema MUST retornar histórico clínico ao Médico somente quando ele possui uma QueueEntry ativa vinculada a uma Consultation `EM_ANDAMENTO` daquele paciente.
+O sistema MUST retornar histórico clínico ao Médico somente quando ele possui episódio ativo autorizado (Consulta ou QueueEntry avulsa) daquele paciente.
 
 #### Scenario: Atendimento ativo válido
 - **WHEN** o Médico responsável possui Consulta em andamento para o paciente
@@ -141,7 +149,7 @@ O sistema MUST retornar histórico clínico ao Médico somente quando ele possui
 - **THEN** o servidor rejeita a leitura sem retornar registros
 
 ### Requirement: Painel Médico apresenta Atendimento atual e histórico de forma simples
-A interface Médica MUST exibir o formulário clínico somente para atendimento ativo originado de Consulta agendada e MUST manter o fluxo walk-in existente sem formulário desta capability.
+A interface Médica MUST exibir o formulário clínico para Consulta agendada e atendimento avulso ativos e autorizados, sem inventar Consulta para walk-in.
 
 #### Scenario: Consulta agendada em andamento
 - **WHEN** o Médico abre o painel com uma Consulta agendada ativa
@@ -149,7 +157,7 @@ A interface Médica MUST exibir o formulário clínico somente para atendimento 
 
 #### Scenario: Walk-in ativo
 - **WHEN** o atendimento ativo não possui Consultation
-- **THEN** o painel mantém o fluxo operacional atual e não mostra formulário ClinicalCareRecord
+- **THEN** o painel mostra o ClinicalCareRecord vinculado à QueueEntry ativa, com edição limitada ao Médico responsável
 
 #### Scenario: Viewport estreita
 - **WHEN** o formulário é usado em tela estreita

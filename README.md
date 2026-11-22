@@ -4,7 +4,7 @@ Sistema acadêmico de gerenciamento de clínica médica desenvolvido com **Pytho
 
 ## Estado atual
 
-A fundação de acesso, paciente/fila, profissionais/especialidades, agenda, lifecycle da Consulta, registro clínico e Prescrições estruturadas estão implementados. Os contratos normativos das sete capabilities estão consolidados sob `openspec/specs/`, e as evoluções concluídas estão preservadas em `openspec/changes/archive/`. A autorização continua sendo revalidada no servidor em todas as leituras e mutações protegidas. A validação de Prescrições inclui testes PostgreSQL, suíte Python e navegador Chromium automatizado; homologação presencial em dispositivos físicos continua recomendada antes de uso real.
+A fundação de acesso, paciente/fila, profissionais/especialidades, agenda, lifecycle da Consulta, registro clínico e Prescrições estruturadas estão implementados. Os contratos normativos são mantidos sob `openspec/specs/`, e as evoluções concluídas estão preservadas em `openspec/changes/archive/`. A autorização continua sendo revalidada no servidor em todas as leituras e mutações protegidas. A validação de Prescrições inclui testes PostgreSQL, suíte Python e navegador Chromium automatizado; homologação presencial em dispositivos físicos continua recomendada antes de uso real.
 
 ## Stack definida
 
@@ -62,18 +62,18 @@ abaixo. No Linux, seu usuário precisa conseguir usar `docker info` sem erro.
 Se ainda não clonou, clone a branch disponível para testes:
 
 ~~~bash
-git clone --branch feat/admin-ux-contrast-navigation \
+git clone --branch develop \
   git@github.com:vitta-one/openspec.git
 cd openspec
 ~~~
 
 Se já clonou o repositório, preserve alterações locais antes de trocar de
-branch. Para obter a versão da PR #323:
+branch. Para atualizar a branch principal de desenvolvimento:
 
 ~~~bash
 cd ~/Documents/openspec
 git fetch origin
-git switch feat/admin-ux-contrast-navigation
+git switch develop
 git pull --ff-only
 ~~~
 

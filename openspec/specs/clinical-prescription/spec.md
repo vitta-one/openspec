@@ -2,12 +2,12 @@
 
 ## Purpose
 
-Permitir que o Médico responsável crie Prescrições estruturadas durante uma Consulta em andamento, mantenha múltiplos itens/documentos, consulte Prescrições concluídas no histórico e use uma visualização protegida pronta para impressão sem antecipar assinatura digital.
+Permitir que o Médico responsável crie Prescrições estruturadas durante um atendimento clínico elegível, mantenha múltiplos itens/documentos, consulte Prescrições concluídas no histórico e use uma visualização protegida pronta para impressão sem antecipar assinatura digital.
 
 ## Requirements
 
 ### Requirement: Prescrição pertence ao Atendimento clínico e à Consulta
-O sistema MUST vincular cada Prescription a um ClinicalCareRecord existente, à mesma Consultation e ao Médico responsável pelo Atendimento.
+O sistema MUST vincular cada Prescription a um ClinicalCareRecord existente e ao Médico responsável. `consultation_id` MUST corresponder à Consulta agendada quando existir e MUST permanecer ausente no episódio avulso da fila.
 
 #### Scenario: Contexto válido
 - **WHEN** o Médico responsável cria uma Prescrição durante uma Consulta `EM_ANDAMENTO`
@@ -58,7 +58,7 @@ O sistema MUST permitir `general_notes` vazio ou com até 4.000 caracteres.
 - **THEN** somente o Prescription correspondente e seu `updated_at` são atualizados
 
 ### Requirement: Somente o Médico responsável pode modificar Prescrições
-O sistema MUST restringir criação, edição e exclusão à conta Médica responsável pelo Atendimento e pela Consultation.
+O sistema MUST restringir criação, edição e exclusão à conta Médica responsável pelo Atendimento e seu episódio (Consulta ou QueueEntry avulsa).
 
 #### Scenario: Médico responsável altera
 - **WHEN** ownership e estado são válidos
@@ -73,7 +73,7 @@ O sistema MUST restringir criação, edição e exclusão à conta Médica respo
 - **THEN** o servidor rejeita antes de ler ou alterar dados protegidos
 
 ### Requirement: Prescrições só são mutáveis durante Consulta Em andamento
-O sistema MUST aceitar mutações somente quando a Consultation relacionada estiver `EM_ANDAMENTO`.
+O sistema MUST aceitar mutações somente quando a Consultation relacionada estiver `EM_ANDAMENTO` ou, em atendimento avulso, a QueueEntry correspondente estiver em atendimento pelo Médico responsável.
 
 #### Scenario: Consulta concluída
 - **WHEN** há tentativa de editar/adicionar/remover/excluir após `CONCLUIDA`
@@ -135,7 +135,7 @@ Criar, editar ou remover Prescrição/itens MUST NOT alterar estado ou timestamp
 - **THEN** somente Prescription/PrescriptionItem e seus timestamps próprios são alterados
 
 ### Requirement: Histórico clínico inclui Prescrições de Consultas concluídas
-A projeção de histórico clínico MUST incluir as Prescrições pertencentes ao ClinicalCareRecord de cada Consultation `CONCLUIDA`.
+A projeção de histórico clínico MUST incluir Prescrições do ClinicalCareRecord dos episódios concluídos, tanto Consultations quanto QueueEntries avulsas.
 
 #### Scenario: Atendimento anterior possui Prescrições
 - **WHEN** o Médico carrega histórico autorizado do paciente
@@ -168,8 +168,8 @@ A UI MUST exibir Prescrições do Atendimento ativo em seção própria, sem sub
 - **THEN** a UI mostra estado vazio honesto e a ação “Nova prescrição”
 
 #### Scenario: Walk-in
-- **WHEN** o atendimento ativo não possui Consultation/ClinicalCareRecord
-- **THEN** a seção Prescrições desta capability não é exibida
+- **WHEN** o atendimento avulso possui QueueEntry em atendimento e ClinicalCareRecord autorizado
+- **THEN** a seção Prescrições funciona para o Médico responsável sem criar Consultation fictícia
 
 ### Requirement: Criação e edição usam dialogs acessíveis
 A UI MUST usar dialogs controlados para criar Prescrição, adicionar/editar item e confirmar exclusão do documento.
@@ -255,3 +255,14 @@ O sistema MUST usar locking/revalidação em mutações concorrentes e MUST pres
 #### Scenario: Duas remoções disputam os últimos itens
 - **WHEN** operações concorrentes poderiam deixar a Prescription vazia
 - **THEN** locking/revalidação garante que uma Prescription persistida continue com pelo menos um item ou que o documento seja removido por operação explícita de exclusão
+
+### Requirement: Prescrição para episódio avulso preserva o vínculo clínico
+O sistema MUST aceitar Prescription para ClinicalCareRecord originado de QueueEntry sem Consulta e MUST manter a autorização e imutabilidade após conclusão.
+
+#### Scenario: Criar prescrição de walk-in
+- **WHEN** o Médico responsável cria prescrição válida durante a entrada avulsa em atendimento
+- **THEN** a prescrição e seus itens persistem vinculados ao registro clínico, sem consultation_id
+
+#### Scenario: Tentar editar após finalizar fila
+- **WHEN** a QueueEntry de origem já foi finalizada
+- **THEN** o servidor rejeita a alteração e preserva a prescrição no histórico
