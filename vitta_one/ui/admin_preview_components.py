@@ -412,7 +412,7 @@ def _agenda_slot_row(row) -> rx.Component:
             high_contrast=True,
             variant="soft",
         ),
-        justify="between", align="center", gap="3", width="100%",
+        justify="between", align="center", gap="0.75rem", width="100%",
         class_name="vitta-schedule-row",
         role="listitem",
     )
@@ -438,7 +438,7 @@ def _agenda_consultation_row(row) -> rx.Component:
             variant="soft",
             high_contrast=True,
         ),
-        justify="between", align="center", gap="3", width="100%",
+        justify="between", align="center", gap="0.75rem", width="100%",
         class_name="vitta-schedule-row",
         role="listitem",
     )
@@ -488,7 +488,7 @@ def _agenda_summary() -> rx.Component:
             "Canceladas: ", AdminAgendaPreviewState.cancelled_count,
             color_scheme="red", variant="soft",
         ),
-        wrap="wrap", gap="2", width="100%",
+        wrap="wrap", gap="0.5rem", width="100%",
         aria_label="Resumo da data selecionada",
     )
 
@@ -514,7 +514,7 @@ def _agenda_pagination(*, page, total, on_previous, on_next) -> rx.Component:
                 ),
                 spacing="2",
             ),
-            align="center", justify="between", gap="3", width="100%",
+            align="center", justify="between", gap="0.75rem", width="100%",
             margin_top="0.6rem",
         ),
         rx.fragment(),
@@ -538,7 +538,7 @@ def agenda_preview() -> rx.Component:
                 "A gestão de horários permanece em Administração / Horários.",
                 size="2", color="var(--vitta-text-muted)",
             ),
-            gap="3", align="center", wrap="wrap", width="100%",
+            gap="0.75rem", align="center", wrap="wrap", width="100%",
         ),
         rx.cond(
             AdminAgendaPreviewState.error_message != "",
@@ -571,7 +571,7 @@ def agenda_preview() -> rx.Component:
                 ),
                 direction=rx.breakpoints(initial="column", md="row"),
                 align=rx.breakpoints(initial="stretch", md="end"),
-                justify="between", gap="3", width="100%",
+                justify="between", gap="0.75rem", width="100%",
             ),
             rx.text(
                 "Período consultado: ", AdminAgendaPreviewState.month_title,
@@ -652,7 +652,7 @@ def agenda_preview() -> rx.Component:
                             " consultas",
                             color_scheme="gray", variant="soft",
                         ),
-                        justify="between", align="center", gap="3", width="100%",
+                        justify="between", align="center", gap="0.75rem", width="100%",
                     ),
                     rx.cond(
                         AdminAgendaPreviewState.is_loading,

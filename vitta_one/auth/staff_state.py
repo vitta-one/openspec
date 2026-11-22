@@ -8,6 +8,7 @@ import reflex as rx
 from vitta_one.auth.authorization import AuthenticationRequiredError, RoleForbiddenError
 from vitta_one.auth.security import is_valid_email_identifier, normalize_email
 from vitta_one.auth.staff_service import (
+    count_employee_roles,
     create_receptionist,
     get_employee_detail,
     list_employee_directory,
@@ -34,11 +35,13 @@ class EmployeeRow(TypedDict):
     name: str
     role: str
     role_label: str
+    access_status: str
     href: str
 
 
 _EMPTY_EMPLOYEE: EmployeeRow = {
-    "id": 0, "email": "", "name": "", "role": "", "role_label": "", "href": "",
+    "id": 0, "email": "", "name": "", "role": "", "role_label": "",
+    "access_status": "", "href": "",
 }
 
 class EmployeeDetail(EmployeeRow):
@@ -49,7 +52,8 @@ class EmployeeDetail(EmployeeRow):
 
 
 _EMPTY_EMPLOYEE_DETAIL: EmployeeDetail = {
-    "id": 0, "email": "", "name": "", "role": "", "role_label": "", "href": "",
+    "id": 0, "email": "", "name": "", "role": "", "role_label": "",
+    "access_status": "", "href": "",
     "has_name": False, "professional_identifier": "", "professional_status": "",
     "specialties": "",
 }
@@ -68,10 +72,18 @@ from vitta_one.auth.staff_service import (
 class AdminStaffState(rx.State):
     emails: list[str] = []
     employees: list[EmployeeRow] = []
+    employee_role_counts: dict[str, int] = {
+        "ADMINISTRADOR": 0,
+        "RECEPCIONISTA": 0,
+        "MEDICO": 0,
+        "FINANCEIRO": 0,
+    }
     employee_detail: EmployeeDetail = _EMPTY_EMPLOYEE_DETAIL
     detail_status: str = "loading"
     employee_search: str = ""
     employee_role: str = "todos"
+    employee_name_status: str = "todos"
+    employee_filters_expanded: bool = False
     is_loading: bool = True
     current_page: int = 1
     page_size: int = 10
@@ -95,10 +107,18 @@ class AdminStaffState(rx.State):
         """Drop employee identities and form data when the admin session ends."""
         self.emails = []
         self.employees = []
+        self.employee_role_counts = {
+            "ADMINISTRADOR": 0,
+            "RECEPCIONISTA": 0,
+            "MEDICO": 0,
+            "FINANCEIRO": 0,
+        }
         self.employee_detail = _EMPTY_EMPLOYEE_DETAIL.copy()
         self.detail_status = "loading"
         self.employee_search = ""
         self.employee_role = "todos"
+        self.employee_name_status = "todos"
+        self.employee_filters_expanded = False
         self.current_page = 1
         self.creation_profile = ""
         self.new_name = ""
@@ -119,7 +139,10 @@ class AdminStaffState(rx.State):
     @rx.var
     def filtered_employees(self) -> list[EmployeeRow]:
         return filter_employee_directory(
-            self.employees, search=self.employee_search, role=self.employee_role,
+            self.employees,
+            search=self.employee_search,
+            role=self.employee_role,
+            name_status=self.employee_name_status,
         )
 
     @rx.var
@@ -133,19 +156,31 @@ class AdminStaffState(rx.State):
 
     @rx.var
     def has_employee_filters(self) -> bool:
-        return bool(self.employee_search.strip()) or self.employee_role != "todos"
+        return (
+            bool(self.employee_search.strip())
+            or self.employee_role != "todos"
+            or self.employee_name_status != "todos"
+        )
 
     @rx.var
     def employee_count(self) -> int:
-        return len(self.employees)
+        return sum(self.employee_role_counts.values())
 
     @rx.var
     def medical_account_count(self) -> int:
-        return sum(employee["role"] == "MEDICO" for employee in self.employees)
+        return self.employee_role_counts["MEDICO"]
 
     @rx.var
     def reception_account_count(self) -> int:
-        return sum(employee["role"] == "RECEPCIONISTA" for employee in self.employees)
+        return self.employee_role_counts["RECEPCIONISTA"]
+
+    @rx.var
+    def administrator_account_count(self) -> int:
+        return self.employee_role_counts["ADMINISTRADOR"]
+
+    @rx.var
+    def other_account_count(self) -> int:
+        return self.employee_role_counts["FINANCEIRO"]
 
     @rx.var
     def total_pages(self) -> int:
@@ -157,8 +192,21 @@ class AdminStaffState(rx.State):
         return self.filtered_employees[start:start + self.page_size]
 
     @rx.var
+    def page_range_start(self) -> int:
+        return (self.current_page - 1) * self.page_size + 1 if self.filtered_employees else 0
+
+    @rx.var
+    def page_range_end(self) -> int:
+        return min(self.current_page * self.page_size, len(self.filtered_employees))
+
+    @rx.var
     def page_label(self) -> str:
         return f"{self.current_page} de {self.total_pages}"
+
+    @rx.var
+    def page_size_value(self) -> str:
+        """Expose the numeric page size as the string expected by Radix Select."""
+        return str(self.page_size)
 
     def _clear_errors(self) -> None:
         self.name_error = ""
@@ -178,14 +226,35 @@ class AdminStaffState(rx.State):
         self.current_page = 1
 
     @rx.event
+    def toggle_employee_filters(self) -> None:
+        self.employee_filters_expanded = not self.employee_filters_expanded
+
+    @rx.event
+    def update_employee_name_status(self, value: str) -> None:
+        self.employee_name_status = value if value in ("todos", "cadastrado", "pendente") else "todos"
+        self.current_page = 1
+
+    @rx.event
     def clear_employee_filters(self):
         self.employee_search = ""
         self.employee_role = "todos"
+        self.employee_name_status = "todos"
         self.current_page = 1
 
     @rx.event
     def move_employee_page(self, delta: int):
         self.current_page = max(1, min(self.current_page + delta, self.total_pages))
+
+    @rx.event
+    def update_employee_page_size(self, value: str) -> None:
+        try:
+            page_size = int(value)
+        except (TypeError, ValueError):
+            return
+        if page_size not in (10, 25, 50):
+            return
+        self.page_size = page_size
+        self.current_page = 1
 
     @rx.event
     def update_new_name(self, value: str) -> None:
@@ -307,17 +376,21 @@ class AdminStaffState(rx.State):
             with rx.session() as db:
                 self.emails = list_receptionists(db, token=token)
                 self.employees = list_employee_directory(db, token=token)
+                self.employee_role_counts = count_employee_roles(db, token=token)
         except AuthenticationRequiredError:
             self.emails = []
             self.employees = []
+            self.employee_role_counts = {role: 0 for role in self.employee_role_counts}
             yield rx.redirect("/login")
         except RoleForbiddenError:
             self.emails = []
             self.employees = []
+            self.employee_role_counts = {role: 0 for role in self.employee_role_counts}
             yield rx.redirect("/acesso-negado")
         except Exception:
             self.emails = []
             self.employees = []
+            self.employee_role_counts = {role: 0 for role in self.employee_role_counts}
             self.error = "Não foi possível carregar os funcionários."
         finally:
             self.is_loading = False

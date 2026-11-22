@@ -43,6 +43,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: tools/openspec-validator/package-lock.json
+
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
@@ -67,8 +74,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
+      - name: Install locked OpenSpec CLI
+        run: npm ci --prefix tools/openspec-validator --ignore-scripts --no-audit --no-fund
+
       - name: Validate OpenSpec
-        run: npx -y @fission-ai/openspec@1.13.0 validate --all --strict --no-interactive
+        run: ./tools/openspec-validator/node_modules/.bin/openspec validate --all --strict --no-interactive
 
       - name: Apply reviewed migration to disposable PostgreSQL
         run: reflex db migrate

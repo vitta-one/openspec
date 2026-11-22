@@ -45,6 +45,7 @@ class SpecialtyRow(TypedDict):
     name: str
     is_active: bool
     status_label: str
+    professional_count: int
 
 
 class SpecialtyOption(TypedDict):
@@ -85,12 +86,13 @@ class ProfessionalRow(TypedDict):
     specialty_more_count: int
 
 
-def _specialty_row(item) -> SpecialtyRow:
+def _specialty_row(item, professional_count: int = 0) -> SpecialtyRow:
     return {
         "id": item.id,
         "name": item.name,
         "is_active": item.is_active,
         "status_label": "Ativa" if item.is_active else "Inativa",
+        "professional_count": professional_count,
     }
 
 
@@ -149,15 +151,30 @@ def _specialty_search_key(value: str) -> str:
     )
 
 
+def normalize_directory_page_size(value: str) -> int | None:
+    """Accept only the directory's supported page sizes from Radix Select."""
+    try:
+        page_size = int(value)
+    except (TypeError, ValueError):
+        return None
+    return page_size if page_size in (10, 25, 50) else None
+
+
 def filter_specialty_rows(
-    rows: list[SpecialtyRow], search: str, status: str
+    rows: list[SpecialtyRow], search: str, status: str,
+    professional_link: str = "all",
 ) -> list[SpecialtyRow]:
-    """Combine search and status against records actually loaded from the server."""
+    """Filter persisted specialties by name, status, and linked professionals."""
     term = _specialty_search_key(search.strip())
     return [
         item for item in rows
         if (not term or term in _specialty_search_key(item["name"]))
         and (status == "all" or item["is_active"] == (status == "active"))
+        and (
+            professional_link == "all"
+            or (item.get("professional_count", 0) > 0)
+            == (professional_link == "linked")
+        )
     ]
 
 
@@ -171,6 +188,8 @@ class AdminDirectoryState(rx.State):
 
     specialty_search: str = ""
     specialty_status: str = "all"
+    specialty_professional_filter: str = "all"
+    specialty_advanced_filters_open: bool = False
     specialty_page: int = 1
     professional_search: str = ""
     professional_status: str = "all"
@@ -250,12 +269,17 @@ class AdminDirectoryState(rx.State):
     @rx.var
     def filtered_specialties(self) -> list[SpecialtyRow]:
         return filter_specialty_rows(
-            self.specialties, self.specialty_search, self.specialty_status
+            self.specialties, self.specialty_search, self.specialty_status,
+            self.specialty_professional_filter,
         )
 
     @rx.var
     def has_active_specialty_filters(self) -> bool:
-        return bool(self.specialty_search.strip()) or self.specialty_status != "all"
+        return (
+            bool(self.specialty_search.strip())
+            or self.specialty_status != "all"
+            or self.specialty_professional_filter != "all"
+        )
 
     @rx.var
     def specialty_result_count(self) -> int:
@@ -302,9 +326,36 @@ class AdminDirectoryState(rx.State):
                    // self.directory_page_size)
 
     @rx.var
+    def specialty_page_range_start(self) -> int:
+        return (
+            (self.specialty_page - 1) * self.directory_page_size + 1
+            if self.filtered_specialties else 0
+        )
+
+    @rx.var
+    def specialty_page_range_end(self) -> int:
+        return min(self.specialty_page * self.directory_page_size, len(self.filtered_specialties))
+
+    @rx.var
     def professional_page_count(self) -> int:
         return max(1, (len(self.filtered_professionals) + self.directory_page_size - 1)
                    // self.directory_page_size)
+
+    @rx.var
+    def professional_page_range_start(self) -> int:
+        return (
+            (self.professional_page - 1) * self.directory_page_size + 1
+            if self.filtered_professionals else 0
+        )
+
+    @rx.var
+    def professional_page_range_end(self) -> int:
+        return min(self.professional_page * self.directory_page_size, len(self.filtered_professionals))
+
+    @rx.var
+    def directory_page_size_value(self) -> str:
+        """Radix Select requires the persisted page size as a string."""
+        return str(self.directory_page_size)
 
     @rx.var
     def paged_specialties(self) -> list[SpecialtyRow]:
@@ -356,6 +407,8 @@ class AdminDirectoryState(rx.State):
         self.recent_professionals = []
         self.specialty_search = ""
         self.specialty_status = "all"
+        self.specialty_professional_filter = "all"
+        self.specialty_advanced_filters_open = False
         self.specialty_page = 1
         self.professional_search = ""
         self.professional_status = "all"
@@ -435,9 +488,18 @@ class AdminDirectoryState(rx.State):
                 recent_specialty_items = []
                 recent_professional_items = []
 
-        self.specialties = [_specialty_row(item) for item in specialty_items]
-        self.specialty_page = min(self.specialty_page, self.specialty_page_count)
         self.professionals = [_professional_row(item) for item in professional_items]
+        professional_counts: dict[int, int] = {}
+        for professional in self.professionals:
+            for specialty_id in professional["specialty_ids"]:
+                professional_counts[specialty_id] = (
+                    professional_counts.get(specialty_id, 0) + 1
+                )
+        self.specialties = [
+            _specialty_row(item, professional_counts.get(item.id, 0))
+            for item in specialty_items
+        ]
+        self.specialty_page = min(self.specialty_page, self.specialty_page_count)
         self.recent_specialties = [_specialty_row(item) for item in recent_specialty_items]
         self.recent_professionals = [_professional_row(item) for item in recent_professional_items]
         # Uma mutação pode remover o último resultado da página filtrada.
@@ -495,9 +557,20 @@ class AdminDirectoryState(rx.State):
             self.specialty_page = 1
 
     @rx.event
+    def toggle_specialty_advanced_filters(self) -> None:
+        self.specialty_advanced_filters_open = not self.specialty_advanced_filters_open
+
+    @rx.event
+    def update_specialty_professional_filter(self, value: str) -> None:
+        if value in {"all", "linked", "unlinked"}:
+            self.specialty_professional_filter = value
+            self.specialty_page = 1
+
+    @rx.event
     def clear_specialty_filters(self) -> None:
         self.specialty_search = ""
         self.specialty_status = "all"
+        self.specialty_professional_filter = "all"
         self.specialty_page = 1
 
     @rx.event
@@ -505,6 +578,15 @@ class AdminDirectoryState(rx.State):
         self.specialty_page = max(1, min(
             self.specialty_page + delta, self.specialty_page_count
         ))
+
+    @rx.event
+    def update_directory_page_size(self, value: str) -> None:
+        page_size = normalize_directory_page_size(value)
+        if page_size is None:
+            return
+        self.directory_page_size = page_size
+        self.specialty_page = 1
+        self.professional_page = 1
 
     @rx.event
     def update_professional_search(self, value: str) -> None:

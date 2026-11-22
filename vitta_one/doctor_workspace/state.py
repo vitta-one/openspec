@@ -59,6 +59,12 @@ def _month_label(value: date) -> str:
     return f"{names[value.month - 1].capitalize()} de {value.year}"
 
 
+def _week_window(today: date) -> tuple[date, date]:
+    """Return the Monday–Sunday calendar week containing the clinic's today."""
+    monday = today - timedelta(days=today.weekday())
+    return monday, monday + timedelta(days=6)
+
+
 def _calendar_cells(month: str, rows: list[DoctorConsultationRow]) -> list[CalendarCell]:
     year, month_num = (int(value) for value in month.split("-"))
     days = monthrange(year, month_num)[1]
@@ -160,8 +166,9 @@ class DoctorWorkspaceState(rx.State):
                     self.patient_rows = []
                     # A second authorized query keeps the upcoming week accurate
                     # even when it crosses a month boundary.
-                    first_day = date.fromisoformat(clinic_today_iso())
-                    last_week_day = first_day + timedelta(days=6)
+                    first_day, last_week_day = _week_window(
+                        date.fromisoformat(clinic_today_iso())
+                    )
                     _, week_items = doctor_get_my_agenda(
                         db,
                         token=token,

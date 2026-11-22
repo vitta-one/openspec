@@ -172,14 +172,14 @@ def _admin_slot_row(row) -> rx.Component:
                                     disabled=AdminAvailabilityState.is_submitting,
                                 )
                             ),
-                            justify="end", gap="2", flex_wrap="wrap",
+                            justify="end", gap="0.5rem", flex_wrap="wrap",
                         ),
                         max_width="28rem",
                     ),
                 ),
             ),
         ),
-        justify="between", align="center", gap="3", width="100%",
+        justify="between", align="center", gap="0.75rem", width="100%",
         flex_wrap="wrap", class_name="vitta-calendar-slot-row",
         role="listitem",
     )
@@ -225,7 +225,7 @@ def admin_calendar_view() -> rx.Component:
             rx.text("Somente horários persistidos, no fuso da clínica.",
                     size="2", color="var(--vitta-text-muted)"),
             direction=rx.breakpoints(initial="column", lg="row"),
-            justify="between", align="center", gap="4", width="100%",
+            justify="between", align="center", gap="1rem", width="100%",
         ),
         month_calendar(
             month_title=AdminAvailabilityState.calendar_month_title,
@@ -249,7 +249,7 @@ def admin_calendar_view() -> rx.Component:
                         rx.text(AdminAvailabilityState.selected_day_inactive, " inativos", size="2"),
                         spacing="2", flex_wrap="wrap", color="var(--vitta-text-muted)",
                     ),
-                    justify="between", align="center", gap="3", width="100%", flex_wrap="wrap",
+                    justify="between", align="center", gap="0.75rem", width="100%", flex_wrap="wrap",
                 ),
                 rx.cond(
                     AdminAvailabilityState.selected_day_slots.length() > 0,
@@ -278,6 +278,23 @@ def admin_availability_panel() -> rx.Component:
     """Focused schedule management: each task has a separate accessible tab."""
     return section_panel(
         rx.vstack(
+            rx.hstack(
+                rx.box(
+                    rx.icon("calendar_days", size=25, color="var(--vitta-primary)"),
+                    class_name="vitta-admin-action-icon",
+                    aria_hidden="true",
+                ),
+                rx.vstack(
+                    rx.heading("Selecionar médico", size="5"),
+                    rx.text(
+                        "Escolha o profissional para visualizar, cadastrar ou ajustar os horários.",
+                        size="2", color="var(--vitta-text-muted)",
+                    ),
+                    spacing="1", align="start", min_width="0",
+                ),
+                align="center", gap="1rem", width="100%",
+                class_name="vitta-availability-heading",
+            ),
             rx.box(
                 field_label("Médico responsável", "admin-schedule-professional"),
                 _professional_select(
@@ -287,15 +304,17 @@ def admin_availability_panel() -> rx.Component:
                     include_all=False,
                     disabled=AdminAvailabilityState.is_loading | AdminAvailabilityState.is_submitting,
                 ),
-                width=rx.breakpoints(initial="100%", md="min(24rem, 100%)"),
+                width=rx.breakpoints(initial="100%", md="min(40rem, 100%)"),
             ),
             feedback_region(AdminAvailabilityState.error_message, AdminAvailabilityState.success_message,
                             "admin-hours-feedback"),
+            rx.separator(),
             rx.cond(
                 AdminAvailabilityState.is_loading & ~AdminAvailabilityState.has_professionals,
                 rx.center(rx.spinner(size="3"), min_height="10rem", width="100%"),
                 rx.cond(
-                    AdminAvailabilityState.has_professionals,
+                    AdminAvailabilityState.has_professionals
+                    & (AdminAvailabilityState.selected_professional != "__none__"),
                     rx.tabs.root(
                 rx.tabs.list(
                     rx.tabs.trigger("Consultar disponibilidade", value="search"),
@@ -450,14 +469,27 @@ def admin_availability_panel() -> rx.Component:
                 on_change=AdminAvailabilityState.change_operation,
                 width="100%",
                 ),
-                empty_state("stethoscope", "Nenhum médico ativo",
-                            "Cadastre um profissional ativo antes de configurar horários."),
+                rx.cond(
+                    AdminAvailabilityState.has_professionals,
+                    empty_state(
+                        "calendar_days", "Nenhum médico selecionado",
+                        "Selecione um profissional acima para gerenciar sua disponibilidade.",
+                        min_height="15.5rem",
+                    ),
+                    empty_state(
+                        "stethoscope", "Nenhum médico ativo",
+                        "Cadastre um profissional ativo antes de configurar horários.",
+                        min_height="15.5rem",
+                    ),
+                ),
                 ),
             ),
             spacing="4",
             align="stretch",
             width="100%",
+            class_name="vitta-availability-content",
         ),
+        class_name="vitta-availability-panel",
     )
 
 
@@ -848,7 +880,7 @@ def _booking_patient_step() -> rx.Component:
                           loading=ReceptionAgendaState.is_booking_loading,
                           align_self="end", min_height="2.8rem"),
                 direction=rx.breakpoints(initial="column", sm="row"),
-                gap="2", align="stretch", width="100%",
+                gap="0.5rem", align="stretch", width="100%",
             ),
             on_submit=ReceptionAgendaState.search_booking_patients,
             width="100%",
@@ -865,7 +897,7 @@ def _booking_patient_step() -> rx.Component:
                     rx.button("Trocar", type="button", variant="ghost", size="2",
                               on_click=ReceptionAgendaState.clear_booking_patient),
                 ),
-                justify="between", align="center", width="100%", gap="2",
+                justify="between", align="center", width="100%", gap="0.5rem",
                 flex_wrap="wrap", class_name="vitta-selection-bar",
             ),
             rx.fragment(),
@@ -982,11 +1014,11 @@ def _booking_calendar_step() -> rx.Component:
             rx.grid(
                 *[rx.center(rx.text(name, size="1", font_weight="700"))
                   for name in ("Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb")],
-                columns="7", gap="1", class_name="vitta-calendar-weekdays",
+                columns="7", gap="0.25rem", class_name="vitta-calendar-weekdays",
             ),
             rx.grid(
                 rx.foreach(ReceptionAgendaState.booking_calendar_days, _booking_calendar_day),
-                columns="7", gap="1", class_name="vitta-calendar-grid",
+                columns="7", gap="0.25rem", class_name="vitta-calendar-grid",
             ),
             class_name="vitta-availability-calendar vitta-booking-calendar",
         ),
@@ -1034,14 +1066,14 @@ def _booking_time_step() -> rx.Component:
                       type="button", variant="outline", size="2", color_scheme="teal",
                       on_click=ReceptionAgendaState.refresh_booking_availability,
                       disabled=ReceptionAgendaState.is_booking_loading),
-            justify="between", align="center", gap="3", width="100%", flex_wrap="wrap",
+            justify="between", align="center", gap="0.75rem", width="100%", flex_wrap="wrap",
         ),
         rx.cond(
             ReceptionAgendaState.booking_date_slots.length() > 0,
             rx.grid(
                 rx.foreach(ReceptionAgendaState.booking_date_slots, _booking_hour_option),
                 columns=rx.breakpoints(initial="3", sm="4", md="5"),
-                gap="2", width="100%",
+                gap="0.5rem", width="100%",
             ),
             empty_state("clock", "Nenhum horário livre neste dia",
                         "Volte ao calendário e escolha outro dia disponível."),
@@ -1100,7 +1132,7 @@ def _booking_dialog() -> rx.Component:
                         on_click=ReceptionAgendaState.cancel_booking,
                         disabled=ReceptionAgendaState.is_submitting,
                     ),
-                    justify="between", align="start", gap="3", width="100%",
+                    justify="between", align="start", gap="0.75rem", width="100%",
                 ),
                 rx.hstack(
                     rx.text("Etapa ", ReceptionAgendaState.booking_step, " de 5",
@@ -1177,7 +1209,7 @@ def _booking_dialog() -> rx.Component:
                         ),
                         spacing="2", align="center",
                     ),
-                    justify="between", align="center", gap="2", flex_wrap="wrap",
+                    justify="between", align="center", gap="0.5rem", flex_wrap="wrap",
                     width="100%", class_name="vitta-booking-footer",
                 ),
                 class_name="vitta-dialog-content vitta-booking-dialog",
@@ -1201,7 +1233,7 @@ def _booking_dialog() -> rx.Component:
                         rx.button("Descartar", type="button", color_scheme="red",
                                   on_click=ReceptionAgendaState.discard_booking),
                     ),
-                    justify="end", gap="2", flex_wrap="wrap", margin_top="4",
+                    justify="end", gap="0.5rem", flex_wrap="wrap", margin_top="4",
                 ),
                 max_width="26rem", class_name="vitta-dialog-content",
             ),
@@ -1222,7 +1254,7 @@ def _agenda_week_entry(entry) -> rx.Component:
         rx.hstack(
             rx.text(entry["time"], font_weight="750", class_name="vitta-tabular", size="1"),
             rx.text(entry["status_label"], size="1", color="var(--vitta-text-muted)"),
-            justify="between", align="center", gap="1", width="100%",
+            justify="between", align="center", gap="0.25rem", width="100%",
         ),
         rx.text(entry["patient_name"], size="1", font_weight="650",
                 class_name="vitta-reception-week-patient"),
@@ -1247,7 +1279,7 @@ def _agenda_week_day(day) -> rx.Component:
                     rx.badge("Hoje", color_scheme="teal", variant="soft", size="1"),
                     rx.fragment(),
                 ),
-                width="100%", justify="between", align="center", gap="1",
+                width="100%", justify="between", align="center", gap="0.25rem",
             ),
             rx.text(day["count"], " consulta(s)", size="1",
                     color="var(--vitta-text-muted)"),
@@ -1311,42 +1343,45 @@ def _reception_calendar_event(appointment, extra_count=0) -> rx.Component:
                     appointment["time"],
                     font_weight="800",
                     size="1",
-                    class_name="vitta-tabular",
+                    class_name="vitta-tabular vitta-reception-calendar-event-time",
                 ),
-                rx.hstack(
-                    rx.text(
-                        appointment["status_label"],
-                        size="1",
-                        font_weight="700",
-                        class_name="vitta-reception-calendar-event-status",
-                    ),
-                    rx.cond(
-                        extra_count > 0,
-                        rx.text("+", extra_count, size="1", font_weight="800"),
-                        rx.fragment(),
-                    ),
-                    spacing="0",
+                rx.text(
+                    appointment["patient_name"],
+                    size="1", font_weight="700",
+                    class_name="vitta-reception-calendar-event-name",
                 ),
-                justify="between",
                 align="center",
-                gap="1",
+                gap="0.25rem",
                 width="100%",
+                class_name="vitta-reception-calendar-event-heading",
             ),
             rx.text(
-                appointment["patient_name"] + " · " + appointment["professional_name"],
-                size="1",
-                font_weight="700",
-                class_name="vitta-reception-calendar-event-name",
+                appointment["professional_name"], size="1",
+                class_name="vitta-reception-calendar-event-professional",
             ),
-            spacing="0",
+            rx.hstack(
+                rx.text(
+                    appointment["status_label"], size="1", font_weight="700",
+                    class_name="vitta-reception-calendar-event-status",
+                ),
+                rx.cond(
+                    extra_count > 0,
+                    rx.text("+", extra_count, size="1", font_weight="800"),
+                    rx.fragment(),
+                ),
+                spacing="0", align="center", width="100%",
+            ),
+            spacing="1",
             align="stretch",
             width="100%",
+            class_name="vitta-reception-calendar-event-content",
         ),
         type="button",
         on_click=ReceptionAgendaState.select_agenda_day(appointment["date_iso"]),
         aria_label=(
             appointment["time"] + ", " + appointment["patient_name"] + ", "
-            + appointment["status_label"] + ". Filtrar consultas desta data."
+            + appointment["professional_name"] + ", " + appointment["status_label"]
+            + ". Filtrar consultas desta data."
         ),
         disabled=ReceptionAgendaState.is_loading,
         class_name=event_class,
@@ -1357,7 +1392,7 @@ def _reception_calendar_day_heading(day) -> rx.Component:
     return rx.button(
         rx.flex(
             rx.text(day["day_label"], font_weight="750", size="2"),
-            rx.text(day["date_label"], size="2", class_name="vitta-tabular"),
+            rx.text(day["day_number_label"], size="2", class_name="vitta-tabular"),
             rx.cond(
                 day["is_today"],
                 rx.badge("Hoje", color_scheme="teal", variant="soft", size="1"),
@@ -1365,7 +1400,7 @@ def _reception_calendar_day_heading(day) -> rx.Component:
             ),
             justify="center",
             align="center",
-            gap="3",
+            gap="0.75rem",
             width="100%",
         ),
         type="button",
@@ -1486,23 +1521,78 @@ def reception_agenda_panel() -> rx.Component:
                         disabled=ReceptionAgendaState.is_loading,
                     ),
                     rx.button(
-                        "Hoje", type="button", variant="outline", color_scheme="teal",
-                        on_click=ReceptionAgendaState.go_to_agenda_today,
-                        disabled=ReceptionAgendaState.is_loading,
-                    ),
-                    rx.button(
                         rx.icon("chevron_right", size=18),
                         type="button", variant="outline", color_scheme="teal",
                         aria_label="Próximos sete dias",
                         on_click=ReceptionAgendaState.move_agenda_week(1),
                         disabled=ReceptionAgendaState.is_loading,
                     ),
+                    rx.button(
+                        "Hoje", type="button", variant="outline", color_scheme="teal",
+                        on_click=ReceptionAgendaState.go_to_agenda_today,
+                        disabled=ReceptionAgendaState.is_loading,
+                    ),
                     rx.separator(orientation="vertical", height="2rem"),
-                    rx.text(
-                        ReceptionAgendaState.agenda_period_label,
-                        color="var(--vitta-text)",
-                        font_weight="750",
-                        class_name="vitta-tabular",
+                    rx.popover.root(
+                        rx.popover.trigger(
+                            rx.button(
+                                ReceptionAgendaState.agenda_period_label,
+                                type="button",
+                                variant="ghost",
+                                aria_label="Escolher outra semana",
+                                disabled=ReceptionAgendaState.is_loading,
+                                class_name="vitta-reception-period-trigger vitta-tabular",
+                            ),
+                        ),
+                        rx.popover.content(
+                            rx.vstack(
+                                rx.text("Ir para uma semana", size="2", weight="bold"),
+                                rx.box(
+                                    field_label("Escolha uma data", "reception-agenda-start"),
+                                    rx.el.input(
+                                        id="reception-agenda-start",
+                                        type="date",
+                                        lang="pt-BR",
+                                        value=ReceptionAgendaState.agenda_date_input,
+                                        on_change=ReceptionAgendaState.update_agenda_date_input,
+                                        class_name="vitta-input vitta-agenda-date-popover-input",
+                                        disabled=ReceptionAgendaState.is_loading,
+                                    ),
+                                    width="100%",
+                                ),
+                                rx.hstack(
+                                    rx.popover.close(
+                                        rx.button(
+                                            "Aplicar",
+                                            type="button",
+                                            variant="outline",
+                                            color_scheme="teal",
+                                            on_click=ReceptionAgendaState.apply_agenda_date,
+                                            disabled=ReceptionAgendaState.is_loading,
+                                        ),
+                                    ),
+                                    rx.popover.close(
+                                        rx.button(
+                                            "Limpar filtros",
+                                            type="button",
+                                            variant="ghost",
+                                            color_scheme="teal",
+                                            on_click=ReceptionAgendaState.clear_agenda_filters,
+                                            disabled=ReceptionAgendaState.is_loading,
+                                        ),
+                                    ),
+                                    align="center",
+                                    gap="0.5rem",
+                                    flex_wrap="wrap",
+                                ),
+                                align="stretch",
+                                spacing="3",
+                                width="100%",
+                            ),
+                            align="start",
+                            max_width="22rem",
+                            class_name="vitta-agenda-date-popover",
+                        ),
                     ),
                     rx.cond(
                         ReceptionAgendaState.agenda_outside_hour_count > 0,
@@ -1520,20 +1610,6 @@ def reception_agenda_panel() -> rx.Component:
                 ),
                 rx.hstack(
                     _reception_agenda_view_select(),
-                    rx.el.input(
-                        id="reception-agenda-start",
-                        type="date", lang="pt-BR",
-                        value=ReceptionAgendaState.agenda_date_input,
-                        on_change=ReceptionAgendaState.update_agenda_date_input,
-                        class_name="vitta-input vitta-reception-agenda-date",
-                        disabled=ReceptionAgendaState.is_loading,
-                        aria_label="Data da semana exibida",
-                    ),
-                    rx.button(
-                        "Aplicar", type="button", variant="outline", color_scheme="teal",
-                        on_click=ReceptionAgendaState.apply_agenda_date,
-                        disabled=ReceptionAgendaState.is_loading,
-                    ),
                     rx.box(
                         _professional_select(
                             control_id="reception-agenda-professional",
@@ -1544,15 +1620,10 @@ def reception_agenda_panel() -> rx.Component:
                         ),
                         width=rx.breakpoints(initial="100%", md="15rem"),
                     ),
-                    rx.button(
-                        "Limpar", type="button", variant="ghost", color_scheme="teal",
-                        on_click=ReceptionAgendaState.clear_agenda_filters,
-                        disabled=ReceptionAgendaState.is_loading,
-                    ),
                     spacing="2", align="center", flex_wrap="wrap",
                     width=rx.breakpoints(initial="100%", md="auto"),
                 ),
-                justify="between", align="center", gap="3",
+                justify="between", align="center", gap="0.75rem",
                 flex_wrap="wrap", width="100%",
                 class_name="vitta-reception-calendar-toolbar",
             ),
@@ -1633,7 +1704,7 @@ def reception_agenda_panel() -> rx.Component:
                         _reception_calendar_legend(
                             "Cancelada", "vitta-reception-calendar-legend-dot--cancelled"
                         ),
-                        gap="4", flex_wrap="wrap", align="center", width="100%",
+                        gap="1rem", flex_wrap="wrap", align="center", width="100%",
                         class_name="vitta-reception-calendar-legend",
                     ),
                     rx.separator(margin_y="0.25rem"),
@@ -1658,7 +1729,7 @@ def reception_agenda_panel() -> rx.Component:
                             ),
                             rx.fragment(),
                         ),
-                        justify="between", gap="3", align="center",
+                        justify="between", gap="0.75rem", align="center",
                         flex_wrap="wrap", width="100%",
                     ),
                     rx.cond(
@@ -1734,7 +1805,7 @@ def reception_agenda_panel() -> rx.Component:
                                 spacing="2",
                             ),
                             justify="between", align="center",
-                            gap="3", flex_wrap="wrap", width="100%",
+                            gap="0.75rem", flex_wrap="wrap", width="100%",
                         ),
                         rx.fragment(),
                     ),

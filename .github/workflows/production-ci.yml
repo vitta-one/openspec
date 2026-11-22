@@ -60,14 +60,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: npm
+          cache-dependency-path: tools/openspec-validator/package-lock.json
       - name: Dependências Python
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
       - name: Sintaxe dos scripts de deploy
         run: bash -n scripts/deploy/bootstrap-vps.sh scripts/deploy/poll-prod.sh
+      - name: Install locked OpenSpec CLI
+        run: npm ci --prefix tools/openspec-validator --ignore-scripts --no-audit --no-fund
       - name: Validação OpenSpec strict
-        run: npx --yes @fission-ai/openspec validate --all --strict
+        run: ./tools/openspec-validator/node_modules/.bin/openspec validate --all --strict
       - name: Migrations em PostgreSQL 16 descartável
         run: |
           reflex db migrate

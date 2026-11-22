@@ -5,6 +5,10 @@ from typing import Any, Mapping, Sequence, TypedDict
 
 
 _WEEKDAYS = ("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")
+_MONTHS = (
+    "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+    "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+)
 
 
 class AgendaWeekEntry(TypedDict):
@@ -19,6 +23,7 @@ class AgendaWeekEntry(TypedDict):
 class AgendaWeekDay(TypedDict):
     date_iso: str
     date_label: str
+    day_number_label: str
     day_label: str
     is_today: bool
     is_selected: bool
@@ -54,6 +59,24 @@ def week_bounds(start_iso: str) -> tuple[str, str]:
     """Seven inclusive clinic-local dates; never use browser timezone here."""
     first = date.fromisoformat(start_iso)
     return first.isoformat(), (first + timedelta(days=6)).isoformat()
+
+
+def format_week_period_label(start_iso: str) -> str:
+    """Format a seven-day range in the approved Portuguese calendar style."""
+    first_iso, last_iso = week_bounds(start_iso)
+    first = date.fromisoformat(first_iso)
+    last = date.fromisoformat(last_iso)
+    if first.year == last.year and first.month == last.month:
+        return f"{first.day}–{last.day} de {_MONTHS[last.month - 1]} de {last.year}"
+    if first.year == last.year:
+        return (
+            f"{first.day} de {_MONTHS[first.month - 1]}–"
+            f"{last.day} de {_MONTHS[last.month - 1]} de {last.year}"
+        )
+    return (
+        f"{first.day} de {_MONTHS[first.month - 1]} de {first.year}–"
+        f"{last.day} de {_MONTHS[last.month - 1]} de {last.year}"
+    )
 
 
 def monday_of_week(day_iso: str) -> str:
@@ -107,6 +130,7 @@ def build_week_days(
             {
                 "date_iso": key,
                 "date_label": day.strftime("%d/%m"),
+                "day_number_label": str(day.day),
                 "day_label": _WEEKDAYS[day.weekday()],
                 "is_today": key == today_iso,
                 "is_selected": key == selected_iso,

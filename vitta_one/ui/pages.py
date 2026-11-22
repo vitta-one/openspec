@@ -391,62 +391,92 @@ def admin_receptionist_staff_page() -> rx.Component:
 def admin_hours_page() -> rx.Component:
     return protected_workspace(
         Role.ADMINISTRADOR,
-        page_header(
-            "Administração / Agenda",
-            "Gerenciar horários",
-            "Configure e consulte a disponibilidade dos médicos, uma tarefa por vez.",
-            show_art=True,
+        breadcrumb(
+            ("Administração", "/admin"),
+            ("Agenda", "/admin/agenda"),
+            ("Gerenciar horários", None),
         ),
-        breadcrumb(("Administração", "/admin"), ("Horários", None)),
-        admin_availability_panel(),
+        rx.vstack(
+            page_header(
+                "Agenda",
+                "Gerenciar horários",
+                "Configure e consulte a disponibilidade dos médicos, uma tarefa por vez.",
+                show_art=True,
+                art_source="/clinic-admin-hours-hero.png",
+            ),
+            admin_availability_panel(),
+            spacing="2", align="stretch", width="100%",
+            class_name="vitta-admin-hours-workspace",
+        ),
         active="horarios",
         verified_path="/admin/horarios",
+        page_spacing="4",
     )
 
 
 def admin_clinic_settings_page() -> rx.Component:
     return protected_workspace(
         Role.ADMINISTRADOR,
-        page_header(
-            "Administração",
-            "Configurações da clínica",
-            "Mantenha atualizadas as informações exibidas no portal do paciente.",
-        ),
-        breadcrumb(("Administração", "/admin"), ("Configurações", None)),
-        rx.grid(
-            admin_clinic_configuration(),
-            section_panel(
-                rx.vstack(
-                    rx.heading("Onde essas informações aparecem?", size="4"),
-                    rx.text(
-                        "O nome e o endereço são mostrados nos detalhes da clínica disponíveis para pacientes.",
-                        size="2", color="var(--vitta-text-muted)", line_height="1.55",
-                    ),
-                    rx.image(
-                        src="/clinic-operational-hero.svg", alt="", aria_hidden="true",
-                        class_name="vitta-clinic-settings-illustration",
-                    ),
-                    rx.separator(),
-                    rx.hstack(
-                        rx.icon("map_pin", size=18, color="var(--vitta-primary)"),
-                        rx.text("Revise o endereço antes de salvar.", size="2"),
-                        align="center", gap="2",
-                    ),
-                    rx.hstack(
-                        rx.icon("shield_check", size=18, color="var(--vitta-primary)"),
-                        rx.text("Somente informações institucionais; não inclua dados de pacientes.",
-                                size="2", line_height="1.45"),
-                        align="start", gap="2",
-                    ),
-                    align="stretch", spacing="3", width="100%",
+        rx.vstack(
+            breadcrumb(("Administração", "/admin"), ("Configurações", None)),
+            rx.vstack(
+                page_header(
+                    "Administração",
+                    "Configurações da clínica",
+                    "Mantenha atualizadas as informações exibidas no portal do paciente.",
+                    title_margin_top="0.725rem",
                 ),
-                class_name="vitta-clinic-settings-guidance",
+                rx.grid(
+                    admin_clinic_configuration(),
+                    section_panel(
+                        rx.vstack(
+                            rx.image(
+                                src="/clinic-admin-settings-guidance.png", alt="", aria_hidden="true",
+                                class_name="vitta-clinic-settings-illustration",
+                            ),
+                            rx.hstack(
+                                rx.icon("info", size=20, color="var(--vitta-primary)"),
+                                rx.vstack(
+                                    rx.heading("Onde essas informações são exibidas?", size="4"),
+                                    rx.text(
+                                        "O nome e o endereço aparecem no portal do paciente, nos agendamentos e nas informações de atendimento.",
+                                        size="2", color="var(--vitta-text-muted)", line_height="1.55",
+                                    ),
+                                    align="start", spacing="1", min_width="0",
+                                ),
+                                align="start", gap="0.75rem", width="100%",
+                            ),
+                            rx.separator(),
+                            rx.hstack(
+                                rx.icon("sparkles", size=20, color="var(--vitta-primary)"),
+                                rx.heading("Dicas", size="4"),
+                                align="center", gap="0.5rem",
+                            ),
+                            rx.hstack(
+                                rx.icon("circle_check", size=18, color="var(--vitta-primary)"),
+                                rx.text("Mantenha os dados da clínica atualizados.", size="2"),
+                                align="center", gap="0.5rem",
+                            ),
+                            rx.hstack(
+                                rx.icon("circle_check", size=18, color="var(--vitta-primary)"),
+                                rx.text("Use o endereço completo, com bairro, cidade e UF.", size="2"),
+                                align="start", gap="0.5rem",
+                            ),
+                            align="stretch", spacing="3", width="100%",
+                        ),
+                        class_name="vitta-clinic-settings-guidance",
+                    ),
+                    columns=rx.breakpoints(
+                        initial="1", lg="minmax(0, 1.6fr) minmax(18rem, 0.85fr)"
+                    ),
+                    gap="1.5rem", align="start", width="100%",
+                    class_name="vitta-clinic-settings-layout",
+                ),
+                spacing="3", align="stretch", width="100%",
+                class_name="vitta-clinic-settings-content",
             ),
-            columns=rx.breakpoints(
-                initial="1", lg="minmax(0, 1.4fr) minmax(18rem, 0.85fr)"
-            ),
-            gap="4", align="start", width="100%",
-            class_name="vitta-clinic-settings-layout",
+            spacing="5", align="stretch", width="100%",
+            class_name="vitta-clinic-settings-workspace",
         ),
         active="configuracoes",
         verified_path="/admin/configuracoes",
@@ -491,10 +521,10 @@ def reception_agenda_page(verified_path: str = "/recepcao/agenda") -> rx.Compone
         page_header(
             "Agenda",
             "Agenda e check-in",
-            "Consulte a semana, localize consultas e confirme a chegada.",
+            "Visualize os horários e confirme a chegada dos pacientes.",
             rx.button(
                 rx.icon("calendar_plus", size=17),
-                "Agendar consulta",
+                "Nova consulta",
                 type="button", color_scheme="teal", high_contrast=True,
                 on_click=ReceptionAgendaState.open_booking,
                 disabled=ReceptionAgendaState.is_submitting,
@@ -587,32 +617,7 @@ def reception_queue_page() -> rx.Component:
                 class_name="vitta-primary-action",
             ),
             show_art=True,
-        ),
-        rx.cond(
-            ReceptionQueueState.is_loading_queue,
-            rx.center(rx.spinner(size="2"),
-                      rx.text("Carregando prioridades…", size="2"),
-                      gap="3", min_height="5rem", width="100%", role="status"),
-            rx.cond(
-                ReceptionQueueState.queue_load_error != "",
-                rx.fragment(),
-                rx.cond(
-                    ReceptionQueueState.queue_has_loaded,
-                    rx.grid(
-                        summary_metric("Urgente", ReceptionQueueState.red_waiting_count,
-                                       "triangle_alert", tone="red"),
-                        summary_metric("Prioridade média", ReceptionQueueState.yellow_waiting_count,
-                                       "circle_alert", tone="amber"),
-                        summary_metric("Prioridade baixa", ReceptionQueueState.green_waiting_count,
-                                       "circle_check", tone="green"),
-                        summary_metric("Total aguardando", ReceptionQueueState.queue_count,
-                                       "users_round"),
-                        columns=rx.breakpoints(initial="1", sm="2", xl="4"),
-                        gap="3", width="100%",
-                    ),
-                    rx.fragment(),
-                ),
-            ),
+            art_source="/clinic-reception-queue-hero.png",
         ),
         active_queue_panel(),
         rx.cond(
@@ -641,11 +646,84 @@ def reception_queue_page() -> rx.Component:
         ),
         active="fila",
         verified_path="/recepcao/fila",
+        page_spacing="4",
     )
 
 
 
+def _doctor_overview_card(
+    icon_name: str,
+    value,
+    label: str,
+    href: str,
+    *,
+    value_size: str = "6",
+) -> rx.Component:
+    return rx.link(
+        rx.flex(
+            rx.box(
+                rx.icon(icon_name, size=30, aria_hidden="true"),
+                class_name="vitta-doctor-overview-icon",
+                aria_hidden="true",
+            ),
+            rx.vstack(
+                rx.heading(value, size=value_size, class_name="vitta-tabular"),
+                rx.text(label, size="2", font_weight="650"),
+                align="start", spacing="0", min_width="0",
+            ),
+            align="center", gap="1rem", width="100%",
+        ),
+        href=href,
+        class_name="vitta-overview-card vitta-doctor-overview-card",
+    )
+
+
+def _doctor_active_workspace_panel() -> rx.Component:
+    return rx.cond(
+        DoctorQueueState.is_loading,
+        rx.center(
+            rx.vstack(
+                rx.spinner(size="3"),
+                rx.text(
+                    "Carregando atendimento…",
+                    color="var(--vitta-text-muted)",
+                    size="2",
+                ),
+                spacing="2",
+                align="center",
+            ),
+            min_height="13rem",
+            width="100%",
+            role="status",
+            aria_live="polite",
+        ),
+        doctor_active_panel(),
+    )
+
+
 def doctor_page() -> rx.Component:
+    queue_workspace = rx.cond(
+        (DoctorQueueState.error_message != "")
+        | (DoctorQueueState.success_message != ""),
+        rx.vstack(
+            feedback_region(
+                DoctorQueueState.error_message,
+                DoctorQueueState.success_message,
+            ),
+            doctor_waiting_summary(),
+            _doctor_active_workspace_panel(),
+            spacing="5",
+            align="stretch",
+            width="100%",
+        ),
+        rx.vstack(
+            doctor_waiting_summary(),
+            _doctor_active_workspace_panel(),
+            spacing="4",
+            align="stretch",
+            width="100%",
+        ),
+    )
     return protected_workspace(
         Role.MEDICO,
         page_header(
@@ -653,75 +731,40 @@ def doctor_page() -> rx.Component:
             "Visão geral do consultório",
             "Acompanhe a agenda, o pronto-socorro, os pacientes e os registros clínicos.",
             show_art=True,
+            art_source="/clinic-doctor-overview-hero.png",
         ),
         rx.grid(
-            rx.link(
-                rx.vstack(
-                    rx.icon("list_ordered", color="var(--vitta-primary)", size=21),
-                    rx.heading(DoctorQueueState.waiting_count, size="6"),
-                    rx.text("Pacientes na espera", size="2", font_weight="650"),
-                    spacing="2", align="start",
-                ),
-                href="/medico", class_name="vitta-overview-card",
+            _doctor_overview_card(
+                "list_ordered", DoctorQueueState.waiting_count,
+                "Pacientes na espera", "/medico",
             ),
-            rx.link(
-                rx.vstack(
-                    rx.icon("calendar_days", color="var(--vitta-primary)", size=21),
-                    rx.heading(DoctorWorkspaceState.consultation_rows.length(), size="6"),
-                    rx.text("Consultas no mês", size="2", font_weight="650"),
-                    spacing="2", align="start",
-                ),
-                href="/medico/agenda", class_name="vitta-overview-card",
+            _doctor_overview_card(
+                "calendar_days", DoctorWorkspaceState.consultation_rows.length(),
+                "Consultas no mês", "/medico/agenda",
             ),
-            rx.link(
-                rx.vstack(
-                    rx.icon("file_heart", color="var(--vitta-primary)", size=21),
-                    rx.heading(rx.cond(DoctorQueueState.has_active, "Em andamento", "Sem atendimento"), size="4"),
-                    rx.text("Prontuário atual", size="2", font_weight="650"),
-                    spacing="2", align="start",
-                ),
-                href="/medico/prontuarios", class_name="vitta-overview-card",
+            _doctor_overview_card(
+                "file_heart",
+                rx.cond(DoctorQueueState.has_active, "Em andamento", "Sem atendimento"),
+                "Prontuário atual", "/medico/prontuarios", value_size="4",
             ),
             columns=rx.breakpoints(initial="1", sm="2", lg="3"),
-            gap="3", width="100%",
+            gap="0.75rem", width="100%", class_name="vitta-doctor-overview-grid",
         ),
         rx.flex(
             rx.link(rx.icon("calendar_days", size=17), "Abrir agenda",
-                    href="/medico/agenda", class_name="vitta-context-link"),
+                    href="/medico/agenda", class_name="vitta-doctor-quick-action"),
             rx.link(rx.icon("users", size=17), "Meus pacientes",
-                    href="/medico/pacientes", class_name="vitta-context-link"),
+                    href="/medico/pacientes", class_name="vitta-doctor-quick-action"),
             rx.link(rx.icon("book_open", size=17), "Prontuário",
-                    href="/medico/prontuarios", class_name="vitta-context-link"),
-            gap="3", flex_wrap="wrap", align="center",
+                    href="/medico/prontuarios", class_name="vitta-doctor-quick-action"),
+            gap="0.75rem", flex_wrap="wrap", align="center",
+            class_name="vitta-doctor-quick-actions",
         ),
         rx.separator(),
         rx.heading("Operação de pronto-socorro", size="5"),
-        feedback_region(
-            DoctorQueueState.error_message,
-            DoctorQueueState.success_message,
-        ),
-        doctor_waiting_summary(),
-        rx.cond(
-            DoctorQueueState.is_loading,
-            rx.center(
-                rx.vstack(
-                    rx.spinner(size="3"),
-                    rx.text(
-                        "Carregando atendimento…",
-                        color="var(--vitta-text-muted)",
-                        size="2",
-                    ),
-                    spacing="2",
-                    align="center",
-                ),
-                min_height="13rem",
-                width="100%",
-                role="status",
-                aria_live="polite",
-            ),
-            doctor_active_panel(),
-        ),
+        queue_workspace,
         active="atendimento",
+        page_spacing="4",
     )
 
 
@@ -730,25 +773,41 @@ def doctor_records_page() -> rx.Component:
     return protected_workspace(
         Role.MEDICO,
         breadcrumb(("Consultório", "/medico"), ("Prontuários", None)),
-        page_header(
-            "Prontuários", "Registro clínico do paciente atual",
-            "Acesso restrito ao atendimento associado à sua sessão médica.",
-            show_art=True,
-        ),
-        rx.cond(
-            DoctorQueueState.has_active,
-            clinical_history_panel(),
-            section_panel(
-                empty_state(
-                    "clipboard_list", "Nenhum prontuário em atendimento",
-                    "Chame o próximo paciente no pronto-socorro para acessar o registro associado.",
-                    rx.link("Ir ao pronto-socorro", href="/medico",
-                            class_name="vitta-context-link"),
-                )
+        rx.vstack(
+            page_header(
+                "Prontuários", "Registro clínico do paciente atual",
+                "Acesso restrito ao atendimento associado à sua sessão médica.",
+                show_art=True,
+                art_source="/clinic-doctor-records-hero.png",
             ),
+            rx.box(
+                rx.cond(
+                    DoctorQueueState.has_active,
+                    clinical_history_panel(),
+                    section_panel(
+                        empty_state(
+                            "clipboard_list", "Nenhum prontuário em atendimento",
+                            "Chame o próximo paciente no pronto-socorro para acessar o registro associado.",
+                            rx.link("Ir ao pronto-socorro", href="/medico",
+                                    class_name="vitta-context-link"),
+                            min_height="22.5rem",
+                        ),
+                        class_name="vitta-doctor-records-empty-panel",
+                        padding=rx.breakpoints(
+                            initial="1rem",
+                            sm="24px 22px 22px",
+                        ),
+                    ),
+                ),
+                width="100%",
+                class_name="vitta-doctor-records-workspace",
+            ),
+            spacing="5", align="stretch", width="100%",
+            class_name="vitta-doctor-records-content",
         ),
         active="prontuarios",
         verified_path="/medico/prontuarios",
+        page_spacing="2",
     )
 
 
@@ -760,12 +819,23 @@ def doctor_agenda_page() -> rx.Component:
             "Minha agenda",
             "Consultas relacionadas ao profissional associado à sua conta, com datas no fuso da clínica.",
             show_art=True,
+            art_source="/clinic-doctor-agenda-hero.png",
         ),
         feedback_region(DoctorWorkspaceState.error_message, "", "doctor-agenda-feedback"),
-        rx.link("Abrir fila e atendimento clínico", href="/medico", class_name="vitta-context-link"),
-        doctor_week_calendar(),
-        rx.heading("Calendário do mês", size="5"),
-        doctor_calendar(),
+        rx.link(
+            rx.icon("plus", size=22),
+            "Abrir fila e atendimento clínico",
+            href="/medico",
+            class_name="vitta-doctor-agenda-cta",
+        ),
+        rx.vstack(
+            doctor_week_calendar(),
+            doctor_calendar(),
+            spacing="0",
+            align="stretch",
+            width="100%",
+            class_name="vitta-doctor-agenda-calendars",
+        ),
         doctor_consultation_list(),
         active="agenda-medica",
         verified_path="/medico/agenda",
@@ -780,6 +850,7 @@ def doctor_patients_page() -> rx.Component:
             "Pacientes vinculados",
             "Pessoas derivadas exclusivamente de consultas do seu cadastro profissional.",
             show_art=True,
+            art_source="/clinic-doctor-patients-hero.png",
         ),
         feedback_region(DoctorWorkspaceState.error_message, "", "doctor-patients-feedback"),
         doctor_patient_list(),

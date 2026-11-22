@@ -1,6 +1,8 @@
 """Tests for the receptionist's persisted daily operations table."""
 
+import asyncio
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 
 import pytest
 from sqlalchemy.pool import StaticPool
@@ -21,7 +23,7 @@ from vitta_one.patient_queue.service import (
 )
 from vitta_one.reception.dashboard.application import reception_day_operations
 from vitta_one.reception.dashboard.service import get_reception_day
-from vitta_one.reception.dashboard.state import _clinic_time_label
+from vitta_one.reception.dashboard.state import ReceptionDashboardState, _clinic_time_label
 
 
 @pytest.fixture(autouse=True)
@@ -38,6 +40,45 @@ def db():
     with Session(engine) as session:
         yield session
     engine.dispose()
+
+
+@pytest.mark.parametrize("form_data", [{}, {"query": ""}])
+def test_empty_day_search_submission_clears_stale_query(form_data):
+    state = SimpleNamespace(search_query="Dra. Clara Silveira", current_page=3)
+
+    async def reload():
+        yield None
+
+    state._reload = reload
+
+    async def submit():
+        async for _ in ReceptionDashboardState.apply_search.fn(state, form_data):
+            pass
+
+    asyncio.run(submit())
+
+    assert state.search_query == ""
+    assert state.current_page == 1
+
+
+def test_day_search_applies_submitted_value_over_previous_filter():
+    state = SimpleNamespace(search_query="11900000001", current_page=3)
+
+    async def reload():
+        yield None
+
+    state._reload = reload
+
+    async def submit():
+        async for _ in ReceptionDashboardState.apply_search.fn(
+            state, {"query": "Dra. Clara Silveira"}
+        ):
+            pass
+
+    asyncio.run(submit())
+
+    assert state.search_query == "Dra. Clara Silveira"
+    assert state.current_page == 1
 
 
 def make_professional(db, index: int = 1, *, name: str = "Dra. Clara Silveira"):
@@ -134,7 +175,7 @@ def test_day_table_paginates_seven_real_consultations_and_keeps_statuses(db):
     assert all(not hasattr(row, "symptoms") for row in first.appointments)
 
 
-def test_day_table_filters_by_professional_name_phone_and_cpf(db):
+def test_day_table_searches_patient_professional_time_and_status(db):
     now = datetime(2026, 10, 14, 15, tzinfo=timezone.utc)
     first_professional = make_professional(db, 1, name="Dra. Beatriz")
     second_professional = make_professional(db, 2, name="Dr. Marcos")
@@ -146,27 +187,37 @@ def test_day_table_filters_by_professional_name_phone_and_cpf(db):
         phone="11984521102",
         scheduled_at=datetime(2026, 10, 14, 16, tzinfo=timezone.utc),
     )
-    add_consultation(
+    second, _ = add_consultation(
         db,
         second_professional,
         patient_name="Outro Paciente",
         cpf="11144477735",
         phone=None,
         scheduled_at=datetime(2026, 10, 14, 16, 30, tzinfo=timezone.utc),
+        status="CONFIRMADA",
     )
 
     by_name = get_reception_day(db, now=now, search="helena")
     by_phone = get_reception_day(db, now=now, search="(11) 98452-1102")
     by_cpf = get_reception_day(db, now=now, search="529.982.247-25")
+    by_professional_name = get_reception_day(db, now=now, search="Dra. Beatriz")
+    by_local_time = get_reception_day(db, now=now, search="13:00")
     by_professional = get_reception_day(
         db, now=now, professional_id=first_professional.id
     )
+    by_status = get_reception_day(db, now=now, status="CONFIRMADA")
 
     assert [row.id for row in by_name.appointments] == [target.id]
     assert [row.id for row in by_phone.appointments] == [target.id]
     assert [row.id for row in by_cpf.appointments] == [target.id]
+    assert [row.id for row in by_professional_name.appointments] == [target.id]
+    assert [row.id for row in by_local_time.appointments] == [target.id]
     assert [row.id for row in by_professional.appointments] == [target.id]
+    assert [row.id for row in by_status.appointments] == [second.id]
     assert by_name.appointments[0].patient_phone == patient.phone
+
+    with pytest.raises(ValueError, match="situação válida"):
+        get_reception_day(db, now=now, status="UNRECOGNIZED")
 
 
 

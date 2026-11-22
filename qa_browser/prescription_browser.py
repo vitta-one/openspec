@@ -3,6 +3,7 @@
 No mocking of Reflex State or backend. Every browser context starts with a fresh
 session. These tests run against a *disposable* real Reflex + PostgreSQL instance.
 """
+from datetime import datetime
 import json
 import os
 import re
@@ -11,6 +12,10 @@ from pathlib import Path
 import pytest
 from playwright.sync_api import Page, expect, sync_playwright
 from qa_browser.playwright_support import launch_chromium, validate_loopback_base_url
+from vitta_one.appointment_scheduling.reception_calendar import (
+    format_week_period_label,
+    monday_of_week,
+)
 
 
 BASE = validate_loopback_base_url(os.getenv("QA_BASE_URL", "http://127.0.0.1:3000"))
@@ -205,7 +210,7 @@ def test_admin_dashboard_is_compact_and_routes_to_complete_directory(page: Page)
     link.focus()
     link.press("Enter")
     expect(page).to_have_url(re.compile(r"/admin/especialidades/?$"), timeout=30000)
-    expect(page.get_by_role("heading", name="Todas as especialidades")).to_be_visible()
+    expect(page.get_by_role("heading", name="Especialidades", exact=True)).to_be_visible()
 
 
 
@@ -215,7 +220,7 @@ def test_admin_specialty_search_and_professional_routes_at_mobile_width(page: Pa
         page.set_viewport_size({"width": width, "height": height})
         page.emulate_media(reduced_motion="reduce")
         page.goto(BASE + "/admin/especialidades", wait_until="domcontentloaded")
-        expect(page.get_by_role("heading", name="Todas as especialidades")).to_be_visible(timeout=30000)
+        expect(page.get_by_role("heading", name="Especialidades", exact=True)).to_be_visible(timeout=30000)
         page.locator("#specialty-directory-search").fill("Extra 2")
         expect(page.get_by_text("Especialidade QA Extra 2", exact=True)).to_be_visible(timeout=15000)
         expect(page.get_by_text("Especialidade QA Extra 1", exact=True)).not_to_be_visible()
@@ -225,7 +230,7 @@ def test_admin_specialty_search_and_professional_routes_at_mobile_width(page: Pa
         page.locator("#specialty-directory-search").fill("")
         page.get_by_role("navigation", name="Trilha de navegação").get_by_role("link", name="Administração", exact=True).click()
         expect(page).to_have_url(re.compile(r"/admin/?$"), timeout=30000)
-        page.get_by_role("main").get_by_role("link", name="Profissionais", exact=True).click()
+        page.locator(".vitta-admin-quick-link").filter(has_text="Profissionais").click()
         expect(page).to_have_url(re.compile(r"/admin/profissionais/?$"), timeout=30000)
         expect(page.get_by_role("heading", name="Todos os profissionais")).to_be_visible(timeout=30000)
         assert page.evaluate(
@@ -258,6 +263,54 @@ def test_admin_staff_role_selection_is_accessible_and_guarded(page: Page) -> Non
     expect(page.locator("#staff-reception-password")).to_have_count(0)
 
 
+def test_admin_staff_directory_advanced_filter_and_row_actions(page: Page) -> None:
+    """The reference toolbar and row actions apply real, authorized operations."""
+    login_as_admin(page)
+    page.set_viewport_size({"width": 1768, "height": 890})
+    page.goto(BASE + "/admin/funcionarios", wait_until="domcontentloaded")
+    expect(page.get_by_role("heading", name="Funcionários", exact=True)).to_be_visible(timeout=30000)
+
+    more_filters = page.get_by_role("button", name="Mais filtros", exact=True)
+    expect(more_filters).to_be_visible()
+    reference_toolbar = page.evaluate("""() => {
+      const rect = selector => {
+        const box = document.querySelector(selector).getBoundingClientRect();
+        return {x: box.x, y: box.y, width: box.width, height: box.height};
+      };
+      return {
+        search: rect('#staff-directory-search'),
+        role: rect('#staff-directory-role'),
+        moreFilters: rect('.vitta-staff-more-filters'),
+      };
+    }""")
+    for name, expected in {
+        "search": {"x": 175, "y": 451, "width": 988, "height": 46},
+        "role": {"x": 1183, "y": 451, "width": 291, "height": 46},
+        "moreFilters": {"x": 1498, "y": 451, "width": 170, "height": 46},
+    }.items():
+        for dimension, value in expected.items():
+            assert abs(reference_toolbar[name][dimension] - value) <= 2, reference_toolbar
+    more_filters.click()
+    status_filter = page.get_by_role("combobox", name="Filtrar por cadastro do nome")
+    expect(status_filter).to_be_visible()
+    status_filter.click()
+    page.get_by_role("option", name="Nome não informado", exact=True).click()
+    expect(page.get_by_role("button", name="Limpar filtros", exact=True)).to_be_visible()
+
+    first_row = page.locator(".vitta-staff-table tbody tr").first
+    expect(first_row).to_be_visible()
+    email = first_row.locator("td").nth(1).inner_text().strip()
+    more_actions = first_row.get_by_role("button", name="Ações do funcionário", exact=True)
+    expect(more_actions).to_be_visible()
+    page.context.grant_permissions(["clipboard-read", "clipboard-write"], origin=BASE)
+    more_actions.click()
+    page.get_by_role("menuitem", name="Copiar e-mail", exact=True).click()
+    page.wait_for_function(
+        "expected => navigator.clipboard.readText().then(text => text === expected)", arg=email
+    )
+
+
+
 def test_non_admin_cannot_open_admin_directory_subroutes(page: Page) -> None:
     login(page, FIXTURE["doctor_b_email"])
     page.goto(BASE + "/admin/profissionais", wait_until="domcontentloaded")
@@ -269,8 +322,8 @@ def test_admin_specialty_create_and_rename_keep_history(page: Page) -> None:
     """Exercise the actual create/edit modal handlers against disposable PostgreSQL."""
     login_as_admin(page)
     page.goto(BASE + "/admin/especialidades", wait_until="domcontentloaded")
-    expect(page.get_by_role("heading", name="Todas as especialidades")).to_be_visible(timeout=30000)
-    page.get_by_role("button", name="Nova especialidade").click()
+    expect(page.get_by_role("heading", name="Especialidades", exact=True)).to_be_visible(timeout=30000)
+    page.get_by_role("button", name="Nova especialidade").first.click()
     dialog = page.get_by_role("dialog")
     expect(dialog).to_be_visible(timeout=15000)
     dialog.locator("#specialty-create-name").fill("Área Clínica QA Nova")
@@ -343,19 +396,83 @@ def test_admin_registers_medical_professional_without_resend_and_prevents_duplic
 
 
 def test_admin_specialty_pagination_has_real_second_page(page: Page) -> None:
-    """Exercise pagination with >10 specialties on disposable PostgreSQL."""
+    """Exercise page sizing and navigation with persisted specialties."""
     login_as_admin(page)
     page.goto(BASE + "/admin/especialidades", wait_until="domcontentloaded")
-    expect(page.get_by_role("heading", name="Todas as especialidades")).to_be_visible(timeout=30000)
-    expect(page.get_by_text("Página 1 de 2", exact=True)).to_be_visible(timeout=20000)
+    expect(page.get_by_role("heading", name="Especialidades", exact=True)).to_be_visible(timeout=30000)
+    current_page = page.locator(".vitta-directory-page-control.is-current")
+    expect(current_page).to_have_text("1", timeout=20000)
     first_page = page.locator("table tbody tr")
     expect(first_page).to_have_count(10, timeout=15000)
-    expect(page.get_by_role("button", name="Anterior")).to_be_disabled()
-    page.get_by_role("button", name="Próxima").click()
-    expect(page.get_by_text("Página 2 de 2", exact=True)).to_be_visible(timeout=15000)
-    expect(page.get_by_role("button", name="Próxima")).to_be_disabled()
-    page.get_by_role("button", name="Anterior").click()
-    expect(page.get_by_text("Página 1 de 2", exact=True)).to_be_visible(timeout=15000)
+    first_row_text = first_page.first.inner_text()
+    previous = page.get_by_role("button", name="Página anterior")
+    next_page = page.get_by_role("button", name="Próxima página")
+    expect(previous).to_be_disabled()
+    expect(next_page).to_be_enabled()
+
+    page_size = page.get_by_role("combobox", name="Itens por página")
+    page_size.click()
+    page.get_by_role("option", name="25", exact=True).click()
+    expect(page_size).to_contain_text("25", timeout=15000)
+    result_summary = page.locator(".vitta-directory-pagination-footer")
+    expect(result_summary).to_contain_text(" de ", timeout=15000)
+    total_match = re.search(
+        r"Mostrando\s+\d+–\d+\s+de\s+(\d+)\s+especialidades",
+        result_summary.inner_text(),
+    )
+    assert total_match is not None, result_summary.inner_text()
+    total_specialties = int(total_match.group(1))
+    assert total_specialties > 10
+    all_specialties = page.locator("table tbody tr")
+    expect(all_specialties).to_have_count(total_specialties, timeout=15000)
+    expect(current_page).to_have_text("1")
+
+    page_size.click()
+    page.get_by_role("option", name="10", exact=True).click()
+    expect(page_size).to_contain_text("10", timeout=15000)
+    expect(first_page).to_have_count(10, timeout=15000)
+    next_page.click()
+    expect(current_page).to_have_text("2", timeout=15000)
+    second_page = page.locator("table tbody tr")
+    expect(second_page.first).to_be_visible(timeout=15000)
+    second_page_count = second_page.count()
+    assert second_page_count == total_specialties - 10
+    assert second_page.first.inner_text() != first_row_text
+    expect(next_page).to_be_disabled()
+    previous.click()
+    expect(current_page).to_have_text("1", timeout=15000)
+
+
+def test_admin_specialty_action_menu_and_metric_spacing_match_reference(page: Page) -> None:
+    """Keep table actions operable and primary metric geometry aligned."""
+    login_as_admin(page)
+    page.set_viewport_size({"width": 1768, "height": 890})
+    page.goto(BASE + "/admin/especialidades", wait_until="domcontentloaded")
+    row = page.locator(".vitta-specialty-table tbody tr").first
+    expect(row).to_be_visible(timeout=30000)
+
+    expect(row.locator(".vitta-specialty-status-dot--active")).to_be_visible()
+    more_actions = row.get_by_role("button", name=re.compile(r"^Mais ações para "))
+    expect(more_actions).to_be_visible()
+    more_actions.click()
+    page.get_by_role("menuitem", name="Desativar", exact=True).click()
+    dialog = page.get_by_role("dialog", name="Desativar especialidade")
+    expect(dialog).to_be_visible(timeout=15000)
+    dialog.get_by_role("button", name="Cancelar", exact=True).click()
+    expect(dialog).to_have_count(0)
+
+    geometry = page.locator(".vitta-directory-summary .vitta-summary-metric").first.evaluate("""card => {
+      const icon = card.querySelector('.vitta-summary-metric-icon').getBoundingClientRect();
+      const label = card.querySelector('.rt-Text').getBoundingClientRect();
+      return {
+        iconWidth: icon.width,
+        iconHeight: icon.height,
+        iconLabelGap: label.left - icon.right,
+      };
+    }""")
+    assert geometry["iconWidth"] == 62, geometry
+    assert geometry["iconHeight"] == 50, geometry
+    assert geometry["iconLabelGap"] >= 19, geometry
 
 
 def test_admin_availability_controls_are_understandable_and_responsive(page: Page) -> None:
@@ -366,6 +483,10 @@ def test_admin_availability_controls_are_understandable_and_responsive(page: Pag
         page.set_viewport_size({"width": width, "height": height})
         page.emulate_media(reduced_motion="reduce")
         expect(page.get_by_role("heading", name="Gerenciar horários")).to_be_visible(timeout=30000)
+        if width == 320:
+            professional = page.locator("#admin-schedule-professional")
+            professional.click()
+            page.get_by_role("option", name=FIXTURE["day_first_professional_name"], exact=True).click()
         page.get_by_role("tab", name="Horário avulso").click()
         date = page.locator("#admin-slot-date")
         hour = page.locator("#admin-slot-time")
@@ -450,9 +571,13 @@ def test_reception_daily_operations_table_and_filters(page: Page) -> None:
             FIXTURE["day_first_patient_name"], exact=True
         )
     ).to_be_visible()
-    expect(page.locator(".vitta-reception-day-row")).to_have_count(7)
-    expect(page.get_by_label("Página atual")).to_have_text("1 de 4")
-    expect(page.get_by_role("status").filter(has_text="de 24 consultas de hoje")).to_be_visible()
+    expect(page.locator(".vitta-reception-day-row")).to_have_count(8)
+    expect(page.get_by_role("button", name="1", exact=True)).to_have_attribute(
+        "aria-current", "page"
+    )
+    expect(
+        page.get_by_role("status").filter(has_text="de 24 consultas")
+    ).to_be_visible(timeout=30000)
 
     page.screenshot(path="qa-artifacts/dashboard-recepcao-1280px.png", full_page=True)
 
@@ -472,27 +597,62 @@ def test_reception_daily_operations_table_and_filters(page: Page) -> None:
     search.press("Enter")
     expect(page.locator(".vitta-reception-day-row")).to_have_count(0, timeout=30000)
     page.get_by_role("button", name="Limpar filtros").click()
-    expect(page.locator(".vitta-reception-day-row")).to_have_count(7, timeout=30000)
+    expect(page.locator(".vitta-reception-day-row")).to_have_count(8, timeout=30000)
 
-    # Restore the day, then filter by a professional from the persisted directory.
+    # Restore the day, then find a professional by name in the same search.
     search.fill("")
     search.press("Enter")
-    expect(page.locator(".vitta-reception-day-row")).to_have_count(7, timeout=30000)
-    page.locator("#reception-day-professional").click()
-    page.get_by_role("option", name=FIXTURE["day_first_professional_name"]).click()
-    expect(page.locator(".vitta-reception-day-row")).to_have_count(7, timeout=30000)
-    expect(page.get_by_role("status").filter(has_text="de 8 consultas de hoje")).to_be_visible()
-    expect(page.get_by_label("Página atual")).to_have_text("1 de 2")
+    expect(page.locator(".vitta-reception-day-row")).to_have_count(8, timeout=30000)
+    first_page_patient = page.locator(".vitta-reception-day-row").first.inner_text()
+    page.get_by_role("button", name="Próxima página").click()
+    expect(page.get_by_role("button", name="2", exact=True)).to_have_attribute(
+        "aria-current", "page", timeout=30000
+    )
+    expect(page.locator(".vitta-reception-day-row")).to_have_count(8, timeout=30000)
+    expect(page.locator(".vitta-reception-day-row").first).not_to_have_text(
+        first_page_patient, timeout=15000
+    )
+    page.get_by_role("button", name="Página anterior").click()
+    expect(page.get_by_role("button", name="1", exact=True)).to_have_attribute(
+        "aria-current", "page", timeout=30000
+    )
+    search.fill(FIXTURE["day_first_professional_name"])
+    search.press("Enter")
+    expect(page.locator(".vitta-reception-day-row")).to_have_count(8, timeout=30000)
+    expect(
+        page.get_by_role("status").filter(has_text="de 8 consultas")
+    ).to_be_visible(timeout=30000)
+    expect(
+        page.locator(".vitta-reception-day-table-scroll").get_by_text(
+            FIXTURE["day_first_patient_name"], exact=True
+        )
+    ).to_be_visible()
 
-    # Paging stays keyboard operable and reflects the server-side page.
-    page.get_by_role("button", name="Próxima página").focus()
-    page.keyboard.press("Enter")
-    expect(page.get_by_label("Página atual")).to_have_text("2 de 2", timeout=30000)
+    search.fill("")
+    search.press("Enter")
+    expect(search).to_have_value("", timeout=30000)
+    expect(page.locator(".vitta-reception-day-row")).to_have_count(8, timeout=30000)
+    expect(
+        page.get_by_role("status").filter(has_text="de 24 consultas")
+    ).to_be_visible(timeout=30000)
+    page.locator("#reception-day-status").click()
+    page.get_by_role("option", name="Agendada", exact=True).click()
+    expect(page.locator(".vitta-reception-day-row")).to_have_count(3, timeout=30000)
+    expect(
+        page.get_by_role("status").filter(has_text="de 3 consultas")
+    ).to_be_visible(timeout=30000)
+    expect(page.locator(".vitta-reception-day-pagination button")).to_have_count(0)
+
+    page.locator("#reception-day-status").click()
+    page.get_by_role("option", name="Todos os status", exact=True).click()
+    search.fill("08:00")
+    search.press("Enter")
     expect(page.locator(".vitta-reception-day-row")).to_have_count(1, timeout=30000)
-
-    page.locator("#reception-day-professional").click()
-    page.get_by_role("option", name="Todos os profissionais").click()
-    expect(page.get_by_label("Página atual")).to_have_text("1 de 4", timeout=30000)
+    expect(
+        page.locator(".vitta-reception-day-table-scroll").get_by_text(
+            FIXTURE["day_first_patient_name"], exact=True
+        )
+    ).to_be_visible()
 
 
 def test_reception_routes_and_responsive_daily_table(page: Page) -> None:
@@ -508,7 +668,7 @@ def test_reception_routes_and_responsive_daily_table(page: Page) -> None:
         ), overflowing_elements(page)
         if width <= 672:
             expect(page.locator(".vitta-reception-day-cards")).to_be_visible()
-            expect(page.locator(".vitta-reception-day-card")).to_have_count(7)
+            expect(page.locator(".vitta-reception-day-card")).to_have_count(8)
             expect(page.locator(".vitta-reception-day-table-scroll")).to_be_hidden()
         else:
             expect(page.locator(".vitta-reception-day-table-scroll")).to_be_visible()
@@ -535,6 +695,32 @@ def test_reception_routes_and_responsive_daily_table(page: Page) -> None:
     expect(
         page.get_by_role("heading", name="Recepção", exact=True)
     ).to_be_visible(timeout=30000)
+
+
+def test_reception_agenda_keeps_date_navigation_in_a_compact_accessible_control(page: Page) -> None:
+    login_as_reception(page)
+    page.goto(BASE + "/recepcao/agenda", wait_until="domcontentloaded")
+    period = page.get_by_role("button", name="Escolher outra semana")
+    expect(period).to_be_visible(timeout=30000)
+    current_period = period.inner_text()
+
+    for width in (1440, 320):
+        page.set_viewport_size({"width": width, "height": 760})
+        period.click()
+        date_input = page.locator("#reception-agenda-start")
+        expect(date_input).to_be_visible(timeout=10000)
+        date_input.fill("2026-11-23")
+        page.get_by_role("button", name="Aplicar", exact=True).click()
+        expect(period).to_have_text("23–29 de novembro de 2026", timeout=30000)
+        assert page.evaluate(
+            "document.documentElement.scrollWidth <= window.innerWidth + 2"
+        ), overflowing_elements(page)
+
+    page.locator("#reception-agenda-professional").click()
+    page.get_by_role("option", name=FIXTURE["day_first_professional_name"], exact=True).click()
+    period.click()
+    page.get_by_role("button", name="Limpar filtros", exact=True).click()
+    expect(period).to_have_text(current_period, timeout=30000)
 
 
 def test_reception_booking_modal_is_shared_and_keyboard_responsive(page: Page) -> None:
@@ -596,7 +782,7 @@ def test_reception_booking_modal_is_shared_and_keyboard_responsive(page: Page) -
 
     # The Agenda provides the same modal without a second booking screen.
     page.goto(BASE + "/recepcao/agenda", wait_until="domcontentloaded")
-    page.get_by_role("button", name="Agendar consulta", exact=True).click()
+    page.get_by_role("button", name="Nova consulta", exact=True).click()
     expect(page.get_by_role("dialog", name="Agendar consulta")).to_be_visible(
         timeout=30000
     )
@@ -606,17 +792,52 @@ def test_reception_global_patient_search_uses_identity_only(page: Page) -> None:
     login_as_reception(page)
     page.goto(BASE + "/recepcao/pacientes", wait_until="domcontentloaded")
     search = page.locator("#patient-directory-search")
-    search.fill(FIXTURE["day_first_patient_name"])
+    # Keep this a name-only query; the record suffix is numeric and is also
+    # present in unrelated synthetic CPFs and phone numbers.
+    search.fill(FIXTURE["day_first_patient_name"].rsplit(" ", 1)[0])
     page.get_by_role("button", name="Buscar", exact=True).click()
     result = page.locator(".vitta-patient-directory-row").filter(has_text=FIXTURE["day_first_patient_name"])
     expect(result).to_be_visible(timeout=30000)
-    expect(result.get_by_role("link", name=re.compile("^Ver detalhes de"))).to_be_visible()
-    assert "Histórico clínico" not in result.inner_text()
-    result.get_by_role("link", name=re.compile("^Ver detalhes de")).click()
-    expect(page).to_have_url(re.compile(r"/recepcao/pacientes/[0-9]+/?$"), timeout=30000)
-    expect(page.get_by_role("heading", name=FIXTURE["day_first_patient_name"], exact=True)).to_be_visible(
-        timeout=30000
+    expect(result).to_have_count(1)
+    expect(page.get_by_role("status").filter(has_text="24 pacientes encontrados")).to_be_visible(timeout=30000)
+    detail_link = result.get_by_role("link", name=re.compile("^Ver detalhes de"))
+    expect(detail_link).to_be_visible()
+    expect(detail_link).to_have_attribute(
+        "href", f"/recepcao/pacientes/{FIXTURE['day_first_patient_id']}"
     )
+    assert "Histórico clínico" not in result.inner_text()
+    row_diagnostics = result.evaluate("""row => ({
+        text: row.innerText,
+        linkHref: row.querySelector('a')?.getAttribute('href'),
+        linkResolvedHref: row.querySelector('a')?.href,
+    })""")
+    detail_link.click()
+    try:
+        expect(page).to_have_url(
+            re.compile(rf"/recepcao/pacientes/{FIXTURE['day_first_patient_id']}/?$"),
+            timeout=30000,
+        )
+        expect(
+            page.get_by_role(
+                "heading", name=FIXTURE["day_first_patient_name"], exact=True
+            )
+        ).to_be_visible(timeout=30000)
+    except AssertionError:
+        debug = page.evaluate("""() => ({
+            pathname: window.location.pathname,
+            title: document.title,
+            headings: [...document.querySelectorAll('h1,h2,h3,h4')]
+                .map((element) => element.innerText),
+            body: document.body.innerText.slice(0, 2400),
+        })""")
+        debug["directoryResultBeforeNavigation"] = row_diagnostics
+        print("Patient detail route failure diagnostics:", json.dumps(debug, ensure_ascii=False))
+        page.screenshot(
+            path="qa-artifacts/patient-detail-load-failure.png",
+            full_page=True,
+            animations="disabled",
+        )
+        raise
 
 
 def test_doctor_cannot_access_reception_dashboard_or_modules(page: Page) -> None:
@@ -700,7 +921,7 @@ def test_reception_contextual_actions_use_authorized_agenda_flows(page: Page) ->
 
 def test_reception_dashboard_is_read_only_and_refreshes(page: Page) -> None:
     login_as_reception(page)
-    expect(page.locator(".vitta-reception-day-row")).to_have_count(7, timeout=30000)
+    expect(page.locator(".vitta-reception-day-row")).to_have_count(8, timeout=30000)
     expect(page.get_by_role("button", name="Atualizar dados da Recepção")).to_be_visible()
     assert page.get_by_role("button", name=re.compile("Chamar próximo", re.I)).count() == 0
     assert page.get_by_role("button", name=re.compile("Finalizar atendimento", re.I)).count() == 0
@@ -714,7 +935,7 @@ def test_reception_dashboard_is_read_only_and_refreshes(page: Page) -> None:
     expect(page.get_by_role("menuitem", name="Abrir Agenda")).to_be_visible()
     page.keyboard.press("Escape")
     page.get_by_role("button", name="Atualizar dados da Recepção").click()
-    expect(page.locator(".vitta-reception-day-row")).to_have_count(7, timeout=30000)
+    expect(page.locator(".vitta-reception-day-row")).to_have_count(8, timeout=30000)
     expect(page.locator(".vitta-reception-day-updated")).to_be_visible(timeout=30000)
 
 
@@ -826,6 +1047,10 @@ def test_patient_books_own_appointment_and_both_staff_agendas_update(page: Page)
     expect(date_options.nth(1)).to_be_visible(timeout=30000)
     date_options.nth(1).click()
     expect(page.get_by_role("heading", name="4. Escolha o horário")).to_be_visible()
+    selected_date_text = page.locator("#patient-booking-date").inner_text()
+    selected_date_match = re.search(r"\d{2}/\d{2}/\d{4}", selected_date_text)
+    assert selected_date_match is not None, selected_date_text
+    booked_date = datetime.strptime(selected_date_match.group(), "%d/%m/%Y").date()
     choose = page.get_by_role("button", name=re.compile("Selecionar horário de")).first
     expect(choose).to_be_visible(timeout=30000)
     page.emulate_media(reduced_motion="reduce")
@@ -885,6 +1110,18 @@ def test_patient_books_own_appointment_and_both_staff_agendas_update(page: Page)
             role_page.goto(BASE + route, wait_until="domcontentloaded")
             if route.startswith("/recepcao"):
                 expect(role_page.get_by_role("heading", name="Consultas do período")).to_be_visible(timeout=30000)
+                # A fixture starts its bookable slot two days ahead. Near a
+                # week boundary that slot belongs to the next agenda period.
+                # Open that week explicitly before asserting the shared record.
+                role_page.get_by_role("button", name="Escolher outra semana").click()
+                role_page.locator("#reception-agenda-start").fill(booked_date.isoformat())
+                role_page.get_by_role("button", name="Aplicar", exact=True).click()
+                expected_period = format_week_period_label(
+                    monday_of_week(booked_date.isoformat())
+                )
+                expect(
+                    role_page.get_by_role("button", name="Escolher outra semana")
+                ).to_have_text(expected_period, timeout=30000)
                 expect_patient_in_paginated_agenda(role_page, FIXTURE["booking_patient_name"])
             else:
                 expect(
@@ -1008,7 +1245,7 @@ def test_reception_booking_cpf_search_retains_selected_patient(page: Page) -> No
     """CPF lookup through the shared modal retains identity across booking steps."""
     login_as_reception(page)
     page.goto(BASE + "/recepcao/agenda", wait_until="domcontentloaded")
-    page.get_by_role("button", name="Agendar consulta", exact=True).click()
+    page.get_by_role("button", name="Nova consulta", exact=True).click()
     dialog = page.get_by_role("dialog", name="Agendar consulta")
     expect(dialog).to_be_visible(timeout=30000)
     search = dialog.locator("#booking-patient-query")
@@ -1185,7 +1422,7 @@ def test_admin_directory_and_modal_text_have_explicit_light_contrast(page: Page)
     """Catch unreadable white-on-white headings/labels on the real Chromium page."""
     login_as_admin(page)
     page.goto(BASE + "/admin/especialidades", wait_until="domcontentloaded")
-    title = page.get_by_role("heading", name="Todas as especialidades")
+    title = page.get_by_role("heading", name="Especialidades", exact=True)
     expect(title).to_be_visible(timeout=30000)
     assert title.evaluate(
         "el => getComputedStyle(el).color"

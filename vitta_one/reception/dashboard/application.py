@@ -91,6 +91,7 @@ def reception_day_operations(
     token: str,
     professional_id: int | None = None,
     search: str = "",
+    status: str = "",
     page: int = 1,
     page_size: int = 7,
 ) -> ReceptionDaySnapshot:
@@ -100,6 +101,7 @@ def reception_day_operations(
         db,
         professional_id=professional_id,
         search=search,
+        status=status,
         page=page,
         page_size=page_size,
     )
