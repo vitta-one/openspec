@@ -375,3 +375,17 @@ Média da rodada: **8,83%** de pixels com RGB L1≥36 e **8,62 MAE/canal**. Os r
 - A criação de um segundo contêiner PostgreSQL não coube no disco. Nenhum banco, contêiner ou volume preexistente foi removido.
 
 A matriz de screenshots foi capturada antes da tentativa de testes que escreve no banco. Referências, screenshots e comparativos permanecem fora do Git em `qa-artifacts/operational-reference/`; não foi feito merge, deploy ou acesso a banco de produção.
+
+## Continuação QA28 — CI completo do SHA `2ce0175` — 22/11/2026
+
+A branch permaneceu em `fix/visual-parity-16-screens-20261117`, sem sobrescrever o checkpoint. Os três workflows do SHA `2ce017575284dba5fefb4edd340d4c5c5a0367a2` terminaram verdes:
+
+- [CI de OpenSpec, migrations, Pytest, Reflex e smoke — run 44965283439](https://github.com/vitta-one/openspec/actions/runs/44965283439): **success**.
+- [Validate Vitta-One — run 44965283505](https://github.com/vitta-one/openspec/actions/runs/44965283505): OpenSpec strict **34 passed, 0 failed**; Pytest PostgreSQL 16 **580 passed, 2 skipped, 2 avisos**; `reflex compile` **success** em 4,746 s.
+- [QA Prescrições com Chromium — run 44965283457](https://github.com/vitta-one/openspec/actions/runs/44965283457): **39 testes Chromium aprovados**, **5 testes de agenda administrativa aprovados**, **96/96 capturas operacionais** nas seis resoluções e **93/93 capturas gerais**. O artifact [vitta-one-chromium-all-screens](https://github.com/vitta-one/openspec/actions/runs/44965283457/artifacts/14730849883) contém capturas e manifestos sintéticos.
+
+As 96 capturas da CI comprovam navegação e renderização do bundle daquele SHA. O runner não tinha os PNGs de referência e declarou isso no log; portanto, elas não constituem comparação visual nem aprovação de paridade. Os comparativos locais QA27 foram gerados sem máscaras e reinspecionados. Eles continuam em `REVIEW_REQUIRED`, **0/16 telas aprovadas**, com média **8,83% de pixels RGB L1≥36** e **8,62 MAE/canal**. A tabela QA27 registra as métricas e os resíduos tela a tela.
+
+Diferenças residuais observáveis incluem estados e dados de QA incompatíveis com as referências (agenda semanal, fila, nomes/contagens, especialidades, cobranças e vínculos médicos), além de texto, ilustração e rasterização. Não alteramos dados clínicos/financeiros para reduzir o diff. A tentativa PostgreSQL local anterior falhou por falta de espaço, mas a repetição limpa no CI validou a suíte integral; o resultado local com erro continua documentado e não é apresentado como aprovado.
+
+PR de trabalho: [#358 para `develop`](https://github.com/vitta-one/openspec/pull/358). Nenhum merge, deploy, alteração de produção ou conexão a banco de produção ocorreu.

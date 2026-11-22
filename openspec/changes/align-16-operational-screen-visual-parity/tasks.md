@@ -84,7 +84,7 @@
 - [x] Reproduzir a geometria da referência com medidas DOM: painel, filtros, tabela, cabeçalho, seis linhas completas e paginação na primeira dobra; manter a rolagem interna acessível por teclado e status anunciado.
 - [x] Atualizar o teste de paginação para derivar o total real do resumo visível, em vez de presumir 13; teste direcionado local **1/1 PASS**.
 - [x] Regerar a matriz local de seis viewports: **96/96 PASS**, sem overflow horizontal; validar OpenSpec strict, compileall, `reflex compile --dry` e `git diff --check`.
-- [ ] Repetir no CI Chromium completo do SHA final (atualização funcional, segurança, teclado, responsividade e uploads de evidência) e inspecionar suas capturas antes da aprovação do código.
+- [x] Repetir no CI Chromium completo do SHA `2ce017575284dba5fefb4edd340d4c5c5a0367a2`: 39 testes de navegador, 5 testes de agenda administrativa, 96/96 capturas operacionais e 93/93 capturas gerais; artifact registrado no relatório QA28.
 - [ ] Paridade integral continua pendente: **0/16**. A tela 09 melhorou a geometria, mas ainda contém dados/ícones/descrições diferentes da referência; não atribuir fidelidade total.
 
 ## Continuação QA27 — espaçamento Reflex e tela 07 — 21–22/11/2026
@@ -93,6 +93,12 @@
 - [x] Refinar barra de busca/filtros e menu de ações real da tela 07, medindo caixas do DOM a 1768×890; melhorar diff de 9,84% para 8,57% sem alterar os registros da fixture.
 - [x] Regerar e inspecionar 96 capturas, 16 comparativos sem máscaras e quatro folhas; métricas por rota atualizadas no relatório de QA.
 - [x] Executar testes direcionados: **12 Python**, **1 Chromium na tela 07** e **1 Chromium na tela 09** aprovados; suíte Python sem PostgreSQL: **535 passed, 47 skipped**.
-- [ ] Repetir a suíte completa PostgreSQL em runner com espaço suficiente. A tentativa local foi impedida por falta de disco ao criar tabelas, sem resultado aprovável.
+- [x] Repetir a suíte completa PostgreSQL em runner limpo: **580 passed, 2 skipped** no Validate do SHA `2ce017575284dba5fefb4edd340d4c5c5a0367a2`. A tentativa local anterior falhou por falta de disco e não conta como aprovada.
 - [ ] Aprovar paridade visual integral nas 16 telas. Status permanece **0/16**, `REVIEW_REQUIRED`; diferenças residuais continuam registradas, sem alterar dados clínicos/financeiros para imitar referências.
-- [ ] Após commit e push, confirmar todos os workflows CI do SHA final e atualizar a PR com resultados reais.
+- [x] Confirmar os três workflows do SHA `2ce017575284dba5fefb4edd340d4c5c5a0367a2` (CI, Validate e Chromium) verdes e registrar resultados/artifact no relatório QA28. A próxima atualização documental também precisa de CI pós-push.
+
+## Continuação QA28 — CI completo — 22/11/2026
+
+- [x] OpenSpec strict **34/34**, Pytest PostgreSQL **580 passed, 2 skipped**, compilação Reflex aprovada.
+- [x] Chromium: **39 testes**, agenda administrativa **5 testes**, capturas operacionais **96/96** e capturas gerais **93/93**; artifact sintético vinculado no relatório QA.
+- [ ] Paridade visual integral: **0/16**. As capturas CI não possuem referências originais; comparativos locais sem máscaras ainda mostram diferenças de dados/estados, conteúdo textual, ilustração e rasterização.
