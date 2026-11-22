@@ -19,8 +19,8 @@ context: |
     servidor da aplicação, nunca apenas por ocultação de componentes na interface.
 
   Access control:
-    O sistema utiliza roles simples: Administrador, Recepcionista, Médico e
-    Financeiro. Cada role possui um painel dedicado.
+    O sistema utiliza cinco roles: Administrador, Recepcionista, Médico,
+    Financeiro e Paciente. Cada role possui painel ou portal dedicado.
 
   Integrations:
     Cloudinary para anexos de exames.

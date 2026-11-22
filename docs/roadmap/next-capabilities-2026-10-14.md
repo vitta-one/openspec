@@ -1,19 +1,17 @@
-# Vitta-One — sequência de capabilities após o QA (14/10/2026)
+# Vitta-One — planejamento de capabilities revisado (22/11/2026)
 
-> Documento de planejamento e pré-especificação, **não** uma spec canônica concluída. Não abrir todas as changes ao mesmo tempo. Qualquer decisão abaixo ainda não implementada exige proposal, design, spec delta, tasks, QA e archive próprios. Os dados clínicos e financeiros usados em QA devem ser sintéticos.
+> Documento histórico de planejamento com escopo revisado para a entrega acadêmica de novembro de 2026. As changes descritas aqui foram arquivadas; este arquivo **não** atesta homologação externa. Os dados clínicos e financeiros usados em QA devem ser sintéticos.
 
 ## Situação e prioridade
 
-O core possui autenticação/RBAC, gestão de profissionais e especialidades, agenda por horários pontuais, recepção/fila, atendimento, registro clínico e prescrições HTML imprimíveis. Os contratos canônicos existentes ficam em `openspec/specs/`. As dependências futuras abaixo devem preservar a consistência do domínio e a segurança.
+O core possui autenticação/RBAC, gestão de profissionais e especialidades, agenda por horários pontuais, recepção/fila, atendimento, registro clínico e prescrições HTML imprimíveis. Os contratos canônicos existentes ficam em `openspec/specs/`. O escopo abaixo reúne os eixos efetivamente documentados no projeto e preserva o histórico de decisões, sem acrescentar novas integrações nesta entrega.
 
 | Ordem | Próxima change (sugestão) | Dependências | Resultado esperado |
 |---|---|---|---|
 | 1 | `add-professional-email-onboarding` | Auth/RBAC, diretório, Resend | Cadastro médico simplificado e primeiro acesso seguro |
 | 2 | `simplify-appointment-scheduling-ux` | Agenda, roles, histórico | Horários claros por profissional/dia, sem alterar arbitrariamente a regra de slot |
-| 3 | `add-examination-attachments` | Atendimentos concluídos/ativos, Cloudinary | Solicitações, resultados e anexos auditáveis |
-| 4 | `add-prescription-signature` | Prescrição estruturada, ZapSign sandbox | Assinatura demonstrativa e rastreamento de estados |
-| 5 | `add-financial-payments` | Consulta, Asaas sandbox | Recebimentos e conciliação básica |
-| 6 | `add-operational-dashboard` | Agenda, consultas, pagamentos (parciais) | KPIs baseados em dados persistidos |
+| 3 | `add-financial-payments` | Consulta, Asaas sandbox | Recebimentos e conciliação básica |
+| 4 | `add-operational-dashboard` | Agenda, consultas, pagamentos (parciais) | KPIs baseados em dados persistidos |
 
 ## 1. Professional onboarding (próxima change)
 
@@ -35,23 +33,7 @@ O core possui autenticação/RBAC, gestão de profissionais e especialidades, ag
 
 **Riscos/decisões:** decidir se a UI trabalha com uma data selecionada ou semana por padrão, sem alterar semântica atual de horários pontuais.
 
-## 3. Exames e anexos Cloudinary
-
-**Problema:** clínica precisa registrar solicitação e resultados no contexto clínico. **Contrato pretendido:** vínculo por atendimento/consulta/paciente/médico; autorização no servidor; upload assinado diretamente ou proxy seguro; metadados persistidos separados do arquivo; limitação MIME/tamanho/extensões; auditoria; gestão de falhas; leitura do histórico; sem integração com laboratórios externos.
-
-**Cenários:** anexos válidos e inválidos, upload cancelado, erro de rede, documento externo removido, médico não responsável, paciente de outro contexto, tentativa de path traversal e arquivo malicioso. Planejar retenção e remoção reversível.
-
-**Dependências:** desenho de modelos e política de armazenamento/retenção; configuração Cloudinary. Não colocar credenciais em cliente nem URLs privadas em logs.
-
-## 4. Assinatura de prescrições ZapSign (sandbox)
-
-**Problema:** prescrição atual é um HTML imprimível sem assinatura digital, sem selo ou QR real. **Contrato pretendido:** vincular uma prescrição imutável e autor autorizado ao documento enviado; estados rascunho/enviado/assinado/falhou/cancelado coerentes com ZapSign; validação de webhook autenticado; idempotência; trilha de auditoria; permitir reconsulta sem presumir validade jurídica.
-
-**Cenários:** envio e confirmação sandbox, webhook duplicado ou fora de ordem, timeout, reenvio, link expirado, alterações após início da assinatura, médico distinto, sessão expirada.
-
-**Riscos:** requisitos jurídicos fora do escopo acadêmico; não mostrar "assinado" sem confirmação do provedor.
-
-## 5. Financeiro Asaas (sandbox)
+## 3. Financeiro Asaas (sandbox)
 
 **Problema:** painel Financeiro atualmente é um shell. **Contrato pretendido:** lançamento de cobrança para consulta com regras explicitamente aprovadas, recepção de status de pagamento, listagem e filtros, conciliação simples, reversões e falhas, preservando RBAC Financeiro/Admin segundo contratos futuros.
 
@@ -59,7 +41,7 @@ O core possui autenticação/RBAC, gestão de profissionais e especialidades, ag
 
 **Decisões necessárias:** quem pode cobrar e alterar valores, tipos de cobrança, reembolso, regras de cancelamento, política de conciliação. Não inventar regras comerciais.
 
-## 6. Dashboard gerencial
+## 4. Dashboard gerencial
 
 **Contrato pretendido:** indicadores derivados somente de dados reais, como consultas do dia, aguardando, concluídas e canceladas, profissionais ativos, e cobranças confirmadas quando implementadas. Cada KPI precisa ter definição de período, fuso, filtros, autorizações e fonte SQL rastreável.
 
