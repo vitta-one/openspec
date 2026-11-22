@@ -124,6 +124,8 @@ def test_employee_filter_combines_name_email_profile_and_role():
     assert [row["id"] for row in filter_employee_directory(rows, search="médico", role="MEDICO")] == [2, 3]
     assert filter_employee_directory(rows, search="sem correspondência") == []
     assert filter_employee_directory(rows, role="RECEPCIONISTA") == [rows[0]]
+    assert [row["id"] for row in filter_employee_directory(rows, name_status="cadastrado")] == [1, 2]
+    assert [row["id"] for row in filter_employee_directory(rows, name_status="pendente")] == [3]
     assert filter_employee_directory(rows) == rows
 
 

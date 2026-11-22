@@ -263,6 +263,54 @@ def test_admin_staff_role_selection_is_accessible_and_guarded(page: Page) -> Non
     expect(page.locator("#staff-reception-password")).to_have_count(0)
 
 
+def test_admin_staff_directory_advanced_filter_and_row_actions(page: Page) -> None:
+    """The reference toolbar and row actions apply real, authorized operations."""
+    login_as_admin(page)
+    page.set_viewport_size({"width": 1768, "height": 890})
+    page.goto(BASE + "/admin/funcionarios", wait_until="domcontentloaded")
+    expect(page.get_by_role("heading", name="Funcionários", exact=True)).to_be_visible(timeout=30000)
+
+    more_filters = page.get_by_role("button", name="Mais filtros", exact=True)
+    expect(more_filters).to_be_visible()
+    reference_toolbar = page.evaluate("""() => {
+      const rect = selector => {
+        const box = document.querySelector(selector).getBoundingClientRect();
+        return {x: box.x, y: box.y, width: box.width, height: box.height};
+      };
+      return {
+        search: rect('#staff-directory-search'),
+        role: rect('#staff-directory-role'),
+        moreFilters: rect('.vitta-staff-more-filters'),
+      };
+    }""")
+    for name, expected in {
+        "search": {"x": 175, "y": 451, "width": 988, "height": 46},
+        "role": {"x": 1183, "y": 451, "width": 291, "height": 46},
+        "moreFilters": {"x": 1498, "y": 451, "width": 170, "height": 46},
+    }.items():
+        for dimension, value in expected.items():
+            assert abs(reference_toolbar[name][dimension] - value) <= 2, reference_toolbar
+    more_filters.click()
+    status_filter = page.get_by_role("combobox", name="Filtrar por cadastro do nome")
+    expect(status_filter).to_be_visible()
+    status_filter.click()
+    page.get_by_role("option", name="Nome não informado", exact=True).click()
+    expect(page.get_by_role("button", name="Limpar filtros", exact=True)).to_be_visible()
+
+    first_row = page.locator(".vitta-staff-table tbody tr").first
+    expect(first_row).to_be_visible()
+    email = first_row.locator("td").nth(1).inner_text().strip()
+    more_actions = first_row.get_by_role("button", name="Ações do funcionário", exact=True)
+    expect(more_actions).to_be_visible()
+    page.context.grant_permissions(["clipboard-read", "clipboard-write"], origin=BASE)
+    more_actions.click()
+    page.get_by_role("menuitem", name="Copiar e-mail", exact=True).click()
+    page.wait_for_function(
+        "expected => navigator.clipboard.readText().then(text => text === expected)", arg=email
+    )
+
+
+
 def test_non_admin_cannot_open_admin_directory_subroutes(page: Page) -> None:
     login(page, FIXTURE["doctor_b_email"])
     page.goto(BASE + "/admin/profissionais", wait_until="domcontentloaded")
@@ -393,6 +441,38 @@ def test_admin_specialty_pagination_has_real_second_page(page: Page) -> None:
     expect(next_page).to_be_disabled()
     previous.click()
     expect(current_page).to_have_text("1", timeout=15000)
+
+
+def test_admin_specialty_action_menu_and_metric_spacing_match_reference(page: Page) -> None:
+    """Keep table actions operable and primary metric geometry aligned."""
+    login_as_admin(page)
+    page.set_viewport_size({"width": 1768, "height": 890})
+    page.goto(BASE + "/admin/especialidades", wait_until="domcontentloaded")
+    row = page.locator(".vitta-specialty-table tbody tr").first
+    expect(row).to_be_visible(timeout=30000)
+
+    expect(row.locator(".vitta-specialty-status-dot--active")).to_be_visible()
+    more_actions = row.get_by_role("button", name=re.compile(r"^Mais ações para "))
+    expect(more_actions).to_be_visible()
+    more_actions.click()
+    page.get_by_role("menuitem", name="Desativar", exact=True).click()
+    dialog = page.get_by_role("dialog", name="Desativar especialidade")
+    expect(dialog).to_be_visible(timeout=15000)
+    dialog.get_by_role("button", name="Cancelar", exact=True).click()
+    expect(dialog).to_have_count(0)
+
+    geometry = page.locator(".vitta-directory-summary .vitta-summary-metric").first.evaluate("""card => {
+      const icon = card.querySelector('.vitta-summary-metric-icon').getBoundingClientRect();
+      const label = card.querySelector('.rt-Text').getBoundingClientRect();
+      return {
+        iconWidth: icon.width,
+        iconHeight: icon.height,
+        iconLabelGap: label.left - icon.right,
+      };
+    }""")
+    assert geometry["iconWidth"] == 62, geometry
+    assert geometry["iconHeight"] == 50, geometry
+    assert geometry["iconLabelGap"] >= 19, geometry
 
 
 def test_admin_availability_controls_are_understandable_and_responsive(page: Page) -> None:

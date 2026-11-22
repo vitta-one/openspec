@@ -230,6 +230,38 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
             expect(page_size).to_contain_text("10")
             expect(page.locator('.vitta-staff-page-control[aria-current="page"]')).to_have_text("1")
             page.evaluate("document.activeElement && document.activeElement.blur()")
+            page_header = page.locator(".vitta-page-header").bounding_box()
+            staff_metrics = page.locator(".vitta-directory-summary").bounding_box()
+            topbar = page.locator(".vitta-topbar").bounding_box()
+            if page_header is None or staff_metrics is None or topbar is None:
+                raise AssertionError("A composição principal da lista de funcionários não foi renderizada")
+            if abs(page_header["x"] - 152) > 2 or abs(staff_metrics["x"] - 152) > 2:
+                raise AssertionError("O cabeçalho e os indicadores de funcionários saíram do eixo da referência")
+            if abs(staff_metrics["width"] - 1539) > 2:
+                raise AssertionError("A linha de indicadores de funcionários não corresponde à largura de referência")
+            if abs(topbar["height"] - 56) > 1:
+                raise AssertionError("A topbar de funcionários não corresponde à referência de 56 px")
+            for selector, expected in {
+                "#staff-directory-search": {"x": 175, "y": 451, "width": 988, "height": 46},
+                "#staff-directory-role": {"x": 1183, "y": 451, "width": 291, "height": 46},
+                ".vitta-staff-more-filters": {"x": 1498, "y": 451, "width": 170, "height": 46},
+                ".vitta-staff-table": {"x": 175, "y": 519, "width": 1493},
+            }.items():
+                actual = page.locator(selector).bounding_box()
+                if actual is None:
+                    raise AssertionError(f"Componente de funcionários não renderizado: {selector}")
+                for dimension, target in expected.items():
+                    if abs(actual[dimension] - target) > 2:
+                        raise AssertionError(
+                            f"{selector} {dimension}={actual[dimension]}px; referência {target}px"
+                        )
+            first_staff_row = page.locator(".vitta-staff-table tbody tr").first.bounding_box()
+            if first_staff_row is None or abs(first_staff_row["height"] - 62) > 2:
+                raise AssertionError("A altura da linha de funcionários não corresponde à referência")
+            expect(page.get_by_role("button", name="Mais filtros", exact=True)).to_be_visible()
+            expect(page.locator(".vitta-staff-table tbody tr").first.get_by_role(
+                "button", name="Ações do funcionário", exact=True
+            )).to_be_visible()
         if route == "/admin/especialidades" and viewport_name == "desktop-1768x890":
             search_box = page.locator("#specialty-directory-search").bounding_box()
             status_box = page.locator("#specialty-status-filter").bounding_box()
@@ -344,7 +376,13 @@ def _capture(page, viewport_name: str, spec, failures: list[dict], records: list
             '.vitta-page-header', '.vitta-page-header .rt-Heading',
             '.vitta-page-header-copy > .rt-Text:last-child',
             '.vitta-page-header-actions > a',
-            '.vitta-admin-hub-metrics', '.vitta-reception-operations',
+            '.vitta-admin-hub-metrics', '.vitta-directory-summary',
+            '.vitta-staff-directory-workspace', '.vitta-staff-toolbar',
+            '.vitta-staff-filter-actions', '.vitta-staff-more-filters',
+            '#staff-directory-search', '#staff-directory-role',
+            '.vitta-staff-table', '.vitta-staff-footer',
+            '.vitta-staff-table tbody tr:first-child .vitta-staff-more-actions',
+            '.vitta-reception-operations',
             '.vitta-reception-day-panel', '.vitta-patient-directory-workspace',
             '.vitta-patient-create-workspace',
             '.vitta-patient-create-form-panel > .rt-Box',
