@@ -71,7 +71,7 @@ jobs:
       - name: Install locked OpenSpec CLI
         run: npm ci --prefix tools/openspec-validator --ignore-scripts --no-audit --no-fund
       - name: Validação OpenSpec strict
-        run: ./tools/openspec-validator/node_modules/.bin/openspec validate --all --strict
+        run: python scripts/validate_archived_openspec.py
       - name: Migrations em PostgreSQL 16 descartável
         run: |
           reflex db migrate

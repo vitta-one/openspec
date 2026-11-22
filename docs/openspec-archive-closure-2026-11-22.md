@@ -4,7 +4,7 @@ Data: 22/11/2026. Repositório: `vitta-one/openspec`. Branch: `docs/openspec-cap
 
 ## Escopo da operação
 
-Por decisão explícita do responsável pelo projeto, todas as **26 changes previamente ativas** foram movidas, sem reescrever o conteúdo, para `openspec/changes/archive/`. O prefixo de data original foi preservado em nomes já datados; as demais receberam `2026-11-22-`. O total do histórico após essa alteração é **45 changes arquivadas**, com **25 specs canônicas** já consolidadas.
+Por decisão explícita do responsável pelo projeto, todas as **26 changes previamente ativas** foram movidas, sem reescrever o conteúdo, para `openspec/changes/archive/`. O prefixo de data original foi preservado em nomes já datados; as demais receberam `2026-11-22-`. O total do histórico após essa alteração é **45 changes arquivadas**. Os 25 contratos antes consolidados foram posteriormente congelados num snapshot histórico, conforme adendo abaixo.
 
 Os dois projetos de integração propostos somente para planejamento nesta PR foram **retirados do escopo acadêmico** e seus artefatos de change não integram o resultado final. Esta alteração não adiciona feature, migration nem deploy.
 
@@ -25,3 +25,9 @@ O histórico anterior inclui registros de testes e componentes já presentes na 
 
 - [Catálogo e rastreabilidade](openspec-capability-catalog-2026-11-22.md)
 - [PR da regularização](https://github.com/vitta-one/openspec/pull/360)
+
+## Adendo: congelamento das 25 specs (22/11/2026)
+
+Por solicitação expressa para a apresentação acadêmica, os **25 diretórios de specs** foram movidos, com hashes de árvore Git preservados, de `openspec/specs/<capability>/` para `docs/archive/openspec-specs-2026-11-22/<capability>/`. A pasta `openspec/specs/` fica apenas com `.gitkeep`; as 45 changes continuam em `openspec/changes/archive/`. Nenhum contrato foi descartado.
+
+**Isto não é o comportamento convencional de `openspec archive`**: a partir de agora o checkout não tem specs canônicas ativas. Para continuar desenvolvimento orientado por especificações, será necessário restaurar e revisar os contratos. O teste e o OpenSpec strict validam a cópia histórica em diretório temporário, sem repovoar `openspec/specs/` no GitHub. O arquivamento não comprova tarefas históricas pendentes nem homologação externa.
