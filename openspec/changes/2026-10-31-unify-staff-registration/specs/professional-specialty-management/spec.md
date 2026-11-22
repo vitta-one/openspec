@@ -3,6 +3,10 @@
 ### Requirement: Administrador gerencia profissionais
 O sistema MUST permitir cadastrar profissional com nome, e-mail único e zero ou mais especialidades ativas, sem pedir identificador interno nem vínculo manual de conta. MUST gerar identificador interno único, sem simular CRM, e vincular exatamente uma identidade `MEDICO` válida. A edição MUST permitir atualizar os vínculos para uma coleção vazia, preservando dados históricos sem excluir especialidades.
 
+#### Scenario: Especialidades removidas na edição
+- **WHEN** o Administrador desmarca todas as especialidades de um profissional existente
+
+
 #### Scenario: Novo profissional válido
 - **WHEN** o Administrador informa nome e e-mail profissional válido com ou sem especialidades ativas
 - **THEN** o sistema cria exatamente um profissional ativo e uma identidade Médica, incluindo somente os vínculos selecionados
