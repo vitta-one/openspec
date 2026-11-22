@@ -6,6 +6,10 @@ Sistema acadêmico de gerenciamento de clínica médica desenvolvido com **Pytho
 
 A fundação de acesso, paciente/fila, profissionais/especialidades, agenda, lifecycle da Consulta, registro clínico e Prescrições estruturadas estão implementados. Os contratos normativos são mantidos sob `openspec/specs/`, e as evoluções concluídas estão preservadas em `openspec/changes/archive/`. A autorização continua sendo revalidada no servidor em todas as leituras e mutações protegidas. A validação de Prescrições inclui testes PostgreSQL, suíte Python e navegador Chromium automatizado; homologação presencial em dispositivos físicos continua recomendada antes de uso real.
 
+## Catálogo OpenSpec e rastreabilidade
+
+A matriz de requisitos → código → testes, os contratos consolidados e as propostas ainda não implementadas estão em [docs/openspec-capability-catalog-2026-11-22.md](docs/openspec-capability-catalog-2026-11-22.md). O catálogo distingue funcionalidades presentes no código, changes com tarefas pendentes e integrações futuras, sem confundir mocks com serviços homologados.
+
 ## Stack definida
 
 - Reflex como framework full-stack da aplicação web;
