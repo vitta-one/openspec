@@ -96,6 +96,13 @@ jobs:
           done
           tail -n 180 qa-artifacts/reflex.log
           exit 1
+      # This suite asserts the seeded doctor-without-linked-patients state.
+      # Run it before interactive browser tests mutate the disposable database.
+      - name: Capture sixteen operational screens in Chromium
+        id: operational_screens
+        if: success()
+        continue-on-error: true
+        run: python -m qa_browser.capture_operational_reference_screens
       - name: Browser QA — security, keyboard and responsive
         run: python -m pytest qa_browser/prescription_browser.py -q
       - name: Admin agenda QA — 320, 390, 768, 1024, 1440 px
@@ -103,9 +110,15 @@ jobs:
       - name: Capture all protected and public screens in Chromium
         if: success()
         run: python -m qa_browser.capture_all_screens
-      - name: Capture sixteen operational screens in Chromium
-        if: success()
-        run: python -m qa_browser.capture_operational_reference_screens
+      - name: Verify operational screen capture
+        if: always()
+        env:
+          CAPTURE_OUTCOME: ${{ steps.operational_screens.outcome }}
+        run: |
+          if [[ "$CAPTURE_OUTCOME" != "success" ]]; then
+            echo "::error::A captura das dezesseis telas falhou ou foi ignorada (resultado: $CAPTURE_OUTCOME)."
+            exit 1
+          fi
       - name: Upload synthetic visual QA evidence
         if: always()
         uses: actions/upload-artifact@v4

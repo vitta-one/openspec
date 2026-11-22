@@ -104,7 +104,6 @@ class PatientDirectoryRow(TypedDict):
     id: int
     name: str
     phone: str
-    href: str
 
 
 class PatientOperationalConsultationRow(TypedDict):
@@ -258,6 +257,14 @@ def format_queue_wait(minutes: int) -> str:
     return f"{hours}h {remaining:02d}min" if hours else f"{remaining} min"
 
 
+def average_queue_wait_minutes(rows: list[QueueRow]) -> int:
+    """Return the rounded mean of persisted queue waits, or zero for an empty queue."""
+    waits = [max(0, int(row["wait_minutes"])) for row in rows]
+    if not waits:
+        return 0
+    return (sum(waits) + len(waits) // 2) // len(waits)
+
+
 def filter_active_queue(
     rows: list[QueueRow], query: str, priority: str
 ) -> list[QueueRow]:
@@ -343,9 +350,12 @@ class ReceptionQueueState(rx.State):
     patient_directory: list[PatientDirectoryRow] = []
     patient_directory_query: str = ""
     patient_directory_applied_query: str = ""
+    patient_directory_phone_filter: str = "ALL"
+    patient_directory_advanced_filters_open: bool = False
     patient_directory_error: str = ""
     patient_directory_total: int = 0
     patient_directory_page: int = 1
+    patient_directory_page_size: int = 10
     patient_directory_pages: int = 1
     patient_directory_loading: bool = False
 
@@ -451,6 +461,10 @@ class ReceptionQueueState(rx.State):
             (row["wait_minutes"] for row in self.queue_rows), default=0
         ))
 
+    @rx.var
+    def queue_average_wait(self) -> str:
+        return format_queue_wait(average_queue_wait_minutes(self.queue_rows))
+
     @rx.event
     def set_queue_search(self, value: str) -> None:
         self.queue_search_query = str(value or "")[:100]
@@ -495,9 +509,12 @@ class ReceptionQueueState(rx.State):
         self.patient_directory = []
         self.patient_directory_query = ""
         self.patient_directory_applied_query = ""
+        self.patient_directory_phone_filter = "ALL"
+        self.patient_directory_advanced_filters_open = False
         self.patient_directory_error = ""
         self.patient_directory_total = 0
         self.patient_directory_page = 1
+        self.patient_directory_page_size = 10
         self.patient_directory_pages = 1
         self.patient_directory_loading = False
         self.selected_patient_id = 0
@@ -599,10 +616,47 @@ class ReceptionQueueState(rx.State):
     def patient_directory_page_label(self) -> str:
         return f"{self.patient_directory_page} de {self.patient_directory_pages}"
 
+    @rx.var
+    def patient_directory_page_size_value(self) -> str:
+        """Expose the numeric page size in the string format Radix Select expects."""
+        return str(self.patient_directory_page_size)
+
     @rx.event
     def update_patient_directory_query(self, value: str):
         """Update only the input; database queries run on explicit submission."""
         self.patient_directory_query = str(value or "")[:100]
+
+    @rx.event
+    def toggle_patient_directory_advanced_filters(self):
+        self.patient_directory_advanced_filters_open = (
+            not self.patient_directory_advanced_filters_open
+        )
+
+    @rx.event
+    def set_patient_directory_phone_filter(self, value: str):
+        if self.patient_directory_loading or value not in {
+            "ALL", "WITH_PHONE", "WITHOUT_PHONE"
+        }:
+            return
+        if value == self.patient_directory_phone_filter:
+            return
+        self.patient_directory_phone_filter = value
+        self.patient_directory_page = 1
+        return ReceptionQueueState.load_patient_list
+
+    @rx.event
+    def set_patient_directory_page_size(self, value: str):
+        if self.patient_directory_loading:
+            return
+        try:
+            page_size = int(value)
+        except (TypeError, ValueError):
+            return
+        if page_size not in {10, 20, 30} or page_size == self.patient_directory_page_size:
+            return
+        self.patient_directory_page_size = page_size
+        self.patient_directory_page = 1
+        return ReceptionQueueState.load_patient_list
 
     @rx.event
     async def load_patient_list(self):
@@ -615,25 +669,34 @@ class ReceptionQueueState(rx.State):
             with rx.session() as db:
                 items, total = reception_list_patient_directory(
                     db, token=token, search=self.patient_directory_applied_query,
-                    page=self.patient_directory_page, size=10,
+                    page=self.patient_directory_page,
+                    size=self.patient_directory_page_size,
+                    phone_filter=self.patient_directory_phone_filter,
                 )
-                pages = max(1, (total + 9) // 10)
+                pages = max(
+                    1, (total + self.patient_directory_page_size - 1)
+                    // self.patient_directory_page_size
+                )
                 if self.patient_directory_page > pages:
                     self.patient_directory_page = pages
                     items, total = reception_list_patient_directory(
                         db, token=token, search=self.patient_directory_applied_query,
-                        page=pages, size=10,
+                        page=pages,
+                        size=self.patient_directory_page_size,
+                        phone_filter=self.patient_directory_phone_filter,
                     )
             self.patient_directory = [
                 {
                     "id": item["id"], "name": item["name"],
                     "phone": _format_patient_contact(item["phone"]),
-                    "href": item["href"],
                 }
                 for item in items
             ]
             self.patient_directory_total = total
-            self.patient_directory_pages = max(1, (total + 9) // 10)
+            self.patient_directory_pages = max(
+                1, (total + self.patient_directory_page_size - 1)
+                // self.patient_directory_page_size
+            )
         except (AuthenticationRequiredError, RoleForbiddenError) as exc:
             async for event in self._authorization_redirect(exc):
                 yield event
@@ -691,7 +754,7 @@ class ReceptionQueueState(rx.State):
         self.patient_detail_error = ""
         yield
         try:
-            raw_id = str(self.router.page.params.get("patient_id", ""))
+            raw_id = self._patient_detail_route_id()
             if not raw_id.isdigit() or len(raw_id) > 18 or int(raw_id) <= 0:
                 self._clear_sensitive_view()
                 self.patient_detail_error = "Paciente não encontrado."
@@ -1029,9 +1092,23 @@ class ReceptionQueueState(rx.State):
         self.selected_patient_portal_status = ""
         self._clear_feedback()
 
+    def _patient_detail_route_id(self) -> str:
+        """Read the patient id from the current URL for detail and edit routes."""
+        parts = self.router.url.path.strip("/").split("/")
+        if (
+            len(parts) not in (3, 4)
+            or parts[:2] != ["recepcao", "pacientes"]
+            or (len(parts) == 4 and parts[3] != "editar")
+        ):
+            return ""
+        raw_id = parts[2]
+        if not raw_id.isdigit() or len(raw_id) > 18 or int(raw_id) <= 0:
+            return ""
+        return raw_id
+
     def _matches_patient_detail_route(self) -> bool:
-        raw_id = str(self.router.page.params.get("patient_id", ""))
-        return raw_id.isdigit() and int(raw_id) == self.selected_patient_id > 0
+        raw_id = self._patient_detail_route_id()
+        return bool(raw_id) and int(raw_id) == self.selected_patient_id > 0
 
     @rx.event
     async def open_patient_edit_dialog(self):

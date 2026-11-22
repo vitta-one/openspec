@@ -40,6 +40,13 @@ def _locked(db: Session, model, identifier: int):
     return row
 
 
+def _has_active_charge(db: Session, consultation_id: int) -> bool:
+    return db.exec(select(FinancialCharge.id).where(
+        FinancialCharge.consultation_id == consultation_id,
+        FinancialCharge.status.not_in(ACTIVE),
+    )).first() is not None
+
+
 def _history(db: Session, charge: FinancialCharge, status: str, source: str, *, key=None, actor=None, reason=""):
     before = charge.status
     charge.status = status
@@ -133,8 +140,7 @@ def create_charge(db: Session, *, token: str, consultation_id: int, value: objec
     consultation = _locked(db, Consultation, consultation_id)
     if consultation.status == "CANCELADA":
         raise FinancialError("Não é possível emitir cobrança para Consulta cancelada.")
-    if db.exec(select(FinancialCharge.id).where(FinancialCharge.consultation_id == consultation_id,
-                                              FinancialCharge.status.not_in(ACTIVE))).first():
+    if _has_active_charge(db, consultation_id):
         raise FinancialError("A Consulta já possui cobrança ativa ou emissão em revisão.")
     patient = _locked(db, Patient, consultation.patient_id)
     db.commit()
@@ -142,7 +148,11 @@ def create_charge(db: Session, *, token: str, consultation_id: int, value: objec
     consultation = _locked(db, Consultation, consultation_id)
     if consultation.status == "CANCELADA":
         raise FinancialError("A Consulta foi cancelada durante a emissão.")
-    # The unique index closes the gap between external customer resolution and charge creation.
+    # Customer resolution includes external calls and commits. Recheck after acquiring the
+    # consultation lock again so a competing emission is observed before any charge insert.
+    if _has_active_charge(db, consultation_id):
+        raise FinancialError("A Consulta já possui cobrança ativa ou emissão em revisão.")
+    # The unique index remains the final guard for database-level races.
     charge = FinancialCharge(consultation_id=consultation_id, customer_id=customer.id, created_by=identity.id,
                              value=value, due_date=due_date, method=method, status="SENDING", operation="CREATE")
     db.add(charge)

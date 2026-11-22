@@ -36,7 +36,7 @@ def validate_disposable_database_url(
     enabled: str,
     database_id: str,
 ) -> None:
-    """Require the dedicated port and explicit container ID for visual captures."""
+    """Require a dedicated loopback port and explicit visual-QA container ID."""
     try:
         url = make_url(raw_url)
     except Exception as exc:
@@ -46,7 +46,8 @@ def validate_disposable_database_url(
         or database_id != "vitta-one-operational-ui-qa-db"
         or url.drivername != "postgresql+psycopg"
         or url.host not in {"localhost", "127.0.0.1"}
-        or url.port != 15432
+        or url.port not in {15432, 15433}
+        or (url.port == 15433 and url.database == "vitta_one")
         # Keep the workflow database and fresh local QA databases side by side.
         # Repeat runs must never inherit appointments or provider records.
         or not (

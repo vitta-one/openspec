@@ -143,7 +143,7 @@ def _time_slots() -> rx.Component:
                 ),
             ),
             rx.badge("Agenda do médico", variant="soft", color_scheme="teal"),
-            align="center", justify="between", gap="2",
+            align="center", justify="between", gap="0.5rem",
             flex_wrap="wrap", width="100%",
         ),
         rx.cond(
@@ -157,7 +157,7 @@ def _time_slots() -> rx.Component:
                 rx.center(
                     rx.spinner(size="3"),
                     rx.text("Buscando datas disponíveis…", role="status"),
-                    min_height="7rem", gap="3",
+                    min_height="7rem", gap="0.75rem",
                 ),
                 rx.cond(
                     PatientBookingState.has_slots,
@@ -266,7 +266,7 @@ def _review_dialog() -> rx.Component:
                     id="patient-booking-confirm",
                 ),
                 direction=rx.breakpoints(initial="column-reverse", sm="row"),
-                justify="end", gap="3", margin_top="1.25rem",
+                justify="end", gap="0.75rem", margin_top="1.25rem",
                 width="100%",
             ),
             max_width="36rem", class_name="vitta-dialog-content",
@@ -328,7 +328,7 @@ def patient_booking_workspace() -> rx.Component:
                             _specialty_select(),
                             _doctor_select(),
                             direction=rx.breakpoints(initial="column", md="row"),
-                            align="start", gap="4", width="100%",
+                            align="start", gap="1rem", width="100%",
                         ),
                         spacing="4", align="stretch", width="100%",
                     )

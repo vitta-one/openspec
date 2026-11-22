@@ -9,6 +9,7 @@ from vitta_one.appointment_scheduling.reception_calendar import (
     build_week_days,
     count_calendar_outside_business_hours,
     filter_consultations_for_day,
+    format_week_period_label,
     monday_of_week,
     week_bounds,
 )
@@ -38,6 +39,12 @@ def test_monday_of_week_aligns_any_day_without_using_browser_timezone():
     assert monday_of_week("2026-11-23") == "2026-11-23"
 
 
+def test_week_period_label_matches_portuguese_calendar_range():
+    assert format_week_period_label("2026-11-16") == "16–22 de novembro de 2026"
+    assert format_week_period_label("2026-11-30") == "30 de novembro–6 de dezembro de 2026"
+    assert format_week_period_label("2026-12-28") == "28 de dezembro de 2026–3 de janeiro de 2027"
+
+
 def test_empty_week_contains_seven_small_zero_count_days():
     days = build_week_days([], "2026-10-31", "", "2026-10-31")
     assert len(days) == 7
@@ -58,6 +65,8 @@ def test_calendar_groups_real_consultations_and_keeps_more_count():
     ]
     days = build_week_days(rows, "2026-10-31", "2026-10-31", "2026-10-31")
     assert days[0]["count"] == 3
+    assert days[0]["day_number_label"] == "31"
+    assert days[0]["day_label"] == "Sáb"
     assert [item["id"] for item in days[0]["entries"]] == [1, 2]
     assert days[0]["extra_count"] == 1
     assert days[0]["is_selected"]

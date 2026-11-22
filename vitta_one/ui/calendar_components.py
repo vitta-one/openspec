@@ -101,7 +101,7 @@ def month_calendar(
                 rx.center(rx.text(name, size="2", font_weight="700"))
                 for name in ("Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb")
             ],
-            columns="7", gap="1", class_name="vitta-calendar-weekdays",
+            columns="7", gap="0.25rem", class_name="vitta-calendar-weekdays",
         ),
         rx.cond(
             is_loading,
@@ -117,7 +117,7 @@ def month_calendar(
                         show_today=show_today,
                     ),
                 ),
-                columns="7", gap="1", class_name="vitta-calendar-grid",
+                columns="7", gap="0.25rem", class_name="vitta-calendar-grid",
             ),
         ),
         class_name="vitta-availability-calendar",

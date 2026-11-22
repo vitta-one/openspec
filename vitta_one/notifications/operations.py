@@ -81,7 +81,7 @@ def operations_panel():
         rx.text("Aceitação pelo provedor não significa entrega na caixa de entrada. Exibindo até 20 solicitações recentes.", size="2"),
         rx.button("Consultar envios", on_click=S.load, variant="outline"),
         rx.foreach(S.rows, lambda row: rx.flex(rx.text(row["kind"]), rx.text(row["status"]),
-            rx.button("Revisar reenvio", on_click=S.begin_retry(row["id"]), variant="outline"), gap="3", flex_wrap="wrap")),
+            rx.button("Revisar reenvio", on_click=S.begin_retry(row["id"]), variant="outline"), gap="0.75rem", flex_wrap="wrap")),
         rx.cond(S.feedback != "", rx.text(S.feedback, role="status")),
         rx.dialog.root(rx.dialog.content(rx.dialog.title("Revisar reenvio"),
             rx.dialog.description("Somente falha ou configuração ausente permite nova tentativa. Para resultado desconhecido, confira primeiro o provedor. Mensagem já aceita não será reenviada."),

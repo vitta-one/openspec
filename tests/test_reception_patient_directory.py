@@ -57,8 +57,7 @@ def test_directory_returns_only_persisted_identity_and_no_cpf(db):
     rows, total = reception_list_patient_directory(db, token=token)
     assert total == 2
     assert [row["id"] for row in rows] == [first.id, first.id + 1]
-    assert set(rows[0]) == {"id", "name", "phone", "href"}
-    assert rows[0]["href"] == f"/recepcao/pacientes/{first.id}"
+    assert set(rows[0]) == {"id", "name", "phone"}
     assert rows[0]["phone"] == "11987654321"
     assert rows[1]["phone"] == ""
     assert all("cpf" not in row and "symptoms" not in row for row in rows)
@@ -79,6 +78,42 @@ def test_directory_uses_stable_sql_pagination_and_real_counts(db):
 
     empty, empty_total = reception_list_patient_directory(db, token=token, page=10)
     assert empty == [] and empty_total == 23
+
+    page, page_total = reception_list_patient_directory(
+        db, token=token, page=2, size=20
+    )
+    assert len(page) == 3 and page_total == 23
+
+
+def test_directory_filters_phone_availability_using_persisted_values(db):
+    token = _token(db, Role.RECEPCIONISTA)
+    with_phone = _patient(db, 0, name="Com telefone", phone="11987654321")
+    _patient(db, 1, name="Sem telefone")
+    _patient(db, 2, name="Telefone em branco", phone="")
+
+    rows, total = reception_list_patient_directory(
+        db, token=token, phone_filter="WITH_PHONE"
+    )
+    assert (total, [row["id"] for row in rows]) == (1, [with_phone.id])
+
+    rows, total = reception_list_patient_directory(
+        db, token=token, phone_filter="WITHOUT_PHONE"
+    )
+    assert total == 2
+    assert {row["name"] for row in rows} == {
+        "Sem telefone 01", "Telefone em branco 02"
+    }
+
+    rows, total = reception_list_patient_directory(
+        db, token=token, search="Com telefone", phone_filter="WITH_PHONE"
+    )
+    assert total == 1 and rows[0]["id"] == with_phone.id
+
+
+def test_directory_rejects_unknown_phone_filter_after_authorization(db):
+    token = _token(db, Role.RECEPCIONISTA)
+    with pytest.raises(ValueError, match="Filtro de telefone inválido"):
+        reception_list_patient_directory(db, token=token, phone_filter="ALL_PATIENTS")
 
 
 def test_directory_finds_name_cpf_and_normalized_phone(db):
