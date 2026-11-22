@@ -2243,6 +2243,42 @@ button:disabled,
 }
 .vitta-staff-table .vitta-staff-table-row:hover { background: var(--vitta-surface-subtle); }
 .vitta-staff-toolbar { padding-bottom: 0.4rem; }
+.vitta-staff-advanced-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 18rem);
+  gap: 0.75rem;
+  align-items: end;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--vitta-border);
+  border-radius: var(--vitta-radius-panel);
+  background: var(--vitta-surface-subtle);
+}
+.vitta-staff-more-actions {
+  width: 2.75rem;
+  height: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+}
+.vitta-staff-filter-actions .vitta-staff-more-filters {
+  width: 10.625rem;
+  height: 2.875rem;
+  min-height: 2.875rem;
+}
+.vitta-staff-toolbar .vitta-staff-search-input {
+  box-sizing: border-box;
+  height: 2.875rem;
+  min-height: 2.875rem;
+}
+.vitta-staff-toolbar .vitta-select-trigger {
+  box-sizing: border-box;
+  height: 2.875rem;
+  min-height: 2.875rem;
+}
+.vitta-shell .vitta-staff-role-filter > label {
+  display: block;
+  margin: 0;
+  line-height: 1.4rem;
+}
 .vitta-staff-footer,
 .vitta-directory-pagination-footer {
   min-height: 3.5rem;
@@ -3874,6 +3910,18 @@ button:disabled,
   padding-top: calc(1.5rem + .375rem);
   padding-right: 2rem;
 }
+@media (min-width: 1051px) {
+  .vitta-shell--admin:has(.vitta-staff-directory-workspace) .vitta-topbar {
+    min-height: 3.5rem;
+  }
+  .vitta-shell--admin .vitta-page:has(.vitta-staff-directory-workspace) {
+    width: min(100%, 99.5rem);
+    padding-inline: 1.5rem 1.8125rem;
+  }
+  .vitta-staff-directory-workspace .vitta-directory-summary .vitta-summary-metric {
+    min-height: 5.25rem;
+  }
+}
 .vitta-shell--admin .vitta-page:has(.vitta-availability-panel) {
   width: min(100%, 99rem);
   padding-right: 1.125rem;
@@ -4086,7 +4134,7 @@ button:disabled,
 .vitta-summary-metric {
   min-width: 0;
   min-height: 5.1rem;
-  padding: .85rem 1rem;
+  padding: .75rem 1rem .75rem 1.375rem;
   border: 1px solid var(--vitta-border);
   border-radius: var(--vitta-radius-panel);
   background: var(--vitta-surface);
@@ -4103,6 +4151,19 @@ button:disabled,
   color: var(--vitta-primary);
   background: var(--vitta-primary-soft);
 }
+.vitta-specialty-status {
+  min-height: 1.5rem;
+  padding-inline: .625rem !important;
+  border-radius: 999px !important;
+}
+.vitta-specialty-status-dot {
+  width: .5rem;
+  height: .5rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+}
+.vitta-specialty-status-dot--active { background: var(--green-9); }
+.vitta-specialty-status-dot--inactive { background: var(--gray-9); }
 .vitta-summary-metric-icon--red {
   color: var(--vitta-danger);
   background: var(--vitta-danger-soft);

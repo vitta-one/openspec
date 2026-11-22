@@ -45,7 +45,7 @@ def breadcrumb(*items: tuple[str, str | None]) -> rx.Component:
             parts.append(rx.link(label, href=href, class_name="vitta-breadcrumb-link"))
         else:
             parts.append(rx.text(label, font_weight="750", color="var(--vitta-text)", size="2", aria_current="page"))
-    return rx.hstack(*parts, gap="2", flex_wrap="wrap", align="center", class_name="vitta-breadcrumb", role="navigation", aria_label="Trilha de navegação")
+    return rx.hstack(*parts, gap="0.5rem", flex_wrap="wrap", align="center", class_name="vitta-breadcrumb", role="navigation", aria_label="Trilha de navegação")
 
 
 
@@ -757,20 +757,32 @@ def section_panel(
     )
 
 
-def summary_metric(label: str, value, icon_name: str, tone: str = "teal") -> rx.Component:
+def summary_metric(
+    label: str,
+    value,
+    icon_name: str,
+    tone: str = "teal",
+    *,
+    icon_width: str = "3.5rem",
+    icon_height: str = "3.375rem",
+    gap: str = "1.25rem",
+    padding: str | None = None,
+) -> rx.Component:
     """Compact persisted-count card shared by directory screens."""
     tone = tone if tone in {"teal", "red", "amber", "green"} else "teal"
     return rx.flex(
         rx.box(
             rx.icon(icon_name, size=19),
             class_name=f"vitta-summary-metric-icon vitta-summary-metric-icon--{tone}",
+            width=icon_width,
+            height=icon_height,
         ),
         rx.vstack(
-            rx.text(label, size="1", font_weight="650", color="var(--vitta-text-muted)"),
-            rx.text(value, size="5", font_weight="800", class_name="vitta-tabular"),
+            rx.text(label, size="2", font_weight="650", color="var(--vitta-text)"),
+            rx.text(value, size="6", font_weight="800", class_name="vitta-tabular"),
             align="start", spacing="0", min_width="0",
         ),
-        align="center", gap="3", width="100%",
+        align="center", gap=gap, width="100%", padding=padding,
         class_name="vitta-summary-metric",
     )
 

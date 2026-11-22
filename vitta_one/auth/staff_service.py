@@ -124,13 +124,20 @@ def get_employee_detail(db: Session, *, token: str, employee_id: int) -> dict | 
 
 
 def filter_employee_directory(
-    rows: list[dict], *, search: str = "", role: str = "todos"
+    rows: list[dict], *, search: str = "", role: str = "todos",
+    name_status: str = "todos",
 ) -> list[dict]:
-    """Filter an already authorized employee directory without mutating records."""
+    """Filter an authorized employee directory without mutating stored records."""
     term = search.strip().casefold()
     return [
         row for row in rows
         if (role == "todos" or row["role"] == role)
+        and (
+            name_status == "todos"
+            or (name_status == "cadastrado" and bool(row["name"].strip())
+                and row["name"].casefold() != "nome não informado")
+            or (name_status == "pendente" and row["name"].casefold() == "nome não informado")
+        )
         and (
             not term
             or any(

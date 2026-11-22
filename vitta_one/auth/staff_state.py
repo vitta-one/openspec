@@ -82,6 +82,8 @@ class AdminStaffState(rx.State):
     detail_status: str = "loading"
     employee_search: str = ""
     employee_role: str = "todos"
+    employee_name_status: str = "todos"
+    employee_filters_expanded: bool = False
     is_loading: bool = True
     current_page: int = 1
     page_size: int = 10
@@ -115,6 +117,8 @@ class AdminStaffState(rx.State):
         self.detail_status = "loading"
         self.employee_search = ""
         self.employee_role = "todos"
+        self.employee_name_status = "todos"
+        self.employee_filters_expanded = False
         self.current_page = 1
         self.creation_profile = ""
         self.new_name = ""
@@ -135,7 +139,10 @@ class AdminStaffState(rx.State):
     @rx.var
     def filtered_employees(self) -> list[EmployeeRow]:
         return filter_employee_directory(
-            self.employees, search=self.employee_search, role=self.employee_role,
+            self.employees,
+            search=self.employee_search,
+            role=self.employee_role,
+            name_status=self.employee_name_status,
         )
 
     @rx.var
@@ -149,7 +156,11 @@ class AdminStaffState(rx.State):
 
     @rx.var
     def has_employee_filters(self) -> bool:
-        return bool(self.employee_search.strip()) or self.employee_role != "todos"
+        return (
+            bool(self.employee_search.strip())
+            or self.employee_role != "todos"
+            or self.employee_name_status != "todos"
+        )
 
     @rx.var
     def employee_count(self) -> int:
@@ -215,9 +226,19 @@ class AdminStaffState(rx.State):
         self.current_page = 1
 
     @rx.event
+    def toggle_employee_filters(self) -> None:
+        self.employee_filters_expanded = not self.employee_filters_expanded
+
+    @rx.event
+    def update_employee_name_status(self, value: str) -> None:
+        self.employee_name_status = value if value in ("todos", "cadastrado", "pendente") else "todos"
+        self.current_page = 1
+
+    @rx.event
     def clear_employee_filters(self):
         self.employee_search = ""
         self.employee_role = "todos"
+        self.employee_name_status = "todos"
         self.current_page = 1
 
     @rx.event

@@ -23,6 +23,35 @@ def status_badge(is_active, active_label: str, inactive_label: str) -> rx.Compon
     )
 
 
+def specialty_status_badge(is_active) -> rx.Component:
+    """Compact status pill with the same dot cue used in the reference table."""
+    active = rx.badge(
+        rx.hstack(
+            rx.box(class_name="vitta-specialty-status-dot vitta-specialty-status-dot--active", aria_hidden="true"),
+            rx.text("Ativa"),
+            align="center",
+            gap="0.375rem",
+        ),
+        color_scheme="green",
+        high_contrast=True,
+        variant="soft",
+        class_name="vitta-specialty-status",
+    )
+    inactive = rx.badge(
+        rx.hstack(
+            rx.box(class_name="vitta-specialty-status-dot vitta-specialty-status-dot--inactive", aria_hidden="true"),
+            rx.text("Inativa"),
+            align="center",
+            gap="0.375rem",
+        ),
+        color_scheme="gray",
+        high_contrast=True,
+        variant="soft",
+        class_name="vitta-specialty-status",
+    )
+    return rx.cond(is_active, active, inactive)
+
+
 def specialty_row(row) -> rx.Component:
     return rx.box(
         rx.flex(
@@ -94,7 +123,7 @@ def specialty_table_row(row) -> rx.Component:
             ),
         ),
         rx.table.cell(rx.text("—", color="var(--vitta-text-muted)")),
-        rx.table.cell(status_badge(row["is_active"], "Ativa", "Inativa")),
+        rx.table.cell(specialty_status_badge(row["is_active"])),
         rx.table.cell(
             rx.flex(
                 rx.button(
@@ -108,23 +137,26 @@ def specialty_table_row(row) -> rx.Component:
                     on_click=AdminDirectoryState.begin_specialty_edit(row["id"]),
                     disabled=AdminDirectoryState.is_submitting,
                 ),
-                rx.button(
-                    rx.icon(
-                        rx.cond(row["is_active"], "circle_minus", "circle_check"),
-                        size=16, aria_hidden="true",
+                rx.dropdown_menu.root(
+                    rx.dropdown_menu.trigger(
+                        rx.button(
+                            rx.icon("ellipsis_vertical", size=18, aria_hidden="true"),
+                            type="button",
+                            variant="outline",
+                            color_scheme="gray",
+                            size="2",
+                            aria_label="Mais ações para " + row["name"],
+                            class_name="vitta-specialty-table-action",
+                            disabled=AdminDirectoryState.is_submitting,
+                        ),
                     ),
-                    type="button",
-                    variant="outline",
-                    color_scheme=rx.cond(row["is_active"], "gray", "teal"),
-                    size="2",
-                    aria_label=rx.cond(
-                        row["is_active"],
-                        "Desativar especialidade " + row["name"],
-                        "Reativar especialidade " + row["name"],
+                    rx.dropdown_menu.content(
+                        rx.dropdown_menu.item(
+                            rx.cond(row["is_active"], "Desativar", "Reativar"),
+                            on_select=AdminDirectoryState.begin_specialty_status_change(row["id"]),
+                        ),
+                        align="end",
                     ),
-                    class_name="vitta-specialty-table-action",
-                    on_click=AdminDirectoryState.begin_specialty_status_change(row["id"]),
-                    disabled=AdminDirectoryState.is_submitting,
                 ),
                 justify="end",
                 align="center",
@@ -652,7 +684,7 @@ def professional_dialog() -> rx.Component:
                 ),
                 justify="between",
                 align="center",
-                gap="3",
+                gap="0.75rem",
                 width="100%",
             ),
             rx.dialog.description(
@@ -755,7 +787,7 @@ def _professional_specialties(row) -> rx.Component:
             rx.fragment(),
         ),
         align="center",
-        gap="2",
+        gap="0.5rem",
         flex_wrap="wrap",
     )
 
@@ -820,7 +852,7 @@ def _professional_actions(row) -> rx.Component:
             ),
         ),
         align="center",
-        gap="2",
+        gap="0.5rem",
         justify="end",
     )
 
@@ -866,7 +898,7 @@ def professional_mobile_row(row) -> rx.Component:
                 spacing="1", align="start", min_width="0", flex="1",
             ),
             status_badge(row["is_active"], "Ativo", "Inativo"),
-            justify="between", align="start", gap="2", width="100%",
+            justify="between", align="start", gap="0.5rem", width="100%",
         ),
         _professional_specialties(row),
         rx.flex(
@@ -876,7 +908,7 @@ def professional_mobile_row(row) -> rx.Component:
             ),
             _professional_actions(row),
             justify="between", align="center",
-            width="100%", gap="2", flex_wrap="wrap",
+            width="100%", gap="0.5rem", flex_wrap="wrap",
         ),
         spacing="3",
         width="100%",
@@ -1014,7 +1046,7 @@ def qa_receptionist_panel() -> rx.Component:
                             ), flex="1", min_width="0",
                         ),
                         direction=rx.breakpoints(initial="column", md="row"),
-                        gap="3", width="100%",
+                        gap="0.75rem", width="100%",
                     ),
                     rx.button(
                         "Criar login de recepcionista", type="submit", color_scheme="teal",
@@ -1397,7 +1429,7 @@ def _directory_pagination(*, is_professional: bool) -> rx.Component:
                         on_change=AdminDirectoryState.update_directory_page_size,
                         size="2",
                     ),
-                    gap="2", align="center",
+                    gap="0.5rem", align="center",
                 ),
                 rx.hstack(
                     rx.button(
@@ -1422,13 +1454,13 @@ def _directory_pagination(*, is_professional: bool) -> rx.Component:
                         disabled=page >= count,
                         aria_label="Próxima página",
                     ),
-                    gap="2", align="center",
+                    gap="0.5rem", align="center",
                     class_name="vitta-directory-pagination-controls",
                 ),
-                gap="3", align="center", flex_wrap="wrap",
+                gap="0.75rem", align="center", flex_wrap="wrap",
                 class_name="vitta-directory-footer-controls",
             ),
-            justify="between", gap="3", align="center", flex_wrap="wrap",
+            justify="between", gap="0.75rem", align="center", flex_wrap="wrap",
             width="100%", class_name="vitta-directory-pagination-footer",
         ),
         rx.fragment(),
@@ -1461,12 +1493,24 @@ def specialties_management_workspace() -> rx.Component:
                     rx.spinner(size="2"),
                     rx.text("Carregando especialidades…", size="2",
                             color="var(--vitta-text-muted)"),
-                    gap="3", min_height="5rem", width="100%", role="status",
+                    gap="0.75rem", min_height="5rem", width="100%", role="status",
                 ),
                 rx.grid(
-                    summary_metric("Total de especialidades", AdminDirectoryState.specialty_count, "stethoscope"),
-                    summary_metric("Ativas", AdminDirectoryState.active_specialty_count, "circle_check"),
-                    summary_metric("Inativas", AdminDirectoryState.inactive_specialty_count, "circle_x"),
+                    summary_metric(
+                        "Total de especialidades", AdminDirectoryState.specialty_count, "stethoscope",
+                        icon_width="3.875rem", icon_height="3.125rem",
+                        gap="1.25rem", padding="0.75rem 1rem 0.75rem 1.5rem",
+                    ),
+                    summary_metric(
+                        "Ativas", AdminDirectoryState.active_specialty_count, "circle_check",
+                        icon_width="3.875rem", icon_height="3.125rem",
+                        gap="1.25rem", padding="0.75rem 1rem 0.75rem 1.5rem",
+                    ),
+                    summary_metric(
+                        "Inativas", AdminDirectoryState.inactive_specialty_count, "circle_x",
+                        icon_width="3.875rem", icon_height="3.125rem",
+                        gap="1.25rem", padding="0.75rem 1rem 0.75rem 1.5rem",
+                    ),
                     columns=rx.breakpoints(initial="1", sm="3"),
                     gap="0.75rem", width="100%", class_name="vitta-directory-summary",
                 ),
@@ -1621,7 +1665,7 @@ def professionals_management_workspace() -> rx.Component:
                     align="center",
                     width="100%",
                     flex_wrap="wrap",
-                    gap="2",
+                    gap="0.5rem",
                 ),
                 rx.cond(
                     AdminDirectoryState.is_loading,
@@ -1778,7 +1822,7 @@ def professional_status_dialog() -> rx.Component:
                     disabled=AdminDirectoryState.is_submitting,
                     on_click=AdminDirectoryState.confirm_professional_status_change,
                 ),
-                justify="end", gap="3", flex_wrap="wrap",
+                justify="end", gap="0.75rem", flex_wrap="wrap",
                 margin_top="1.25rem",
             ),
             class_name="vitta-dialog-content",
@@ -1816,7 +1860,7 @@ def professional_registration_workspace() -> rx.Component:
                                 loading=AdminDirectoryState.is_submitting,
                             ),
                             direction=rx.breakpoints(initial="column-reverse", sm="row"),
-                            justify="end", align="center", gap="3", width="100%",
+                            justify="end", align="center", gap="0.75rem", width="100%",
                         ),
                         spacing="4", align="stretch", width="100%",
                     ),
@@ -1850,7 +1894,7 @@ def medical_registration_form_panel() -> rx.Component:
                         high_contrast=True, disabled=AdminDirectoryState.is_submitting,
                         loading=AdminDirectoryState.is_submitting, min_height="2.85rem",
                     ),
-                    justify="end", align="center", gap="3", flex_wrap="wrap", width="100%",
+                    justify="end", align="center", gap="0.75rem", flex_wrap="wrap", width="100%",
                 ),
                 spacing="5", align="stretch", width="100%",
                 class_name="vitta-form-panel",

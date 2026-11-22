@@ -19,7 +19,7 @@ def _admin_destination(title: str, description: str, href: str, icon: str) -> rx
                 spacing="1", align="start", flex="1", min_width="0",
             ),
             rx.icon("chevron_right", size=19, color="var(--vitta-text-muted)", flex_shrink="0"),
-            align="center", gap="3", width="100%",
+            align="center", gap="0.75rem", width="100%",
         ),
         href=href,
         class_name="vitta-admin-action",
@@ -34,7 +34,7 @@ def _admin_group(title: str, *destinations: rx.Component) -> rx.Component:
         rx.hstack(
             rx.icon(icon, size=22, color="var(--vitta-primary)"),
             rx.heading(title, size="4", class_name="vitta-admin-hub-heading"),
-            align="center", gap="3", width="100%",
+            align="center", gap="0.75rem", width="100%",
         ),
         rx.vstack(
             *destinations,
@@ -107,7 +107,7 @@ def admin_hub_workspace() -> rx.Component:
                 rx.center(
                     rx.spinner(size="3", color="var(--vitta-primary)"),
                     rx.text("Carregando indicadores da clínica…", size="2", color="var(--vitta-text-muted)"),
-                    gap="3",
+                    gap="0.75rem",
                     min_height="8rem",
                     width="100%",
                     role="status",
@@ -164,13 +164,13 @@ def admin_hub_workspace() -> rx.Component:
                     _admin_quick_link("Profissionais", "/admin/profissionais", "users_round"),
                     _admin_quick_link("Novo funcionário", "/admin/funcionarios/novo", "user_plus"),
                     _admin_quick_link("Configurações", "/admin/configuracoes", "settings"),
-                    gap="2",
+                    gap="0.5rem",
                     flex_wrap="wrap",
                     justify="end",
                 ),
                 justify="between",
                 align="center",
-                gap="4",
+                gap="1rem",
                 flex_wrap="wrap",
                 width="100%",
                 class_name="vitta-admin-quick-access",
@@ -196,7 +196,7 @@ def _admin_metric(label: str, value, icon: str, href: str) -> rx.Component:
                 min_width="0",
             ),
             rx.icon("chevron_right", size=19, color="var(--vitta-text-muted)"),
-            gap="3",
+            gap="0.75rem",
             align="center",
             width="100%",
         ),
@@ -208,7 +208,7 @@ def _admin_metric(label: str, value, icon: str, href: str) -> rx.Component:
 
 def _admin_quick_link(label: str, href: str, icon: str) -> rx.Component:
     return rx.link(
-        rx.hstack(rx.icon(icon, size=17), rx.text(label, font_weight="700"), gap="2", align="center"),
+        rx.hstack(rx.icon(icon, size=17), rx.text(label, font_weight="700"), gap="0.5rem", align="center"),
         href=href,
         class_name="vitta-admin-quick-link",
     )
@@ -234,7 +234,7 @@ def _employee_table_row(employee) -> rx.Component:
                     aria_hidden="true",
                 ),
                 rx.text(employee["name"], font_weight="700", overflow_wrap="anywhere"),
-                align="center", gap="3", min_width="0",
+                align="center", gap="0.75rem", min_width="0",
             )
         ),
         rx.table.cell(
@@ -248,7 +248,29 @@ def _employee_table_row(employee) -> rx.Component:
             rx.badge(employee["access_status"], color_scheme="green", variant="soft",
                      high_contrast=True)
         ),
-        rx.table.cell(_employee_details_link(employee)),
+        rx.table.cell(
+            rx.hstack(
+                _employee_details_link(employee),
+                rx.dropdown_menu.root(
+                    rx.dropdown_menu.trigger(
+                        rx.button(
+                            rx.icon("ellipsis_vertical", size=18, aria_hidden="true"),
+                            type="button", variant="outline", color_scheme="gray", size="2",
+                            aria_label="Ações do funcionário",
+                            class_name="vitta-staff-more-actions",
+                        ),
+                    ),
+                    rx.dropdown_menu.content(
+                        rx.dropdown_menu.item(
+                            "Copiar e-mail",
+                            on_select=rx.set_clipboard(employee["email"]),
+                        ),
+                        align="end",
+                    ),
+                ),
+                align="center", justify="end", gap="0.5rem", width="100%",
+            ),
+        ),
         class_name="vitta-staff-table-row",
     )
 
@@ -267,7 +289,7 @@ def _employee_mobile_row(employee) -> rx.Component:
             spacing="1", align="start", min_width="0",
         ),
         _employee_details_link(employee),
-        direction="column", align="start", gap="2",
+        direction="column", align="start", gap="0.5rem",
         class_name="vitta-staff-mobile-row",
     )
 
@@ -377,7 +399,7 @@ def admin_staff_type_workspace() -> rx.Component:
                     rx.spinner(size="2"),
                     rx.text("Carregando indicadores da equipe…", size="2",
                             color="var(--vitta-text-muted)"),
-                    gap="3", min_height="5rem", width="100%", role="status",
+                    gap="0.75rem", min_height="5rem", width="100%", role="status",
                 ),
                 rx.grid(
                     summary_metric("Total de funcionários", AdminStaffState.employee_count, "users_round"),
@@ -393,79 +415,126 @@ def admin_staff_type_workspace() -> rx.Component:
         ),
         section_panel(
             rx.vstack(
-                rx.box(
-                    rx.heading("Equipe cadastrada", size="4"),
-                    rx.text(
-                        "Contas médicas e de recepção, com acesso por perfil.",
-                        color="var(--vitta-text-muted)", size="2", margin_top="0.35rem",
-                    ),
-                    width="100%",
-                ),
-                rx.grid(
+                rx.vstack(
                     rx.box(
-                        rx.el.label(
-                            "Buscar funcionário por nome, e-mail ou perfil",
-                            html_for="staff-directory-search",
-                            class_name="vitta-sr-only",
+                        rx.heading("Equipe cadastrada", size="4"),
+                        rx.text(
+                            "Contas médicas e de recepção, com acesso por perfil.",
+                            color="var(--vitta-text-muted)", size="2", margin_top="0.35rem",
                         ),
-                        rx.flex(
-                            rx.box(
-                                rx.icon("search", size=18, aria_hidden="true"),
-                                rx.el.input(
-                                    id="staff-directory-search", type="search",
-                                    placeholder="Buscar por nome, e-mail ou perfil...",
-                                    aria_label="Buscar funcionário por nome, e-mail ou perfil",
-                                    class_name="vitta-input vitta-staff-search-input",
-                                    value=AdminStaffState.employee_search,
-                                    on_change=AdminStaffState.update_employee_search,
-                                    width="100%", min_width="0",
-                                ),
-                                class_name="vitta-staff-search-control",
+                        width="100%",
+                    ),
+                    rx.grid(
+                        rx.box(
+                            rx.el.label(
+                                "Buscar funcionário por nome, e-mail ou perfil",
+                                html_for="staff-directory-search",
+                                class_name="vitta-sr-only",
                             ),
+                            rx.flex(
+                                rx.box(
+                                    rx.icon("search", size=18, aria_hidden="true"),
+                                    rx.el.input(
+                                        id="staff-directory-search", type="search",
+                                        placeholder="Buscar por nome, e-mail ou perfil...",
+                                        aria_label="Buscar funcionário por nome, e-mail ou perfil",
+                                        class_name="vitta-input vitta-staff-search-input",
+                                        value=AdminStaffState.employee_search,
+                                        on_change=AdminStaffState.update_employee_search,
+                                        width="100%", min_width="0",
+                                    ),
+                                    class_name="vitta-staff-search-control",
+                                ),
+                                rx.cond(
+                                    AdminStaffState.employee_search != "",
+                                    rx.button("Limpar busca", type="button", variant="ghost",
+                                              color_scheme="teal", size="2",
+                                              on_click=AdminStaffState.update_employee_search("")),
+                                    rx.fragment(),
+                                ),
+                                gap="0.5rem", align="center", width="100%",
+                            ),
+                            min_width="0",
+                        ),
+                        rx.box(
+                            field_label("Filtrar por perfil", "staff-directory-role"),
+                            rx.select.root(
+                                rx.select.trigger(
+                                    id="staff-directory-role", width="100%",
+                                    class_name="vitta-select-trigger",
+                                    aria_label="Filtrar funcionários por perfil",
+                                ),
+                                rx.select.content(
+                                    rx.select.item("Todos os perfis", value="todos"),
+                                    rx.select.item("Médico", value="MEDICO"),
+                                    rx.select.item("Recepcionista", value="RECEPCIONISTA"),
+                                    position="popper",
+                                ),
+                                value=AdminStaffState.employee_role,
+                                on_change=AdminStaffState.update_employee_role,
+                                size="3",
+                            ),
+                            width="100%",
+                        class_name="vitta-staff-role-filter",
+                        ),
+                        rx.hstack(
                             rx.cond(
-                                AdminStaffState.employee_search != "",
-                                rx.button("Limpar busca", type="button", variant="ghost",
+                                AdminStaffState.has_employee_filters,
+                                rx.button("Limpar filtros", type="button", variant="outline",
                                           color_scheme="teal", size="2",
-                                          on_click=AdminStaffState.update_employee_search("")),
+                                          on_click=AdminStaffState.clear_employee_filters),
                                 rx.fragment(),
                             ),
-                            gap="2", align="center", width="100%",
-                        ),
-                        min_width="0",
-                    ),
-                    rx.box(
-                        field_label("Filtrar por perfil", "staff-directory-role"),
-                        rx.select.root(
-                            rx.select.trigger(
-                                id="staff-directory-role", width="100%",
-                                class_name="vitta-select-trigger",
-                                aria_label="Filtrar funcionários por perfil",
+                            rx.button(
+                                rx.hstack(
+                                    rx.icon("list_filter", size=16, aria_hidden="true"),
+                                    rx.text("Mais filtros"),
+                                    align="center", gap="0.5rem",
+                                ),
+                                type="button", variant="outline", color_scheme="teal", size="2",
+                                on_click=AdminStaffState.toggle_employee_filters,
+                                aria_expanded=AdminStaffState.employee_filters_expanded,
+                                class_name="vitta-staff-more-filters",
                             ),
-                            rx.select.content(
-                                rx.select.item("Todos os perfis", value="todos"),
-                                rx.select.item("Médico", value="MEDICO"),
-                                rx.select.item("Recepcionista", value="RECEPCIONISTA"),
-                                position="popper",
-                            ),
-                            value=AdminStaffState.employee_role,
-                            on_change=AdminStaffState.update_employee_role,
-                            size="3",
+                            gap="0.5rem", align="center", justify="end", width="100%",
+                            class_name="vitta-staff-filter-actions",
                         ),
-                        width=rx.breakpoints(initial="100%", sm="14rem"),
+                        columns=rx.breakpoints(
+                            initial="1",
+                            xl="minmax(0, 1fr) 18.1875rem 10.875rem",
+                        ),
+                        gap="1.25rem", align="end", width="100%",
+                        class_name="vitta-staff-toolbar",
                     ),
                     rx.cond(
-                        AdminStaffState.has_employee_filters,
-                        rx.button("Limpar filtros", type="button", variant="outline",
-                                  color_scheme="teal", size="2",
-                                  on_click=AdminStaffState.clear_employee_filters),
+                        AdminStaffState.employee_filters_expanded,
+                        rx.box(
+                            rx.box(
+                                field_label("Cadastro do nome", "staff-directory-name-status"),
+                                rx.select.root(
+                                    rx.select.trigger(
+                                        id="staff-directory-name-status", width="100%",
+                                        class_name="vitta-select-trigger",
+                                        aria_label="Filtrar por cadastro do nome",
+                                    ),
+                                    rx.select.content(
+                                        rx.select.item("Todos os cadastros", value="todos"),
+                                        rx.select.item("Com nome cadastrado", value="cadastrado"),
+                                        rx.select.item("Nome não informado", value="pendente"),
+                                        position="popper",
+                                    ),
+                                    value=AdminStaffState.employee_name_status,
+                                    on_change=AdminStaffState.update_employee_name_status,
+                                    size="3",
+                                ),
+                            ),
+                            id="staff-directory-advanced-filters",
+                            class_name="vitta-staff-advanced-filters",
+                        ),
                         rx.fragment(),
                     ),
-                    columns=rx.breakpoints(
-                        initial="1",
-                        xl="minmax(0, 1fr) minmax(14rem, 17rem) auto",
-                    ),
-                    gap="0.75rem", align="end", width="100%",
-                    class_name="vitta-staff-toolbar",
+                    spacing="0", align="stretch", width="100%",
+                    class_name="vitta-staff-directory-controls",
                 ),
                 _staff_directory_results(),
                 rx.cond(
@@ -517,22 +586,26 @@ def admin_staff_type_workspace() -> rx.Component:
                                     disabled=AdminStaffState.current_page >= AdminStaffState.total_pages,
                                     aria_label="Próxima página",
                                 ),
-                                gap="2", align="center",
+                                gap="0.5rem", align="center",
                                 class_name="vitta-staff-pagination-controls",
                             ),
-                            gap="2", align="center",
+                            gap="0.5rem", align="center",
                             class_name="vitta-staff-footer-controls",
                         ),
-                        justify="between", gap="3", align="center",
+                        justify="between", gap="0.75rem", align="center",
                         flex_wrap="wrap", width="100%",
                         class_name="vitta-staff-footer",
                     ),
                     rx.fragment(),
                 ),
                 spacing="4", align="stretch", width="100%",
-            )
+            ),
+            class_name="vitta-staff-directory-panel",
+            padding="1.375rem",
+            margin_top="0.25rem",
         ),
         spacing="4", align="stretch", width="100%",
+        class_name="vitta-staff-directory-workspace",
     )
 
 
@@ -617,7 +690,7 @@ def _employee_detail_content() -> rx.Component:
                     ),
                     direction=rx.breakpoints(initial="column", sm="row"),
                     align="start",
-                    gap="3",
+                    gap="0.75rem",
                     width="100%",
                 ),
                 rx.separator(),
@@ -647,7 +720,7 @@ def _employee_detail_content() -> rx.Component:
                         ),
                         direction=rx.breakpoints(initial="column", md="row"),
                         align="start",
-                        gap="4",
+                        gap="1rem",
                         width="100%",
                     ),
                     rx.cond(
