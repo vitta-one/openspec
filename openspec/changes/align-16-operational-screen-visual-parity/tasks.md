@@ -86,3 +86,13 @@
 - [x] Regerar a matriz local de seis viewports: **96/96 PASS**, sem overflow horizontal; validar OpenSpec strict, compileall, `reflex compile --dry` e `git diff --check`.
 - [ ] Repetir no CI Chromium completo do SHA final (atualização funcional, segurança, teclado, responsividade e uploads de evidência) e inspecionar suas capturas antes da aprovação do código.
 - [ ] Paridade integral continua pendente: **0/16**. A tela 09 melhorou a geometria, mas ainda contém dados/ícones/descrições diferentes da referência; não atribuir fidelidade total.
+
+## Continuação QA27 — espaçamento Reflex e tela 07 — 21–22/11/2026
+
+- [x] Substituir 143 declarações `gap` numéricas inválidas por unidades CSS explícitas e adicionar teste contra regressão.
+- [x] Refinar barra de busca/filtros e menu de ações real da tela 07, medindo caixas do DOM a 1768×890; melhorar diff de 9,84% para 8,57% sem alterar os registros da fixture.
+- [x] Regerar e inspecionar 96 capturas, 16 comparativos sem máscaras e quatro folhas; métricas por rota atualizadas no relatório de QA.
+- [x] Executar testes direcionados: **12 Python**, **1 Chromium na tela 07** e **1 Chromium na tela 09** aprovados; suíte Python sem PostgreSQL: **535 passed, 47 skipped**.
+- [ ] Repetir a suíte completa PostgreSQL em runner com espaço suficiente. A tentativa local foi impedida por falta de disco ao criar tabelas, sem resultado aprovável.
+- [ ] Aprovar paridade visual integral nas 16 telas. Status permanece **0/16**, `REVIEW_REQUIRED`; diferenças residuais continuam registradas, sem alterar dados clínicos/financeiros para imitar referências.
+- [ ] Após commit e push, confirmar todos os workflows CI do SHA final e atualizar a PR com resultados reais.

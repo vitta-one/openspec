@@ -326,3 +326,52 @@ A tabela agora usa as proporções da referência para alinhar coluna de especia
 A matriz local com o código atualizado voltou a gerar **96/96 capturas em seis viewports**, sem overflow horizontal; o guard da rota 09 agora confere geometria da tabela, sexta linha integral e rodapé visível. Como as referências não estavam no caminho que o runner local procura, esse manifesto local comprova navegação/captura e os comparativos de `/tmp` foram gerados manualmente contra o PNG original. OpenSpec strict (**valid**), `compileall`, `reflex compile --dry` e `git diff --check` passaram. A fidelidade integral permanece **0/16**; nenhuma das outras 15 telas foi aprovada nesta rodada.
 
 Nenhum registro clínico/financeiro foi criado ou alterado para imitar o mockup. A diferença de 14 versus 13 no CI foi corrigida no teste, não na fixture. O follow-up `60e3b4c2aa7b0a256752201be2411cf33c81b874` está no CI (**Chromium run 44958157881; Python/Reflex run 44958157941; Validate run 44958157919**). Ainda é necessário conferir os três resultados, comparar e inspecionar o artifact desse SHA e registrar qualquer regressão antes de aprovar o código.
+
+## Continuação QA27 — espaçamento compartilhado e equipe — 21–22/11/2026
+
+Uma auditoria das composições Flex/Grid encontrou **143 declarações Reflex `gap` com valores numéricos sem unidade**. No DOM Chromium, esses valores eram CSS inválido e viravam `normal`, eliminando espaços entre alguns elementos. Os valores foram convertidos para unidades CSS explícitas em múltiplos de 4 px, nas telas e componentes afetados. O teste `tests/test_ui_spacing_tokens.py` agora impede a volta de `gap` numérico sem unidade.
+
+Na tela 07, a barra de busca/filtros e as ações das linhas foram medidas e refinadas a 1768×890:
+
+| Elemento | X | Y | Largura | Altura |
+|---|---:|---:|---:|---:|
+| Busca de funcionário | 175 | 450,97 | 988 | 46 |
+| Seletor de perfil | 1183 | 450,97 | 291 | 46 |
+| Mais filtros | 1498 | 450,97 | 170 | 46 |
+| Tabela | 175 | 519,36 | 1493 | — |
+
+O filtro avançado deriva o estado do nome persistido, e o menu da linha oferece a ação funcional de copiar o e-mail. O teste Chromium seleciona “Nome não informado” e confere o conteúdo real da área de transferência. A captura 07 caiu de **9,84% / MAE 8,98** para **8,57% / MAE 7,98** no limiar RGB L1≥36. A fixture continua com quatro funcionários contra três mostrados na referência, diferença de conteúdo, não uma mudança de geometria.
+
+O bundle da branch foi recapturado depois dessas alterações: **96/96** combinações de rota e viewport, sem falha de navegação ou overflow horizontal. Os 16 comparativos sem máscaras, quatro folhas e a composição individual da tela 07 foram reinspecionados. Métricas atuais:
+
+| Tela | Pixels RGB L1≥36 | MAE/canal | Resíduo visual registrado |
+|---|---:|---:|---|
+| 01 `/recepcao` | 14,09% | 11,13 | Métricas, nomes e conteúdo operacional diferem. |
+| 02 `/recepcao/agenda` | 13,41% | 10,42 | Datas e distribuição das consultas diferem. |
+| 03 `/recepcao/pacientes` | 5,68% | 8,10 | Nomes e quantidade de pacientes diferem. |
+| 04 `/recepcao/pacientes/novo` | 7,20% | 8,05 | Arte, texto, ícones e rasterização ainda diferem. |
+| 05 `/recepcao/fila` | 10,39% | 11,44 | A fixture tem uma entrada; a referência mostra estado vazio. |
+| 06 `/admin` | 13,67% | 10,15 | Contagens e conteúdo administrativo diferem. |
+| 07 `/admin/funcionarios` | 8,57% | 7,98 | A geometria da toolbar melhorou; a fixture mostra quatro funcionários, a referência três. |
+| 08 `/admin/funcionarios/novo` | 7,95% | 8,23 | Formulário inicial, ilustração e textos diferem. |
+| 09 `/admin/especialidades` | 8,95% | 8,90 | A fixture mostra 13 especialidades, a referência seis. |
+| 10 `/admin/horarios` | 7,16% | 6,68 | Nenhum profissional foi selecionado na sessão QA. |
+| 11 `/admin/configuracoes` | 10,33% | 10,40 | A clínica QA não tem configuração persistida. |
+| 12 `/financeiro` | 9,64% | 9,37 | Não há cobranças elegíveis na fixture. |
+| 13 `/medico` | 8,08% | 8,03 | A fila compartilhada de QA difere do estado vazio da referência. |
+| 14 `/medico/agenda` | 6,84% | 7,63 | O médico QA não tem consultas vinculadas. |
+| 15 `/medico/pacientes` | 4,14% | 5,53 | O médico QA não tem pacientes vinculados. |
+| 16 `/medico/prontuarios` | 5,15% | 5,94 | O médico QA não tem prontuário ativo. |
+
+Média da rodada: **8,83%** de pixels com RGB L1≥36 e **8,62 MAE/canal**. Os resultados permanecem diagnósticos, não uma nota de layout: **0/16 telas aprovadas integralmente**, `REVIEW_REQUIRED`. Dados e estados diferentes, texto, ilustrações e pequenas diferenças visuais persistem; nada foi mascarado e nenhum registro clínico/financeiro foi alterado para reduzir o diff.
+
+### Validação desta continuação
+
+- `tests/test_ui_spacing_tokens.py` e `tests/test_staff_display_name.py`: **12 passed**.
+- Chromium em `/admin/funcionarios` (filtro avançado e copiar e-mail): **1 passed**.
+- Chromium em `/admin/especialidades` (menu de ações e espaçamento das métricas): **1 passed**.
+- Suíte Python sem PostgreSQL, mantendo timezone e TTL clínico configurados: **535 passed, 47 skipped**, um aviso de depreciação legado. Os skips são os cenários explicitamente dependentes de PostgreSQL.
+- Uma tentativa de suíte completa no PostgreSQL descartável existente foi interrompida por `psycopg.errors.DiskFull` ao criar tabelas/índices: **549 passed, 28 errors, 3 failed, 2 skipped**. Esse resultado não é aprovado como execução completa; CI limpa ainda precisa executar a suíte PostgreSQL.
+- A criação de um segundo contêiner PostgreSQL não coube no disco. Nenhum banco, contêiner ou volume preexistente foi removido.
+
+A matriz de screenshots foi capturada antes da tentativa de testes que escreve no banco. Referências, screenshots e comparativos permanecem fora do Git em `qa-artifacts/operational-reference/`; não foi feito merge, deploy ou acesso a banco de produção.
