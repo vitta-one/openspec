@@ -25,8 +25,6 @@ O sistema MUST permitir que um usuário com role Recepcionista cadastre um pacie
 - **WHEN** a Recepcionista deixa o telefone vazio ou informa um telefone preenchido com comprimento diferente de 10 ou 11 dígitos
 - **THEN** o telefone ausente é aceito e o telefone inválido é rejeitado sem persistir o paciente
 
-
-
 ### Requirement: Busca rápida de pacientes pela Recepção
 O sistema MUST permitir que uma Recepcionista autenticada localize cadastros por nome, telefone ou CPF e MUST retornar somente identificador, nome e telefone. A busca MUST exigir role Recepcionista, ter limite de resultados e MUST NOT expor prontuário ou conteúdo clínico.
 
@@ -166,3 +164,192 @@ A visualização local de pacientes do Administrador MUST permitir selecionar no
 #### Scenario: Permissões permanecem intactas
 - **WHEN** o Administrador usa a barra contextual do preview
 - **THEN** nenhuma ação exclusiva de Recepção ou Médico é disponibilizada ou executada e a autorização server-side existente permanece inalterada
+
+### Requirement: Edição cadastral isolada na ficha de paciente
+A Recepção MUST disponibilizar uma ação específica de edição cadastral, separada do convite de acesso e do agendamento. A interface MUST manter um rascunho independente até a persistência, atualizar nome e telefone autorizados e preservar CPF e vínculo com conta.
+
+#### Scenario: Atualização válida
+- **WHEN** a recepcionista autorizada altera o nome ou telefone e confirma o salvamento
+- **THEN** o servidor valida a sessão, o paciente e os campos, persiste os valores e a ficha exibe os dados atualizados
+
+#### Scenario: Formulário inválido
+- **WHEN** nome é vazio/composto por espaços ou telefone informado é inválido
+- **THEN** o servidor rejeita a alteração, a interface mantém os valores digitados e apresenta mensagem de erro contextual
+
+#### Scenario: Cancelamento
+- **WHEN** a recepcionista fecha o modal antes de salvar
+- **THEN** o cadastro persistido permanece inalterado e a ficha não exibe valores provisórios
+
+#### Scenario: Estado ou identidade adulterados
+- **WHEN** a sessão perde a autorização ou o identificador de paciente não corresponde à ficha aberta
+- **THEN** nenhuma alteração é persistida e a operação é rejeitada
+
+### Requirement: O diretório da Recepção abre a ficha do paciente da linha selecionada
+A lista de pacientes da Recepção MUST gerar a ação de detalhes a partir do identificador persistido da mesma linha que apresenta nome e telefone. Após ativar a ação, a rota e a ficha carregada MUST representar essa identidade e MUST continuar sujeitas à autorização server-side da Recepção.
+
+#### Scenario: Abrir detalhes de um resultado da busca
+- **WHEN** uma Recepcionista autenticada pesquisa pacientes e ativa “Ver detalhes” em uma linha
+- **THEN** a rota de destino usa o identificador persistido dessa linha e a ficha exibe o nome do mesmo cadastro
+
+#### Scenario: Sessão ou role sem acesso
+- **WHEN** a sessão expira ou uma identidade sem role Recepcionista solicita a rota da ficha
+- **THEN** o servidor nega o acesso conforme a autorização existente e não retorna dados do paciente
+
+### Requirement: O diretório permite filtrar a disponibilidade de telefone e escolher o tamanho da página
+A interface MUST oferecer um filtro recolhível de disponibilidade de telefone e tamanhos de página de 10, 20 e 30 registros. A busca, o filtro e a paginação MUST continuar aplicados no servidor após revalidar a role Recepcionista; alterar busca, filtro ou tamanho MUST reiniciar na primeira página.
+
+#### Scenario: Filtrar cadastros com telefone
+- **WHEN** uma Recepcionista escolhe “Com telefone” no painel “Mais filtros”
+- **THEN** o servidor retorna somente pacientes persistidos com telefone não vazio e atualiza a contagem autorizada
+
+#### Scenario: Filtrar cadastros sem telefone
+- **WHEN** uma Recepcionista escolhe “Sem telefone” no painel “Mais filtros”
+- **THEN** o servidor retorna somente pacientes persistidos sem telefone e preserva a pesquisa textual aplicada
+
+#### Scenario: Ajustar tamanho da página
+- **WHEN** uma Recepcionista seleciona 20 ou 30 itens por página
+- **THEN** o servidor busca o tamanho solicitado, recalcula o total de páginas e exibe a primeira página
+
+### Requirement: Diretório operacional protegido de pacientes da Recepção
+O sistema MUST oferecer à role Recepcionista uma listagem compacta dos pacientes persistidos com nome, telefone quando cadastrado e ação explícita de navegação à ficha individual. A leitura MUST revalidar a sessão e a role no servidor, MUST NOT incluir CPF em claro nem conteúdo clínico na projeção e MUST utilizar paginação persistente com ordenação determinística.
+
+#### Scenario: Lista de pacientes cadastrados
+- **WHEN** a Recepcionista autenticada acessa a página de pacientes
+- **THEN** o sistema exibe somente pacientes persistidos, em tabela semântica com navegação "Ver detalhes" para a ficha autorizada
+
+#### Scenario: Página com múltiplos registros
+- **WHEN** a base possui mais registros que o tamanho de página
+- **THEN** o servidor retorna somente a página solicitada, total real e ordenação estável por nome e identificador
+
+#### Scenario: Página única
+- **WHEN** os resultados cabem em uma página
+- **THEN** a interface informa a quantidade com singular ou plural correto e oculta os controles de paginação
+
+#### Scenario: Busca contextual
+- **WHEN** a Recepcionista submete um nome, CPF ou telefone
+- **THEN** o servidor normaliza a entrada, filtra somente registros autorizados e retorna à primeira página sem consultar a cada tecla
+
+#### Scenario: Pesquisa vazia ou sem resultados
+- **WHEN** a pesquisa não encontra resultados ou ainda não existem pacientes
+- **THEN** a interface distingue esses estados e permite limpar a pesquisa ou iniciar o cadastro já existente
+
+#### Scenario: Falha ao carregar
+- **WHEN** a consulta falha por motivo operacional
+- **THEN** os resultados desatualizados deixam de ser exibidos e a interface mostra mensagem acessível e ação para tentar novamente
+
+#### Scenario: Sessão expirada ou role incompatível
+- **WHEN** uma sessão expira ou um usuário de outro perfil solicita a listagem
+- **THEN** o servidor nega a leitura, limpa os dados pessoais armazenados no State e direciona para o fluxo de autenticação ou acesso negado
+
+#### Scenario: Responsividade e teclado
+- **WHEN** a Recepcionista usa um dispositivo de largura reduzida ou navega por teclado
+- **THEN** nome, contato e ação principal permanecem utilizáveis sem transbordo horizontal do documento, com labels e foco visível
+
+### Requirement: Ficha operacional autorizada do paciente
+A Recepção SHALL consultar na ficha individual somente identidade e registros operacionais de um paciente persistido, incluindo CPF mascarado, telefone opcional, consultas futuras e anteriores, entrada ativa e movimentações encerradas na fila. O servidor SHALL revalidar a sessão e a role antes de cada leitura e não SHALL retornar sintomas, diagnósticos, prescrições ou outras informações clínicas dessa projeção.
+
+#### Scenario: Recepcionista abre paciente existente
+- **WHEN** uma recepcionista autenticada abre a ficha de um paciente persistido
+- **THEN** o sistema mostra identificação mascarada, próximas consultas, situação da fila e histórico limitado aos registros desse paciente
+- **AND** não envia CPF completo nem campos clínicos à interface
+
+#### Scenario: Paciente inexistente ou acesso indevido
+- **WHEN** o ID da rota é inválido, o paciente não existe ou a sessão não está autorizada
+- **THEN** o sistema não revela dados pessoais
+- **AND** apresenta um estado não encontrado ou redireciona para autenticação/acesso negado conforme o caso
+
+#### Scenario: Histórico grande ou ausência de dados
+- **WHEN** o paciente possui mais de seis consultas anteriores
+- **THEN** a Recepção pode navegar pelas páginas do histórico ordenadas por data
+- **AND** um paciente sem registros recebe mensagens vazias específicas por seção
+
+### Requirement: Identificação da entrada ativa da fila
+A ficha SHALL distinguir entradas ativas de entradas encerradas, sem alterar prioridade ou ordenação clínica.
+
+#### Scenario: Paciente com entrada ativa
+- **WHEN** o paciente possui entrada AGUARDANDO ou EM_ATENDIMENTO
+- **THEN** a ficha mostra situação, prioridade e horário de entrada
+- **AND** oferece acesso à fila sem exibir ação para adicionar uma nova entrada
+
+#### Scenario: Entrada avulsa duplicada
+- **WHEN** duas operações tentam adicionar o mesmo paciente com entrada ativa à fila avulsa
+- **THEN** o serviço impede a duplicação sob serialização transacional no PostgreSQL
+- **AND** não altera a prioridade da entrada existente
+
+#### Scenario: Check-in agendado com fila ativa
+- **WHEN** uma consulta agendada tenta confirmar chegada enquanto o mesmo paciente possui entrada ativa na fila
+- **THEN** o serviço recusa criar outra entrada, preservando o estado da consulta e a prioridade existente
+- **AND** uma nova confirmação poderá ser realizada após encerramento legítimo da entrada anterior
+
+#### Scenario: Paciente com somente entradas encerradas
+- **WHEN** um paciente possui apenas entradas FINALIZADO ou RETIRADO
+- **THEN** a ficha mostra que não existe entrada ativa
+- **AND** permite iniciar o fluxo de nova entrada com as validações de domínio existentes
+
+### Requirement: Formulário dedicado de cadastro oferece entrada acessível e validação recuperável
+O formulário de novo paciente da Recepção MUST manter nome e CPF obrigatórios, telefone opcional, máscara automática de CPF e feedback específico por campo. A UI MUST permitir colar CPF com ou sem pontuação, MUST preservar os valores editados em erro de validação e MUST apresentar o primeiro campo inválido com foco e erro associado programaticamente. A interface MUST usar componentes existentes, ter largura controlada e funcionar por teclado e em telas estreitas.
+
+#### Scenario: Recepcionista digita ou cola CPF sem pontuação
+- **WHEN** a Recepcionista preenche CPF válido com 11 dígitos, digitado ou colado
+- **THEN** o campo mostra a formatação visual sem exigir pontuação manual, e o servidor valida os mesmos 11 dígitos para persistência
+
+#### Scenario: Dados inválidos são corrigidos no próprio formulário
+- **WHEN** a Recepcionista envia nome vazio ou só com espaços, CPF inválido ou telefone inválido preenchido
+- **THEN** o servidor rejeita o cadastro, o formulário identifica os campos com erro e mantém os valores para correção sem criar paciente
+
+#### Scenario: Telefone opcional
+- **WHEN** a Recepcionista não informa telefone e apresenta nome e CPF válidos
+- **THEN** o cadastro pode ser concluído sem telefone
+
+### Requirement: Cadastro de paciente confirma persistência e impede duplicação
+A ação de cadastrar paciente MUST validar autorização e entrada no servidor, MUST impedir duas submissões simultâneas pelo State e MUST respeitar a unicidade de CPF no banco, inclusive sob concorrência. Sucesso MUST ser informado somente após persistência confirmada, seguido de navegação à ficha individual do paciente criado. Uma falha posterior de navegação MUST NOT provocar outra inserção automática.
+
+#### Scenario: Cadastro válido encaminha à ficha
+- **WHEN** uma Recepcionista autorizada confirma um cadastro válido de CPF ainda inexistente
+- **THEN** exatamente um paciente é persistido, sua identificação é preservada e a ficha correspondente é aberta automaticamente
+
+#### Scenario: CPF já cadastrado
+- **WHEN** a Recepcionista tenta cadastrar um CPF que já pertence a um paciente
+- **THEN** nenhum segundo registro é criado, a tela informa a duplicidade e pode oferecer acesso à ficha existente somente se o servidor autorizar sua consulta
+
+#### Scenario: Cliques repetidos
+- **WHEN** a Recepcionista envia o formulário novamente enquanto a operação anterior está em andamento ou após sucesso persistido na mesma tela
+- **THEN** o State não emite outra inserção e mantém a identificação do cadastro confirmado
+
+#### Scenario: Persistência confirmada seguida de falha na navegação
+- **WHEN** a persistência do cadastro é confirmada, mas o redirecionamento não conclui
+- **THEN** o State mantém o ID criado e disponibiliza um caminho para abrir a ficha sem criar novo paciente
+
+#### Scenario: Sessão inválida ou role incompatível
+- **WHEN** alguém sem sessão válida ou sem role Recepcionista tenta executar o cadastro diretamente
+- **THEN** o servidor nega a operação sem expor dados pessoais ou persistir novos registros
+
+### Requirement: Fila ativa exibe projeção operacional responsiva e mantém ordenação clínica
+A Recepção MUST consultar apenas entradas em AGUARDANDO, apresentando prioridade textual, paciente, horário de entrada no fuso da clínica, tempo decorrido, situação e ações permitidas. Em desktop MUST usar tabela semântica e no celular MUST manter identificação, prioridade e ações sem overflow. Busca por nome e filtro de prioridade MUST restringir somente dados autorizados e MUST manter a ordenação calculada no servidor. Falha de consulta MUST NOT ser apresentada como fila vazia.
+
+#### Scenario: Fila preenchida
+- **WHEN** a Recepcionista carrega dados de pacientes aguardando
+- **THEN** a UI apresenta a sequência do servidor, prioridade textual, espera derivada do instante persistido e ações autorizadas
+
+#### Scenario: Busca sem resultados
+- **WHEN** os filtros selecionados não correspondem a entradas
+- **THEN** a UI apresenta mensagem distinta de fila vazia e permite limpar filtros
+
+#### Scenario: Falha de consulta
+- **WHEN** a leitura da fila não pode ser concluída
+- **THEN** a UI apresenta erro recuperável e não declara que a fila está vazia
+
+### Requirement: Inclusões avulsas e check-in impedem duplicidade de entrada ativa
+O sistema MUST impedir que um mesmo paciente tenha duas entradas simultâneas em AGUARDANDO ou EM_ATENDIMENTO, independentemente de chegada agendada ou avulsa. O servidor MUST serializar as tentativas concorrentes de entrada com bloqueio transacional por paciente no PostgreSQL. Uma entrada RETIRADA ou FINALIZADA MUST permitir nova chegada.
+
+#### Scenario: Dupla submissão
+- **WHEN** uma recepcionista tenta incluir novamente um paciente com entrada ativa
+- **THEN** a segunda operação falha sem criar outro registro
+
+#### Scenario: Inclusões concorrentes
+- **WHEN** check-in e inclusão avulsa são iniciados simultaneamente para um mesmo paciente
+- **THEN** no máximo uma nova entrada ativa é persistida
+
+#### Scenario: Nova visita
+- **WHEN** a entrada anterior foi retirada ou concluída
+- **THEN** uma nova entrada válida pode ser criada
