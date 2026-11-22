@@ -23,7 +23,7 @@ Reconciliar o contrato normativo com o monólito Python/Reflex, migrations e tes
 | `patient-self-booking` | A | `patient_portal/{booking,booking_state}.py` | `test_patient_self_scheduling.py` | autoagendamento autenticado |
 | `doctor-workspace` | A | `doctor_workspace/state.py` | `test_doctor_workspace_state.py` | agenda/pacientes do Médico |
 | `patient-portal` | A + D | `patient_portal/{service,state,activation_api}.py` | `test_patient_portal_and_role_agendas.py`, `test_patient_self_scheduling.py` | portal, convite e endereço persistido |
-| `emergency-queue-clinical-care` | A | `patient_queue/", `clinical_care/", `models/clinical_care.py` | `test_walkin_clinical_journey.py` | episódio sem Consultation fictícia |
+| `emergency-queue-clinical-care` | A | `patient_queue/`, `clinical_care/`, `models/clinical_care.py` | `test_walkin_clinical_journey.py` | episódio sem Consultation fictícia |
 | `admin-qa-patient-dossier` | D | `admin_preview/{service,state}.py` | `test_admin_preview_patient_detail.py` | somente QA local |
 | `clinic-settings` | D | `clinic_settings/service.py`, `models/clinic_settings.py` | `test_clinic_settings.py` | configuração com revisão/auditoria |
 | `administration-dashboard` | D | `admin_dashboard/{service,state}.py` | `test_admin_directory_summary.py` | contagens persistidas |

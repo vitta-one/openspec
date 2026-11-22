@@ -61,7 +61,7 @@ def test_canonical_specs_contain_verifiable_scenarios() -> None:
         for index, heading in enumerate(headings):
             block = source[heading.end():headings[index + 1].start() if index + 1 < len(headings) else None]
             requirement_text = block.split("#### Scenario:", 1)[0]
-            assert re.search(r"\\b(?:MUST|SHALL)\\b", requirement_text), f"{name}: {heading.group(1)}"
+            assert re.search(r"\b(?:MUST|SHALL)\b", requirement_text), f"{name}: {heading.group(1)}"
             scenarios = list(re.finditer(r"(?m)^#### Scenario: (.+)$", block))
             assert scenarios, f"{name}: no scenarios for {heading.group(1)}"
             scenario_names = [m.group(1) for m in scenarios]
