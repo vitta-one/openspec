@@ -4660,6 +4660,41 @@ button:disabled,
   font-size: 1rem;
 }
 .vitta-clinic-settings-form > .rt-Box { min-height: 33.75rem; }
+/* The clinic name has a Radix wrapper plus an inner input. Only the wrapper
+ * draws the border and keyboard focus ring, preserving error states. */
+.vitta-clinic-settings-form .rt-TextFieldRoot.vitta-input {
+  min-height: 3rem;
+  padding: 0;
+  border: 1px solid var(--vitta-contrast-border);
+  box-shadow: none !important;
+}
+.vitta-clinic-settings-form .rt-TextFieldRoot.vitta-input::before,
+.vitta-clinic-settings-form .rt-TextFieldRoot.vitta-input::after {
+  box-shadow: none;
+}
+.vitta-clinic-settings-form .rt-TextFieldRoot.vitta-input .rt-TextFieldInput {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: .78rem .9rem;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+.vitta-clinic-settings-form .rt-TextFieldRoot.vitta-input .rt-TextFieldInput:focus-visible {
+  /* Override the global focus-visible rule on the nested native input. */
+  outline: none !important;
+  outline-offset: 0 !important;
+}
+.vitta-clinic-settings-form .rt-TextFieldRoot.vitta-input:focus-within {
+  outline: 2px solid var(--vitta-focus);
+  outline-offset: 2px;
+}
+.vitta-clinic-settings-form .rt-TextFieldRoot.vitta-input:is(
+  [aria-invalid="true"], :has(.rt-TextFieldInput[aria-invalid="true"])
+) {
+  border-color: var(--vitta-danger) !important;
+}
 /* Reflex/Radix renders a wrapper and an inner textarea. Keep one border and
  * a single visible keyboard focus ring on the wrapper (not both elements). */
 .vitta-clinic-settings-form .rt-TextAreaRoot.vitta-textarea {
