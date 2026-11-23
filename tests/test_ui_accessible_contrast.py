@@ -57,3 +57,21 @@ def test_active_navigation_and_control_borders():
     assert ".rt-SelectContent" in CSS
     assert ".rt-DialogContent" in CSS
     assert ".vitta-task-tabs" in CSS
+
+
+def test_clinic_address_textarea_has_single_visible_focus_ring():
+    """The settings field has one Radix wrapper border and one keyboard focus ring."""
+    wrapper = ".vitta-clinic-settings-form .rt-TextAreaRoot.vitta-textarea"
+
+    def declarations(selector: str) -> str:
+        match = re.search(re.escape(selector) + r"\\s*\\{([^{}]*)\\}", CSS)
+        assert match is not None, f"Regra CSS não encontrada: {selector}"
+        return match.group(1)
+
+    assert "min-height: 5.75rem;" in declarations(wrapper)
+    assert "padding: 0;" in declarations(wrapper)
+    inner = declarations(f"{wrapper} .rt-TextAreaInput")
+    assert "border: 0 !important;" in inner
+    assert "outline: none !important;" in inner
+    focus = declarations(f"{wrapper}:focus-within")
+    assert "outline: 2px solid var(--vitta-focus);" in focus
