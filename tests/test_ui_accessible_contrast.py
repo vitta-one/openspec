@@ -75,3 +75,32 @@ def test_clinic_address_textarea_has_single_visible_focus_ring():
     assert "outline: none !important;" in inner
     focus = declarations(f"{wrapper}:focus-within")
     assert "outline: 2px solid var(--vitta-focus);" in focus
+
+
+def test_clinic_name_textfield_has_single_focus_ring():
+    """The clinic name keeps the focus ring on the Radix wrapper only."""
+    wrapper = ".vitta-clinic-settings-form .rt-TextFieldRoot.vitta-input"
+
+    def declarations(selector: str) -> str:
+        match = re.search(re.escape(selector) + r"\s*\{([^{}]*)\}", CSS)
+        assert match is not None, f"Regra CSS não encontrada: {selector}"
+        return match.group(1)
+
+    root = declarations(wrapper)
+    assert "border: 1px solid var(--vitta-contrast-border);" in root
+    assert "padding: 0;" in root
+    assert "box-shadow: none !important;" in root
+
+    inner = declarations(f"{wrapper} .rt-TextFieldInput")
+    assert "border: 0 !important;" in inner
+    assert "box-shadow: none !important;" in inner
+    assert "outline: none !important;" in inner
+
+    inner_focus = declarations(f"{wrapper} .rt-TextFieldInput:focus-visible")
+    assert "outline: none !important;" in inner_focus
+    assert "outline-offset: 0 !important;" in inner_focus
+
+    focus = declarations(f"{wrapper}:focus-within")
+    assert "outline: 2px solid var(--vitta-focus);" in focus
+    assert "outline-offset: 2px;" in focus
+    assert ':has(.rt-TextFieldInput[aria-invalid="true"])' in CSS
