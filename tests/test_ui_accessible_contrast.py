@@ -64,7 +64,7 @@ def test_clinic_address_textarea_has_single_visible_focus_ring():
     wrapper = ".vitta-clinic-settings-form .rt-TextAreaRoot.vitta-textarea"
 
     def declarations(selector: str) -> str:
-        match = re.search(re.escape(selector) + r"\\s*\\{([^{}]*)\\}", CSS)
+        match = re.search(re.escape(selector) + r"\s*\{([^{}]*)\}", CSS)
         assert match is not None, f"Regra CSS não encontrada: {selector}"
         return match.group(1)
 
