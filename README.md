@@ -2,6 +2,182 @@
 
 Sistema acadêmico de gerenciamento de clínica médica desenvolvido com **Python + Reflex + PostgreSQL**, seguindo desenvolvimento incremental orientado por especificações com **OpenSpec**.
 
+
+## Manual de utilização — Innovation Lab (2026)
+
+Este manual apresenta **como acessar e utilizar o Vitta-One**. A parte técnica de instalação, desenvolvimento e testes continua documentada nas seções posteriores deste mesmo README. As funcionalidades descritas correspondem ao código do projeto; integrações com serviços externos têm suas limitações indicadas.
+
+**Demonstração em vídeo (aproximadamente 5 minutos):** [Assistir no YouTube](https://youtu.be/h9zIW06GCA0).
+
+### 1. Apresentação do aplicativo
+
+O **Vitta-One** é uma aplicação web acadêmica de **gestão integrada de clínica médica**. Seu objetivo é reunir em um único sistema as rotinas de cadastro de pacientes, profissionais e especialidades, agendamento, recepção, atendimento clínico, prescrições, histórico e acompanhamento financeiro.
+
+O projeto busca substituir o controle fragmentado por planilhas, registros manuais e ferramentas desconectadas, reduzindo retrabalho e facilitando a continuidade do atendimento. Os principais usuários são **Administrador, Recepcionista, Paciente, Médico e Financeiro**.
+
+**Fluxo principal:**
+
+~~~text
+Administrador configura profissionais/horários
+                 ↓
+Recepção cadastra paciente / Paciente agenda
+                 ↓
+         Consulta agendada
+                 ↓
+     Recepção confirma chegada
+                 ↓
+        Fila de atendimento
+                 ↓
+       Médico atende e registra
+                 ↓
+       Prescrição e prontuário
+                 ↓
+        Atendimento concluído
+~~~
+
+O sistema é uma **demonstração acadêmica**, não um produto certificado para uso clínico real.
+
+### 2. Acesso ao aplicativo
+
+- **Código-fonte e documentação:** https://github.com/vitta-one/openspec
+- **Vídeo demonstrativo:** https://youtu.be/h9zIW06GCA0
+- **Aplicação publicada:** não há uma URL de produção pública homologada informada neste README. O link do GitHub é para o **código**, não substitui o endereço da aplicação funcionando.
+- **Demonstração local:** após o setup descrito em [Início rápido para desenvolvimento local](#início-rápido-para-desenvolvimento-local--docker--um-comando), acesse **http://localhost:3000/login**.
+
+Para quem vai executar uma demonstração com dados fictícios, o fluxo recomendado é:
+
+1. Prepare **Python 3.12**, **Docker Compose**, Git e Make, conforme os pré-requisitos do início rápido.
+2. Na raiz do repositório, crie a conta administrativa do ambiente local com **make admin** (apenas na primeira utilização).
+3. Inicie a aplicação e o PostgreSQL QA com **make dev**.
+4. Abra **http://localhost:3000/login** no navegador.
+5. Crie os demais acessos de teste com **make user**, quando necessário, e vincule as contas de Médico e Paciente a seus cadastros. Em QA local habilitado, há também caminhos controlados de criação de acessos pela interface, detalhados na seção [Demonstração local completa sem Resend](#demonstração-local-completa-sem-resend-apenas-qa-isolado).
+
+**Importante:** não existe cadastro público irrestrito. Cada conta acessa somente as rotas autorizadas para seu perfil. Credenciais de demonstração devem ser fornecidas separadamente a pessoas autorizadas, nunca inseridas no README. Use apenas dados sintéticos.
+
+### 3. Perfis de usuários e permissões
+
+| Perfil | Responsabilidade | Acesso principal |
+| --- | --- | --- |
+| **Administrador** | Gerenciar funcionários, profissionais, especialidades, expedientes/horários e configurações da clínica | **/admin** |
+| **Recepcionista** | Cadastrar e localizar pacientes, agendar consultas, confirmar chegada, organizar a fila e atualizar informações cadastrais | **/recepcao** |
+| **Paciente** | Consultar seus próprios agendamentos e solicitar horários disponíveis no portal | **/paciente** |
+| **Médico** | Visualizar sua agenda e pacientes autorizados, chamar da fila, registrar atendimento e emitir prescrições | **/medico** |
+| **Financeiro** | Consultar informações financeiras e operar cobranças no fluxo configurado para Asaas Sandbox | **/financeiro** |
+
+A navegação e as operações são protegidas por **login e permissões verificadas no servidor**. Um Médico não recebe acesso irrestrito aos registros de outros médicos; o Paciente só consulta seus próprios dados. As telas de inspeção de outras áreas visíveis ao Administrador em QA local são **pré-visualizações restritas**, não autorização clínica geral.
+
+### 4. Funcionalidades disponíveis
+
+| Área | Funcionalidades de uso |
+| --- | --- |
+| **Autenticação** | Login, logout, sessão protegida, primeiro acesso e perfis de permissão |
+| **Administração** | Cadastro e gestão de funcionários, profissionais e especialidades; disponibilidade semanal e configuração da clínica |
+| **Agenda** | Horários disponíveis, agendamento, reagendamento e cancelamento conforme regras de estado e permissão; prevenção de horários conflitantes |
+| **Pacientes e recepção** | Cadastro, busca, ficha, edição cadastral, confirmação de chegada e gestão da fila |
+| **Portal do paciente** | Ativação por convite quando configurada, consultas próprias e autoagendamento por especialidade, médico, data e horário |
+| **Atendimento médico** | Agenda própria, chamada de paciente, queixa, anamnese, diagnóstico, conduta e encerramento do atendimento |
+| **Prontuário e prescrições** | Histórico clínico autorizado e prescrições estruturadas com itens, visualização para impressão |
+| **Financeiro** | Painel e fluxos de cobrança, consulta e conciliação com adaptador Asaas em **Sandbox**, dependentes de configuração e homologação externa |
+
+O **painel da recepção** exibe informações operacionais derivadas de registros persistidos. Recursos dependentes de provedores externos não devem ser confundidos com serviços homologados em produção.
+
+### 5. Manual de utilização passo a passo
+
+As telas podem apresentar estados vazios quando ainda não existem dados no ambiente. Em demonstrações, prepare primeiro profissionais, horários e pacientes fictícios para percorrer uma jornada completa.
+
+#### 5.1 Entrar e navegar
+
+1. Acesse **/login** no endereço do ambiente.
+2. Informe **e-mail e senha** de uma conta existente e selecione **Entrar**.
+3. Após autenticar, o sistema direciona para o painel correspondente ao perfil.
+4. Use o menu lateral para abrir as funções permitidas e a opção de **sair** para encerrar a sessão.
+
+**Resultado esperado:** a pessoa visualiza apenas o painel e as operações para as quais tem permissão. Login inválido ou tentativa de acesso a outra área apresenta bloqueio, sem revelar dados protegidos.
+
+#### 5.2 Administrador — preparar o atendimento
+
+1. Entre como Administrador e abra **Especialidades** (**/admin/especialidades**). Cadastre uma especialidade que será usada na demonstração.
+2. Em **Funcionários** (**/admin/funcionarios**) ou **Profissionais** (**/admin/profissionais**), cadastre o Médico e associe a especialidade correspondente.
+3. Abra **Horários** (**/admin/horarios**) para configurar o expediente e verificar os horários reserváveis.
+4. Em **Configurações** (**/admin/configuracoes**), consulte ou ajuste os dados da clínica conforme as permissões disponíveis.
+5. Volte ao painel administrativo para conferir os dados cadastrados.
+
+**Resultado esperado:** o profissional e a especialidade ficam disponíveis nos fluxos de agenda; horários só podem ser reservados quando estiverem válidos e livres. Cadastros e horários podem depender de campos obrigatórios e validações.
+
+#### 5.3 Recepcionista — cadastrar, agendar e confirmar chegada
+
+1. Entre como Recepcionista e abra **Pacientes** (**/recepcao/pacientes**).
+2. Utilize a busca para encontrar um paciente existente. Se não existir, selecione o fluxo de **Novo paciente** (**/recepcao/pacientes/novo**) e preencha os dados solicitados com informações fictícias válidas.
+3. Confira a ficha do paciente e, se necessário, utilize a opção de edição cadastral permitida.
+4. Acesse **Agenda** (**/recepcao/agenda**) e inicie **Agendar consulta** (**/recepcao/agenda/nova**). Escolha paciente, profissional e horário disponível; revise e confirme.
+5. Na data de atendimento, localize a consulta na agenda e execute **Confirmar chegada** para encaminhá-la à fila.
+6. Em **Fila** (**/recepcao/fila**), acompanhe o atendimento, a situação do paciente e os recursos de prioridade ou reavaliação oferecidos para a entrada.
+
+**Resultado esperado:** paciente e consulta ficam registrados; a consulta confirmada passa a integrar o fluxo da recepção e pode ser chamada pelo Médico autorizado. O sistema deve recusar um horário já ocupado. Também há **entrada avulsa sem consulta agendada**, que segue um fluxo de fila distinto.
+
+#### 5.4 Paciente — consultar e realizar autoagendamento
+
+1. Tenha um cadastro de paciente e acesso ao portal habilitado conforme o ambiente. No fluxo por convite, ative a conta pela página **/ativar-paciente**, com código válido e consentimento quando solicitado.
+2. Entre como Paciente e abra **/paciente** para conferir suas consultas.
+3. Escolha **Agendar consulta** (**/paciente/agendar**).
+4. Selecione a **especialidade**, depois o **médico**, a **data** e um **horário disponível**.
+5. Revise os dados da reserva e confirme.
+
+**Resultado esperado:** a consulta aparece no portal do paciente e nas agendas operacionais relacionadas. A seleção respeita a disponibilidade publicada e a janela de reserva de **45 dias**; outro paciente não consegue reservar simultaneamente o mesmo horário.
+
+#### 5.5 Médico — realizar atendimento e emitir prescrição
+
+1. Entre com a conta vinculada ao profissional e consulte **/medico** ou **/medico/agenda**.
+2. Localize um paciente elegível na fila e utilize a ação de **chamar/iniciar atendimento**.
+3. Registre a **queixa principal**, a **anamnese**, o **diagnóstico** e a **conduta**, conforme as informações necessárias ao caso fictício.
+4. Se cabível, crie uma **prescrição** com um ou mais itens e orientações de uso, mantendo o vínculo com o atendimento.
+5. Finalize o atendimento e consulte o resultado no histórico/prontuário autorizado (**/medico/prontuarios**).
+6. Quando disponível para a prescrição criada, abra a visualização protegida de impressão.
+
+**Resultado esperado:** o atendimento concluído integra o histórico clínico autorizado; seu registro e prescrições passam a ser consultáveis em modo de leitura, em vez de permanecerem editáveis como um atendimento em andamento.
+
+#### 5.6 Financeiro — acompanhar cobranças no ambiente de testes
+
+1. Entre com perfil Financeiro e abra **/financeiro**.
+2. Consulte os registros e utilize os filtros de pesquisa, situação e período, quando houver dados.
+3. No ambiente de **Asaas Sandbox configurado**, selecione uma consulta elegível e preencha os dados exigidos para registrar uma cobrança de teste.
+4. Consulte os detalhes e o histórico; funcionalidades como conciliação, Pix e operações financeiras dependem do estado da cobrança, das permissões e do provedor configurado.
+
+**Resultado esperado:** operações autorizadas são registradas e refletidas no painel. **Não trate uma cobrança de teste como pagamento real**: chamadas externas, webhooks e disponibilidade do provedor dependem de credenciais e homologação próprias. Nunca use dados financeiros reais na demonstração acadêmica.
+
+### 6. Exemplo prático: uma consulta do início ao fim
+
+**Cenário fictício:** um paciente precisa marcar atendimento em uma especialidade disponível.
+
+| Etapa | Quem executa | Ação na plataforma | Resultado visível |
+| --- | --- | --- | --- |
+| 1 | Administrador | Cadastra especialidade, Médico e expediente | Horários livres publicados |
+| 2 | Recepcionista | Cadastra o paciente com dados sintéticos | Paciente localizado na lista |
+| 3 | Paciente ou Recepcionista | Escolhe profissional, data e horário | Consulta agendada |
+| 4 | Recepcionista | Confirma a chegada | Entrada na fila |
+| 5 | Médico | Chama o paciente e registra o atendimento | Consulta em andamento e dados clínicos associados |
+| 6 | Médico | Registra prescrição, se necessária, e finaliza | Consulta concluída |
+| 7 | Médico autorizado | Consulta o prontuário e a prescrição | Histórico disponível para leitura |
+
+**Caminho alternativo:** na ausência de agendamento, a Recepção pode criar uma entrada avulsa na fila; ela não precisa inventar uma consulta agendada para registrar o episódio. Filtros de agenda, lista de pacientes e consultas por perfil são exemplos de funcionalidades complementares.
+
+**Referência visual:** o [vídeo demonstrativo](https://youtu.be/h9zIW06GCA0) mostra a navegação no aplicativo. As imagens de apresentação em **assets/** são elementos visuais do produto e não devem ser interpretadas como prova de que uma operação externa foi homologada.
+
+### 7. Limitações conhecidas e cuidados
+
+- **Escopo acadêmico:** não é prontuário certificado, nem solução aprovada para operação com pacientes reais. Demonstrações e QA devem usar somente dados fictícios.
+- **Hospedagem:** o repositório é público, mas este README **não confirma URL de aplicação em produção**. Sem um deploy válido, utilize a execução local documentada.
+- **Asaas:** há fluxo e adaptador para **Sandbox**, com testes automatizados, mas a emissão real no Sandbox, webhooks e operações de ponta a ponta com provedor externo **não foram homologados** nas evidências disponíveis. Não anunciar pagamentos de produção.
+- **E-mail/Resend:** convites, notificações e componentes de entrega existem no código; o envio efetivo depende de configuração do provedor, remetente verificado e homologação externa.
+- **Prescrição:** há visualização HTML/CSS para impressão, mas **não há assinatura digital ZapSign** nem PDF clínico assinado/persistido nesta entrega.
+- **Exames/anexos:** a integração com **Cloudinary** e o fluxo completo de exames não integram as capacidades concluídas desta entrega; não há integração com laboratórios externos.
+- **Acesso e permissões:** sem cadastro público irrestrito; telas administrativas de pré-visualização local não concedem acesso geral aos dados clínicos.
+- **Validação:** testes automatizados e compilação são evidências técnicas, mas não substituem homologação presencial, revisão visual final, segurança operacional e integração real com terceiros.
+
+Para detalhes técnicos, histórico de decisões e evidências, consulte o [catálogo de capabilities](docs/openspec-capability-catalog-2026-11-22.md), o [contrato de UX](UX-CONTRACT.md), os [relatórios de QA](docs/qa/) e as instruções de instalação abaixo.
+
+---
+
 ## Estado atual
 
 A fundação de acesso, paciente/fila, profissionais/especialidades, agenda, lifecycle da Consulta, registro clínico e Prescrições estruturadas estão implementados. Por decisão de encerramento acadêmico, os 25 contratos normativos foram preservados em `docs/archive/openspec-specs-2026-11-22/` e `openspec/specs/` ficou sem specs; as 45 changes encerradas permanecem em `openspec/changes/archive/`. É uma exceção ao fluxo OpenSpec padrão. A autorização continua sendo revalidada no servidor em todas as leituras e mutações protegidas. A validação de Prescrições inclui testes PostgreSQL, suíte Python e navegador Chromium automatizado; homologação presencial em dispositivos físicos continua recomendada antes de uso real.
@@ -759,10 +935,10 @@ Os valores acima são placeholders, **não credenciais funcionais**. O remetente
 - `/recepcao`: agenda de Consultas, confirmação de chegada, cadastro/localização de pacientes, entrada avulsa, reavaliação, retirada e acompanhamento da fila ativa;
 - `/medico`: fila elegível, registro clínico, múltiplas Prescrições com itens e histórico concluído do paciente;
 - `/medico/prescricao/[prescription_id]`: visualização protegida e pronta para impressão da Prescrição do Médico autor, sem assinatura digital nesta etapa;
-- `/financeiro`: shell protegido do Financeiro;
+- `/financeiro`: painel Financeiro protegido com gestão de cobranças em Asaas Sandbox; a integração externa depende de configuração e homologação;
 - `/acesso-negado`: estado autenticado para tentativa de acesso a uma role incompatível.
 
-Financeiro ainda permanece shell. Administrador executa a gestão do diretório e Recepção/Médico executam a capability de fila; prioridade é sempre informada pela operação (`VERMELHO`, `AMARELO`, `VERDE`) e nunca é calculada ou elevada automaticamente pelo Vitta-One. A autorização é revalidada no backend e não depende apenas de componentes escondidos no frontend.
+Financeiro possui um painel e operações financeiras de Sandbox, ainda dependentes de homologação externa. Administrador executa a gestão do diretório e Recepção/Médico executam a capability de fila; prioridade é sempre informada pela operação (`VERMELHO`, `AMARELO`, `VERDE`) e nunca é calculada ou elevada automaticamente pelo Vitta-One. A autorização é revalidada no backend e não depende apenas de componentes escondidos no frontend.
 
 Uma Consulta agendada continua fora da fila até a Recepção usar **Confirmar chegada**. Quando o Médico marcado chama o paciente, nasce um único `ClinicalCareRecord`. Durante `EM_ANDAMENTO`, o Médico pode salvar o registro clínico e criar uma ou mais Prescrições com itens. Ao finalizar, Consulta/fila passam para `CONCLUIDA`/`FINALIZADO`; Atendimento e Prescrições tornam-se somente leitura e passam a integrar o histórico. A Prescrição possui visualização HTML/CSS protegida para impressão; assinatura digital está fora do escopo desta entrega. Atendimentos avulsos de pronto-socorro não criam uma Consulta agendada: o registro clínico e as prescrições são vinculados diretamente à passagem da fila, com histórico preservado após finalização. O fluxo de autogendamento não altera a classificação da fila.
 
