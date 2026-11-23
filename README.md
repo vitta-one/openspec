@@ -4,15 +4,17 @@ Sistema acadêmico de gerenciamento de clínica médica desenvolvido com **Pytho
 
 ## Estado atual
 
-A fundação de acesso, paciente/fila, profissionais/especialidades, agenda, lifecycle da Consulta, registro clínico e Prescrições estruturadas estão implementados. Os contratos normativos das sete capabilities estão consolidados sob `openspec/specs/`, e as evoluções concluídas estão preservadas em `openspec/changes/archive/`. A autorização continua sendo revalidada no servidor em todas as leituras e mutações protegidas. A validação de Prescrições inclui testes PostgreSQL, suíte Python e navegador Chromium automatizado; homologação presencial em dispositivos físicos continua recomendada antes de uso real.
+A fundação de acesso, paciente/fila, profissionais/especialidades, agenda, lifecycle da Consulta, registro clínico e Prescrições estruturadas estão implementados. Por decisão de encerramento acadêmico, os 25 contratos normativos foram preservados em `docs/archive/openspec-specs-2026-11-22/` e `openspec/specs/` ficou sem specs; as 45 changes encerradas permanecem em `openspec/changes/archive/`. É uma exceção ao fluxo OpenSpec padrão. A autorização continua sendo revalidada no servidor em todas as leituras e mutações protegidas. A validação de Prescrições inclui testes PostgreSQL, suíte Python e navegador Chromium automatizado; homologação presencial em dispositivos físicos continua recomendada antes de uso real.
+
+## Catálogo OpenSpec e rastreabilidade
+
+A matriz de requisitos → código → testes e a situação dos contratos congelados no arquivo histórico estão em [docs/openspec-capability-catalog-2026-11-22.md](docs/openspec-capability-catalog-2026-11-22.md). O catálogo distingue evidências automatizadas, histórico documental e integrações externas que ainda dependem de homologação.
 
 ## Stack definida
 
 - Reflex como framework full-stack da aplicação web;
 - Python;
 - PostgreSQL;
-- Cloudinary para anexos de exames;
-- ZapSign em sandbox para assinatura de prescrições (integração planejada; ainda não aplicada nesta capability);
 - Asaas em sandbox para operações financeiras.
 
 ## Estrutura principal
@@ -25,10 +27,11 @@ A fundação de acesso, paciente/fila, profissionais/especialidades, agenda, lif
 ├── alembic.ini
 ├── docs/
 │   ├── project-overview.md
-│   └── domain-model.md
+│   ├── domain-model.md
+│   └── archive/openspec-specs-2026-11-22/
 ├── openspec/
 │   ├── config.yaml
-│   ├── specs/
+│   ├── specs/  # apenas .gitkeep neste corte
 │   └── changes/
 │       └── archive/
 ├── vitta_one/
@@ -62,18 +65,18 @@ abaixo. No Linux, seu usuário precisa conseguir usar `docker info` sem erro.
 Se ainda não clonou, clone a branch disponível para testes:
 
 ~~~bash
-git clone --branch feat/admin-ux-contrast-navigation \
+git clone --branch develop \
   git@github.com:vitta-one/openspec.git
 cd openspec
 ~~~
 
 Se já clonou o repositório, preserve alterações locais antes de trocar de
-branch. Para obter a versão da PR #323:
+branch. Para atualizar a branch principal de desenvolvimento:
 
 ~~~bash
 cd ~/Documents/openspec
 git fetch origin
-git switch feat/admin-ux-contrast-navigation
+git switch develop
 git pull --ff-only
 ~~~
 
@@ -149,7 +152,7 @@ Este roteiro é a referência oficial para rodar o projeto, tanto numa máquina 
 | pip, venv | Incluídos no Python | Dependências Python |
 | Homebrew/Docker | **Opcionais** | Não necessários para o Hackintosh |
 | Resend | **Opcional** | Enviar credenciais temporárias por e-mail |
-| Cloudinary/ZapSign/Asaas | Não necessários | Integrações planejadas para outra etapa |
+| Asaas (Sandbox) | Opcional para QA local | Adaptador financeiro; produção e credenciais externas dependem de configuração e homologação |
 
 Comandos de inspeção no macOS/Linux:
 
@@ -592,11 +595,14 @@ Rotas importantes: `/admin`, `/admin/especialidades`, `/admin/profissionais`, `/
 
 ### 10. Rodar testes e validar OpenSpec
 
-Primeiro valide as specs:
+Para validar com OpenSpec strict as 25 specs preservadas no snapshot sem recolocá-las em `openspec/specs/`, use o validador temporário:
 
 ~~~bash
-npx -y @fission-ai/openspec@1.13.0 validate --all --strict --no-interactive
+npm ci --prefix tools/openspec-validator --ignore-scripts --no-audit --no-fund
+python scripts/validate_archived_openspec.py
 ~~~
+
+> Esta organização é excepcional para a apresentação acadêmica. O comando direto `openspec validate --all` na raiz não encontrará as 25 specs, pois estão arquivadas; antes de novas changes, restaure e revise os contratos do snapshot.
 
 Para `pytest`, **nunca use o banco `vitta_one_qa` onde você testa o navegador**. Crie e migre `vitta_one_test` (passo 3/4/5). No macOS/Linux:
 
@@ -638,7 +644,7 @@ A senha temporária é gerada criptograficamente, salva somente em hash e expira
 
 O convite do portal do paciente usa as mesmas credenciais do Resend e exige também `VITTA_ONE_PUBLIC_URL`. A Recepção precisa confirmar consentimento em uma ação separada; o cadastro não cria uma conta. O código é enviado por e-mail, persistido somente como hash, expira em 24 horas e é consumido uma vez. Se o envio não for aceito, nenhum acesso é ativado; a equipe pode emitir outro convite após confirmar consentimento novamente. `VITTA_ONE_CLINIC_NAME` e `VITTA_ONE_CLINIC_ADDRESS` devem conter os dados reais da unidade; quando qualquer um estiver ausente, o portal informa que o endereço ainda precisa ser configurado.
 
-Cloudinary (exames), ZapSign (assinatura de prescrições) e Asaas (pagamentos) **não precisam de configuração para testar o MVP atual**. Sua integração continua planejada em `docs/roadmap/next-capabilities-2026-10-14.md`.
+O MVP roda localmente sem credenciais externas de pagamento. Para testar operações reais de Asaas em Sandbox ou a entrega por Resend, configure e homologue os respectivos provedores no ambiente de QA apropriado; mocks e testes automatizados não comprovam entrega ou liquidação externa.
 
 ### 12. Atualizar depois de novos merges — sem reinstalar tudo
 
@@ -758,7 +764,7 @@ Os valores acima são placeholders, **não credenciais funcionais**. O remetente
 
 Financeiro ainda permanece shell. Administrador executa a gestão do diretório e Recepção/Médico executam a capability de fila; prioridade é sempre informada pela operação (`VERMELHO`, `AMARELO`, `VERDE`) e nunca é calculada ou elevada automaticamente pelo Vitta-One. A autorização é revalidada no backend e não depende apenas de componentes escondidos no frontend.
 
-Uma Consulta agendada continua fora da fila até a Recepção usar **Confirmar chegada**. Quando o Médico marcado chama o paciente, nasce um único `ClinicalCareRecord`. Durante `EM_ANDAMENTO`, o Médico pode salvar o registro clínico e criar uma ou mais Prescrições com itens. Ao finalizar, Consulta/fila passam para `CONCLUIDA`/`FINALIZADO`; Atendimento e Prescrições tornam-se somente leitura e passam a integrar o histórico. A Prescrição possui visualização HTML/CSS para impressão, mas **a assinatura ZapSign ainda não está implementada**. Atendimentos avulsos de pronto-socorro não criam uma Consulta agendada: o registro clínico e as prescrições são vinculados diretamente à passagem da fila, com histórico preservado após finalização. O fluxo de autogendamento não altera a classificação da fila.
+Uma Consulta agendada continua fora da fila até a Recepção usar **Confirmar chegada**. Quando o Médico marcado chama o paciente, nasce um único `ClinicalCareRecord`. Durante `EM_ANDAMENTO`, o Médico pode salvar o registro clínico e criar uma ou mais Prescrições com itens. Ao finalizar, Consulta/fila passam para `CONCLUIDA`/`FINALIZADO`; Atendimento e Prescrições tornam-se somente leitura e passam a integrar o histórico. A Prescrição possui visualização HTML/CSS protegida para impressão; assinatura digital está fora do escopo desta entrega. Atendimentos avulsos de pronto-socorro não criam uma Consulta agendada: o registro clínico e as prescrições são vinculados diretamente à passagem da fila, com histórico preservado após finalização. O fluxo de autogendamento não altera a classificação da fila.
 
 ## Fluxo de desenvolvimento
 

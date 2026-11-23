@@ -111,8 +111,6 @@ Não implementar todo o banco, todas as telas ou todos os módulos antecipadamen
 
 Permanecem para refinamento em changes específicas:
 
-- assinatura digital das Prescrições via ZapSign sandbox;
-- fluxo de exames, resultados e anexos Cloudinary;
 - regras financeiras e integração Asaas;
 - Atendimento clínico para walk-ins sem Consulta;
 - dashboards e demais projeções gerenciais;
@@ -126,5 +124,7 @@ Esses pontos não devem ser preenchidos por suposição.
 - `docs/domain-model.md`: conceitos e relacionamentos do domínio;
 - `AGENTS.md`: regras operacionais para agentes;
 - `openspec/config.yaml`: contexto permanente dos workflows;
-- `openspec/specs/`: comportamento consolidado após changes arquivadas;
-- `openspec/changes/`: mudanças em planejamento ou implementação.
+- `openspec/specs/`: sem specs ativas neste corte (apenas `.gitkeep`);
+- `docs/archive/openspec-specs-2026-11-22/`: snapshot íntegro dos 25 contratos normativos congelados;
+- `openspec/changes/archive/`: histórico de 45 changes arquivadas;
+- `openspec/changes/`: local para novas changes, sem changes ativas atualmente.

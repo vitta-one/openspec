@@ -78,7 +78,7 @@ jobs:
         run: npm ci --prefix tools/openspec-validator --ignore-scripts --no-audit --no-fund
 
       - name: Validate OpenSpec
-        run: ./tools/openspec-validator/node_modules/.bin/openspec validate --all --strict --no-interactive
+        run: python scripts/validate_archived_openspec.py
 
       - name: Apply reviewed migration to disposable PostgreSQL
         run: reflex db migrate
