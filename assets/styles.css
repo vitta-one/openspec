@@ -4660,7 +4660,35 @@ button:disabled,
   font-size: 1rem;
 }
 .vitta-clinic-settings-form > .rt-Box { min-height: 33.75rem; }
-.vitta-clinic-settings-form .vitta-textarea { min-height: 8.25rem; }
+/* Reflex/Radix renders a wrapper and an inner textarea. Keep one border and
+ * a single visible keyboard focus ring on the wrapper (not both elements). */
+.vitta-clinic-settings-form .rt-TextAreaRoot.vitta-textarea {
+  min-height: 5.75rem;
+  padding: 0;
+  border: 1px solid var(--vitta-contrast-border);
+  box-shadow: none;
+}
+.vitta-clinic-settings-form .rt-TextAreaRoot.vitta-textarea::before {
+  box-shadow: none;
+}
+.vitta-clinic-settings-form .rt-TextAreaRoot.vitta-textarea .rt-TextAreaInput {
+  width: 100%;
+  min-height: 5.75rem;
+  padding: .78rem .9rem;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  resize: none;
+}
+.vitta-clinic-settings-form .rt-TextAreaRoot.vitta-textarea:focus-within {
+  outline: 2px solid var(--vitta-focus);
+  outline-offset: 2px;
+}
+.vitta-clinic-settings-form .rt-TextAreaRoot.vitta-textarea:is(
+  [aria-invalid="true"], :has(.rt-TextAreaInput[aria-invalid="true"])
+) {
+  border-color: var(--vitta-danger) !important;
+}
 .vitta-staff-form > .rt-Box { padding-bottom: 1.1rem; }
 .vitta-availability-content .vitta-empty-state .rt-Text { max-width: 72ch; }
 .vitta-shell--admin .vitta-page:has(.vitta-availability-panel) .vitta-empty-state .rt-Text {
